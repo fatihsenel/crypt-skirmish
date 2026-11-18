@@ -481,6 +481,54 @@ function lookAt(x, z, zoom) {
   cam.position.add(shift);
 }
 
+/**
+ * On a phone only part of the crypt is on screen: when a unit near or past the edge of the
+ * free area (between the initiative bar and the action bar) takes its turn, glide the camera
+ * to centre it. Zoom stays put, and so does any pan the player made while the unit is in view.
+ */
+let panTween = 0;
+function keepInView(unit) {
+  if (Math.min(window.innerWidth, window.innerHeight) >= 600) return;
+  const cam = stage.camera;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const { top, bottom, right } = hudInsets(w, h);
+  const p = new THREE.Vector3(unit.x, 0, unit.z).project(cam);
+  const sx = ((p.x + 1) / 2) * w;
+  const sy = ((1 - p.y) / 2) * h;
+  const mx = Math.min(70, (w - right) * 0.2);
+  const my = Math.min(70, (h - top - bottom) * 0.2);
+  const inside = sx >= mx && sx <= w - right - mx && sy >= top + my && sy <= h - bottom - my;
+  if (inside) return;
+  // Bring it to the middle of the free area (an edge would tuck it under the HUD buttons).
+  const dx = sx - (w - right) / 2;
+  const dy = sy - (top + h - bottom) / 2;
+  // Turn that nudge into a ground-plane shift: where would the unit's screen point land?
+  const toGround = (x, y) => {
+    raycaster.setFromCamera(new THREE.Vector2((x / w) * 2 - 1, -(y / h) * 2 + 1), cam);
+    const g = new THREE.Vector3();
+    return raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), g) ? g : null;
+  };
+  const from = toGround(sx - dx, sy - dy);
+  const to = toGround(sx, sy);
+  if (!from || !to) return;
+  const shift = to.sub(from);
+  const ticket = ++panTween;
+  const start = performance.now();
+  let done = 0;
+  const step = (now) => {
+    if (ticket !== panTween) return; // a newer pan took over
+    const t = Math.min(1, (now - start) / 350);
+    const eased = 1 - (1 - t) ** 3;
+    const d = shift.clone().multiplyScalar(eased - done);
+    done = eased;
+    stage.controls.target.add(d);
+    cam.position.add(d);
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 /** Replay a saved fight on the new `game`. False if it didn't land where it was saved. */
 function replaySaved(saved) {
   try {
@@ -585,6 +633,7 @@ function flushReveals() {
 async function onTurnStart(unit) {
   flushReveals();
   for (const v of views.values()) v.setActive(v.unit === unit);
+  if (!unseen(unit)) keepInView(unit);
   selected = null;
   syncStatus();
   hud.renderInitiative(game);

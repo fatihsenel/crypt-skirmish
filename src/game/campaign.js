@@ -385,7 +385,10 @@ export function parseSave(text) {
       if (!r.items.every((i) => ITEMS[i]) || typeof r.slots !== 'object') return null;
       if (r.name !== undefined && (typeof r.name !== 'string' || !r.name || cleanName(r.name) !== r.name)) delete r.name;
       if (r.cls !== undefined && (r.cls === code || !CLASS_CHOICES[code].includes(r.cls))) delete r.cls;
-      const max = restedHero(code, r).layOnHandsMax;
+      const rested = restedHero(code, r);
+      // A save from before a class lost hit points (the Ranger's 28 → 24) keeps no extra HP.
+      r.hp = Math.min(r.hp, rested.maxHp);
+      const max = rested.layOnHandsMax;
       if (max) r.layOnHands = Number.isFinite(r.layOnHands) ? Math.max(0, Math.min(max, r.layOnHands)) : max;
       else delete r.layOnHands;
     }

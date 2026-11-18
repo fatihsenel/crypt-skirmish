@@ -711,6 +711,14 @@ describe('campaign: levels, items and the dungeon map', () => {
     expect(parseSave(JSON.stringify({ ...s, at: 'nowhere' }))).toBe(null);
     expect(parseSave(null)).toBe(null);
   });
+
+  it('a save from before a hit point cut loads with HP capped at the new maximum', () => {
+    const s = newCampaign('normal', {}, { R: 'A' });
+    s.party.R.hp = 28; // the Ranger had 28 HP at level 3 before the tone-down
+    expect(parseSave(serialize(s)).party.R.hp).toBe(24);
+    s.party.R.hp = 10; // a wounded hero keeps their wounds
+    expect(parseSave(serialize(s)).party.R.hp).toBe(10);
+  });
 });
 
 describe('campaign: unopened chests', () => {
