@@ -27,6 +27,7 @@ import { Camp } from './ui/camp.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
 import { music } from './audio/music.js';
+import { voices } from './audio/voices.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -645,6 +646,7 @@ async function onTurnStart(unit) {
   refresh();
   if (unit.team === 'heroes') {
     sfx.turn();
+    voices.bark(unit, 'turn'); // now and then
     saveFight(); // with the rooms seen so far
   }
   if (unit.team === 'monsters' || debugAutoplay) await runMonsterTurn(unit);
@@ -938,6 +940,8 @@ const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'F
 function damageReaction(unit) {
   const v = view(unit);
   v.updateHp();
+  // Heroes grunt when hit; monsters only cry out when they fall.
+  if (!unseen(unit) && (!unit.alive || unit.team === 'heroes')) voices.bark(unit, unit.alive ? 'hurt' : 'die');
   if (unit.alive) return v.flinch();
   sfx.death(unit.code);
   return v.die();

@@ -1,31 +1,32 @@
 // Procedural background music, built on the same Web Audio primitives as the sound
 // effects (sfx.tone / sfx.noise) and played through their stone-room reverb.
 //
-// One clock (84 bpm, sixteenth steps) drives three layers over a four-bar loop in
-// A minor (Am F Dm E). Each layer has its own gain, and the mood sets which are heard:
+// One clock (72 bpm, sixteenth steps) drives three layers over a four-bar loop in
+// A minor with a horror turn: Am, B♭ (a half step up), Dm, and E with a clashing F on top.
+// Each layer has its own gain, and the mood sets which are heard:
 //   calm     the title and camp: the exploring layer, softer
-//   explore  in a room nobody has noticed you in yet: a slow pad and stray bell notes
-//   combat   monsters are on to you: drums, a bass ostinato and strings come in
-//   boss     the sanctum and the barrow: combat plus brass swells and quick ticks
+//   explore  in a room nobody has noticed you in yet: a beating tritone drone under a soft,
+//            dark pad
+//   combat   monsters are on to you: drums, a bass ostinato and trembling strings that
+//            grind a half step against the chord
+//   boss     the final rooms: combat plus a low drone that keeps sinking, and quick ticks
 // Moods crossfade over a couple of seconds, so a fight builds and then dies away.
 
 import { sfx } from './sfx.js';
 
 const STORAGE_KEY = 'crypt-skirmish:music';
-const BPM = 84;
+const BPM = 72;
 const STEP = 60 / BPM / 4; // a sixteenth note, in seconds
 const LOOKAHEAD = 0.25;    // schedule this far ahead of the audio clock
 
 const midi = (n) => 440 * 2 ** ((n - 69) / 12);
-// Am, F, Dm, E (the E major chord's G# gives the harmonic-minor bite).
+// Am, B♭, Dm, E(♭9): the B♭ and the F over E are the half-step rubs that make it uneasy.
 const CHORDS = [
   [57, 60, 64], // A C E
-  [53, 57, 60], // F A C
+  [58, 62, 65], // B♭ D F
   [50, 53, 57], // D F A
-  [52, 56, 59], // E G# B
+  [52, 56, 59, 65], // E G# B F
 ];
-const BELLS = [69, 72, 74, 76, 79, 81]; // A minor pentatonic, up high
-
 /** Target gain of each layer, per mood. */
 const MIX = {
   off: { explore: 0, combat: 0, boss: 0 },
@@ -133,19 +134,17 @@ class Music {
     const rnd = Math.random;
 
     if (this.audible('explore')) {
-      if (s === 0) {
-        // a slow pad: root low, then third and fifth
-        sfx.tone(t, { type: 'triangle', freq: midi(chord[0] - 12), dur: bar * 1.15, gain: 0.07, attack: 0.9, lowpass: 700, out: L.explore });
-        for (const n of chord.slice(1)) {
-          sfx.tone(t + 0.05, { type: 'triangle', freq: midi(n), dur: bar * 1.1, gain: 0.025, attack: 1.2, lowpass: 1100, out: L.explore });
+      // the drone: low A against a low E♭ (a tritone), each a pair a hair apart so they beat
+      if (step % 64 === 0) {
+        for (const [n, d, g] of [[33, 1, 0.07], [33, 1.003, 0.05], [39, 1, 0.025], [39, 0.996, 0.02]]) {
+          sfx.tone(t, { type: 'triangle', freq: midi(n) * d, dur: bar * 4.2, gain: g, attack: bar * 1.2, lowpass: 400, out: L.explore });
         }
       }
-      // stray bell notes, never two in a row
-      if (s % 2 === 0 && rnd() < 0.09 && this.lastBell !== step - 2) {
-        this.lastBell = step;
-        const n = BELLS[Math.floor(rnd() * BELLS.length)];
-        sfx.tone(t, { type: 'sine', freq: midi(n), dur: 2.4, gain: 0.03, attack: 0.005, out: L.explore });
-        sfx.tone(t, { type: 'sine', freq: midi(n) * 2.76, dur: 0.6, gain: 0.006, attack: 0.002, out: L.explore }); // bell partial
+      // the pad: the chord low and hushed, one swell per bar
+      if (s === 0) {
+        chord.slice(0, 3).forEach((n, i) => {
+          sfx.tone(t, { type: 'triangle', freq: midi(n - 12) * (1 + (i - 1) * 0.002), dur: bar * 1.2, gain: 0.03, attack: bar * 0.4, lowpass: 700, out: L.explore });
+        });
       }
     }
 
@@ -162,19 +161,21 @@ class Music {
         const n = chord[0] - 24 + (s === 10 ? 7 : 0);
         sfx.tone(t, { type: 'sawtooth', freq: midi(n), dur: STEP * 1.8, gain: 0.07, attack: 0.01, lowpass: 420, out: L.combat });
       }
-      // strings: a held fifth that swells through the bar
-      if (s === 0) {
-        for (const [n, d] of [[chord[0], 1], [chord[0] + 7, 1.004]]) {
-          sfx.tone(t, { type: 'sawtooth', freq: midi(n) * d, dur: bar * 1.05, gain: 0.018, attack: bar * 0.7, lowpass: 1500, out: L.combat });
+      // strings: tremolo on the root and fifth, with a half step above the root grinding
+      // against them, swelling through the bar
+      if (s % 2 === 0) {
+        for (const [n, g] of [[chord[0], 0.016], [chord[0] + 7, 0.012], [chord[0] + 1, 0.007]]) {
+          const swell = 0.4 + 0.6 * (s / 16);
+          sfx.tone(t, { type: 'sawtooth', freq: midi(n) * (1 + (rnd() - 0.5) * 0.004), dur: STEP * 1.9, gain: g * swell, attack: 0.02, lowpass: 1600, out: L.combat });
         }
       }
     }
 
     if (this.audible('boss')) {
-      // brass swell on the low root every other bar
+      // a low drone that slides down a half step every other bar
       if (s === 0 && step % 32 === 0) {
         for (const d of [1, 1.006]) {
-          sfx.tone(t, { type: 'sawtooth', freq: midi(chord[0] - 24) * d, dur: bar * 1.8, gain: 0.05, attack: 0.5, lowpass: 600, out: L.boss });
+          sfx.tone(t, { type: 'sawtooth', freq: midi(chord[0] - 24) * d, freqEnd: midi(chord[0] - 25) * d, dur: bar * 1.9, gain: 0.05, attack: 0.6, lowpass: 600, out: L.boss });
         }
       }
       // quick ticks in sixteenths, accents on the beat

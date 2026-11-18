@@ -7,6 +7,7 @@ import { tween, easeOut, easeInOut, linear } from './tween.js';
 import { buildModel } from './models.js';
 import { buildGltfModel } from './gltfModels.js';
 import { sfx } from '../audio/sfx.js';
+import { voices } from '../audio/voices.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeIn = (t) => t * t * t;
@@ -264,6 +265,7 @@ export class UnitView {
 
   /** Spell-casting gesture: raise both arms, run `release`, lower them. */
   async cast(target, release) {
+    this.cry('cast');
     if (target) await this.turnTowards(target.x, target.z);
     if (this.rig) {
       const { hit, done } = this.rig.play(target ? 'spell' : 'cast', { at: 0.4 });
@@ -336,10 +338,19 @@ export class UnitView {
     this.walking = false;
   }
 
+  /**
+   * A bark for this unit (see audio/voices.js), only while it can be seen. An attack by a
+   * monster without a voice of its own keeps its old cry (squeak, hiss, groan...).
+   */
+  cry(kind) {
+    if (!this.group.visible) return;
+    if (!voices.bark(this.unit, kind) && kind === 'attack') sfx.voice(this.unit.code);
+  }
+
   /** Melee: wind up overhead, step in and strike, recover. */
   async swing(target, onImpact) {
     if (this.model.bite) return this.bite(target, onImpact);
-    sfx.voice(this.unit.code);
+    this.cry('attack');
     await this.turnTowards(target.x, target.z);
     if (this.rig) {
       const { hit, done } = this.rig.play('melee', { at: 0.45, speed: 1.15 });
@@ -379,7 +390,7 @@ export class UnitView {
     const { head, body } = this.model;
     const home = this.group.position.clone();
     const dir = new THREE.Vector3(target.x - home.x, 0, target.z - home.z).normalize().multiplyScalar(0.4);
-    sfx.voice(this.unit.code);
+    this.cry('attack');
     await tween(160, (t) => {
       body.rotation.x = 0.15 * t;
       this.group.position.copy(home).addScaledVector(dir, -0.25 * t);
@@ -402,6 +413,7 @@ export class UnitView {
    * kind: 'fire' / 'necro' (cast), 'javelin' (overarm throw), 'arrow' (draw a bow)
    */
   async shoot(target, kind, release, onImpact) {
+    this.cry(kind === 'fire' || kind === 'necro' ? 'cast' : 'attack'); // Fire Bolt, Chill Touch: an incantation
     await this.turnTowards(target.x, target.z);
     if (this.rig) {
       const spell = kind === 'fire' || kind === 'necro';
