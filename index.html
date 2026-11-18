@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Crypt Skirmish</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage"></div>
+
+      <header id="initiative" aria-label="Initiative order"></header>
+
+      <aside id="log" aria-label="Combat log">
+        <h2>Combat log</h2>
+        <ol id="log-list"></ol>
+      </aside>
+
+      <footer id="actionbar">
+        <div id="hint"></div>
+        <div class="bar">
+          <div id="who"></div>
+          <div id="attacks"></div>
+          <button id="end-turn" type="button">End turn <kbd>Space</kbd></button>
+        </div>
+      </footer>
+
+      <div id="help">Left-click: move / attack<br>Right-drag: pan · Wheel: zoom<br>Space: end turn · Esc: cancel<br>M: sound on/off<br>Red dots: path provokes an opportunity attack<br>Click a chest next to you to open it</div>
+      <button id="sound" type="button" aria-pressed="true" title="Sound on/off (M)">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
+          <path class="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          <path class="cross" d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <span>Sound</span>
+      </button>
+      <div id="toast" role="status"></div>
+
+      <div id="banner" hidden>
+        <div class="card">
+          <h1 id="banner-title"></h1>
+          <p id="banner-text"></p>
+          <div class="banner-buttons">
+            <button id="next" type="button" hidden>Continue to the map</button>
+            <button id="restart" type="button">Try again</button>
+            <button id="to-map" type="button" hidden>Back to the map</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="title" hidden>
+        <div class="card">
+          <h1>Crypt Skirmish</h1>
+          <p class="tagline">Four heroes, one crypt, and a necromancer at the bottom of it.</p>
+          <div class="title-buttons">
+            <button id="title-continue" type="button" class="primary" hidden>Continue</button>
+            <button id="title-new" type="button">New campaign</button>
+          </div>
+          <p id="title-save" class="muted"></p>
+        </div>
+      </div>
+
+      <section id="camp" hidden aria-label="Camp">
+        <div class="camp-card">
+          <header class="camp-head">
+            <h2>Camp</h2>
+            <button id="camp-new" type="button" class="quiet">Abandon run</button>
+          </header>
+          <div id="camp-report"></div>
+          <div class="camp-grid">
+            <div class="camp-left">
+              <h3 class="sub">The way down</h3>
+              <div id="camp-map"></div>
+              <div id="camp-room"></div>
+            </div>
+            <div class="camp-right">
+              <h3 class="sub">The party</h3>
+              <div id="camp-party"></div>
+              <h3 class="sub">Pack</h3>
+              <div id="camp-pack"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
