@@ -376,6 +376,9 @@ The logo (`public/logo.svg`) and its emblem (`public/emblem.svg`, the logo witho
 lettering, used on the loading and title screens and as the tab icon) were drawn for the
 game as SVG. The logo's lettering uses Cinzel from Google Fonts, so open it in a browser
 for the right typeface.
+The home-screen icons (`public/apple-touch-icon.png`, `icon-192.png`, `icon-512.png`) are the
+emblem on the dark backdrop, and `public/og-image.jpg` is the 1200×630 picture link previews
+show; `public/manifest.webmanifest` lets phones add the game to the home screen.
 
 The heroes, skeletons and Morvath are from the **KayKit Adventurers** and **KayKit Skeletons**
 character packs by Kay Lousberg (www.kaylousberg.com), CC0. Their license files are in
