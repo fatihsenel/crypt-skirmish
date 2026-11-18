@@ -31,6 +31,7 @@ import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
 import { recordRun } from './game/history.js';
 import { unlock } from './game/achievements.js';
+import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak } from './game/daily.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -64,6 +65,10 @@ let nodeId = null;
  * { node, seed, log, check, explored, seen } (see replay.js). null when it can't be saved.
  */
 let fight = null;
+/** Today's daily crypt while it's being played (see daily.js), else null. */
+let daily = null;
+/** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
+let feats = { maxHit: 0, sneaks: 0 };
 
 // The character models load room by room: a fight waits only for the figures it needs.
 // Once the dungeon tiles are in (they gate the title), the next room's models come first,
@@ -85,11 +90,13 @@ const hud = new Hud({
   onChoose: (choice) => choose(choice),
   onRestart: () => {
     sfx.ui();
-    if (game?.over === 'victory') startCampaign(); // after the final room
+    if (daily) newGame(); // the daily again, from the same seed
+    else if (game?.over === 'victory') startCampaign(); // after the final room
     else newGame(); // retry this room with the party as it entered
   },
   onNext: () => leaveRoom(),
   onMap: () => {
+    if (daily) return backToTitle();
     sfx.ui();
     showCamp(null);
   },
@@ -112,9 +119,11 @@ const camp = new Camp({
     camp.show(campaign);
   },
   onNewCampaign: (difficulty, names, classes) => startCampaign(difficulty, names, classes),
+  onDaily: () => startDaily(),
   onContinue: () => {
     sfx.ui();
     saving = true;
+    daily = null;
     campaign = loadSave() ?? newCampaign();
     const saved = campaign.fight;
     delete campaign.fight;
@@ -131,12 +140,47 @@ const camp = new Camp({
 function startCampaign(difficulty, names, classes) {
   sfx.ui();
   saving = true;
+  daily = null;
   // A run being replaced (Abandon run, or New campaign over a save) goes into the history.
   const old = loadSave();
   if (old && !old.done) recordRun(old, 'abandoned');
   campaign = newCampaign(difficulty, names, classes);
   writeSave(campaign);
   showCamp(null);
+}
+
+/** Today's daily crypt: its room and party, apart from the campaign (nothing is saved). */
+function startDaily() {
+  sfx.ui();
+  saving = false;
+  daily = dailyPlan(dayKey());
+  campaign = dailyCampaign(daily);
+  nodeId = daily.node;
+  camp.hide();
+  newGame();
+}
+
+/** From a daily crypt back to the title screen, with the empty dungeon behind it. */
+function backToTitle() {
+  sfx.ui();
+  ++fightTicket;
+  for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
+  if (board) {
+    stage.scene.remove(board.group);
+    board.dispose();
+  }
+  for (const v of views.values()) {
+    v.dispose();
+    stage.scene.remove(v.group);
+  }
+  views = new Map();
+  game = null;
+  fight = null;
+  daily = null;
+  campaign = null;
+  hud.reset();
+  showBackdrop();
+  camp.showTitle(loadSave());
 }
 
 function showCamp(report) {
@@ -371,9 +415,16 @@ function startFight(resume) {
   }
 
   const level = levelById(NODES[nodeId].level);
-  const seed = resume?.seed ?? newSeed();
+  // A daily always starts from the day's seed, so every try (and everyone) faces the same dice.
+  const seed = resume?.seed ?? daily?.seed ?? newSeed();
   game = new Game(level, { party: campaign.party, difficulty: DIFFICULTIES[campaign.difficulty], rng: seeded(seed) });
-  fight = { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
+  fight = daily ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
+  feats = { maxHit: 0, sneaks: 0 };
+  game.on('attack', (r) => {
+    if (r.attacker.team !== 'heroes' || !r.hit) return;
+    feats.maxHit = Math.max(feats.maxHit, r.damage ?? 0);
+    if (r.sneak) feats.sneaks++;
+  });
   if (resume && !replaySaved(resume)) {
     game = null;
     views = new Map();
@@ -1320,7 +1371,7 @@ async function checkGameOver() {
   let awards = []; // achievements unlocked by this fight (none on test runs)
   if (game.over === 'victory') {
     sfx.victory();
-    if (saving) awards = unlock('room', { game, node: nodeId });
+    if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily });
     if (!final) {
       board.lightStairs();
       setTimeout(() => sfx.stairs(), 900);
@@ -1341,9 +1392,17 @@ async function checkGameOver() {
       writeSave(campaign);
     }
   }
+  let dailyResult = null;
+  if (daily) {
+    const attempt = { won: game.over === 'victory', rounds: game.round, downed: Object.values(game.stats).reduce((n, h) => n + (h.downed ?? 0), 0), node: nodeId };
+    const results = recordDaily(daily.key, attempt);
+    const run = streak(results, daily.key);
+    if (attempt.won) awards.push(...unlock('daily', { streak: run }));
+    dailyResult = { ...attempt, best: results[daily.key], streak: run };
+  }
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary, awards,
+    summary, awards, daily: dailyResult,
   });
   return true;
 }
@@ -1604,15 +1663,7 @@ window.addEventListener('keydown', (ev) => {
 });
 
 /** A rested party at `level` (3 to 6), for the ?level= test route (&party=5). */
-function testParty(state, level) {
-  if (!(level > 3 && level <= 6)) return state;
-  for (const [code, rec] of Object.entries(state.party)) {
-    const u = heroUnit(code, { cls: rec.cls, level });
-    Object.assign(rec, { level, hp: u.maxHp, slots: { ...u.slotMax } });
-    if (u.layOnHandsMax) rec.layOnHands = u.layOnHandsMax;
-  }
-  return state;
-}
+const testParty = partyAt;
 
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets
 // the heroes' level, &paladin swaps the Fighter for a Paladin and &ranger the Rogue for a Ranger.

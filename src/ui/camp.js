@@ -12,6 +12,7 @@ import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
 import { loadHistory } from '../game/history.js';
 import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
+import { dayKey, dailyPlan, loadDaily, streak } from '../game/daily.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -38,8 +39,8 @@ const CLASS_BLURB = {
 };
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -52,6 +53,7 @@ export class Camp {
     $('#title').addEventListener('click', (ev) => {
       const b = ev.target.closest('button');
       if (b?.id === 'title-continue') this.h.onContinue();
+      if (b?.id === 'title-daily-play') this.h.onDaily();
       if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty, this.names(), { ...this.classes });
       if (b?.dataset.cls) this.pickClass(b.dataset.slot, b.dataset.cls);
     });
@@ -127,6 +129,26 @@ export class Camp {
     $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
     this.renderHistory(loadHistory());
     this.renderAwards(loadAchievements());
+    this.renderDaily();
+  }
+
+  /** Today's crypt: which room, the party, and the day's best result and the streak so far. */
+  renderDaily() {
+    const plan = dailyPlan(dayKey());
+    const results = loadDaily();
+    const today = results[plan.key];
+    const party = [plan.classes.F ? 'a Paladin' : 'a Fighter', 'a Wizard', plan.classes.R ? 'a Ranger' : 'a Rogue', 'a Cleric'];
+    const box = $('#title-daily');
+    box.querySelector('.daily-date').textContent = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    box.querySelector('.daily-room').textContent =
+      `${levelById(NODES[plan.node].level).name}, with ${party.slice(0, 3).join(', ')} and ${party[3]} at level ${plan.level}. The same for everyone today.`;
+    const run = streak(results, plan.key);
+    const rounds = (n) => `${n} round${n === 1 ? '' : 's'}`;
+    box.querySelector('.daily-result').textContent = today
+      ? (today.won ? `Best today: won in ${rounds(today.rounds)}` : `Not won yet today (${today.tries} ${today.tries === 1 ? 'try' : 'tries'})`)
+        + (run ? ` · Streak: ${run} day${run === 1 ? '' : 's'}` : '')
+      : run ? `Streak: ${run} day${run === 1 ? '' : 's'}. Win today to keep it going.` : 'Not played yet today.';
+    $('#title-daily-play').textContent = today?.won ? 'Play it again' : 'Play today’s crypt';
   }
 
   /** Every achievement: unlocked ones in gold with the date, the rest dimmed, as goals. */

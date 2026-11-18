@@ -443,7 +443,7 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [] }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null }) {
     this.renderSummary(summary);
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
@@ -461,8 +461,28 @@ export class Hud {
     $('#to-map').hidden = won;
     $('#restart').textContent = won ? 'New campaign' : 'Try again';
     $('#restart').hidden = won && !final;
+    $('#to-map').textContent = 'Back to the map';
+    if (daily) this.dailyBanner(daily, level);
     $('#banner').dataset.result = result;
     $('#banner').hidden = false;
+  }
+
+  /** The daily crypt's ending: the result, the day's best and the streak; try again or leave. */
+  dailyBanner(d, level) {
+    const rounds = (n) => `${n} round${n === 1 ? '' : 's'}`;
+    const fell = (n) => (n === 0 ? 'nobody fell' : `${n} hero${n === 1 ? '' : 'es'} fell`);
+    const best = d.best.won ? `won in ${rounds(d.best.rounds)}, ${fell(d.best.downed)}` : 'not won yet';
+    $('#banner-title').textContent = d.won ? 'Daily crypt won' : 'Defeat';
+    $('#banner-text').textContent = (d.won
+      ? `${level} is quiet after ${rounds(d.rounds)}, and ${fell(d.downed)}.`
+      : `Your party has fallen in ${level}. Today’s crypt can be tried as often as you like.`)
+      + ` Best today: ${best} (try ${d.best.tries}).`
+      + (d.streak > 0 ? ` Streak: ${d.streak} day${d.streak === 1 ? '' : 's'}.` : '');
+    $('#next').hidden = true;
+    $('#restart').hidden = false;
+    $('#restart').textContent = 'Try again';
+    $('#to-map').hidden = false;
+    $('#to-map').textContent = 'Back to the title';
   }
 
   /** Achievements this fight unlocked, as gold chips under the banner text. */

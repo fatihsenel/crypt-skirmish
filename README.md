@@ -164,10 +164,16 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   camp, or a new campaign over the save) and how far the party got, with difficulty, date,
   party level, rooms won, rounds, the party and who dealt the most damage. An abandoned run
   that never won a room isn't kept
-- **achievements**: 12 goals that last across runs, such as winning a room in 3 rounds,
-  defeating a mimic, beating a boss without a hero falling, or winning a campaign on Hard.
+- **achievements**: 20 goals that last across runs, such as winning a room in 3 rounds,
+  defeating a mimic, a 25-damage hit, 4 sneak attacks in a fight, beating a boss without a
+  hero falling, winning a campaign on Hard or with no hero ever falling, and daily wins.
   New ones show on the victory banner; the title screen lists them all, locked ones dimmed.
   Test rooms opened with `?level=` don't count
+- **daily crypt**: one room a day from the title screen, the same for everyone: the date
+  picks the room, a rested party at a level to suit it (sometimes with a Paladin or a
+  Ranger) and the seed the dice start from, so every try starts the same. Play it as often
+  as you like; the day's best result is kept (a win, then fewest rounds, then fewest heroes
+  down), and wins on days in a row make a streak. It never touches the campaign save
 - **voices**: every character barks in a made-up tongue, synthesized from formant filters
   (no recordings). Heroes shout on attacks, chant spells, grunt when hit and cry out when
   they fall; goblins, bugbears and orcs snarl, the necromancer intones, specters moan,
@@ -285,7 +291,8 @@ src/
     ai.js          monster brains (brute / skirmisher / caster), one step at a time
     replay.js      fight saves: hero commands, monster turns and replaying them from a seed
     history.js     past runs for the title screen (won or abandoned), newest 20 kept
-    achievements.js  the 12 achievements and their checks (room won, campaign won)
+    achievements.js  the 20 achievements and their checks (room, campaign or daily won)
+    daily.js       the daily crypt: the day's room, party and seed, best results, streaks
   render/          three.js only
     stage.js       renderer, isometric orthographic camera, lights, loop, screen shake
     board.js       dungeon meshes, torches, doors, chests, traps, stairs, banners, props,

@@ -39,14 +39,34 @@ describe('achievements', () => {
 
   it('checks the run goals', () => {
     const state = newCampaign('hard', {}, { F: 'P' });
-    expect(ids(earned('run', { state }, {}))).toEqual(['campaign', 'hard', 'unbroken', 'new-blood']);
+    expect(ids(earned('run', { state }, {}))).toEqual(['campaign', 'hard', 'unbroken', 'iron', 'new-blood']);
     state.stats.lost = 1;
-    expect(ids(earned('run', { state: { ...newCampaign('normal'), stats: state.stats } }, {}))).toEqual(['campaign']);
+    expect(ids(earned('run', { state: { ...newCampaign('normal'), stats: state.stats } }, {}))).toEqual(['campaign', 'iron']);
   });
 
   it('reads stored unlocks safely', () => {
     expect(parseAchievements('junk')).toEqual({});
     expect(parseAchievements('[1]')).toEqual({});
     expect(parseAchievements('{"swift":5,"nope":1,"hard":"x"}')).toEqual({ swift: 5 });
+  });
+});
+
+describe('newer achievements', () => {
+  const won = { 'first-room': 1 };
+  it('counts a big hit, sneak attacks, healing and a one-hero sweep', () => {
+    const game = fight({ stats: { R: { kills: 4, healing: 0 }, C: { kills: 0, healing: 31 } }, units: [{ team: 'heroes', alive: true }, { team: 'heroes', alive: true }] });
+    expect(ids(earned('room', { game, node: 'crypt', feats: { maxHit: 25, sneaks: 4 } }, won)))
+      .toEqual(['heavy-blow', 'sneaky', 'medic', 'one-hero']);
+  });
+  it('knows a last stand, and needs four kills for a sweep', () => {
+    const game = fight({ stats: { R: { kills: 3 } }, units: [{ team: 'heroes', alive: true }, { team: 'heroes', alive: false }] });
+    expect(ids(earned('room', { game, node: 'crypt' }, won))).toEqual(['last-stand']);
+  });
+  it('leaves the act goals to the campaign', () => {
+    expect(ids(earned('room', { game: fight(), node: 'barrow', daily: true }, won))).toEqual(['clean-boss']);
+  });
+  it('rewards daily wins and a three-day streak', () => {
+    expect(ids(earned('daily', { streak: 1 }, {}))).toEqual(['daily']);
+    expect(ids(earned('daily', { streak: 3 }, { daily: 1 }))).toEqual(['daily-streak']);
   });
 });

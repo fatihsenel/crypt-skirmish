@@ -1,6 +1,8 @@
 // Achievements: goals that last across runs, kept in the browser. Each is checked when a room
-// is won (`room`: from the fight that just ended) or when a campaign is won (`run`: from the
-// finished campaign), and unlocks once. Pure checks here; main.js stores and shows them.
+// is won (`room`: the fight that just ended, its node, and `feats` main.js tallied from the
+// fight's attacks), when a campaign is won (`run`: the finished campaign), or when the daily
+// crypt is won (`daily`: the daily win streak, today included), and unlocks once.
+// Pure checks here; main.js stores and shows them.
 
 import { NODES, HERO_CODES } from './campaign.js';
 import { classOf } from './units.js';
@@ -8,6 +10,7 @@ import { classOf } from './units.js';
 export const ACHIEVEMENTS_KEY = 'crypt-skirmish:achievements';
 
 const heroTotal = (stats, field) => Object.values(stats ?? {}).reduce((n, h) => n + (h[field] ?? 0), 0);
+const heroesUp = (game) => game.units.filter((u) => u.team === 'heroes' && u.alive).length;
 
 /** In the order the title screen lists them. */
 export const ACHIEVEMENTS = [
@@ -40,12 +43,37 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ game, node }) => !!NODES[node]?.boss && heroTotal(game.stats, 'downed') === 0,
   },
   {
+    id: 'heavy-blow', name: 'Heavy blow', desc: 'Deal 25 or more damage with a single attack.',
+    on: 'room', test: ({ feats }) => (feats?.maxHit ?? 0) >= 25,
+  },
+  {
+    id: 'sneaky', name: 'Knife in the dark', desc: 'Land 4 sneak attacks in one fight.',
+    on: 'room', test: ({ feats }) => (feats?.sneaks ?? 0) >= 4,
+  },
+  {
+    id: 'medic', name: 'Field medic', desc: 'Heal 30 HP in one fight.',
+    on: 'room', test: ({ game }) => heroTotal(game.stats, 'healing') >= 30,
+  },
+  {
+    id: 'one-hero', name: 'One-hero army', desc: 'Win a room where one hero lands every kill (at least 4).',
+    on: 'room',
+    test: ({ game }) => {
+      const kills = Object.values(game.stats ?? {}).map((h) => h.kills ?? 0);
+      const total = kills.reduce((a, b) => a + b, 0);
+      return total >= 4 && kills.includes(total);
+    },
+  },
+  {
+    id: 'last-stand', name: 'Last one standing', desc: 'Win a room with only one hero still on their feet.',
+    on: 'room', test: ({ game }) => heroesUp(game) === 1,
+  },
+  {
     id: 'act-one', name: 'The necromancer', desc: 'Clear the Sanctum, the end of act one.',
-    on: 'room', test: ({ node }) => node === 'sanctum',
+    on: 'room', test: ({ node, daily }) => !daily && node === 'sanctum', // campaign progress, not a daily
   },
   {
     id: 'act-two', name: 'The barrow king', desc: 'Clear the Barrow, the end of act two.',
-    on: 'room', test: ({ node }) => node === 'barrow',
+    on: 'room', test: ({ node, daily }) => !daily && node === 'barrow',
   },
   {
     id: 'campaign', name: 'Crypt cleared', desc: 'Win a campaign.',
@@ -60,9 +88,21 @@ export const ACHIEVEMENTS = [
     on: 'run', test: ({ state }) => (state.stats?.lost ?? 0) === 0,
   },
   {
+    id: 'iron', name: 'Iron party', desc: 'Win a campaign without a hero ever falling.',
+    on: 'run', test: ({ state }) => heroTotal(state.stats?.heroes, 'downed') === 0,
+  },
+  {
     id: 'new-blood', name: 'New blood', desc: 'Win a campaign with a Paladin or a Ranger in the party.',
     on: 'run',
     test: ({ state }) => HERO_CODES.some((c) => ['P', 'A'].includes(classOf(c, state.party?.[c]))),
+  },
+  {
+    id: 'daily', name: 'Daily delver', desc: 'Win a daily crypt.',
+    on: 'daily', test: () => true,
+  },
+  {
+    id: 'daily-streak', name: 'Creature of habit', desc: 'Win the daily crypt 3 days in a row.',
+    on: 'daily', test: ({ streak }) => streak >= 3,
   },
 ];
 
