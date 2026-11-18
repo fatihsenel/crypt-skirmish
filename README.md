@@ -2,6 +2,10 @@
 
 **Play it in the browser: https://fatihsenel.github.io/crypt-skirmish/**
 
+![The party fighting skeletons in the Flooded Ossuary, with the combat log](docs/screenshots/battle.jpg)
+
+![Wren sneaking past a patrolling goblin and sleeping rats while hidden](docs/screenshots/stealth.jpg)
+
 A small turn-based dungeon crawl: a party of four (Fighter, Wizard, Rogue, Cleric) fights
 its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 
