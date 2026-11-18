@@ -11,6 +11,7 @@
 // each step and re-plan from the new state.
 
 import { key, pathFrom, gridDistance } from './grid.js';
+import { PATROL_PACE } from './combat.js';
 
 const keepsDistance = (unit) => unit.ai === 'skirmisher' || unit.ai === 'caster';
 
@@ -107,6 +108,36 @@ function corpseToRaise(game, unit) {
 }
 
 /**
+ * Where a patrolling monster walks this turn: up to PATROL_PACE tiles toward its next
+ * waypoint (moving on to the following one when it gets there). Doesn't open doors.
+ */
+export function patrolStep(game, unit) {
+  const { patrol } = unit;
+  for (let tries = 0; tries < patrol.route.length; tries++) {
+    const wp = patrol.route[patrol.next];
+    if (wp.x === unit.x && wp.z === unit.z) {
+      patrol.next = (patrol.next + 1) % patrol.route.length;
+      continue;
+    }
+    const toWp = game.grid.distanceField([wp]);
+    const here = toWp.get(key(unit.x, unit.z)) ?? Infinity;
+    let best = null;
+    const map = game.reachable(unit);
+    for (const n of map.values()) {
+      if (n.dist === 0 || n.dist > PATROL_PACE || !game.canEndOn(unit, n.x, n.z)) continue;
+      const path = pathFrom(map, n.x, n.z);
+      if (path.some((p) => game.grid.closedDoorAt(p.x, p.z))) continue;
+      const d = toWp.get(key(n.x, n.z)) ?? Infinity;
+      if (d < here && (!best || d < best.d || (d === best.d && n.dist < best.n.dist))) best = { n, d };
+    }
+    if (!best) return null; // blocked (someone in the way): wait a turn
+    if (best.d === 0) patrol.next = (patrol.next + 1) % patrol.route.length;
+    return { x: best.n.x, z: best.n.z };
+  }
+  return null;
+}
+
+/**
  * Next thing the monster should do. `memo` persists across calls within one turn
  * (start with {}). Returns one of
  *   { type: 'bonus', id }   { type: 'action', id }   { type: 'spell', id, target }
@@ -114,7 +145,15 @@ function corpseToRaise(game, unit) {
  */
 export function nextMonsterStep(game, unit, memo) {
   if (game.over || !unit.alive) return { type: 'end' };
-  if (unit.unaware) return { type: 'end' }; // hasn't noticed the party yet
+  if (unit.unaware) {
+    // Hasn't noticed the party yet: stands guard, sleeps, or walks its beat.
+    if (unit.patrol && !memo.moved) {
+      memo.moved = true;
+      const dest = patrolStep(game, unit);
+      if (dest) return { type: 'move', ...dest };
+    }
+    return { type: 'end' };
+  }
   const adjacent = game.isAdjacentToEnemy(unit);
 
   if (unit.turned) {

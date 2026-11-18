@@ -41,8 +41,15 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **monster senses**: monsters start unaware. They notice a hero they can see within 8
   tiles (3 for Wren, a *skulker*), hear fighting within 5 tiles of walking distance (a closed
   door counts as 2 more; 3rd-level spells carry to 8), and a monster that spots you or gets hurt shouts to unaware
-  allies within 4 tiles that can see it. Unaware monsters stand still, make no opportunity
-  attacks, and are attacked with advantage (so Sneak Attack works on them)
+  allies within 4 tiles that can see it (a roused ally doesn't pass the alarm on). Unaware
+  monsters make no opportunity attacks and are attacked with advantage (so Sneak Attack
+  works on them). Some **sleep** (they see nothing and only wake to noise within 2 tiles,
+  a shout, or a blow); some **patrol**, walking a beat at half speed until they notice you
+- **stealth**: any hero can take the **Hide** action (Wren as a bonus action, with
+  expertise; Brannoc and Maela roll with disadvantage in heavy armour). A hidden hero is
+  only spotted by a monster whose passive Perception (10 + WIS) reaches the Stealth roll,
+  or one right next to them. The first attack from hiding has advantage; attacking or
+  casting gives you away. You can't hide while an alert enemy can see you
 - **atmosphere**: walls in front of a figure turn see-through; hits spray blood (bone chips
   from the undead), fire bolts burst into embers, critical hits and Fireball shake the
   screen, and a natural 20 or 1 throws a tumbling d20 over the attacker
@@ -139,8 +146,8 @@ you can swap the visuals (real models, different camera) without touching rules.
    (its column, row and `next` links); the camp map draws it.
 4. **More .glb models**: goblins, orcs and rats are still procedural. Add a CC0 pack's file
    to `public/models` and an entry in `SPECS` in `gltfModels.js` (clip names per action).
-5. **Stealth for the heroes**: a Hide action, or a stealth roll against a monster's
-   passive Perception instead of the fixed sight ranges in `combat.js`.
+5. **Searching monsters**: alert monsters that lose track of a hidden hero could walk
+   to where they last saw them (`patrolStep` in `ai.js` already walks toward a tile).
 
 ## Credits
 

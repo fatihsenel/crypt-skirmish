@@ -185,7 +185,8 @@ export class UnitView {
       u.shielded && ['shield', 'Shield +5'],
       u.disengaged && ['disengage', 'Disengaged'],
       u.turned && ['turned', 'Turned'],
-      u.unaware && ['unaware', 'Unaware'],
+      u.hidden && ['hidden', `Hidden · ${u.hidden}`],
+      u.asleep ? ['asleep', 'Asleep'] : u.patrol && u.unaware ? ['unaware', 'Patrolling'] : u.unaware && ['unaware', 'Unaware'],
     ].filter(Boolean);
     this.label.element.querySelector('.tags').innerHTML =
       tags.map(([cls, text]) => `<i class="tag ${cls}">${text}</i>`).join('');

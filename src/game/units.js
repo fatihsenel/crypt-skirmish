@@ -6,6 +6,7 @@ export const TEMPLATES = {
     name: 'Brannoc', cls: 'Fighter', team: 'heroes', color: 0x3b6fd8,
     hp: 31, ac: 17, speed: 6, prof: 2, level: 3,
     features: ['secondWind'],
+    noisyArmor: true, // splint: disadvantage on Stealth
     potions: 1,
     stats: { str: 16, dex: 12, con: 15, int: 10, wis: 12, cha: 10 },
     attacks: [
@@ -29,7 +30,8 @@ export const TEMPLATES = {
   R: {
     name: 'Wren', cls: 'Rogue', team: 'heroes', color: 0x3a8f6a,
     hp: 24, ac: 14, speed: 6, prof: 2, level: 3,
-    features: ['cunningDash', 'cunningDisengage'],
+    features: ['cunningDash', 'cunningDisengage', 'cunningHide'],
+    stealth: 'expert',
     passives: ['sneakAttack', 'trapSense', 'skulker'],
     stats: { str: 10, dex: 16, con: 12, int: 12, wis: 14, cha: 12 },
     attacks: [
@@ -41,6 +43,7 @@ export const TEMPLATES = {
     name: 'Maela', cls: 'Cleric', team: 'heroes', color: 0xd8c36a,
     hp: 24, ac: 18, speed: 6, prof: 2, level: 3, // chain mail + shield
     features: ['turnUndead'],
+    noisyArmor: true, // chain mail: disadvantage on Stealth
     castStat: 'wis',
     spells: ['sacredFlame', 'cureWounds', 'healingWord'],
     slots: { 1: 4, 2: 2 },

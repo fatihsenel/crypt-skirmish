@@ -74,6 +74,8 @@ html, body {
 .tag.disengage { color: var(--heal); }
 .tag.turned { color: var(--gold); }
 .tag.unaware { color: #a9a3b8; font-style: italic; }
+.tag.asleep { color: #8fa3c8; font-style: italic; }
+.tag.hidden { color: #b9a4e8; }
 .float-text.heal { color: var(--heal); }
 .float-text.spell { color: var(--spell); font-size: 16px; }
 .float-text.warn { color: var(--monster); font-size: 15px; }

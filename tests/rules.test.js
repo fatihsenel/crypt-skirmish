@@ -796,3 +796,145 @@ describe('monster senses', () => {
     expect(s.unaware).toBe(false); // 5 steps with the door open
   });
 });
+
+describe('stealth', () => {
+  // The goblin starts 9 tiles away: out of sight.
+  const rows = ['############', '#W.........#', '#..........#', '#.........g#', '############'];
+  const setup = () => {
+    const game = new Game(rows, { rng: fixed(0.5) }); // every d20 rolls 11
+    game.start();
+    const w = game.units.find((u) => u.code === 'W');
+    const g = game.units.find((u) => u.code === 'g');
+    setTurn(game, game.units.indexOf(w));
+    return { game, w, g };
+  };
+
+  it('a hidden hero walks past a monster whose passive Perception is below the roll', () => {
+    const { game, w, g } = setup();
+    const r = game.doAction(w, 'hide');
+    expect(r.total).toBe(13); // 11 + DEX 2; the goblin's passive Perception is 9
+    expect(w.hidden).toBe(13);
+    game.move(w, 5, 2);
+    expect(g.unaware).toBe(true);
+    expect(w.hidden).toBe(13);
+  });
+
+  it('without hiding, the same walk is spotted', () => {
+    const { game, w, g } = setup();
+    game.move(w, 5, 2);
+    expect(g.unaware).toBe(false);
+  });
+
+  it('stepping right next to a monster gives you away', () => {
+    const { game, w, g } = setup();
+    game.doAction(w, 'hide');
+    const seen = [];
+    game.on('revealed', (e) => seen.push(e));
+    Object.assign(w, { x: 9, z: 2 });
+    game.updateAwareness();
+    expect(w.hidden).toBe(0);
+    expect(seen[0]).toMatchObject({ unit: w, cause: 'spotted', by: g });
+    expect(g.unaware).toBe(false);
+  });
+
+  it('the first attack from hiding has advantage, then you are seen', () => {
+    const { game, w, g } = setup();
+    game.doAction(w, 'hide');
+    w.bonusUsed = false;
+    w.actionUsed = false; // pretend the hide was a bonus action
+    expect(game.attackMods(w, g, w.attacks[0]).adv).toContain('hidden');
+    expect(game.attackMods(g, w, g.attacks[1]).dis).toContain('target hidden');
+    game.attack(w, g, w.attacks[0]);
+    expect(w.hidden).toBe(0);
+  });
+
+  it("can't hide while an alert enemy can see you", () => {
+    const game = new Game(rows, { senses: false });
+    game.start();
+    const w = setTurn(game, game.units.findIndex((u) => u.code === 'W'));
+    Object.assign(w, { x: 5, z: 2 });
+    expect(game.actionProblem(w, 'hide')).toMatch(/watching/);
+  });
+
+  it('heavy armour hides with disadvantage; Wren hides as a bonus action with expertise', () => {
+    const game = new Game(['#######', '#F...R#', '#######'], { rng: fixed(0.5) });
+    game.start();
+    const f = setTurn(game, game.units.findIndex((u) => u.code === 'F'));
+    expect(game.doAction(f, 'hide').rolls).toHaveLength(2);
+    const r = setTurn(game, game.units.findIndex((u) => u.code === 'R'));
+    const res = game.doAction(r, 'cunningHide');
+    expect(res.total).toBe(11 + 3 + 4);
+    expect(r.actionUsed).toBe(false);
+  });
+});
+
+describe('sleepers and patrols', () => {
+  it("an ally roused by a shout doesn't pass the alarm on", () => {
+    const game = new Game(['############', '#F#.g..s..s#', '############']);
+    game.start();
+    const [g, s1, s2] = game.units.filter((u) => u.team === 'monsters');
+    game.alert(g, 'hurt');
+    expect(s1.unaware).toBe(false); // 3 tiles from the goblin
+    expect(s2.unaware).toBe(true);  // 3 tiles from s1, 6 from the goblin
+  });
+
+  it('a sleeping monster sees nothing and sleeps through fighting a few tiles off', () => {
+    // The rat is 5 tiles off: beyond the goblin's shout, within earshot of an awake monster.
+    const level = { rows: ['##########', '#F....r..#', '#g.......#', '##########'], asleep: ['6,1'] };
+    const game = new Game(level, { rng: fixed(0.5) });
+    game.start();
+    const f = game.units.find((u) => u.code === 'F');
+    const g = game.units.find((u) => u.code === 'g');
+    const r = game.units.find((u) => u.code === 'r');
+    expect(r.asleep && r.unaware).toBe(true); // in plain view
+    setTurn(game, game.units.indexOf(f));
+    game.attack(f, g, f.attacks[0]);
+    expect(r.asleep).toBe(true); // an awake monster would have heard that
+    expect(game.attackMods(f, r, f.attacks[0]).adv).toContain('asleep');
+    const woke = [];
+    game.on('alert', (e) => woke.push(e));
+    Object.assign(f, { x: 4, z: 1 });
+    game.noise(f);
+    expect(r.asleep).toBe(false);
+    expect(woke[0]).toMatchObject({ unit: r, cause: 'noise', wasAsleep: true });
+  });
+
+  it('a patrol walks its beat at half speed and turns back at the end', () => {
+    const level = {
+      rows: ['############', '#F...#....s#', '#....#.....#', '#....#.....#', '############'],
+      patrols: { '10,1': [[6, 3]] },
+    };
+    const game = new Game(level);
+    game.start();
+    const s = game.units.find((u) => u.code === 's');
+    expect(s.unaware).toBe(true);
+    setTurn(game, game.units.indexOf(s));
+    const step = nextMonsterStep(game, s, {});
+    expect(step.type).toBe('move');
+    expect(gridDistance(s, step)).toBeLessThanOrEqual(3);
+    game.move(s, step.x, step.z);
+    expect(gridDistance(s, { x: 6, z: 3 })).toBe(1);
+    setTurn(game, game.units.indexOf(s));
+    const step2 = nextMonsterStep(game, s, {});
+    game.move(s, step2.x, step2.z);
+    expect([s.x, s.z]).toEqual([6, 3]);
+    expect(s.patrol.next).toBe(0); // heading home
+    expect(s.unaware).toBe(true); // the wall still hides the party
+  });
+
+  it('a patrol that wanders into view raises the alarm and stops patrolling', () => {
+    const level = {
+      rows: ['############', '#F.........#', '#####......#', '#.........s#', '############'],
+      patrols: { '10,3': [[6, 1]] },
+    };
+    const game = new Game(level);
+    game.start();
+    const s = game.units.find((u) => u.code === 's');
+    expect(s.unaware).toBe(true);
+    setTurn(game, game.units.indexOf(s));
+    const step = nextMonsterStep(game, s, {});
+    game.move(s, step.x, step.z);
+    expect(s.unaware).toBe(false);
+    expect(s.patrol).toBeNull();
+  });
+});

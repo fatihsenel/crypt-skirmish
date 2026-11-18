@@ -9,6 +9,8 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const who = (u) => `<span class="${u.team}">${esc(u.name)}</span>`;
 const ordinal = (n) => ['', '1st', '2nd', '3rd'][n] ?? `${n}th`;
 const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus ? ` ${signed(roll.bonus)}` : ''}]</span>`;
+// (logAction builds every action's text, so this must cope with results that have no roll)
+const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
 
@@ -133,6 +135,8 @@ export class Hud {
       secondWind: `uses <b>Second Wind</b> and regains <b class="heal">${r.healed} HP</b> ${r.roll && dice(r.roll)}.`,
       cunningDash: 'uses <b>Cunning Action</b> to Dash.',
       cunningDisengage: 'uses <b>Cunning Action</b> to Disengage.',
+      hide: `slips into the shadows: <b>Stealth ${r.total}</b> ${stealthRoll(r)}.`,
+      cunningHide: `uses <b>Cunning Action</b> to Hide: <b>Stealth ${r.total}</b> ${stealthRoll(r)}.`,
       aggressive: 'roars and charges (<b>Aggressive</b>).',
       potion: `drinks a <b>potion of healing</b>: <b class="heal">+${r.healed} HP</b> ${r.roll && dice(r.roll)}.`,
       turnUndead: `presents a holy symbol: <b class="spell">Turn Undead</b> (WIS save DC ${r.dc})<br>` +

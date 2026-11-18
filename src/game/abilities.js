@@ -6,12 +6,17 @@ export const ACTIONS = {
   dash: { name: 'Dash', time: 'action', desc: 'Gain extra movement equal to your speed this turn.' },
   dodge: { name: 'Dodge', time: 'action', desc: 'Attacks against you have disadvantage until your next turn.' },
   disengage: { name: 'Disengage', time: 'action', desc: 'Your movement doesn’t provoke opportunity attacks this turn.' },
+  hide: {
+    name: 'Hide', time: 'action',
+    desc: 'Roll Stealth. Unaware monsters only spot you if their passive Perception beats it (or they are next to you); your first attack from hiding has advantage. Not while an alert enemy can see you.',
+  },
   potion: { name: 'Potion', time: 'action', desc: 'Drink a potion of healing: regain 2d4 + 2 HP.' },
   // Fighter
   secondWind: { name: 'Second Wind', time: 'bonus', feature: true, desc: 'Regain 1d10 + fighter level HP. Once per fight.' },
   // Rogue
   cunningDash: { name: 'Cunning Dash', time: 'bonus', feature: true, desc: 'Cunning Action: Dash as a bonus action.' },
   cunningDisengage: { name: 'Cunning Disengage', time: 'bonus', feature: true, desc: 'Cunning Action: Disengage as a bonus action.' },
+  cunningHide: { name: 'Cunning Hide', time: 'bonus', feature: true, desc: 'Cunning Action: Hide as a bonus action (Stealth with expertise).' },
   // Cleric
   turnUndead: {
     name: 'Turn Undead', time: 'action', feature: true, range: 6,
@@ -22,7 +27,7 @@ export const ACTIONS = {
   aggressive: { name: 'Aggressive', time: 'bonus', feature: true, desc: 'Move up to its speed toward an enemy.' },
 };
 
-export const STANDARD_ACTIONS = ['dash', 'dodge', 'disengage'];
+export const STANDARD_ACTIONS = ['dash', 'dodge', 'disengage', 'hide'];
 
 /** Passive features (no button): documented here for the HUD tooltips. */
 export const PASSIVES = {

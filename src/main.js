@@ -155,6 +155,7 @@ let selected = null;
 let hovered = null; // {x, z}
 let pendingReveals = []; // traps spotted during a move, shown once the move has played out
 let pendingAlerts = [];  // monsters that noticed the party, shown once the action has played out
+let pendingSpotted = []; // hidden heroes found (or giving themselves away), shown the same way
 let debugAutoplay = false; // __debug.autoplay(true): the monster AI plays the heroes too
 
 const view = (u) => views.get(u.id);
@@ -243,6 +244,7 @@ function newGame() {
   selected = null;
   pendingReveals = [];
   pendingAlerts = [];
+  pendingSpotted = [];
   visionSig = '';
   seenIds = new Set();
   board.fadeSources = () => [...views.values()]
@@ -286,6 +288,7 @@ function newGame() {
   game.on('chest', (r) => hud.logChest(r));
   game.on('trapFound', (r) => pendingReveals.push(r));
   game.on('alert', (r) => pendingAlerts.push(r));
+  game.on('revealed', (r) => pendingSpotted.push(r));
 
   game.start();
 }
@@ -314,15 +317,27 @@ const ALERT_TEXT = {
 
 /** Monsters that just noticed the party: a "!" over each one in view, one log line. */
 function flushAlerts() {
+  for (const { unit, cause, by } of pendingSpotted) {
+    if (cause === 'spotted') {
+      floatText(stage.scene, unit, 'Spotted!', 'warn');
+      const finder = by && !unseen(by) ? `<span class="monsters">${by.name}</span>` : 'Something';
+      hud.log(`${finder} spots <span class="heroes">${unit.name}</span> in the shadows!`, 'sys');
+    } else {
+      hud.log(`<span class="heroes">${unit.name}</span> steps out of hiding.`, 'sys');
+    }
+  }
+  pendingSpotted = [];
   if (!pendingAlerts.length) return;
   let hidden = 0;
-  for (const { unit, cause } of pendingAlerts) {
+  for (const { unit, cause, wasAsleep } of pendingAlerts) {
+    if (!unit.alive) continue; // killed by the blow that woke it: "falls" says it all
     if (unseen(unit)) {
       hidden++;
       continue;
     }
     if (cause !== 'hurt') floatText(stage.scene, unit, '!', 'warn');
-    hud.log(`<span class="monsters">${unit.name}</span> ${ALERT_TEXT[cause]}`, 'sys');
+    const text = wasAsleep && cause !== 'hurt' ? 'wakes with a start!' : ALERT_TEXT[cause];
+    hud.log(`<span class="monsters">${unit.name}</span> ${text}`, 'sys');
   }
   if (hidden) hud.log('Somewhere in the dark, something stirs.', 'sys');
   if (pendingAlerts.some((a) => !unseen(a.unit) && a.cause !== 'hurt')) sfx.alert();
@@ -694,6 +709,12 @@ async function doAction(unit, id) {
       }
       await Promise.all(r.saves.filter((s) => s.destroyed).map((s) => damageReaction(s.unit)));
       await wait(500);
+      break;
+    case 'hide':
+    case 'cunningHide':
+      floatText(stage.scene, unit, `Stealth ${r.total}`, 'spell');
+      v.updateStatus();
+      await wait(400);
       break;
     case 'aggressive':
       sfx.roar();

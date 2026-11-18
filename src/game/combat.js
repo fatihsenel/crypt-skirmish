@@ -11,15 +11,21 @@ import { ACTIONS, STANDARD_ACTIONS, SPELLS, coneTiles, areaTiles, directionTo } 
 export const TRAP_DC = 13;
 export const TRAP_DAMAGE = '2d6';
 
-// Monster senses, in tiles (5 ft). In the dim crypt, monsters spot heroes within 40 ft
-// (a Skulker only within 15 ft), hear fighting 40 ft away by walking distance (sound gets
-// through doors), and an alarmed monster shouts to friends it can see within 20 ft.
+// Monster senses, in tiles (5 ft). In the dim crypt, unaware monsters spot heroes within
+// 40 ft (a Skulker only within 15 ft; a hidden hero only if their passive Perception beats
+// the Stealth roll, or from right next to them). They hear fighting 25 ft away by walking
+// distance (a closed door muffles it), sleepers only much closer. A monster that spots you
+// or is hurt shouts to friends it can see within 20 ft; they don't pass the alarm on.
 export const SIGHT = 8;
 export const SKULK_SIGHT = 3;
 export const NOISE = 5;
 /** Extra tiles a closed door adds to how far a sound has to travel. */
 export const DOOR_MUFFLE = 2;
 export const SHOUT = 4;
+/** A sleeping monster only wakes to noise this many tiles closer than the noise's range. */
+export const SLEEP_DEPTH = 3;
+/** Unaware patrols walk their beat at this many tiles per turn. */
+export const PATROL_PACE = 3;
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions'];
@@ -29,8 +35,10 @@ export const isWeapon = (attack) => attack.stat === 'str' || attack.stat === 'de
 
 export class Game {
   /**
-   * @param level  ASCII rows, or { rows, loot } where loot lists the contents of
-   *               each '$' chest in reading order, e.g. [['potion'], ['potion', 'potion']]
+   * @param level  ASCII rows, or { rows, loot, asleep, patrols } where loot lists the
+   *               contents of each '$' chest in reading order, e.g. [['potion'], ['potion', 'potion']],
+   *               asleep lists the monsters asleep at the start by tile ('x,z'), and patrols
+   *               maps a monster's tile to the waypoints of its beat, e.g. { '13,5': [[9,2]] }
    * @param party  hero state from the previous level, keyed by unit code
    */
   /** senses: false makes every monster aware from the start (the old behaviour). */
@@ -69,7 +77,16 @@ export class Game {
     }
 
     // Monsters start out unaware of the party (see updateAwareness).
-    if (senses) for (const u of this.units) if (u.team === 'monsters' && u.alive) u.unaware = true;
+    if (senses) {
+      for (const u of this.units) {
+        if (u.team !== 'monsters' || !u.alive) continue;
+        u.unaware = true;
+        const at = key(u.x, u.z);
+        if (level.asleep?.includes(at)) u.asleep = true;
+        const beat = level.patrols?.[at];
+        if (beat && !u.asleep) u.patrol = { route: [{ x: u.x, z: u.z }, ...beat.map(([x, z]) => ({ x, z }))], next: 1 };
+      }
+    }
 
     this.order = [];
     this.turn = -1;
@@ -167,28 +184,64 @@ export class Game {
   }
 
   // --- senses ---------------------------------------------------------------
-  /** Can monster `m` spot hero `h` from where they stand? (sight works both ways) */
+  /** 10 + WIS modifier: what a monster notices without trying. */
+  passivePerception(m) {
+    return 10 + abilityMod(m.stats.wis) + (m.perception ?? 0);
+  }
+
+  /** d20 + DEX, doubled proficiency for an expert, disadvantage in noisy armour. */
+  stealthBonus(h) {
+    return abilityMod(h.stats.dex) + (h.stealth === 'expert' ? 2 * h.prof : h.stealth === 'trained' ? h.prof : 0);
+  }
+
+  inSight(a, b, range = SIGHT) {
+    return gridDistance(a, b) <= range
+      && (this.grid.lineOfSight(a.x, a.z, b.x, b.z) || this.grid.lineOfSight(b.x, b.z, a.x, a.z));
+  }
+
+  /**
+   * Can monster `m` spot hero `h` from where it stands? (sight works both ways)
+   * Sleepers see nothing. A hidden hero is spotted only by a monster whose passive
+   * Perception reaches the Stealth roll, or one standing right next to them.
+   */
   notices(m, h) {
-    const range = h.passives.includes('skulker') ? SKULK_SIGHT : SIGHT;
-    return h.alive && gridDistance(m, h) <= range
-      && (this.grid.lineOfSight(m.x, m.z, h.x, h.z) || this.grid.lineOfSight(h.x, h.z, m.x, m.z));
+    if (!h.alive || !m.alive || m.asleep) return false;
+    if (h.hidden) return gridDistance(m, h) <= 1 || (this.passivePerception(m) >= h.hidden && this.inSight(m, h));
+    return this.inSight(m, h, m.unaware && h.passives.includes('skulker') ? SKULK_SIGHT : SIGHT);
+  }
+
+  /** A hidden hero gives themself away (or is found). */
+  reveal(h, cause, by = null) {
+    if (!h.hidden) return;
+    h.hidden = 0;
+    this.emit('revealed', { unit: h, cause, by });
   }
 
   /** An unaware monster becomes aware; if it saw or was hurt, it shouts to friends in view. */
   alert(m, cause) {
     if (!m.unaware || !m.alive) return;
+    const wasAsleep = !!m.asleep;
     m.unaware = false;
-    this.emit('alert', { unit: m, cause });
-    if (cause === 'noise') return;
+    m.asleep = false;
+    m.patrol = null;
+    this.emit('alert', { unit: m, cause, wasAsleep });
+    // Only the monster that saw you or was hurt raises the alarm: no relay across the map.
+    if (cause === 'noise' || cause === 'ally') return;
     for (const o of this.living('monsters')) {
       if (o.unaware && gridDistance(o, m) <= SHOUT && this.grid.lineOfSight(o.x, o.z, m.x, m.z)) this.alert(o, 'ally');
     }
   }
 
-  /** Every unaware monster looks around. */
+  /** Every monster looks around: unaware ones may spot the party, anyone may find a hidden hero. */
   updateAwareness() {
     const heroes = this.living('heroes');
-    for (const m of this.living('monsters')) {
+    const monsters = this.living('monsters');
+    for (const h of heroes) {
+      if (!h.hidden) continue;
+      const by = monsters.find((m) => this.notices(m, h));
+      if (by) this.reveal(h, 'spotted', by);
+    }
+    for (const m of monsters) {
       if (m.unaware && heroes.some((h) => this.notices(m, h))) this.alert(m, 'sight');
     }
   }
@@ -198,7 +251,8 @@ export class Game {
     if (!this.living('monsters').some((m) => m.unaware)) return;
     const dist = this.soundField(at, range);
     for (const m of this.living('monsters')) {
-      if (m.unaware && (dist.get(key(m.x, m.z)) ?? Infinity) <= range) this.alert(m, 'noise');
+      const reach = m.asleep ? range - SLEEP_DEPTH : range;
+      if (m.unaware && (dist.get(key(m.x, m.z)) ?? Infinity) <= reach) this.alert(m, 'noise');
     }
   }
 
@@ -529,7 +583,10 @@ export class Game {
     if (attack.reach === 1 && this.isFlanking(attacker, target)) adv.push('flanking');
     if (attacker.passives.includes('packTactics') && this.allyNextTo(attacker, target)) adv.push('pack tactics');
     if (target.turned) adv.push('target is fleeing');
-    if (target.unaware) adv.push('unaware');
+    if (target.asleep) adv.push('asleep');
+    else if (target.unaware) adv.push('unaware');
+    if (attacker.hidden && !opportunity) adv.push('hidden');
+    if (target.hidden) dis.push('target hidden');
     const mode = adv.length && !dis.length ? 'adv' : dis.length && !adv.length ? 'dis' : 'normal';
     return { adv, dis, mode };
   }
@@ -552,6 +609,7 @@ export class Game {
     if (problem) return { ok: false, reason: problem };
 
     const mods = this.attackMods(attacker, target, attack, { opportunity });
+    this.reveal(attacker, 'attack');
     if (opportunity) {
       attacker.reactionUsed = true;
     } else if (!attacker.actionUsed) {
@@ -648,6 +706,11 @@ export class Game {
     }
     if (['disengage', 'nimbleEscape', 'cunningDisengage'].includes(id) && unit.disengaged) return 'Already disengaged';
     if (unit.turned && !['dash', 'dodge', 'disengage', 'nimbleEscape'].includes(id)) return 'Turned: can only flee';
+    if (id === 'hide' || id === 'cunningHide') {
+      if (unit.hidden) return 'Already hidden';
+      const watcher = this.enemiesOf(unit).find((e) => !e.unaware && this.inSight(e, unit));
+      if (watcher) return `${watcher.name} is watching you`;
+    }
     return null;
   }
 
@@ -668,6 +731,14 @@ export class Game {
       case 'dodge':
         unit.dodging = true;
         break;
+      case 'hide':
+      case 'cunningHide': {
+        const { d20, rolls } = this.rollD20(unit.noisyArmor ? 'dis' : 'normal');
+        const bonus = this.stealthBonus(unit);
+        Object.assign(result, { d20, rolls, bonus, total: d20 + bonus, noisy: !!unit.noisyArmor });
+        unit.hidden = Math.max(1, d20 + bonus);
+        break;
+      }
       case 'disengage':
       case 'nimbleEscape':
       case 'cunningDisengage':
@@ -698,6 +769,7 @@ export class Game {
       }
     }
     this.emit('action', result);
+    if (unit.hidden) this.updateAwareness(); // anyone close enough spots the attempt
     for (const s of result.saves ?? []) if (s.destroyed) this.applyDamage(s.unit, s.unit.hp, unit);
     return result;
   }
@@ -826,6 +898,7 @@ export class Game {
     else caster.bonusUsed = true;
     const slot = this.spendSlot(caster, spell.level);
     const upcast = Math.max(0, slot - spell.level);
+    this.reveal(caster, 'spell');
     const result = { ok: true, kind: 'spell', id, spell, caster, slot };
 
     switch (id) {

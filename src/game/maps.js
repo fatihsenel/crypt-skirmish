@@ -4,6 +4,8 @@
 // Spawns: F fighter, W wizard, R rogue, C cleric;
 //         g goblin, s skeleton, o orc, r giant rat, b goblin boss, n necromancer.
 // `loot` lists the contents of each chest in reading order (item ids from items.js).
+// `asleep` lists monsters asleep at the start, by tile ('x,z'); `patrols` maps a monster's
+// tile to the waypoints it walks between while it hasn't noticed the party.
 // The campaign map that links these levels lives in campaign.js.
 
 export const LEVELS = [
@@ -26,6 +28,8 @@ export const LEVELS = [
       '################',
     ],
     loot: [['potion']],
+    asleep: ['14,8', '14,9', '11,10'], // the rat nest
+    patrols: { '13,5': [[13, 1], [9, 2]], '11,8': [[7, 7]] },
   },
   {
     id: 'warren',
@@ -46,6 +50,8 @@ export const LEVELS = [
       '################',
     ],
     loot: [['potion', 'weaponPlus1']],
+    asleep: ['10,8', '1,10', '12,10'], // the orc sleeps off last night's ale
+    patrols: { '11,2': [[8, 2], [13, 3]], '13,8': [[9, 6]] },
   },
   {
     id: 'ossuary',
@@ -66,6 +72,8 @@ export const LEVELS = [
       '################',
     ],
     loot: [['ringProtection'], ['potion', 'potion']],
+    asleep: ['8,6', '3,7', '5,9'],
+    patrols: { '11,1': [[14, 1], [14, 4]], '12,5': [[7, 6]] },
   },
   {
     id: 'sanctum',
@@ -87,6 +95,7 @@ export const LEVELS = [
       '################',
     ],
     loot: [['potion']],
+    patrols: { '12,2': [[8, 3]] },
   },
 ];
 
