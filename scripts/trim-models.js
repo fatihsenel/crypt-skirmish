@@ -130,6 +130,12 @@ for (const [file, keep] of clipsByFile()) {
   const url = new URL(`${file}.glb`, DIR);
   const buf = readFileSync(url);
   const { json, bin } = readGlb(buf);
+  if ((json.extensionsUsed ?? []).includes('EXT_meshopt_compression')) {
+    // Compressed buffers can't be sliced by accessor; start from the uncompressed file.
+    console.error(`${file}.glb is meshopt-compressed (scripts/compress-models.js): restore it from git first`);
+    failed = true;
+    continue;
+  }
   const r = trim(json, bin, keep);
   const out = writeGlb(json, r.bin);
   const kb = (n) => `${Math.round(n / 1024)} kB`;
@@ -142,6 +148,6 @@ for (const [file, keep] of clipsByFile()) {
   if (!check && out.length < buf.length) writeFileSync(url, out);
 }
 if (failed) {
-  console.error('A model lost every clip; check modelSpecs.js.');
+  console.error('Some models were not trimmed (see above); a model with no clips left means modelSpecs.js needs checking.');
   process.exit(1);
 }

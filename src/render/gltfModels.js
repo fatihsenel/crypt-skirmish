@@ -7,6 +7,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { SPECS, DEFAULT_CLIPS } from './modelSpecs.js';
 
@@ -16,7 +17,7 @@ const loaded = new Map(); // file -> gltf
 
 /** Load every model once. Never rejects: a model that fails just isn't used. */
 export function preloadModels() {
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); // see scripts/compress-models.js
   const files = [...new Set(Object.values(SPECS).map((s) => s.file))];
   return Promise.all(files.map((f) => loader.loadAsync(`${BASE}${f}.glb`)
     .then((g) => loaded.set(f, g))

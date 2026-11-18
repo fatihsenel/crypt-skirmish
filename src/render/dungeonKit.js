@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 const BASE = `${import.meta.env.BASE_URL}models/dungeon/`;
 
@@ -19,7 +20,7 @@ const SHADE = { floor: 0.55, wall: 0.78, pillar: 0.78 };
 const pieces = new Map();
 
 export function preloadDungeon(onProgress) {
-  const loader = new GLTFLoader();
+  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); // see scripts/compress-models.js
   let done = 0;
   const tick = () => onProgress?.(++done, FILES.length);
   onProgress?.(0, FILES.length);

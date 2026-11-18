@@ -291,6 +291,7 @@ src/
 tests/rules.test.js, tests/replay.test.js
 scripts/sim.js     headless balance simulator (npm run sim)
 scripts/trim-models.js  strips the character .glb files down to the clips in modelSpecs.js
+scripts/compress-models.js  meshopt-compresses every .glb (npm run models)
 ```
 
 A boot screen, styled inline in `index.html` so it paints before any script arrives, shows
@@ -298,8 +299,12 @@ the tiles' loading progress. The title screen waits only for the dungeon tiles; 
 character models keep loading behind it, and a fight started before they arrive waits for them. three.js is built into a chunk of
 its own, so browsers keep it cached when only the game changes. The packs ship 14 to 95
 animation clips per model and the game plays about ten, so `node scripts/trim-models.js`
-drops the rest (30 MB of models down to under 8 MB). Adding a clip to `modelSpecs.js` means
-bringing the untrimmed file back first (git history has it), then trimming again.
+drops the rest (30 MB of models down to under 8 MB). `npm run models`
+(`scripts/compress-models.js`, using gltf-transform) then resamples the animations and
+meshopt-compresses every .glb, halving them again (about 1.1 MB of characters and 0.25 MB of
+tiles over the wire); both loaders decode them with three's `MeshoptDecoder`. Adding a clip to
+`modelSpecs.js` means bringing the original file back first (git history has it), then
+trimming and compressing again.
 
 The rules engine resolves everything instantly and emits events (`initiative`, `turnStart`,
 `move`, `attack`, `spell`, `action`, `door`, `trap`, `trapFound`, `chest`, `mimic`,
