@@ -6,6 +6,8 @@
 // Browsers only allow audio after a user gesture, so call sfx.unlock() from
 // the first click / key press. Until then every play call is a silent no-op.
 
+import { loadSettings, levelGain } from '../game/settings.js';
+
 const STORAGE_KEY = 'crypt-skirmish:muted';
 const rand = (a, b) => a + Math.random() * (b - a);
 /** Monsters that borrow another's voice: the ghast and the ghosts hiss like ghouls, spiders like rats. */
@@ -24,6 +26,8 @@ class Sfx {
     this.ctx = null;
     this.muted = loadMuted();
     this.volume = 0.7;
+    /** Each kind of sound's own level (0..1), under the mute switch: see setLevel. */
+    this.levels = (({ music, effects, voices }) => ({ music, effects, voices }))(loadSettings());
     this.ambientOn = false;
   }
 
@@ -50,6 +54,18 @@ class Sfx {
       wet.gain.value = 0.28;
       this.bus.connect(verb).connect(wet).connect(this.master);
 
+      // One level stage per kind of sound: effects (and the ambience, kept dry), music, voices.
+      const stage = (kind, to) => {
+        const g = c.createGain();
+        g.gain.value = levelGain(this.levels[kind]);
+        g.connect(to);
+        return g;
+      };
+      this.fx = stage('effects', this.bus);
+      this.ambLevel = stage('effects', this.master);
+      this.musicLevel = stage('music', this.bus);
+      this.voiceLevel = stage('voices', this.bus);
+
       this.noiseBuf = this.makeNoise(2);
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
@@ -71,6 +87,18 @@ class Sfx {
       const t = this.ctx.currentTime;
       this.master.gain.cancelScheduledValues(t);
       this.master.gain.setTargetAtTime(muted ? 0 : this.volume, t, 0.05);
+    }
+  }
+
+  /** Set one kind of sound's level: 'music', 'effects' or 'voices', 0..1. */
+  setLevel(kind, value) {
+    this.levels[kind] = value;
+    if (!this.ctx) return;
+    const nodes = { effects: [this.fx, this.ambLevel], music: [this.musicLevel], voices: [this.voiceLevel] }[kind];
+    const t = this.ctx.currentTime;
+    for (const n of nodes ?? []) {
+      n.gain.cancelScheduledValues(t);
+      n.gain.setTargetAtTime(levelGain(value), t, 0.03);
     }
   }
 
@@ -112,7 +140,7 @@ class Sfx {
     f.Q.value = q;
     f.frequency.setValueAtTime(freq, t);
     if (freqEnd) f.frequency.exponentialRampToValueAtTime(freqEnd, t + dur);
-    src.connect(f).connect(this.env(t, gain, attack, dur)).connect(out || this.bus);
+    src.connect(f).connect(this.env(t, gain, attack, dur)).connect(out || this.fx);
     src.start(t, Math.random());
     src.stop(t + dur + 0.05);
   }
@@ -130,7 +158,7 @@ class Sfx {
       f.frequency.value = lowpass;
       node = o.connect(f);
     }
-    node.connect(this.env(t, gain, attack, dur)).connect(out || this.bus);
+    node.connect(this.env(t, gain, attack, dur)).connect(out || this.fx);
     o.start(t);
     o.stop(t + dur + 0.05);
   }
@@ -613,7 +641,7 @@ class Sfx {
     const amb = c.createGain();
     amb.gain.value = 0.0001;
     amb.gain.exponentialRampToValueAtTime(1, c.currentTime + 3);
-    amb.connect(this.master);
+    amb.connect(this.ambLevel);
 
     for (const f of [55, 55.6, 82.4]) {
       const o = c.createOscillator();

@@ -140,7 +140,30 @@
         </svg>
         <span>Sound</span>
       </button>
+      <button id="settings-toggle" type="button" aria-controls="settings" aria-expanded="false" title="Settings">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          <circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+          <circle cx="9" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+        <span>Settings</span>
+      </button>
       </div>
+      <section id="settings" aria-label="Settings" hidden>
+        <h2>Settings</h2>
+        <h3>Volume</h3>
+        <label class="level"><span>Music</span><input type="range" name="music" min="0" max="100" step="5" /><output></output></label>
+        <label class="level"><span>Effects</span><input type="range" name="effects" min="0" max="100" step="5" /><output></output></label>
+        <label class="level"><span>Voices</span><input type="range" name="voices" min="0" max="100" step="5" /><output></output></label>
+        <p class="settings-note">The sound switch still mutes everything at once.</p>
+        <h3 id="speed-head">Monster turns</h3>
+        <div class="speed" role="radiogroup" aria-labelledby="speed-head">
+          <label><input type="radio" name="speed" value="normal" /><span>Normal</span></label>
+          <label><input type="radio" name="speed" value="fast" /><span>Fast</span></label>
+          <label><input type="radio" name="speed" value="fastest" /><span>Fastest</span></label>
+        </div>
+        <button id="settings-close" type="button">Done</button>
+      </section>
       <div id="toast" role="status"></div>
       <div id="loading" role="status" hidden>Gathering the party…</div>
 

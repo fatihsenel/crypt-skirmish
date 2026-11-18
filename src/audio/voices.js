@@ -68,7 +68,7 @@ function voiceBus() {
   if (!b) {
     b = sfx.ctx.createGain();
     b.gain.value = VOICE_LEVEL;
-    b.connect(sfx.bus);
+    b.connect(sfx.voiceLevel); // the voices level, then the reverb
     voiceBuses.set(sfx.ctx, b);
   }
   return b;

@@ -10,6 +10,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { SPECS, DEFAULT_CLIPS } from './modelSpecs.js';
+import { playback } from './tween.js';
 
 const BASE = `${import.meta.env.BASE_URL}models/`;
 
@@ -231,7 +232,7 @@ export class GltfRig {
         this.base = want;
       }
     }
-    this.mixer.update(dt);
+    this.mixer.update(dt * playback.rate); // sped up with monster turns
   }
 
   /**
@@ -241,6 +242,8 @@ export class GltfRig {
   play(kind, { at = 0.5, speed = 1, hold = false } = {}) {
     const a = this.action(kind);
     if (!a) return { hit: Promise.resolve(), done: Promise.resolve() };
+    // The mixer already runs at playback.rate; the timers below must keep pace with it.
+    const len = (a.getClip().duration / speed / playback.rate) * 1000;
     this.oneShot?.fadeOut(0.1);
     a.reset().setLoop(THREE.LoopOnce, 1).fadeIn(0.1).play();
     a.clampWhenFinished = true;
@@ -249,7 +252,6 @@ export class GltfRig {
     this.base = null;
     this.oneShot = a;
     if (hold) this.holdLast = true;
-    const len = (a.getClip().duration / speed) * 1000;
     const hit = new Promise((r) => setTimeout(r, len * at));
     const done = new Promise((r) => setTimeout(r, len)).then(() => {
       if (this.oneShot === a && !hold) {

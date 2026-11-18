@@ -1,7 +1,7 @@
 // Spell and ability effects: short-lived meshes animated with tweens.
 
 import * as THREE from 'three';
-import { tween, easeOut, linear } from './tween.js';
+import { tween, wait, easeOut, linear } from './tween.js';
 
 const glow = (color, opacity = 1) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -585,5 +585,5 @@ export async function d20Fx(scene, at, value) {
     num.material.map.dispose();
     dispose(group);
   });
-  await new Promise((r) => setTimeout(r, 250));
+  await wait(250);
 }

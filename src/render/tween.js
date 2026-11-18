@@ -1,3 +1,9 @@
+/**
+ * How fast animations and pauses play: 1 is normal, 2 is twice as fast. main.js raises it
+ * while monsters take their turns (the monster-turn speed setting) and puts it back after.
+ */
+export const playback = { rate: 1 };
+
 export const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 export const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 export const linear = (t) => t;
@@ -8,6 +14,7 @@ export const linear = (t) => t;
  * when the browser throttles rAF (background tab, hidden pane).
  */
 export function tween(ms, onUpdate, ease = easeInOut) {
+  ms /= playback.rate;
   return new Promise((resolve) => {
     const start = performance.now();
     let done = false;
@@ -29,4 +36,4 @@ export function tween(ms, onUpdate, ease = easeInOut) {
   });
 }
 
-export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+export const wait = (ms) => new Promise((r) => setTimeout(r, ms / playback.rate));

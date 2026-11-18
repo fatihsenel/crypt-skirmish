@@ -61,7 +61,7 @@ class Music {
     const c = sfx.ctx;
     this.out = c.createGain();
     this.out.gain.value = 0.0001;
-    this.out.connect(sfx.bus); // through the reverb; sfx.master handles muting
+    this.out.connect(sfx.musicLevel); // the music level, then the reverb; sfx.master handles muting
     this.layers = {};
     for (const name of ['explore', 'combat', 'boss']) {
       const g = c.createGain();

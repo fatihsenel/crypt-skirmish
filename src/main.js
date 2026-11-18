@@ -21,12 +21,14 @@ import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
 import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon } from './render/effects.js';
-import { wait } from './render/tween.js';
+import { wait, playback } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Camp } from './ui/camp.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
 import { music } from './audio/music.js';
+import { loadSettings, saveSettings, SPEEDS } from './game/settings.js';
+import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
 import { recordRun } from './game/history.js';
@@ -266,6 +268,16 @@ function toggleMusic() {
   hud.setMusic(music.enabled);
 }
 hud.setMusic(music.enabled);
+
+// Volumes and the monster-turn speed (the Settings button).
+const settings = loadSettings();
+new SettingsPanel(settings, (key, value) => {
+  settings[key] = value;
+  saveSettings(settings);
+  if (key === 'speed') return;
+  unlockAudio();
+  sfx.setLevel(key, value);
+});
 
 // The controls panel: open the first time, then remembered. On a phone it would cover
 // the board, so there it starts closed.
@@ -980,7 +992,7 @@ async function animateAttack(r, at = r.target) {
       tv.updateHp();
       if (r.rider && target.alive) {
         const text = r.rider.success ? 'Resists' : CONDITION_FLOAT[r.rider.condition];
-        setTimeout(() => floatText(stage.scene, { x: pos.x, z: pos.z - 0.5 }, text, r.rider.success ? 'miss' : 'cond'), 350);
+        wait(350).then(() => floatText(stage.scene, { x: pos.x, z: pos.z - 0.5 }, text, r.rider.success ? 'miss' : 'cond'));
         tv.updateStatus();
       }
       reaction = damageReaction(target);
@@ -1412,21 +1424,27 @@ async function runMonsterTurn(unit) {
   const g = game; // a restart or level change mid-turn abandons this turn
   busy = true;
   refresh();
-  // Monsters out of sight act quickly: nothing to watch.
-  const pace = (ms) => wait(unit.team === 'monsters' && (unseen(unit) || unit.unaware) ? ms / 4 : ms);
-  await pace(450);
+  // The monster-turn speed setting: everything plays faster until the turn is over.
+  playback.rate = unit.team === 'monsters' ? SPEEDS[settings.speed] : 1;
+  try {
+    // Monsters out of sight act quickly: nothing to watch.
+    const pace = (ms) => wait(unit.team === 'monsters' && (unseen(unit) || unit.unaware) ? ms / 4 : ms);
+    await pace(450);
 
-  for (const { step, result } of monsterTurn(g, unit)) {
-    if (result.ok) await play(unit, step.type, result);
+    for (const { step, result } of monsterTurn(g, unit)) {
+      if (result.ok) await play(unit, step.type, result);
+      if (game !== g) return;
+      syncStatus();
+      hud.renderActionBar(game, { selected, busy });
+      await pace(180);
+    }
+
+    if (game !== g || await checkGameOver()) return;
+    await pace(300);
     if (game !== g) return;
-    syncStatus();
-    hud.renderActionBar(game, { selected, busy });
-    await pace(180);
+  } finally {
+    playback.rate = 1;
   }
-
-  if (game !== g || await checkGameOver()) return;
-  await pace(300);
-  if (game !== g) return;
   busy = false;
   game.endTurn();
 }

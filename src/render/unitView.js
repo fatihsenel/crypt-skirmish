@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { tween, easeOut, easeInOut, linear } from './tween.js';
+import { tween, wait, easeOut, easeInOut, linear } from './tween.js';
 import { buildModel } from './models.js';
 import { buildGltfModel } from './gltfModels.js';
 import { sfx } from '../audio/sfx.js';
@@ -354,7 +354,7 @@ export class UnitView {
     await this.turnTowards(target.x, target.z);
     if (this.rig) {
       const { hit, done } = this.rig.play('melee', { at: 0.45, speed: 1.15 });
-      setTimeout(() => sfx.whoosh(this.unit.code === 'F' || this.unit.code === 'P'), 180);
+      wait(180).then(() => sfx.whoosh(this.unit.code === 'F' || this.unit.code === 'P'));
       await hit;
       onImpact?.();
       await done;

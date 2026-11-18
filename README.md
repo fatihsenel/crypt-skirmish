@@ -183,6 +183,9 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   once monsters notice the party, and the boss rooms add a sinking drone and quick ticks,
   then fade back when the room is quiet. The
   Music button (or N) turns it off; Sound (or M) mutes everything
+- **settings** (the button beside Sound, on the title and camp screens too): a volume
+  slider each for music, effects (with the dungeon ambience) and voices, and how fast
+  monster turns play out: Normal, Fast (1.75×) or Fastest (3×). Kept in the browser
 - **the ending**: beating Ysolde shows the run's tally: difficulty, party level, rooms won,
   rounds fought, fights lost and XP, then each hero's damage dealt, kills, critical hits,
   healing given and times downed, with a star on whoever leads each column. Lost fights
@@ -293,6 +296,7 @@ src/
     history.js     past runs for the title screen (won or abandoned), newest 20 kept
     achievements.js  the 20 achievements and their checks (room, campaign or daily won)
     daily.js       the daily crypt: the day's room, party and seed, best results, streaks
+    settings.js    volumes and monster-turn speed, kept in the browser
   render/          three.js only
     stage.js       renderer, isometric orthographic camera, lights, loop, screen shake
     board.js       dungeon meshes, torches, doors, chests, traps, stairs, banners, props,
@@ -310,12 +314,13 @@ src/
     effects.js     spell effects: missiles, fire cone, mist, shield dome, healing,
                    sacred flame, turn undead, raise dead, fireball; hit particles,
                    fire-bolt bursts and the tumbling d20
-    tween.js       promise-based tweening
+    tween.js       promise-based tweening, and the playback rate that speeds monster turns
   audio/sfx.js     procedural Web Audio sound effects + dungeon ambience
   audio/music.js   procedural music: explore, combat and boss layers that crossfade
   audio/voices.js  synthesized character barks
   ui/hud.js        HTML overlay: initiative, action bar, combat log
   ui/camp.js       title screen and camp: map, party, pack, level-ups
+  ui/settings.js   the settings panel: volume sliders and monster-turn speed
   ui/tips.js       optional tips for new players, shown once each
   main.js          controller: input → game → animations → HUD; campaign flow and saving
 tests/rules.test.js, tests/replay.test.js
