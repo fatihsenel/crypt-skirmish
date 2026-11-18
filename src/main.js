@@ -60,6 +60,12 @@ let nodeId = null;
  */
 let fight = null;
 
+// The character models, loading from the moment the page opens.
+const $loading = document.getElementById('loading');
+let figuresReady = false;
+let fightTicket = 0; // the latest fight asked for while the figures were loading
+const figuresLoading = preloadModels().then(() => { figuresReady = true; });
+
 /** Save the campaign together with the fight in progress. */
 function saveFight() {
   if (!fight || !game || game.over === 'defeat') return;
@@ -327,6 +333,20 @@ function clearSpiritWeapon(id) {
  * replay it to where it was saved instead; if that fails, the party is back at camp.
  */
 function newGame(resume = null) {
+  if (figuresReady) {
+    startFight(resume);
+    return;
+  }
+  // The figures are still downloading (a first visit, straight into a room): wait for them.
+  const ticket = ++fightTicket;
+  $loading.hidden = false;
+  figuresLoading.then(() => {
+    $loading.hidden = true;
+    if (ticket === fightTicket) startFight(resume);
+  });
+}
+
+function startFight(resume) {
   for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
   if (board) {
     stage.scene.remove(board.group);
@@ -1500,9 +1520,11 @@ function testParty(state, level) {
 
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets
 // the heroes' level and &paladin swaps the Fighter for a Paladin.
-// The .glb figures load first; any that fail fall back to the built-in miniatures.
+// The title waits only for the dungeon tiles (~1 MB); the .glb figures (~7 MB) keep
+// loading behind it, and a fight started before they're here waits for them. Any that
+// fail fall back to the built-in miniatures.
 showBackdrop();
-Promise.all([preloadModels(), preloadDungeon()]).then(() => {
+preloadDungeon().then(() => {
   // rebuild the backdrop from the tile kit now that it's here
   if (!game) {
     stage.scene.remove(board.group);

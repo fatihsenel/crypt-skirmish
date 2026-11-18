@@ -1,112 +1,16 @@
 // Rigged .glb characters: KayKit packs by Kay Lousberg (CC0) for the heroes and the undead,
 // Quaternius models (CC0) for the orc and the giant rats.
-// Each model ships every weapon as a mesh on the hand bones and ~80 animation clips; we
-// keep the weapons a unit uses and drive the clips through an AnimationMixer.
+// Each model ships every weapon as a mesh on the hand bones; we keep the weapons a unit
+// uses and drive its clips through an AnimationMixer. The packs come with ~80 clips per
+// model; scripts/trim-models.js strips the files down to the clips in modelSpecs.js.
 // A model that fails to load falls back to the unit's procedural figure.
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
+import { SPECS, DEFAULT_CLIPS } from './modelSpecs.js';
 
 const BASE = `${import.meta.env.BASE_URL}models/`;
-
-/**
- * Per unit: which file, which built-in meshes to show (every other weapon/prop is hidden),
- * procedural weapons for the unarmed skeletons, figure height, and the clips used.
- */
-const QUATERNIUS = {
-  idle: 'Idle', walk: 'Walk', melee: 'Attack', arrow: 'Attack', javelin: 'Attack',
-  hit: 'HitRecieve', die: 'Death', dead: 'Death',
-};
-
-const SPECS = {
-  F: {
-    file: 'Knight', height: 1.35,
-    show: ['1H_Sword', 'Round_Shield'],
-    clips: { melee: '1H_Melee_Attack_Slice_Diagonal' },
-  },
-  // The Paladin: the same knight in white and gold, with the crested shield.
-  P: {
-    file: 'Knight', height: 1.35,
-    show: ['1H_Sword', 'Badge_Shield'],
-    tint: 0xffe6a8,
-    clips: { melee: '1H_Melee_Attack_Slice_Diagonal' },
-  },
-  W: {
-    file: 'Mage', height: 1.35,
-    show: ['2H_Staff'],
-    clips: { melee: '2H_Melee_Attack_Stab' },
-  },
-  R: {
-    file: 'Rogue_Hooded', height: 1.28,
-    show: ['Knife', 'Knife_Offhand'],
-    ranged: ['1H_Crossbow'], // swapped in for a shot
-    clips: { melee: 'Dualwield_Melee_Attack_Stab', arrow: '1H_Ranged_Shoot' },
-  },
-  C: {
-    file: 'Barbarian', height: 1.35,
-    show: ['1H_Axe', 'Barbarian_Round_Shield'],
-    hide: ['Barbarian_Hat'],
-    tint: 0xfff3dc,
-    clips: { melee: '1H_Melee_Attack_Chop' },
-  },
-  s: {
-    file: 'Skeleton_Warrior', height: 1.3, blade: true,
-    clips: { melee: '1H_Melee_Attack_Chop', walk: 'Walking_D_Skeletons', rise: 'Spawn_Ground_Skeletons' },
-  },
-  risen: {
-    file: 'Skeleton_Minion', height: 1.2, blade: true,
-    clips: { melee: '1H_Melee_Attack_Chop', walk: 'Walking_D_Skeletons', rise: 'Spawn_Ground_Skeletons' },
-  },
-  n: {
-    file: 'Skeleton_Mage', height: 1.5, staff: true,
-    clips: { melee: '1H_Melee_Attack_Stab', walk: 'Walking_D_Skeletons' },
-  },
-  // Act two reuses the skeleton rigs: ghouls are a grey-green, clawing minion; the wight a
-  // tall, cold-blue warrior.
-  u: {
-    file: 'Skeleton_Minion', height: 1.2, tint: 0x9fb88a,
-    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
-  },
-  // The ghast: a bigger, darker ghoul.
-  h: {
-    file: 'Skeleton_Minion', height: 1.38, tint: 0x6f8060,
-    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
-  },
-  w: {
-    file: 'Skeleton_Warrior', height: 1.5, blade: true, tint: 0x8fa0d0,
-    clips: { melee: '1H_Melee_Attack_Slice_Diagonal', walk: 'Walking_D_Skeletons' },
-  },
-  // Goblins: the KayKit rogue, small and green, knife and crossbow; Grukk is a green,
-  // goblin-sized barbarian with axe and shield.
-  g: {
-    file: 'Rogue_Hooded', height: 1.0, tint: 0x9ccf6e,
-    show: ['Knife'], ranged: ['1H_Crossbow'],
-    clips: { melee: '1H_Melee_Attack_Stab', arrow: '1H_Ranged_Shoot' },
-  },
-  b: {
-    file: 'Barbarian', height: 1.12, tint: 0xa8d080,
-    show: ['1H_Axe', 'Barbarian_Round_Shield'],
-    clips: { melee: '1H_Melee_Attack_Chop' },
-  },
-  // The orc and the rats: Quaternius (CC0), one swing clip for every attack.
-  o: { file: 'monsters/Orc', height: 1.45, clips: { ...QUATERNIUS, melee: 'Weapon', javelin: 'Weapon', arrow: 'Weapon', hit: 'HitReact' } },
-  r: { file: 'monsters/Rat', height: 0.5, quadruped: true, clips: { ...QUATERNIUS, melee: 'Rat_Attack', idle: 'Rat_Idle', walk: 'Rat_Walk', die: 'Rat_Death', dead: 'Rat_Death' } },
-};
-
-const DEFAULT_CLIPS = {
-  idle: 'Idle',
-  walk: 'Walking_A',
-  melee: '1H_Melee_Attack_Chop',
-  arrow: '1H_Ranged_Shoot',
-  javelin: 'Throw',
-  spell: 'Spellcast_Shoot',
-  cast: 'Spellcast_Raise',
-  hit: 'Hit_A',
-  die: 'Death_A',
-  dead: 'Death_A_Pose',
-  rise: 'Lie_StandUp',
-};
 
 const loaded = new Map(); // file -> gltf
 
@@ -133,6 +37,35 @@ function skeletonBlade() {
   grip.position.y = 0;
   g.add(blade, guard, grip);
   return g;
+}
+
+/**
+ * Long pointed ears poking out of the sides of the head (the goblins wear the rogue's hood).
+ * Built in the unscaled model's space around the head mesh, then handed to the head bone so
+ * they follow every nod and swing.
+ */
+function addEars(scene, { mesh, color }) {
+  const head = scene.getObjectByName('head');
+  const skull = scene.getObjectByName(mesh);
+  if (!head || !skull) return;
+  const box = new THREE.Box3().setFromObject(skull);
+  const size = box.getSize(new THREE.Vector3());
+  const mid = box.getCenter(new THREE.Vector3());
+  const skin = new THREE.MeshStandardMaterial({ color, roughness: 0.8, flatShading: true });
+  const len = size.x * 0.65;
+  for (const side of [-1, 1]) {
+    // A flattened four-sided cone, tip outward and a little up and back.
+    const geo = new THREE.ConeGeometry(size.y * 0.13, len, 4);
+    geo.translate(0, len / 2, 0);
+    geo.scale(1, 1, 0.45);
+    const ear = new THREE.Mesh(geo, skin);
+    ear.castShadow = true;
+    ear.position.set(mid.x + side * size.x * 0.4, mid.y - size.y * 0.08, mid.z - size.z * 0.05);
+    ear.rotation.set(-0.25, 0, -side * (Math.PI / 2 - 0.45));
+    scene.add(ear);
+    ear.updateMatrixWorld(true);
+    head.attach(ear);
+  }
 }
 
 function necroStaff() {
@@ -199,6 +132,7 @@ export function buildGltfModel(unit) {
   scene.traverse((o) => {
     if (o.isMesh && !o.parent?.name.startsWith('handslot')) box.expandByObject(o);
   });
+  if (spec.ears) addEars(scene, spec.ears);
   const s = spec.height / (box.max.y - box.min.y);
   scene.scale.setScalar(s);
   scene.position.y = -box.min.y * s;

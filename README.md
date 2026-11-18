@@ -243,6 +243,7 @@ src/
                    weapons, plays their animation clips (idle, walk, attack, cast, hit, death,
                    rise); goblins are the hooded rogue scaled down and tinted green, Grukk a
                    green-tinted barbarian, the ghast a tinted skeleton minion
+    modelSpecs.js  which .glb and which animation clips each unit uses (no three.js)
     models.js      rigged procedural miniatures: the mimic, plus
                    fallbacks for every other unit if its .glb fails to load
     unitView.js    base + label, idle/walk/swing/cast/teleport/death animations
@@ -257,7 +258,15 @@ src/
   main.js          controller: input → game → animations → HUD; campaign flow and saving
 tests/rules.test.js, tests/replay.test.js
 scripts/sim.js     headless balance simulator (npm run sim)
+scripts/trim-models.js  strips the character .glb files down to the clips in modelSpecs.js
 ```
+
+The title screen waits only for the dungeon tiles; the character models keep loading behind
+it, and a fight started before they arrive waits for them. three.js is built into a chunk of
+its own, so browsers keep it cached when only the game changes. The packs ship 14 to 95
+animation clips per model and the game plays about ten, so `node scripts/trim-models.js`
+drops the rest (30 MB of models down to under 8 MB). Adding a clip to `modelSpecs.js` means
+bringing the untrimmed file back first (git history has it), then trimming again.
 
 The rules engine resolves everything instantly and emits events (`initiative`, `turnStart`,
 `move`, `attack`, `spell`, `action`, `door`, `trap`, `trapFound`, `chest`, `mimic`,
@@ -275,12 +284,14 @@ you can swap the visuals (real models, different camera) without touching rules.
    monsters can inflict it through an attack `rider` or a spell's `condition`.
 3. **More rooms**: add a map to `LEVELS` in `maps.js` and a node in `NODES` in `campaign.js`
    (its column, row and `next` links); the camp map draws it.
-4. **A real goblin model**: goblins and Grukk reuse tinted KayKit adventurers. A dedicated
-   rigged goblin would only need a `.glb` in `public/models` and its entry in `SPECS` in
-   `gltfModels.js` (clip names per action; a `Armature|Clip` prefix is stripped).
+4. **A real goblin model**: goblins and Grukk reuse tinted KayKit adventurers (the goblins
+   with procedural ears on the head bone). A dedicated rigged goblin would only need a `.glb`
+   in `public/models` and its entry in `SPECS` in `modelSpecs.js` (clip names per action; a
+   `Armature|Clip` prefix is stripped). Free CC0 ones are scarce: Quaternius's is blocky
+   Cube World style, and KayKit's own goblin (Mystery Monthly Series 2) is no longer sold.
 5. **More classes**: `CLASS_CHOICES` in `units.js` lists which classes can fill each hero
    slot. A new one needs a stat block and a `PROGRESSION` table there, a model spec in
-   `gltfModels.js` (and a builder in `models.js`), and a simulator policy in `scripts/sim.js`
+   `modelSpecs.js` (and a builder in `models.js`), and a simulator policy in `scripts/sim.js`
    if it has abilities the monster AI wouldn't use. A Ranger for Wren's slot would be next.
 
 ## Credits
