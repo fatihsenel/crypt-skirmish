@@ -677,9 +677,11 @@ kbd {
 }
 
 /* --- touch: bigger targets, no keyboard hints, touch wording in the controls --------- */
-.help-keys .touch { display: none; }
-body.touch .help-keys .mouse { display: none; }
-body.touch .help-keys .touch { display: revert; }
+/* Mouse or touch controls, never both. Scoped to #help so they beat `#help dt { display: flex }`. */
+#help .help-keys .touch { display: none; }
+body.touch #help .help-keys .mouse { display: none; }
+body.touch #help .help-keys dt.touch { display: flex; }
+body.touch #help .help-keys dd.touch { display: block; }
 body.touch #end-turn kbd, body.touch #help summary kbd { display: none; }
 body.touch button.ability { padding: 7px 10px; min-height: 40px; }
 body.touch #end-turn { min-height: 44px; padding: 8px 14px; }
