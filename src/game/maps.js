@@ -117,11 +117,11 @@ export const LEVELS = [
       '#u.#..s..+..s..#',
       '#..#.....#....&#',
       '#..+..$..#.##..#',
-      '#..#..r..#..u.>#',
+      '#..#..u..#..u.>#',
       '################',
     ],
     loot: [['potion', 'potion']],
-    asleep: ['1,7', '12,10'], // gorged ghouls, sleeping it off
+    asleep: ['1,7'], // a gorged ghoul, sleeping it off
     patrols: { '9,1': [[13, 1], [13, 4]] },
   },
   {

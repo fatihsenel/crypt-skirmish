@@ -327,8 +327,8 @@ export class Board {
         this.candles.push({ light, seed: hash(x, z, 8) * 10, cell: null });
       }
     } else {
-      if (!kitPiece('column', 0)) box(0.5, KIT_WALL, 0x6f6862);
-      else parts[0].scale.set(0.62, 0.72, 0.62);
+      if (!kitPiece('column', 0)) box(0.5, KIT_WALL * 1.5, 0x6f6862);
+      else parts[0].scale.set(0.6, 1.1, 0.6); // 1.4 tall in the kit: about one and a half walls
     }
     this.group.add(...parts);
     const cell = this.addToCell(x, z, ...parts);

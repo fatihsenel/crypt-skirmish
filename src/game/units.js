@@ -128,7 +128,8 @@ export const TEMPLATES = {
   // --- act two ---------------------------------------------------------------
   u: {
     name: 'Ghoul', cls: 'Ghoul', team: 'monsters', color: 0x8a9a78,
-    hp: 22, ac: 12, speed: 6, prof: 2, xp: 200, cr: 1,
+    hp: 28, ac: 13, speed: 6, prof: 2, xp: 200, cr: 1,
+    multiattack: 2, // claw, claw
     ai: 'brute',
     undead: true,
     stats: { str: 13, dex: 15, con: 10, int: 7, wis: 10, cha: 6 },
@@ -139,22 +140,23 @@ export const TEMPLATES = {
   },
   w: {
     name: 'Varek', cls: 'Wight', team: 'monsters', color: 0x5a6a88,
-    hp: 45, ac: 14, speed: 6, prof: 2, xp: 700, cr: 3,
+    hp: 85, ac: 15, speed: 6, prof: 2, xp: 700, cr: 3,
     multiattack: 2,
     ai: 'brute',
     undead: true,
     castStat: 'cha',
     spells: ['dread'],
-    slots: { 1: 2 },
+    slots: { 1: 3 },
     stats: { str: 15, dex: 14, con: 16, int: 10, wis: 13, cha: 15 },
     attacks: [
-      { name: 'Longsword', stat: 'str', damage: '1d8', reach: 1 },
+      { name: 'Longsword', stat: 'str', damage: '1d10', reach: 1 },
       { name: 'Longbow', stat: 'dex', damage: '1d8', reach: 24, projectile: 'arrow' },
     ],
   },
   m: {
     name: 'Mimic', cls: 'Mimic', team: 'monsters', color: 0x7a4a24,
-    hp: 58, ac: 12, speed: 3, prof: 2, xp: 450, cr: 2,
+    hp: 70, ac: 12, speed: 3, prof: 2, xp: 450, cr: 2,
+    multiattack: 2,
     ai: 'brute',
     huge: true, // too heavy to shove over
     stats: { str: 17, dex: 12, con: 15, int: 5, wis: 13, cha: 8 },

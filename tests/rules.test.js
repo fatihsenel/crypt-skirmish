@@ -1255,3 +1255,20 @@ describe('room dressing', () => {
     expect(chooseAttack(game, g).target).toBe(r);
   });
 });
+
+describe('balance simulator', () => {
+  it('plays an act-two room to the end with a level-5 party', async () => {
+    const { fight } = await import('../scripts/sim.js');
+    const { newCampaign, heroUnit, HERO_CODES } = await import('../src/game/campaign.js');
+    const c = newCampaign();
+    for (const code of HERO_CODES) {
+      const u = heroUnit(code, { level: 5 });
+      Object.assign(c.party[code], { level: 5, hp: u.maxHp, slots: { ...u.slotMax } });
+    }
+    let seed = 3;
+    const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const r = fight('barrow', c, rng);
+    expect(r.game.over).toBeTruthy();
+    expect(r.rounds).toBeGreaterThan(1);
+  });
+});

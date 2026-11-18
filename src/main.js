@@ -706,7 +706,6 @@ async function openChest(unit, x, z) {
     sfx.chest();
     board.removeChest(x, z);
     addView(r.mimic);
-    sfx.roar();
     floatText(stage.scene, { x, z }, 'Mimic!', 'warn');
     stage.shake(0.25, 350);
     await wait(450);

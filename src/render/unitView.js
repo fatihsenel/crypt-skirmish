@@ -291,6 +291,7 @@ export class UnitView {
   /** Melee: wind up overhead, step in and strike, recover. */
   async swing(target, onImpact) {
     if (this.model.bite) return this.bite(target, onImpact);
+    sfx.voice(this.unit.code);
     await this.turnTowards(target.x, target.z);
     if (this.rig) {
       const { hit, done } = this.rig.play('melee', { at: 0.45, speed: 1.15 });
@@ -330,7 +331,7 @@ export class UnitView {
     const { head, body } = this.model;
     const home = this.group.position.clone();
     const dir = new THREE.Vector3(target.x - home.x, 0, target.z - home.z).normalize().multiplyScalar(0.4);
-    sfx.squeak();
+    sfx.voice(this.unit.code);
     await tween(160, (t) => {
       body.rotation.x = 0.15 * t;
       this.group.position.copy(home).addScaledVector(dir, -0.25 * t);

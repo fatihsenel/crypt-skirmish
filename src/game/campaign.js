@@ -47,7 +47,7 @@ export const NODES = {
   // Act two: one fight, then the vault's loot or the well's rest, then the wight.
   catacombs: {
     kind: 'fight', level: 'catacombs', col: 4, row: 1, next: ['vault', 'well'],
-    teaser: 'Ghouls: their claws poison. Skeletons and a rat besides.',
+    teaser: 'Ghouls: their claws poison. Skeletons besides.',
   },
   vault: {
     kind: 'fight', level: 'vault', short: 'Vault', col: 5, row: 0, next: ['barrow'],

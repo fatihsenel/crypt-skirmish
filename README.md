@@ -47,10 +47,13 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **a campaign**: a dungeon map with a fork. After the Crypt Door, pick the Goblin Warren or
   the Flooded Ossuary; then either rest at the Forgotten Chapel (long rest) or clear the
   other room too (more XP and loot, but no rest) before the Necromancer's Sanctum
-- **act two**: Morvath's fall is followed by a long rest, then the **Catacombs** (ghouls),
+- **act two**: Morvath's fall is followed by a long rest, then the **Catacombs** (ghouls: two
+  poisoning claws each),
   a fork between the **Sealed Vault** (treasure, including a Cloak of Protection, and a
   **mimic** posing as a chest) and a rest at the **Still Well**, and finally the
-  **Wight's Barrow**, where Varek the wight (two attacks, a longbow, Dread) waits. Opening the
+  **Wight's Barrow**, where Varek the wight (85 HP, two attacks, a longbow, Dread) waits. The
+  party reaches act two at level 5, and these monsters are tougher than their SRD stat blocks
+  to match (see Balance below). Opening the
   mimic wakes it: it joins the initiative right after the opener and bites with advantage,
   unless Wren's Keen Eyes spotted it from within 10 ft (the log warns you, and hovering the
   chest says so)
@@ -94,6 +97,7 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 npm install
 npm run dev      # http://localhost:5173
 npm test         # rules unit tests (Vitest)
+npm run sim      # balance check: plays whole campaigns headlessly and prints win rates
 npm run build    # production bundle in dist/ (served from /crypt-skirmish/)
 npm run preview  # http://localhost:4173/crypt-skirmish/ to check the build
 ```
@@ -105,6 +109,17 @@ Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 W
 3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow) with a fresh level-3 party; this doesn't touch the save.
 In the browser console, `__debug.autoplay()` lets the monster AI play the heroes too, and
 `__debug.win()` / `__debug.lose()` end the current fight on the spot.
+
+## Balance
+
+`scripts/sim.js` plays the campaign without graphics: heroes heal, Fireball crowds, Magic
+Missile the weakest foe, drink potions when low, sometimes loot chests mid-fight, and
+otherwise use the monster AI's tactics. Gear found goes to whoever suits it.
+`npm run sim -- 300` plays 300 campaigns down each route; `npm run sim -- 300 act2` replays
+act two only, from a pool of real end-of-act-one parties (faster when tuning). Set `SEED=n`
+to change the dice. Act two was tuned against act one's numbers from the same simulator:
+roughly 80% of the party's HP left after the Catacombs, 65% after the Vault, and a Barrow
+that is a clear step harder when the party skips the well's rest.
 
 ## Controls
 
@@ -160,6 +175,7 @@ src/
   ui/camp.js       title screen and camp: map, party, pack, level-ups
   main.js          controller: input → game → animations → HUD; campaign flow and saving
 tests/rules.test.js
+scripts/sim.js     headless balance simulator (npm run sim)
 ```
 
 The rules engine resolves everything instantly and emits events (`initiative`, `turnStart`,

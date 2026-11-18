@@ -160,6 +160,14 @@ class Sfx {
         this.noise(t, { dur: 0.1, filter: 'lowpass', freq: 300, gain: 0.4 });
       } else if (code === 'r') {
         for (let i = 0; i < 3; i++) this.click(t + i * 0.03, rand(3500, 5500), 0.06); // claws skitter
+      } else if (code === 'u') {
+        this.noise(t, { dur: 0.16, filter: 'bandpass', freq: rand(350, 500), q: 1.2, gain: 0.16, attack: 0.04 }); // a dragging shuffle
+      } else if (code === 'w') {
+        this.noise(t, { dur: 0.09, filter: 'lowpass', freq: 380, gain: 0.35 });
+        this.noise(t + 0.01, { dur: 0.08, filter: 'highpass', freq: 4500, gain: 0.07 }); // rusted mail
+      } else if (code === 'm') {
+        this.tone(t, { type: 'sine', freq: 85, freqEnd: 50, dur: 0.14, gain: 0.35 }); // a heavy, wet hop
+        this.noise(t, { dur: 0.12, filter: 'lowpass', freq: 500, gain: 0.25 });
       } else if (code === 'R') {
         this.noise(t, { dur: 0.05, filter: 'lowpass', freq: 500, gain: 0.07 }); // barely a sound
       } else {
@@ -225,6 +233,18 @@ class Sfx {
           this.squeakNow(t, 0.7);
         } else if (targetCode === 's') {
           for (let i = 0; i < 6; i++) this.click(t + Math.random() * 0.14, rand(1800, 3600), 0.2); // bones clatter
+        } else if (targetCode === 'u') {
+          this.hissNow(t, 0.5);
+        } else if (targetCode === 'w') {
+          for (const [f, g] of [[380, 0.07], [960, 0.05], [1720, 0.03]]) {
+            this.tone(t, { type: 'sine', freq: f * rand(0.97, 1.03), dur: 0.35, gain: g, attack: 0.002 }); // dull, rusted mail
+          }
+          this.groanNow(t + 0.05, 0.5);
+        } else if (targetCode === 'm') {
+          this.noise(t, { dur: 0.1, filter: 'highpass', freq: 1800, gain: 0.12 });
+          this.click(t + 0.02, 600, 0.2); // splintering lid
+        } else if (targetCode === 'o') {
+          this.tone(t, { type: 'sawtooth', freq: 130, freqEnd: 95, dur: 0.22, gain: 0.12, lowpass: 800 }); // a grunt
         }
         // body thud underneath everything
         this.tone(t, { type: 'sine', freq: 150, freqEnd: 55, dur: 0.2, gain: 0.5 });
@@ -258,6 +278,15 @@ class Sfx {
         this.noise(t, { dur: 1.4, filter: 'bandpass', freq: 600, freqEnd: 120, q: 1, gain: 0.25, attack: 0.2 }); // the soul escapes
       } else if (code === 's') {
         for (let i = 0; i < 16; i++) this.click(t + 0.1 + Math.random() * 0.6, rand(1500, 3800), rand(0.08, 0.2));
+      } else if (code === 'u') {
+        this.hissNow(t, 1.6);
+        this.tone(t + 0.2, { type: 'sawtooth', freq: 140, freqEnd: 60, dur: 0.6, gain: 0.08, lowpass: 600 }); // a gurgle
+      } else if (code === 'w') {
+        this.groanNow(t, 2);
+        this.noise(t + 0.3, { dur: 1.4, filter: 'bandpass', freq: 500, freqEnd: 100, q: 1, gain: 0.22, attack: 0.3 }); // crumbles to dust
+      } else if (code === 'm') {
+        for (let i = 0; i < 8; i++) this.click(t + Math.random() * 0.4, rand(400, 1200), rand(0.15, 0.3)); // the lid splits
+        this.tone(t + 0.1, { type: 'sawtooth', freq: 90, freqEnd: 40, dur: 0.8, gain: 0.14, lowpass: 500 });
       } else {
         this.tone(t, { type: 'triangle', freq: 330, freqEnd: 120, dur: 0.7, gain: 0.12, lowpass: 900 });
       }
@@ -265,6 +294,37 @@ class Sfx {
       this.tone(t + 0.55, { type: 'sine', freq: 110, freqEnd: 45, dur: 0.3, gain: 0.5 });
       this.noise(t + 0.55, { dur: 0.2, filter: 'lowpass', freq: 600, gain: 0.35 });
     });
+  }
+
+  /** A monster's cry as it attacks: rat squeak, ghoul hiss, wight groan, mimic chomp, orc grunt. */
+  voice(code) {
+    this.play((t) => {
+      if (code === 'r') this.squeakNow(t, 1);
+      else if (code === 'u') this.hissNow(t, 1);
+      else if (code === 'w') this.groanNow(t, 1);
+      else if (code === 'o') this.tone(t, { type: 'sawtooth', freq: 120, freqEnd: 150, dur: 0.3, gain: 0.12, attack: 0.03, lowpass: 900 });
+      else if (code === 'm') {
+        // jaws gape (a creak) and slam shut (two wet clacks)
+        this.tone(t, { type: 'sawtooth', freq: 70, freqEnd: 110, dur: 0.25, gain: 0.08, lowpass: 700 });
+        for (const d of [0.26, 0.31]) {
+          this.click(t + d, rand(500, 800), 0.35);
+          this.noise(t + d, { dur: 0.08, filter: 'lowpass', freq: 900, gain: 0.3 });
+        }
+      }
+    });
+  }
+
+  /** Ghoul hiss: breathy noise through a narrow band, falling. */
+  hissNow(t, len = 1) {
+    this.noise(t, { dur: 0.45 * len, filter: 'bandpass', freq: 4200, freqEnd: 2600, q: 2.5, gain: 0.22, attack: 0.03 });
+    this.noise(t, { dur: 0.3 * len, filter: 'highpass', freq: 6000, gain: 0.06, attack: 0.02 });
+  }
+
+  /** Wight groan: two low, detuned voices sliding down. */
+  groanNow(t, len = 1) {
+    this.tone(t, { type: 'sawtooth', freq: 105, freqEnd: 75, dur: 0.6 * len, gain: 0.12, attack: 0.08, lowpass: 650 });
+    this.tone(t, { type: 'sawtooth', freq: 111, freqEnd: 78, dur: 0.6 * len, gain: 0.09, attack: 0.08, lowpass: 650 });
+    this.noise(t, { dur: 0.5 * len, filter: 'bandpass', freq: 420, q: 2, gain: 0.12, attack: 0.1 });
   }
 
   /** Rat squeak (attacks, hits, deaths). */
