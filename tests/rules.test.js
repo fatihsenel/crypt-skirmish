@@ -959,6 +959,69 @@ describe('stealth', () => {
     expect(w.hidden).toBe(13);
   });
 
+  describe('goblins that hide', () => {
+    // Ilsa at the left; a barrel at 8,1 between her and the goblin at 9,1.
+    const room = ['############', '#W......&g.#', '#..........#', '############'];
+    const setup = (rng = fixed(0.5)) => {
+      const game = new Game(room, { rng });
+      game.start();
+      const w = game.units.find((u) => u.code === 'W');
+      const g = game.units.find((u) => u.code === 'g');
+      g.unaware = false;
+      setTurn(game, game.units.indexOf(g));
+      return { game, w, g };
+    };
+
+    it('a goblin hides behind a barrel as a bonus action, but not in the open', () => {
+      const { game, w, g } = setup();
+      const r = game.doAction(g, 'nimbleHide');
+      expect(r.total).toBe(11 + 6); // Stealth +6 (DEX 2, expertise)
+      expect(g.hidden).toBe(17);
+      expect(g.bonusUsed).toBe(true);
+      g.hidden = 0;
+      g.bonusUsed = false;
+      Object.assign(g, { x: 9, z: 2 }); // out from behind the barrel
+      expect(game.actionProblem(g, 'nimbleHide')).toMatch(/Ilsa is watching/);
+      expect(w.alive).toBe(true);
+    });
+
+    it("a hidden goblin can't be targeted, and stepping into the open gives it away", () => {
+      const { game, w, g } = setup();
+      game.doAction(g, 'nimbleHide');
+      expect(game.attackProblem(w, g, w.attacks[0])).toMatch(/hidden/);
+      expect(game.spellProblem(w, 'magicMissile', g)).toMatch(/hidden/);
+      game.move(g, 9, 2);
+      expect(g.hidden).toBe(0);
+    });
+
+    it('heroes Search for hidden goblins; a blast also drives them out', () => {
+      const { game, w, g } = setup();
+      game.doAction(g, 'nimbleHide'); // Stealth 17
+      setTurn(game, game.units.indexOf(w));
+      expect(game.doAction(w, 'search').found).toEqual([]); // 11 + 1 = 12
+      g.hidden = 12;
+      w.actionUsed = false;
+      expect(game.doAction(w, 'search').found).toEqual([g]);
+      expect(g.hidden).toBe(0);
+      g.hidden = 17;
+      game.applyDamage(g, 1, w);
+      expect(g.hidden).toBe(0);
+    });
+
+    it("Search is greyed out for heroes when nothing is hidden in sight", () => {
+      const { game, w } = setup();
+      setTurn(game, game.units.indexOf(w));
+      expect(game.actionProblem(w, 'search')).toMatch(/Nothing hidden/);
+    });
+
+    it('the goblin AI ends its turn hidden when it can', () => {
+      const { game, g } = setup();
+      g.actionUsed = true; // already shot
+      const memo = { moved: true };
+      expect(nextMonsterStep(game, g, memo)).toEqual({ type: 'bonus', id: 'nimbleHide' });
+    });
+  });
+
   it('heavy armour hides with disadvantage; Wren hides as a bonus action with expertise', () => {
     const game = new Game(['#######', '#F...R#', '#######'], { rng: fixed(0.5) });
     game.start();
@@ -1501,3 +1564,138 @@ describe('hero names', () => {
   });
 });
 
+
+describe('the paladin', () => {
+  const paladinParty = (level = 3, extra = {}) => {
+    const c = newCampaign('normal', {}, { F: 'P' });
+    if (level > 3) {
+      const done = completeFight(c, 'crypt', { partyState: () => ({}), stats: {}, round: 0, found: [], grid: { chests: new Map() }, xpEarned: () => ({ 4: 450, 5: 900, 6: 2000 })[level] });
+      return { ...done.state.party, ...extra };
+    }
+    return { ...c.party, ...extra };
+  };
+  const arena = (rows, level, rng = fixed(0.5)) => {
+    const game = new Game(rows, { party: paladinParty(level), senses: false, rng });
+    game.start();
+    return game;
+  };
+
+  it('takes the Fighter slot: a Paladin template, keyed as F', () => {
+    const c = newCampaign('normal', { F: 'Odo' }, { F: 'P' });
+    expect(c.party.F).toMatchObject({ cls: 'P', hp: 28, slots: { 1: 3 }, layOnHands: 15, name: 'Odo' });
+    expect(newCampaign().party.F.cls).toBeUndefined(); // the Fighter by default
+    expect(newCampaign('normal', {}, { W: 'P' }).party.W.cls).toBeUndefined(); // not a choice there
+    const game = arena(['######', '#Fg..#', '######']);
+    const p = game.units.find((u) => u.team === 'heroes');
+    expect([p.cls, p.code, p.slot, game.acOf(p)]).toEqual(['Paladin', 'P', 'F', 18]);
+    expect(Object.keys(game.partyState())).toEqual(['F']);
+  });
+
+  it('Dueling adds 2 to melee weapon damage, not to a thrown javelin', () => {
+    const game = arena(['######', '#Fg..#', '######']);
+    const p = game.units.find((u) => u.code === 'P');
+    expect(game.damageBonus(p, p.attacks[0])).toBe(3 + 2);
+    expect(game.damageBonus(p, p.attacks[1])).toBe(3);
+  });
+
+  it('Divine Smite: an armed melee hit spends a slot for 2d8, 3d8 against undead, then disarms', () => {
+    const game = arena(['######', '#Fs..#', '######'], 3, () => 0.999);
+    const [p, s] = game.units;
+    setTurn(game, 0);
+    s.hp = 999;
+    expect(game.toggleSmite(p)).toEqual({ ok: true, armed: true });
+    const r = game.attack(p, s, p.attacks[0]);
+    expect(r.smite).toMatchObject({ slot: 1, dice: 3 });
+    expect(r.smite.total).toBe(48); // a crit doubles the smite dice: 6d8 at 8 each
+    expect(p.slots[1]).toBe(2);
+    expect(p.smiteArmed).toBe(false);
+  });
+
+  it('Divine Smite: a thrown javelin never smites; no slots, no arming', () => {
+    const game = arena(['########', '#F...g.#', '########'], 3, () => 0.95);
+    const [p, g] = game.units;
+    setTurn(game, 0);
+    g.hp = 999;
+    game.toggleSmite(p);
+    const r = game.attack(p, g, p.attacks[1]);
+    expect(r.hit).toBe(true);
+    expect(r.smite).toBeNull();
+    expect(p.smiteArmed).toBe(true); // still waiting for a melee hit
+    game.toggleSmite(p);
+    p.slots = { 1: 0 };
+    expect(game.toggleSmite(p).ok).toBe(false);
+  });
+
+  it('Lay on Hands heals from the pool, only what is missing', () => {
+    const game = arena(['#######', '#FW.g.#', '#######']);
+    const p = game.units.find((u) => u.code === 'P');
+    const w = game.units.find((u) => u.code === 'W');
+    setTurn(game, game.units.indexOf(p));
+    expect(game.spellProblem(p, 'layOnHands', w)).toBe('Ilsa is unhurt');
+    w.hp -= 6;
+    const r = game.castSpell(p, 'layOnHands', w);
+    expect([r.healed, r.left, w.hp]).toEqual([6, 9, w.maxHp]);
+    expect(game.stats.F.healing).toBe(6);
+    p.layOnHands = 0;
+    w.hp -= 3;
+    p.actionUsed = false;
+    expect(game.spellProblem(p, 'layOnHands', w)).toBe('Your healing pool is spent');
+  });
+
+  it('Shield of Faith: +2 AC on one ally at a time, gone when the paladin falls', () => {
+    const game = arena(['#######', '#FW.g.#', '#######']);
+    const p = game.units.find((u) => u.code === 'P');
+    const w = game.units.find((u) => u.code === 'W');
+    setTurn(game, game.units.indexOf(p));
+    const ac = game.acOf(w);
+    expect(game.castSpell(p, 'shieldOfFaith', w).ok).toBe(true); // unhurt is fine: not a heal
+    expect(game.acOf(w)).toBe(ac + 2);
+    p.bonusUsed = false;
+    game.castSpell(p, 'shieldOfFaith', p);
+    expect(game.acOf(w)).toBe(ac);
+    expect(game.acOf(p)).toBe(20);
+    game.applyDamage(p, 999, game.units.find((u) => u.code === 'g'));
+    expect(p.faithFrom).toBeNull();
+  });
+
+  it('levels 3 to 6: Extra Attack and bigger slots at 5, Aura of Protection at 6', () => {
+    const party = paladinParty(6);
+    expect(party.F).toMatchObject({ cls: 'P', level: 6, layOnHands: 30 });
+    const game = new Game(['########', '#FW..g.#', '########'], { party, senses: false, rng: fixed(0.5) });
+    const p = game.units.find((u) => u.code === 'P');
+    const w = game.units.find((u) => u.code === 'W');
+    expect([p.maxHp, p.extraAttack, p.slotMax, p.stats.str]).toEqual([52, 2, { 1: 4, 2: 2 }, 18]);
+    expect(game.save(w, 'wis', 10).aura).toBe(3); // CHA 16
+    expect(game.save(game.units.find((u) => u.code === 'g'), 'wis', 10).aura).toBe(0);
+    w.x = 5; w.z = 1; game.units.find((u) => u.code === 'g').x = 3;
+    expect(game.auraBonus(w)).toBe(0); // out of the 10-ft aura
+  });
+
+  it('carries class, pool and tally through the campaign and the save', () => {
+    const c = newCampaign('normal', {}, { F: 'P' });
+    const game = new Game(['######', '#Fg..#', '######'], { party: c.party, senses: false, rng: () => 0.999 });
+    game.start();
+    const [p, g] = game.units;
+    setTurn(game, 0);
+    p.layOnHands = 4;
+    p.hp = 10;
+    game.attack(p, g, p.attacks[0]);
+    const { state, report } = completeFight({ ...c, xp: 440 }, 'crypt', game);
+    expect(state.party.F).toMatchObject({ cls: 'P', level: 4, layOnHands: 9 }); // the pool doesn't refill on a short rest
+    expect(state.party.F.hp).toBe(19 + 8); // half the missing 18 back, plus the level's 8
+    expect(state.stats.heroes.F.kills).toBe(1);
+    expect(report.levelUps[0]).toMatchObject({ code: 'F', name: 'Brannoc', note: 'Strength 18: +1 to hit and damage' });
+    expect(runSummary(state).heroes[0].cls).toBe('Paladin');
+    const rested = takeRest(state, 'chapel');
+    expect(rested.party.F).toMatchObject({ hp: 36, layOnHands: 20 });
+    const loaded = parseSave(serialize(state));
+    expect(loaded.party.F).toMatchObject({ cls: 'P', layOnHands: 9 });
+    const bad = JSON.parse(serialize(state));
+    bad.party.F.cls = 'W';
+    bad.party.W.layOnHands = 5;
+    const fixedSave = parseSave(JSON.stringify(bad));
+    expect(fixedSave.party.F.cls).toBeUndefined();
+    expect(fixedSave.party.F.layOnHands).toBeUndefined();
+    expect(fixedSave.party.W.layOnHands).toBeUndefined();
+  });
+});

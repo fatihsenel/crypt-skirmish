@@ -4,7 +4,7 @@
 
 import { rollDice, rollExpr, abilityMod } from './dice.js';
 import { Grid, key, gridDistance, pathFrom } from './grid.js';
-import { createUnit, applyLevel, TEMPLATES } from './units.js';
+import { createUnit, applyLevel, classOf, TEMPLATES } from './units.js';
 import { applyItems } from './items.js';
 import { ACTIONS, STANDARD_ACTIONS, SPELLS, coneTiles, areaTiles, directionTo } from './abilities.js';
 
@@ -38,10 +38,12 @@ export const PATROL_PACE = 3;
 export const CONDITIONS = ['prone', 'poisoned', 'frightened'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
-const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions'];
+const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
 
 /** Weapon attacks (not spell attacks like Fire Bolt) benefit from +1 weapons. */
 export const isWeapon = (attack) => attack.stat === 'str' || attack.stat === 'dex';
+/** A melee weapon attack (not a thrown javelin): what Dueling and Divine Smite need. */
+export const isMelee = (attack) => isWeapon(attack) && attack.reach === 1;
 
 export class Game {
   /**
@@ -49,7 +51,7 @@ export class Game {
    *               contents of each '$' chest in reading order, e.g. [['potion'], ['potion', 'potion']],
    *               asleep lists the monsters asleep at the start by tile ('x,z'), and patrols
    *               maps a monster's tile to the waypoints of its beat, e.g. { '13,5': [[9,2]] }
-   * @param party  hero state from the previous level, keyed by unit code
+   * @param party  hero state from the previous level, keyed by hero slot (F W R C)
    */
   /** senses: false makes every monster aware from the start (the old behaviour). */
   constructor(level, { rng = Math.random, party = null, senses = true, difficulty = null } = {}) {
@@ -72,7 +74,10 @@ export class Game {
     const seen = {};
     const make = (s) => {
       seen[s.code] = (seen[s.code] || 0) + 1;
-      return createUnit(s.code, s.x, s.z, seen[s.code], totals[s.code]);
+      // A hero slot may be played by another class (party record `cls`).
+      const u = createUnit(party?.[s.code] ? classOf(s.code, party[s.code]) : s.code, s.x, s.z, seen[s.code], totals[s.code]);
+      u.slot = s.code;
+      return u;
     };
     this.difficulty = difficulty; // { hp, bonus } from DIFFICULTIES, or null for as written
     this.units = this.grid.spawns.map(make);
@@ -84,12 +89,12 @@ export class Game {
     }
     if (party) {
       for (const u of this.units) {
-        const saved = party[u.code];
+        const saved = party[u.slot];
         if (u.team !== 'heroes' || !saved) continue;
         if (saved.level) applyLevel(u, saved.level);
         if (saved.name) u.name = saved.name;
         applyItems(u, saved.items);
-        for (const f of ['hp', 'alive', 'slots', 'potions']) {
+        for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands']) {
           if (saved[f] !== undefined) u[f] = structuredClone(saved[f]);
         }
         if (!u.alive) Object.assign(u, { alive: true, hp: 1 }); // carried out by the party
@@ -113,13 +118,13 @@ export class Game {
     this.round = 0;
     this.over = null; // 'victory' | 'defeat'
     this.found = [];  // non-potion loot taken from chests, for the party's pack
-    this.stats = {};  // per hero code: { damage, kills, crits, healing, downed } (for the run's ending)
+    this.stats = {};  // per hero slot: { damage, kills, crits, healing, downed } (for the run's ending)
   }
 
   /** The tally for a hero, or null for monsters. */
   tally(unit) {
-    if (unit?.team !== 'heroes' || !unit.code) return null;
-    return (this.stats[unit.code] ??= { damage: 0, kills: 0, crits: 0, healing: 0, downed: 0 });
+    if (unit?.team !== 'heroes' || !unit.slot) return null;
+    return (this.stats[unit.slot] ??= { damage: 0, kills: 0, crits: 0, healing: 0, downed: 0 });
   }
 
   /** XP for every monster slain in this fight (risen dead included, old corpses not). */
@@ -133,8 +138,8 @@ export class Game {
   partyState() {
     const out = {};
     for (const u of this.units) {
-      if (u.team === 'heroes' && !u.corpse && !(u.code in out)) {
-        out[u.code] = structuredClone(Object.fromEntries(CARRY.map((f) => [f, u[f]])));
+      if (u.team === 'heroes' && !u.corpse && !(u.slot in out)) {
+        out[u.slot] = structuredClone(Object.fromEntries(CARRY.map((f) => [f, u[f]])));
       }
     }
     return out;
@@ -188,11 +193,12 @@ export class Game {
   /** Flat damage bonus added to an attack's dice. */
   damageBonus(unit, attack) {
     if (attack.addMod === false) return 0;
-    return abilityMod(unit.stats[attack.stat]) + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0);
+    const dueling = unit.passives?.includes('dueling') && isMelee(attack) ? 2 : 0;
+    return abilityMod(unit.stats[attack.stat]) + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + dueling;
   }
 
   acOf(unit) {
-    return unit.ac + (unit.acBonus ?? 0) + (unit.shielded ? 5 : 0);
+    return unit.ac + (unit.acBonus ?? 0) + (unit.shielded ? 5 : 0) + (unit.faithFrom ? 2 : 0);
   }
 
   /**
@@ -207,11 +213,22 @@ export class Game {
     return 0;
   }
 
-  /** Roll a saving throw: d20 + ability modifier + item bonuses. */
+  /** Roll a saving throw: d20 + ability modifier + item bonuses + a paladin's aura. */
   save(unit, stat, dc) {
     const d20 = rollDice(1, 20, this.rng).total;
-    const total = d20 + abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0);
-    return { unit, d20, total, success: total >= dc };
+    const aura = this.auraBonus(unit);
+    const total = d20 + abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0) + aura;
+    return { unit, d20, total, aura, success: total >= dc };
+  }
+
+  /** Aura of Protection: the best CHA modifier (min +1) of a living paladin of its side within 10 ft. */
+  auraBonus(unit) {
+    let best = 0;
+    for (const p of this.living(unit.team)) {
+      if (!p.passives.includes('auraOfProtection') || gridDistance(p, unit) > 2) continue;
+      best = Math.max(best, Math.max(1, abilityMod(p.stats.cha)));
+    }
+    return best;
   }
 
   spellDC(unit) {
@@ -270,7 +287,24 @@ export class Game {
     }
   }
 
-  /** A hidden hero gives themself away (or is found). */
+  /**
+   * Can hero `h` spot hidden monster `m`? Next to it, or in sight with a passive Perception
+   * that reaches its Stealth, or in sight with nothing between them: a goblin needs a wall,
+   * column, barrel or crate to stay hidden behind.
+   */
+  spotsHidden(h, m) {
+    if (!h.alive || !m.alive) return false;
+    if (gridDistance(h, m) <= 1) return true;
+    if (!this.inSight(h, m)) return false;
+    return this.passivePerception(h) >= m.hidden || this.coverBonus(h, m) === 0;
+  }
+
+  /** Heroes who can see `m` with nothing to hide behind (they stop it hiding). */
+  hideWatchers(m) {
+    return this.living('heroes').filter((h) => this.inSight(h, m) && this.coverBonus(h, m) === 0);
+  }
+
+  /** A hidden unit gives itself away (or is found). */
   reveal(h, cause, by = null) {
     if (!h.hidden) return;
     h.hidden = 0;
@@ -384,6 +418,11 @@ export class Game {
     for (const m of monsters) {
       if (m.unaware && heroes.some((h) => this.notices(m, h))) this.alert(m, 'sight');
     }
+    for (const m of monsters) {
+      if (!m.hidden) continue;
+      const by = heroes.find((h) => this.spotsHidden(h, m));
+      if (by) this.reveal(m, 'spotted', by);
+    }
     for (const h of heroes) this.markSeen(h, [h]);
   }
 
@@ -495,6 +534,7 @@ export class Game {
   applyDamage(target, amount, source) {
     this.alert(target, 'hurt');
     const before = target.hp;
+    if (amount > 0) this.reveal(target, 'hurt'); // caught in a blast: no hiding that
     target.hp = Math.max(0, target.hp - amount);
     if (amount > 0) target.turned = 0; // damage breaks Turn Undead
     const t = target.team === 'monsters' ? this.tally(source) : null;
@@ -504,6 +544,7 @@ export class Game {
       const down = this.tally(target);
       if (down) down.downed++;
       target.alive = false;
+      for (const u of this.units) if (u.faithFrom === target.id) u.faithFrom = null; // Shield of Faith drops
       this.emit('death', { unit: target, source });
       this.checkEnd();
     }
@@ -750,6 +791,7 @@ export class Game {
     if (!opportunity && attacker.turned) return 'Turned: can only flee';
     if (!target?.alive) return 'No valid target';
     if (target.team === attacker.team) return 'That is an ally';
+    if (target.hidden && target.team === 'monsters') return `${target.name} is hidden: Search to find it`;
     const d = gridDistance(attacker, target);
     if (d > attack.reach) return `Out of range (${d * 5} ft, ${attack.name} reaches ${attack.reach * 5} ft)`;
     if (d > 1 && !this.grid.lineOfSight(attacker.x, attacker.z, target.x, target.z)) {
@@ -811,6 +853,34 @@ export class Game {
   }
 
   /** Sneak Attack applies: once per turn, with advantage or an ally next to the target. */
+  /**
+   * Divine Smite: spends the lowest slot for 2d8 radiant, +1d8 per slot level above 1st
+   * (5d8 at most), +1d8 against undead. Dice double on a crit. Disarms afterwards.
+   */
+  smite(attacker, target, crit) {
+    const slot = this.spendSlot(attacker, 1);
+    attacker.smiteArmed = false;
+    const dice = Math.min(5, 1 + slot) + (target.undead ? 1 : 0);
+    const roll = rollExpr(`${dice}d8`, { crit, rng: this.rng });
+    return { slot, dice, total: roll.total, roll };
+  }
+
+  /** Why `unit` can't arm Divine Smite, or null. */
+  smiteProblem(unit) {
+    if (!unit.passives.includes('divineSmite')) return 'Unknown feature';
+    if (this.over) return 'The battle is over';
+    if (!unit.smiteArmed && !this.hasSlot(unit, 1)) return 'No spell slots left';
+    return null;
+  }
+
+  /** Arm or disarm Divine Smite for the next melee hit (a free choice, not an action). */
+  toggleSmite(unit) {
+    const problem = this.smiteProblem(unit);
+    if (problem) return { ok: false, reason: problem };
+    unit.smiteArmed = !unit.smiteArmed;
+    return { ok: true, armed: unit.smiteArmed };
+  }
+
   canSneak(attacker, target, mods) {
     if (!attacker.passives.includes('sneakAttack') || attacker.sneakUsed) return false;
     return mods.mode === 'adv' || (mods.mode === 'normal' && this.allyNextTo(attacker, target));
@@ -853,6 +923,7 @@ export class Game {
     let damage = 0;
     let damageRoll = null;
     let sneak = null;
+    let smite = null;
     if (hit) {
       damageRoll = rollExpr(attack.damage, { crit, rng: this.rng });
       damage = Math.max(1, damageRoll.total + this.damageBonus(attacker, attack));
@@ -860,6 +931,10 @@ export class Game {
         attacker.sneakUsed = true;
         sneak = rollExpr(`${attacker.sneakDice ?? 2}d6`, { crit, rng: this.rng });
         damage += sneak.total;
+      }
+      if (attacker.smiteArmed && isMelee(attack) && this.hasSlot(attacker, 1)) {
+        smite = this.smite(attacker, target, crit);
+        damage += smite.total;
       }
     }
 
@@ -874,7 +949,7 @@ export class Game {
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
-      hit, crit, fumble, shielded, damage, damageRoll, sneak, uncanny, rider: null,
+      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, uncanny, rider: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -949,7 +1024,6 @@ export class Game {
   actionsFor(unit) {
     const list = [...STANDARD_ACTIONS, ...unit.features];
     if (unit.potions > 0) list.push('potion');
-    if (unit.team === 'monsters') list.push('search');
     return list;
   }
 
@@ -976,10 +1050,15 @@ export class Game {
     }
     if (['disengage', 'nimbleEscape', 'cunningDisengage'].includes(id) && unit.disengaged) return 'Already disengaged';
     if (unit.turned && !['dash', 'dodge', 'disengage', 'nimbleEscape'].includes(id)) return 'Turned: can only flee';
-    if (id === 'hide' || id === 'cunningHide') {
+    if (id === 'hide' || id === 'cunningHide' || id === 'nimbleHide') {
       if (unit.hidden) return 'Already hidden';
-      const watcher = this.enemiesOf(unit).find((e) => !e.unaware && this.inSight(e, unit));
+      const watcher = unit.team === 'monsters' ? this.hideWatchers(unit)[0]
+        : this.enemiesOf(unit).find((e) => !e.unaware && this.inSight(e, unit));
       if (watcher) return `${watcher.name} is watching you`;
+    }
+    if (id === 'search' && unit.team === 'heroes'
+        && !this.enemiesOf(unit).some((e) => e.hidden && this.inSight(unit, e))) {
+      return 'Nothing hidden in sight';
     }
     return null;
   }
@@ -1002,7 +1081,8 @@ export class Game {
         unit.dodging = true;
         break;
       case 'hide':
-      case 'cunningHide': {
+      case 'cunningHide':
+      case 'nimbleHide': {
         const poisoned = this.has(unit, 'poisoned');
         const { d20, rolls } = this.rollD20(unit.noisyArmor || poisoned ? 'dis' : 'normal');
         const bonus = this.stealthBonus(unit);
@@ -1011,9 +1091,9 @@ export class Game {
         break;
       }
       case 'search': {
-        // Perception (d20 + the passive bonus) against each hidden hero it could see.
+        // Perception (d20 + the passive bonus) against each hidden enemy it could see.
         const bonus = this.passivePerception(unit) - 10;
-        result.checks = this.living('heroes')
+        result.checks = this.enemiesOf(unit)
           .filter((h) => h.hidden && this.inSight(unit, h))
           .map((h) => {
             const { d20 } = this.rollD20(this.has(unit, 'poisoned') ? 'dis' : 'normal');
@@ -1054,7 +1134,7 @@ export class Game {
     this.emit('action', result);
     for (const h of result.found ?? []) {
       this.reveal(h, 'searched', unit);
-      h.lastSeen = { x: h.x, z: h.z };
+      if (h.team === 'heroes') h.lastSeen = { x: h.x, z: h.z };
     }
     if (unit.hidden) this.updateAwareness(); // anyone close enough spots the attempt
     for (const s of result.saves ?? []) if (s.destroyed) this.applyDamage(s.unit, s.unit.hp, unit);
@@ -1137,6 +1217,7 @@ export class Game {
     if (s.time === 'action' && caster.actionUsed) return 'Action already used this turn';
     if (s.time === 'bonus' && caster.bonusUsed) return 'Bonus action already used this turn';
     if (!this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
+    if (s.pool && !(caster.layOnHands > 0)) return 'Your healing pool is spent';
     if (s.targeting === 'self') {
       if (id === 'massHealingWord' && !this.massHealTargets(caster).length) return 'No one nearby is hurt';
       return null;
@@ -1148,12 +1229,14 @@ export class Game {
     switch (s.targeting) {
       case 'enemy':
         if (!target.alive || target.team === caster.team) return 'Choose an enemy';
+        if (target.hidden && target.team === 'monsters') return `${target.name} is hidden: Search to find it`;
         if (!inRange(target)) return `Out of range or not in sight (${s.range * 5} ft)`;
         if (s.condition && this.has(target, s.condition)) return `${target.name} is already ${s.condition}`;
         break;
       case 'ally':
         if (!target.alive || target.team !== caster.team) return 'Choose an ally (or yourself)';
-        if (target.hp >= target.maxHp) return `${target.name} is unhurt`;
+        if ((s.heal || s.pool) && target.hp >= target.maxHp) return `${target.name} is unhurt`;
+        if (id === 'shieldOfFaith' && target.faithFrom === caster.id) return `${target.name} already has it`;
         if (!inRange(target)) return s.range === 1 ? 'Must touch: stand next to them' : `Out of range (${s.range * 5} ft)`;
         break;
       case 'corpse':
@@ -1271,6 +1354,23 @@ export class Game {
         this.emit('spell', result);
         break;
       }
+      case 'layOnHands': {
+        result.target = target;
+        const amount = Math.min(caster.layOnHands, target.maxHp - target.hp);
+        caster.layOnHands -= amount;
+        result.healed = this.heal(target, amount, caster);
+        result.left = caster.layOnHands;
+        this.emit('spell', result);
+        break;
+      }
+      case 'shieldOfFaith': {
+        // One at a time: casting it again moves it.
+        for (const u of this.units) if (u.faithFrom === caster.id) u.faithFrom = null;
+        target.faithFrom = caster.id;
+        result.target = target;
+        this.emit('spell', result);
+        break;
+      }
       case 'mistyStep': {
         result.from = { x: caster.x, z: caster.z };
         result.to = { x: target.x, z: target.z };
@@ -1295,7 +1395,7 @@ export class Game {
         throw new Error(`castSpell: no rules for "${id}"`);
     }
     if (id !== 'mistyStep') {
-      if (result.target?.team) this.alert(result.target, 'hurt');
+      if (result.target?.team && result.target.team !== caster.team) this.alert(result.target, 'hurt');
       this.noise(caster, spell.level >= 3 ? NOISE + 3 : NOISE);
     }
     this.updateAwareness();

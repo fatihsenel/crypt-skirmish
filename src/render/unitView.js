@@ -192,12 +192,21 @@ export class UnitView {
       u.conditions?.prone && ['prone', 'Prone'],
       u.conditions?.poisoned && ['poisoned', 'Poisoned'],
       u.conditions?.frightened && ['frightened', 'Frightened'],
-      u.hidden && ['hidden', `Hidden · ${u.hidden}`],
+      // A hero's own Stealth roll is theirs to see; a goblin's isn't.
+      u.hidden && ['hidden', u.team === 'heroes' ? `Hidden · ${u.hidden}` : 'Hidden'],
       u.asleep ? ['asleep', 'Asleep'] : u.patrol && u.unaware ? ['unaware', 'Patrolling'] : u.unaware && ['unaware', 'Unaware'],
     ].filter(Boolean);
     this.label.element.querySelector('.tags').innerHTML =
       tags.map(([cls, text]) => `<i class="tag ${cls}">${text}</i>`).join('');
     this.setProne(!!u.conditions?.prone && u.alive);
+    if (u.team === 'monsters' && !this.gone) this.setGhost(!!u.hidden && u.alive);
+  }
+
+  /** A hidden monster: a faint shape where the heroes saw it duck down. */
+  setGhost(on) {
+    if (on === !!this.ghost) return;
+    this.ghost = on;
+    this.fadeMeshes(on ? 0.35 : 1);
   }
 
   /** Knocked down / back on its feet: tip the figure over onto its back (rats onto a side). */
@@ -295,7 +304,7 @@ export class UnitView {
     await this.turnTowards(target.x, target.z);
     if (this.rig) {
       const { hit, done } = this.rig.play('melee', { at: 0.45, speed: 1.15 });
-      setTimeout(() => sfx.whoosh(this.unit.code === 'F'), 180);
+      setTimeout(() => sfx.whoosh(this.unit.code === 'F' || this.unit.code === 'P'), 180);
       await hit;
       onImpact?.();
       await done;
@@ -311,7 +320,7 @@ export class UnitView {
       armR.rotation.x = lerp(startR, -2.9, t);
       armL.rotation.x = lerp(rest.armL, rest.armL - 0.3, t);
     }, easeOut);
-    sfx.whoosh(this.unit.code === 'F');
+    sfx.whoosh(this.unit.code === 'F' || this.unit.code === 'P');
     await tween(120, (t) => {
       armR.rotation.x = lerp(-2.9, -0.25, t);
       this.group.position.copy(home).addScaledVector(dir, t);

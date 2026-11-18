@@ -2,7 +2,7 @@
 // party's pack of loot, and save data. Pure state, no DOM and no storage. Every
 // function returns a new state; the controller decides when to persist it.
 
-import { TEMPLATES, PROGRESSION, MAX_LEVEL, createUnit, applyLevel } from './units.js';
+import { TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf } from './units.js';
 import { ITEMS, applyItems } from './items.js';
 import { levelById } from './maps.js';
 
@@ -98,15 +98,25 @@ export function levelForXp(xp) {
   return Math.min(level, MAX_LEVEL);
 }
 
-/** A hero unit as described by a party record (for the camp screen and rest maths). */
+/**
+ * A hero unit as described by a party record (for the camp screen and rest maths). The
+ * record's `cls` picks the class for the slot; pass it along with partial records.
+ */
 export function heroUnit(code, rec) {
-  const u = createUnit(code, 0, 0);
+  const u = createUnit(classOf(code, rec), 0, 0);
+  u.slot = code;
   applyLevel(u, rec.level);
   applyItems(u, rec.items);
-  for (const f of ['hp', 'alive', 'slots', 'potions']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
+  for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
   if (rec.name) u.name = rec.name;
   return u;
 }
+
+/** The fresh-from-a-long-rest version of a slot's hero at `level`. */
+const restedHero = (code, rec, level = rec.level) => heroUnit(code, { cls: rec.cls, level });
+
+/** A hero's display name: the one typed on the title screen, or the class's default. */
+export const heroName = (code, rec) => rec.name ?? TEMPLATES[classOf(code, rec)].name;
 
 const STAT_FIELDS = ['damage', 'kills', 'crits', 'healing', 'downed'];
 
@@ -150,7 +160,7 @@ export function runSummary(state) {
   const stats = validStats(state.stats);
   const heroes = HERO_CODES.map((code) => {
     const rec = state.party[code];
-    return { code, name: rec.name ?? TEMPLATES[code].name, cls: TEMPLATES[code].cls, level: rec.level, ...stats.heroes[code], best: [] };
+    return { code, name: heroName(code, rec), cls: TEMPLATES[classOf(code, rec)].cls, level: rec.level, ...stats.heroes[code], best: [] };
   });
   for (const f of ['damage', 'kills', 'crits', 'healing']) {
     const top = Math.max(...heroes.map((h) => h[f]));
@@ -167,12 +177,18 @@ export function runSummary(state) {
   };
 }
 
-/** `names` may rename heroes, e.g. { F: 'Tamsin' }; blank or unusable names keep the default. */
-export function newCampaign(difficulty = 'normal', names = {}) {
+/**
+ * `names` may rename heroes, e.g. { F: 'Tamsin' }; blank or unusable names keep the default.
+ * `classes` may swap a slot's class, e.g. { F: 'P' } for a Paladin instead of the Fighter.
+ */
+export function newCampaign(difficulty = 'normal', names = {}, classes = {}) {
   const party = {};
   for (const code of HERO_CODES) {
-    const u = createUnit(code, 0, 0);
+    const cls = classOf(code, { cls: classes[code] });
+    const u = createUnit(cls, 0, 0);
     party[code] = { level: u.level, hp: u.hp, alive: true, slots: { ...u.slots }, potions: u.potions, items: [] };
+    if (cls !== code) party[code].cls = cls;
+    if (u.layOnHandsMax) party[code].layOnHands = u.layOnHandsMax;
     const name = cleanName(names[code]);
     if (name) party[code].name = name;
   }
@@ -218,7 +234,7 @@ export function completeFight(prev, id, game) {
   for (const code of HERO_CODES) {
     if (!carried[code]) continue;
     const rec = { ...state.party[code], ...carried[code] };
-    const max = heroUnit(code, { level: rec.level }).maxHp;
+    const max = restedHero(code, rec).maxHp;
     rec.hp = Math.min(max, rec.hp + Math.ceil((max - rec.hp) / 2));
     rec.alive = true;
     state.party[code] = rec;
@@ -235,15 +251,16 @@ export function completeFight(prev, id, game) {
   for (const code of HERO_CODES) {
     const rec = state.party[code];
     if (rec.level >= target) continue;
-    const before = heroUnit(code, { level: rec.level });
-    const after = heroUnit(code, { level: target });
+    const before = restedHero(code, rec);
+    const after = restedHero(code, rec, target);
     rec.hp += after.maxHp - before.maxHp;
+    if (after.layOnHandsMax) rec.layOnHands = (rec.layOnHands ?? 0) + after.layOnHandsMax - before.layOnHandsMax;
     // Newly gained slots arrive ready to use.
     for (const [l, n] of Object.entries(after.slotMax)) {
       rec.slots[l] = (rec.slots[l] ?? 0) + n - (before.slotMax[l] ?? 0);
     }
     for (let l = rec.level + 1; l <= target; l++) {
-      levelUps.push({ code, name: rec.name ?? TEMPLATES[code].name, level: l, note: PROGRESSION[code][l]?.note ?? '' });
+      levelUps.push({ code, name: heroName(code, rec), level: l, note: PROGRESSION[classOf(code, rec)][l]?.note ?? '' });
     }
     rec.level = target;
   }
@@ -276,8 +293,9 @@ export function completeFight(prev, id, game) {
 function restParty(state) {
   for (const code of HERO_CODES) {
     const rec = state.party[code];
-    const u = heroUnit(code, { level: rec.level });
+    const u = restedHero(code, rec);
     Object.assign(rec, { hp: u.maxHp, alive: true, slots: { ...u.slotMax } });
+    if (u.layOnHandsMax) rec.layOnHands = u.layOnHandsMax;
   }
 }
 
@@ -294,7 +312,7 @@ export function takeRest(prev, id) {
 export function equipProblem(state, i, code) {
   const id = state.pack[i];
   if (!id || ITEMS[id]?.kind !== 'gear') return 'Nothing to equip';
-  if (state.party[code].items.includes(id)) return `${state.party[code].name ?? TEMPLATES[code].name} already has one`;
+  if (state.party[code].items.includes(id)) return `${heroName(code, state.party[code])} already has one`;
   return null;
 }
 
@@ -331,6 +349,10 @@ export function parseSave(text) {
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;
       if (!r.items.every((i) => ITEMS[i]) || typeof r.slots !== 'object') return null;
       if (r.name !== undefined && (typeof r.name !== 'string' || !r.name || cleanName(r.name) !== r.name)) delete r.name;
+      if (r.cls !== undefined && (r.cls === code || !CLASS_CHOICES[code].includes(r.cls))) delete r.cls;
+      const max = restedHero(code, r).layOnHandsMax;
+      if (max) r.layOnHands = Number.isFinite(r.layOnHands) ? Math.max(0, Math.min(max, r.layOnHands)) : max;
+      else delete r.layOnHands;
     }
     // A run finished before act two existed ended at the Sanctum: open the way on, after
     // the long rest the act break gives.

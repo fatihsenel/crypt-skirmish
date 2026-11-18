@@ -86,7 +86,7 @@ const camp = new Camp({
     writeSave(campaign);
     camp.show(campaign);
   },
-  onNewCampaign: (difficulty, names) => startCampaign(difficulty, names),
+  onNewCampaign: (difficulty, names, classes) => startCampaign(difficulty, names, classes),
   onContinue: () => {
     sfx.ui();
     saving = true;
@@ -95,10 +95,10 @@ const camp = new Camp({
   },
 });
 
-function startCampaign(difficulty, names) {
+function startCampaign(difficulty, names, classes) {
   sfx.ui();
   saving = true;
-  campaign = newCampaign(difficulty, names);
+  campaign = newCampaign(difficulty, names, classes);
   writeSave(campaign);
   showCamp(null);
 }
@@ -367,12 +367,16 @@ const ALERT_TEXT = {
 /** Monsters that just noticed the party: a "!" over each one in view, one log line. */
 function flushAlerts() {
   for (const { unit, cause, by } of pendingSpotted) {
+    if (unseen(unit)) continue; // a goblin found somewhere the party can't see
+    const who = `<span class="${unit.team}">${unit.name}</span>`;
     if (cause === 'spotted' || cause === 'searched') {
-      floatText(stage.scene, unit, cause === 'searched' ? 'Found!' : 'Spotted!', 'warn');
-      const finder = by && !unseen(by) ? `<span class="monsters">${by.name}</span>` : 'Something';
-      hud.log(`${finder} ${cause === 'searched' ? 'finds' : 'spots'} <span class="heroes">${unit.name}</span> in the shadows!`, 'sys');
+      floatText(stage.scene, unit, cause === 'searched' ? 'Found!' : 'Spotted!', unit.team === 'heroes' ? 'warn' : 'spell');
+      const finder = by && !unseen(by) ? `<span class="${by.team}">${by.name}</span>` : 'Something';
+      hud.log(`${finder} ${cause === 'searched' ? 'finds' : 'spots'} ${who} in the shadows!`, 'sys');
+    } else if (unit.team === 'monsters' && cause === 'attack') {
+      hud.log(`${who} strikes from hiding!`, 'sys');
     } else {
-      hud.log(`<span class="heroes">${unit.name}</span> steps out of hiding.`, 'sys');
+      hud.log(`${who} ${cause === 'hurt' ? 'is driven out of hiding' : 'steps out of hiding'}.`, 'sys');
     }
   }
   pendingSpotted = [];
@@ -647,6 +651,11 @@ async function animateAttack(r, at = r.target) {
       hitFx(stage.scene, { ...pos, undead: target.undead }, attacker, { crit: r.crit });
       if (r.crit) stage.shake(0.3, 420);
       if (r.uncanny) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Uncanny Dodge ½', 'spell');
+      if (r.smite) {
+        sfx.radiant();
+        radiantFx(stage.scene, pos);
+        floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Divine Smite!', 'spell');
+      }
       floatText(stage.scene, pos, r.crit ? `CRIT −${r.damage}` : `−${r.damage}`, r.crit ? 'crit' : 'dmg');
       tv.updateHp();
       if (r.rider && target.alive) {
@@ -834,7 +843,9 @@ async function doAction(unit, id) {
       break;
     case 'hide':
     case 'cunningHide':
-      floatText(stage.scene, unit, `Stealth ${r.total}`, 'spell');
+    case 'nimbleHide':
+      if (unit.team === 'heroes') floatText(stage.scene, unit, `Stealth ${r.total}`, 'spell');
+      else if (!unseen(unit)) floatText(stage.scene, unit, 'Hides!', 'warn');
       v.updateStatus();
       await wait(400);
       break;
@@ -957,6 +968,21 @@ async function castSpell(caster, id, target) {
       floatText(stage.scene, r.target, r.save.success ? 'Resists' : 'Frightened!', r.save.success ? 'miss' : 'cond');
       view(r.target).updateStatus();
       await wait(300);
+      break;
+    case 'layOnHands':
+      await cv.cast(r.target === caster ? null : r.target, async () => {
+        sfx.heal();
+        floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
+        view(r.target).updateHp();
+        await healFx(stage.scene, r.target);
+      });
+      break;
+    case 'shieldOfFaith':
+      await cv.cast(r.target === caster ? null : r.target, async () => {
+        sfx.radiant();
+        floatText(stage.scene, r.target, 'AC +2', 'heal');
+        await radiantFx(stage.scene, r.target);
+      });
       break;
     case 'cureWounds':
     case 'healingWord':
@@ -1094,6 +1120,12 @@ function choose(choice) {
   const u = game.current;
   if (choice.kind === 'action') {
     heroDoes(() => doAction(u, choice.id));
+    return;
+  }
+  if (choice.kind === 'smite') {
+    const r = game.toggleSmite(u);
+    if (r.ok) hud.logSmiteArmed(u, r.armed);
+    refresh();
     return;
   }
   if (choice.kind === 'spell' && SPELLS[choice.id].targeting === 'self') {

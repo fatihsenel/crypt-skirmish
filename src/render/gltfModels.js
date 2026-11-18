@@ -25,6 +25,13 @@ const SPECS = {
     show: ['1H_Sword', 'Round_Shield'],
     clips: { melee: '1H_Melee_Attack_Slice_Diagonal' },
   },
+  // The Paladin: the same knight in white and gold, with the crested shield.
+  P: {
+    file: 'Knight', height: 1.35,
+    show: ['1H_Sword', 'Badge_Shield'],
+    tint: 0xffe6a8,
+    clips: { melee: '1H_Melee_Attack_Slice_Diagonal' },
+  },
   W: {
     file: 'Mage', height: 1.35,
     show: ['2H_Staff'],

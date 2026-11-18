@@ -1,6 +1,7 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
-//   node scripts/sim.js [runs] [room ...]
+//   node scripts/sim.js [runs] [act2]
+// Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
 // way the campaign does (short rests between fights, a long rest at the well).
 
@@ -11,12 +12,16 @@ import { levelById } from '../src/game/maps.js';
 import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
 
+const CLASSES = process.env.PALADIN ? { F: 'P' } : {};
+const freshCampaign = () => newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES);
+
 /** A rested party at `level`. */
 function partyAt(level) {
-  const c = newCampaign();
+  const c = freshCampaign();
   for (const code of HERO_CODES) {
-    const u = heroUnit(code, { level });
+    const u = heroUnit(code, { cls: c.party[code].cls, level });
     Object.assign(c.party[code], { level, hp: u.maxHp, slots: { ...u.slotMax } });
+    if (u.layOnHandsMax) c.party[code].layOnHands = u.layOnHandsMax;
   }
   return c;
 }
@@ -80,8 +85,28 @@ function heroOpening(game, u) {
       if (t) game.castSpell(u, 'magicMissile', t);
     }
   }
+  if (u.code === 'F' && u.hp < u.maxHp / 2 && !game.actionProblem(u, 'secondWind')) game.doAction(u, 'secondWind');
+  if (u.code === 'P') paladinOpening(game, u, heroes);
   if (!u.actionUsed && u.hp < u.maxHp * 0.35 && u.potions > 0 && !game.actionProblem(u, 'potion')) game.doAction(u, 'potion');
 }
+
+/**
+ * Shield of Faith on whoever stands in front, Lay on Hands on a badly hurt neighbour (or
+ * itself), and Divine Smite against undead and bosses, or anything while slots are plenty.
+ */
+function paladinOpening(game, u, heroes) {
+  if (!heroes.some((h) => h.faithFrom === u.id) && game.knownFoes(u).some((e) => !e.unaware)) {
+    if (!game.spellProblem(u, 'shieldOfFaith', u)) game.castSpell(u, 'shieldOfFaith', u);
+  }
+  const low = heroes.filter((h) => h.hp < h.maxHp * 0.4 && !game.spellProblem(u, 'layOnHands', h))
+    .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+  if (low) game.castSpell(u, 'layOnHands', low);
+  const slots = Object.values(u.slots).reduce((a, b) => a + b, 0);
+  const worthy = game.knownFoes(u).some((e) => !e.unaware && gridDistanceTo(u, e) <= u.speed + 1 && (e.undead || (e.cr ?? 0) >= 1));
+  if (!u.smiteArmed && slots > 0 && (worthy || slots >= 3)) game.toggleSmite(u);
+}
+
+const gridDistanceTo = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 function playTurn(game, u) {
   if (u.team === 'heroes') heroOpening(game, u);
@@ -118,7 +143,7 @@ function mimicCheck(level, runs) {
     for (let i = 0; i < runs; i++) {
       const game = new Game(levelById('vault'), { party: partyAt(level).party });
       game.start();
-      const hero = game.units.find((u) => u.code === code);
+      const hero = game.units.find((u) => u.slot === code && u.team === 'heroes');
       const chest = [...game.grid.chests.values()].find((c) => c.mimic);
       Object.assign(hero, { x: chest.x - 1, z: chest.z });
       hero.interacted = false;
@@ -164,7 +189,7 @@ const ACT_TWO = [
 const via = (two) => two.slice(1, -1).join('+');
 
 /** Play a whole campaign along `route`; returns per-room results until the party falls. */
-function campaign(route, rng, start = newCampaign(process.env.DIFFICULTY ?? 'normal')) {
+function campaign(route, rng, start = freshCampaign()) {
   let state = start;
   const out = [];
   for (const id of route) {

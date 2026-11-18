@@ -21,6 +21,14 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   Cunning Action (bonus-action Dash / Disengage), Keen Eyes (spots traps within 10 ft)
 - **Cleric**: Sacred Flame (cantrip, DEX save), Cure Wounds, Healing Word (bonus action, 60 ft)
   and **Turn Undead** (undead within 30 ft make a WIS save or flee for 2 turns, or until hurt)
+- **Paladin** (optional: picked on the title screen in place of the Fighter, as Brannoc in
+  white and gold with a crested shield): 28 HP, AC 18, three 1st-level slots and the
+  **Dueling** style (+2 melee damage). **Divine Smite** is a toggle in the Attack group: armed,
+  the next melee weapon hit spends the lowest slot for 2d8 radiant (+1d8 per slot level above
+  1st, +1d8 against undead; a crit doubles it), then it disarms. **Lay on Hands** heals a
+  neighbour or yourself from a pool of 5 HP per level that only a long rest refills, and
+  **Shield of Faith** (bonus action, 60 ft) gives one ally +2 AC for the fight, until it moves
+  to someone else or the paladin falls
 - monsters: goblins (skirmishers), skeletons (brutes, undead), an **orc** that charges
   (Aggressive), **giant rats** with Pack Tactics, **Grukk the goblin boss** (two attacks, the
   second at disadvantage) and **Morvath the necromancer**, who raises corpses with
@@ -65,19 +73,21 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   the missing HP; the fallen get back up) and shares **XP**. A lost fight can be retried as
   you entered it, or you can go back to the map and pick another way
 - **levelling** from 3 to 6 (450 / 900 / 2000 party XP): more HP and a +2 to the main ability at 4;
-  at 5, Brannoc gets **Extra Attack**, Ilsa **Fireball** (20-ft radius, hits allies too),
+  at 5, Brannoc gets **Extra Attack** (the Paladin also two 2nd-level slots), Ilsa **Fireball** (20-ft radius, hits allies too),
   Wren Sneak Attack 3d6 and **Uncanny Dodge**, Maela **Mass Healing Word** and
   **Destroy Undead**, plus 3rd-level slots for both casters. Level 6 comes after the
-  Catacombs: Brannoc Strength 20, Ilsa **Sculpt Spells** (her Fireball and Burning Hands
+  Catacombs: Brannoc Strength 20 (the Paladin **Aura of Protection**: allies within 10 ft add
+  the paladin's CHA modifier, +3, to saving throws), Ilsa **Sculpt Spells** (her Fireball and Burning Hands
   spare the party), Wren Sneak Attack 4d6, Maela Turn Undead twice per fight and
   **Blessed Healer** (healing someone else with a slot heals her for 2 + the slot level),
   and a third 3rd-level slot for both casters
 - **difficulty**, picked on the title screen for a new run: **Story** (monsters have ¾ HP
   and −1 to hit and damage), **Normal**, or **Hard** (1.2× HP, +1 to hit and damage). It
   applies to every monster, including mimics and the risen dead; the heroes are unchanged
-- **hero names**: "Name your heroes" on the title screen renames Brannoc, Ilsa, Wren and
-  Maela for a new run (letters, numbers, spaces, apostrophes and hyphens, up to 14 characters;
-  a blank field keeps the default)
+- **hero names and class**: "Name your heroes, pick a class" on the title screen renames
+  Brannoc, Ilsa, Wren and Maela for a new run (letters, numbers, spaces, apostrophes and
+  hyphens, up to 14 characters; a blank field keeps the default), and its Fighter / Paladin
+  switch picks the first hero's class. The choice is kept in the save; older saves load as a Fighter
 - **magic items** from chests (Runed Weapon +1, Ring of Protection, Cloak of Protection) go into the pack and
   are handed out at camp
 - **fog of war**: you only see what your heroes can see. Rooms you have seen stay dimly
@@ -100,6 +110,14 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   it's far), and take the **Search** action: a Perception roll against the hero's Stealth
   for every hidden hero in sight, which finds them on a success. With no lead, they stay
   put and Search
+- **goblins that hide**: goblins use **Nimble Escape** to Hide as a bonus action (Stealth
+  with expertise), usually after shooting. They need something to hide behind: out of the
+  heroes' sight, or behind a barrel or crate, and they end their moves in such spots. A
+  hidden goblin is drawn as a ghost with a "Hidden" tag and can't be targeted. A hero
+  standing next to it, one with a clear view of it, or one whose passive Perception
+  reaches its roll spots it; otherwise the
+  heroes' **Search** action rolls Perception against every hidden goblin in sight. Attacking
+  or getting hurt gives a goblin away
 - **atmosphere**: walls in front of a figure turn see-through; hits spray blood (bone chips
   from the undead), fire bolts burst into embers, critical hits and Fireball shake the
   screen, and a natural 20 or 1 throws a tumbling d20 over the attacker
@@ -233,8 +251,10 @@ you can swap the visuals (real models, different camera) without touching rules.
 4. **A real goblin model**: goblins and Grukk reuse tinted KayKit adventurers. A dedicated
    rigged goblin would only need a `.glb` in `public/models` and its entry in `SPECS` in
    `gltfModels.js` (clip names per action; a `Armature|Clip` prefix is stripped).
-5. **Monsters that hide**: goblins could Hide too (Nimble Escape allows it in the SRD),
-   with the heroes using the Search action to find them.
+5. **More classes**: `CLASS_CHOICES` in `units.js` lists which classes can fill each hero
+   slot. A new one needs a stat block and a `PROGRESSION` table there, a model spec in
+   `gltfModels.js` (and a builder in `models.js`), and a simulator policy in `scripts/sim.js`
+   if it has abilities the monster AI wouldn't use. A Ranger for Wren's slot would be next.
 
 ## Credits
 

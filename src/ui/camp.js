@@ -5,7 +5,7 @@ import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, DIFFICULTIES,
   cleanName,
 } from '../game/campaign.js';
-import { TEMPLATES } from '../game/units.js';
+import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
 import { ITEMS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
@@ -26,6 +26,12 @@ const GLYPH = {
   boss: '<path d="M-8 5 H8 L9 -5 L4 -1 L0 -7 L-4 -1 L-9 -5 Z" />',
 };
 
+/** One line on what each swappable class brings, for the title screen's class picker. */
+const CLASS_BLURB = {
+  F: 'Fighter: the most HP, Second Wind to heal mid-fight, Extra Attack at level 5.',
+  P: 'Paladin: Divine Smite burns spell slots for radiant damage, Lay on Hands and Shield of Faith protect the party, Aura of Protection at level 6.',
+};
+
 export class Camp {
   constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue }) {
     this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue };
@@ -41,7 +47,8 @@ export class Camp {
     $('#title').addEventListener('click', (ev) => {
       const b = ev.target.closest('button');
       if (b?.id === 'title-continue') this.h.onContinue();
-      if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty, this.names());
+      if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty, this.names(), { ...this.classes });
+      if (b?.dataset.cls) this.pickClass(b.dataset.slot, b.dataset.cls);
     });
     $('#title-difficulty').addEventListener('change', (ev) => {
       this.difficulty = ev.target.value;
@@ -76,9 +83,26 @@ export class Camp {
   renderNames() {
     const grid = $('#title-names .name-grid');
     if (grid.children.length) return; // keep whatever was typed
-    grid.innerHTML = HERO_CODES.map((code) => `
-      <label><small>${esc(TEMPLATES[code].cls)}</small>
-      <input type="text" data-code="${code}" maxlength="14" placeholder="${esc(TEMPLATES[code].name)}" autocomplete="off" spellcheck="false"></label>`).join('');
+    this.classes = {};
+    grid.innerHTML = HERO_CODES.map((code) => {
+      const options = CLASS_CHOICES[code];
+      const head = options.length > 1
+        ? `<span class="cls-pick" role="group" aria-label="Class">${options.map((c) => `
+            <button type="button" data-slot="${code}" data-cls="${c}" title="${esc(CLASS_BLURB[c])}"
+              aria-pressed="${c === code}">${esc(TEMPLATES[c].cls)}</button>`).join('')}</span>`
+        : `<small>${esc(TEMPLATES[code].cls)}</small>`;
+      return `<label>${head}
+      <input type="text" data-code="${code}" maxlength="14" placeholder="${esc(TEMPLATES[code].name)}" autocomplete="off" spellcheck="false"></label>`;
+    }).join('');
+  }
+
+  /** Swap the class that fills a hero slot for the next new run. */
+  pickClass(slot, cls) {
+    this.classes[slot] = cls;
+    for (const b of document.querySelectorAll(`#title-names [data-slot="${slot}"]`)) {
+      b.setAttribute('aria-pressed', String(b.dataset.cls === cls));
+    }
+    document.querySelector(`#title-names input[data-code="${slot}"]`).placeholder = TEMPLATES[cls].name;
   }
 
   showTitle(save) {

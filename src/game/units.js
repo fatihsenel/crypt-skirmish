@@ -19,6 +19,23 @@ export const TEMPLATES = {
       { name: 'Javelin', stat: 'str', damage: '1d6', reach: 6, projectile: 'javelin' },
     ],
   },
+  // The Paladin can take the Fighter's place in the party (chosen on the title screen).
+  P: {
+    name: 'Brannoc', cls: 'Paladin', team: 'heroes', color: 0xe0c060,
+    hp: 28, ac: 18, speed: 6, prof: 2, level: 3, // chain mail + shield
+    noisyArmor: true, // chain mail: disadvantage on Stealth
+    potions: 1,
+    castStat: 'cha',
+    spells: ['layOnHands', 'shieldOfFaith'],
+    slots: { 1: 3 },
+    layOnHands: 15, // the pool of healing: 5 × paladin level, back after a long rest
+    passives: ['divineSmite', 'dueling'],
+    stats: { str: 16, dex: 10, con: 14, int: 8, wis: 10, cha: 16 },
+    attacks: [
+      { name: 'Longsword', stat: 'str', damage: '1d8', reach: 1 },
+      { name: 'Javelin', stat: 'str', damage: '1d6', reach: 6, projectile: 'javelin' },
+    ],
+  },
   W: {
     name: 'Ilsa', cls: 'Wizard', team: 'heroes', color: 0x8b4fd6,
     hp: 20, ac: 15, speed: 6, prof: 2, level: 3, // AC from Mage Armor
@@ -60,8 +77,9 @@ export const TEMPLATES = {
   g: {
     name: 'Goblin', cls: 'Goblin', team: 'monsters', color: 0x5f8f2a,
     hp: 7, ac: 15, speed: 6, prof: 2, xp: 50, cr: 0.25,
-    features: ['nimbleEscape'],
-    ai: 'skirmisher', // prefers shooting from a safe distance
+    features: ['nimbleEscape', 'nimbleHide'],
+    stealth: 'expert', // SRD Stealth +6
+    ai: 'skirmisher', // prefers shooting from a safe distance, then ducks out of sight
     stats: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     attacks: [
       { name: 'Scimitar', stat: 'dex', damage: '1d6', reach: 1 },
@@ -189,6 +207,7 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     ...structuredClone(t),
     id: nextId++,
     code,
+    slot: code,         // the party slot a hero fills (a Paladin plays in the Fighter's 'F')
     name: total > 1 ? `${t.name} ${number}` : t.name,
     variant: number, // lets the renderer vary look between copies
     maxHp: t.hp,
@@ -220,6 +239,9 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     disengaged: false,  // this turn
     shielded: false,    // Shield spell, until the start of its next turn
     secondWindUsed: false,
+    layOnHandsMax: t.layOnHands ?? 0,
+    smiteArmed: false,  // Divine Smite on the next melee hit
+    faithFrom: null,    // the paladin whose Shield of Faith is on it (+2 AC)
     conditions: {},     // prone / poisoned / frightened (combat.js)
   };
 }
@@ -234,6 +256,14 @@ export const PROGRESSION = {
     4: { hp: 8, stats: { str: 2 }, note: 'Strength 18: +1 to hit and damage' },
     5: { hp: 8, prof: 3, extraAttack: 2, passives: ['extraAttack'], note: 'Extra Attack: two swings per Attack action' },
     6: { hp: 8, stats: { str: 2 }, note: 'Strength 20: +1 to hit and damage' },
+  },
+  P: {
+    4: { hp: 8, stats: { str: 2 }, note: 'Strength 18: +1 to hit and damage' },
+    5: {
+      hp: 8, prof: 3, extraAttack: 2, slots: { 1: 4, 2: 2 }, passives: ['extraAttack'],
+      note: 'Extra Attack, and two 2nd-level slots for bigger Smites',
+    },
+    6: { hp: 8, passives: ['auraOfProtection'], note: 'Aura of Protection: allies within 10 ft add your CHA to saves' },
   },
   W: {
     4: { hp: 5, stats: { int: 2 }, slots: { 2: 3 }, note: 'Intelligence 18, a third 2nd-level slot' },
@@ -282,5 +312,12 @@ export function applyLevel(unit, level) {
     unit.level = l;
   }
   unit.slots = { ...unit.slotMax };
+  if (unit.spells.includes('layOnHands')) unit.layOnHands = unit.layOnHandsMax = 5 * unit.level;
   return unit;
 }
+
+/** Classes that can fill each hero slot: the first is the default. */
+export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W'], R: ['R'], C: ['C'] };
+
+/** The class (template code) a party record plays in a slot. */
+export const classOf = (slot, rec) => (CLASS_CHOICES[slot]?.includes(rec?.cls) ? rec.cls : slot);

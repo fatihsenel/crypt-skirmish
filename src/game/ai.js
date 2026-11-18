@@ -61,6 +61,10 @@ export function chooseMove(game, unit, goal = game.canAttack(unit) ? 'attack' : 
   const field = game.grid.distanceField(goal === 'search' ? [toward] : foes);
   const map = game.reachable(unit);
   const skirmisher = keepsDistance(unit);
+  // Goblins that can still hide this turn like a spot every watching hero can't see into.
+  const hideable = unit.features?.includes('nimbleHide') && !unit.bonusUsed && !unit.hidden;
+  const heroes = hideable ? game.living('heroes') : [];
+  const canHideAt = (node) => heroes.every((h) => !game.inSight(h, node) || game.coverBonus(h, node) > 0);
 
   // A brute that already struck stays put; walking away only invites a blade.
   if (goal === 'retreat' && !skirmisher) return null;
@@ -94,6 +98,7 @@ export function chooseMove(game, unit, goal = game.canAttack(unit) ? 'attack' : 
     }
     // Skirmishers like to end up with a barrel or crate between them and the heroes.
     if (skirmisher && foes.some((f) => game.coverBonus(f, node))) score -= 12;
+    if (hideable && (goal === 'attack' || goal === 'retreat') && !nearFoe && canHideAt(node)) score -= 10;
     if (score < bestScore) {
       bestScore = score;
       best = node;
@@ -157,9 +162,15 @@ export function patrolStep(game, unit) {
   return null;
 }
 
-/** The nearest (by walking) last-seen spot of a hidden hero, or null. */
+/**
+ * The nearest (by walking) spot to look for a hidden enemy, or null. Monsters go where they
+ * last saw a hero; heroes saw the goblin duck behind its barrel, so they go there.
+ */
 function searchSpot(game, unit) {
-  const spots = game.living('heroes').filter((h) => h.hidden && h.lastSeen).map((h) => h.lastSeen);
+  const hiddenFoes = game.enemiesOf(unit).filter((e) => e.hidden);
+  const spots = unit.team === 'monsters'
+    ? hiddenFoes.filter((h) => h.lastSeen).map((h) => h.lastSeen)
+    : hiddenFoes.map((m) => ({ x: m.x, z: m.z }));
   if (!spots.length) return null;
   const field = game.grid.distanceField([unit]);
   let best = null;
@@ -177,7 +188,7 @@ function searchSpot(game, unit) {
 function huntStep(game, unit, memo) {
   const spot = searchSpot(game, unit);
   const arrived = spot && gridDistance(unit, spot) <= 1;
-  if (arrived) {
+  if (arrived && unit.team === 'monsters') {
     for (const h of game.living('heroes')) {
       if (h.lastSeen && h.lastSeen.x === spot.x && h.lastSeen.z === spot.z) h.lastSeen = null;
     }
@@ -194,8 +205,19 @@ function huntStep(game, unit, memo) {
       memo.moved = false;
       return { type: 'action', id: 'dash' };
     }
-    const hidden = game.living('heroes').some((h) => h.hidden);
+    const hidden = game.enemiesOf(unit).some((h) => h.hidden);
     if (hidden && !game.actionProblem(unit, 'search')) return { type: 'action', id: 'search' };
+  }
+  return endStep(game, unit);
+}
+
+/**
+ * The turn is over: a goblin with its bonus action left ducks out of sight (Nimble Escape)
+ * if it has a wall or a barrel between it and every hero who can see it.
+ */
+function endStep(game, unit) {
+  if (unit.features?.includes('nimbleHide') && !unit.hidden && !game.actionProblem(unit, 'nimbleHide')) {
+    return { type: 'bonus', id: 'nimbleHide' };
   }
   return { type: 'end' };
 }
@@ -286,5 +308,5 @@ export function nextMonsterStep(game, unit, memo) {
     }
     if (adjacent) return { type: 'action', id: 'dodge' };
   }
-  return { type: 'end' };
+  return endStep(game, unit);
 }

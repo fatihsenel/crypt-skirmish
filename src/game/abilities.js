@@ -25,10 +25,11 @@ export const ACTIONS = {
   // Monsters
   nimbleEscape: { name: 'Nimble Escape', time: 'bonus', feature: true, desc: 'Disengage as a bonus action.' },
   aggressive: { name: 'Aggressive', time: 'bonus', feature: true, desc: 'Move up to its speed toward an enemy.' },
-  search: { name: 'Search', time: 'action', desc: 'Perception check against the Stealth of every hidden hero in sight; a success finds them.' },
+  nimbleHide: { name: 'Nimble Hide', time: 'bonus', feature: true, desc: 'Nimble Escape: Hide as a bonus action, behind cover or out of sight.' },
+  search: { name: 'Search', time: 'action', desc: 'Roll Perception against the Stealth of every hidden enemy you can see; a success finds them.' },
 };
 
-export const STANDARD_ACTIONS = ['dash', 'dodge', 'disengage', 'hide'];
+export const STANDARD_ACTIONS = ['dash', 'dodge', 'disengage', 'hide', 'search'];
 
 /** Shove sits with the attacks: it takes one attack of the Attack action. */
 export const SHOVE = {
@@ -51,7 +52,10 @@ export const PASSIVES = {
   destroyUndead: 'Destroy Undead: weak undead (CR ½ or lower) that fail against Turn Undead are destroyed.',
   sculptSpells: 'Sculpt Spells: your Fireball and Burning Hands leave the party unharmed.',
   blessedHealer: 'Blessed Healer: healing someone else with a spell slot heals you too (2 + the slot level).',
-  packTactics: 'Pack Tactics: advantage when an ally is next to the target.',
+  divineSmite: 'Divine Smite: arm it, and your next melee weapon hit spends a spell slot for 2d8 radiant (+1d8 per slot level above 1st, +1d8 against undead).',
+  dueling: 'Dueling: +2 damage with melee weapon attacks.',
+  auraOfProtection: 'Aura of Protection: you and allies within 10 ft add your CHA modifier to saving throws.',
+  packTactics:'Pack Tactics: advantage when an ally is next to the target.',
   trapSense: 'Keen Eyes: spots traps within 10 ft.',
   skulker: 'Skulker: monsters that have not noticed the party only spot you within 15 ft.',
 };
@@ -94,6 +98,14 @@ export const SPELLS = {
     name: 'Healing Word', level: 1, time: 'bonus', range: 12, targeting: 'ally',
     heal: [1, 4],
     desc: 'Bonus action, 60 ft: heal 1d4 + WIS. +1d4 per slot level above 1st.',
+  },
+  layOnHands: {
+    name: 'Lay on Hands', level: 0, time: 'action', range: 1, targeting: 'ally', pool: true,
+    desc: 'Touch an ally (or yourself) and heal from a pool of 5 HP per paladin level, as much as they are missing. The pool refills after a long rest.',
+  },
+  shieldOfFaith: {
+    name: 'Shield of Faith', level: 1, time: 'bonus', range: 12, targeting: 'ally',
+    desc: 'Bonus action, 60 ft: a shimmering field gives an ally (or yourself) +2 AC for the rest of the fight. One at a time.',
   },
   fireball: {
     name: 'Fireball', level: 3, time: 'action', range: 30, radius: 4, targeting: 'area',

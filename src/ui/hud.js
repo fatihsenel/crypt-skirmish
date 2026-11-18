@@ -12,7 +12,7 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 // (logAction builds every action's text, so this must cope with results that have no roll)
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
-  `${who(s.unit)} <span class="dice">${s.total}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
+  `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
 const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
@@ -68,6 +68,7 @@ export class Hud {
         : '';
     const tag = r.opportunity ? '<b class="opp">Opportunity attack!</b><br>' : '';
     const sneak = (r.sneak ? ` incl. <b class="sneak">Sneak Attack +${r.sneak.total}</b> ${dice(r.sneak)}` : '')
+      + (r.smite ? ` incl. <b class="spell">Divine Smite +${r.smite.total} radiant</b> ${dice(r.smite.roll)}${r.target.undead ? ' (undead +1d8)' : ''} <span class="dice">${ordinal(r.smite.slot)}-level slot</span>` : '')
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '');
     this.log(
       `${tag}${who(r.attacker)} → ${who(r.target)} · ${esc(r.attack.name)}${why}<br> ` +
@@ -111,6 +112,10 @@ export class Hud {
       (chest.suspected ? '' : ' It strikes before anyone can react.'), 'death');
   }
 
+  logSmiteArmed(unit, armed) {
+    this.log(`${who(unit)} ${armed ? 'readies a <b class="spell">Divine Smite</b> for the next melee hit' : 'lets the Smite go'}.`);
+  }
+
   logMimicFound({ unit }) {
     this.log(`${who(unit)} eyes a chest warily: <b class="opp">those aren't scratches, they're teeth marks</b>.`);
   }
@@ -147,6 +152,12 @@ export class Hud {
     } else if (r.id === 'cureWounds' || r.id === 'healingWord') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} casts ${name} on ${self}: <b class="heal">+${r.healed} HP</b> ${dice(r.roll)}. ${slot}${blessed(r)}`);
+    } else if (r.id === 'layOnHands') {
+      const self = r.target === r.caster ? 'themself' : who(r.target);
+      this.log(`${who(r.caster)} lays hands on ${self}: <b class="heal">+${r.healed} HP</b> <span class="dice">${r.left} left in the pool</span>.`);
+    } else if (r.id === 'shieldOfFaith') {
+      const self = r.target === r.caster ? 'themself' : who(r.target);
+      this.log(`${who(r.caster)} casts ${name} on ${self}: <b>AC +2</b> for the rest of the fight. ${slot}`);
     } else if (r.id === 'dread') {
       this.log(`${who(r.caster)} whispers ${name} at ${who(r.target)}. WIS save DC ${r.dc}: ` +
         `${saveText({ ...r.save, unit: r.target }, 'is frightened')}. ${slot}`);
@@ -187,11 +198,13 @@ export class Hud {
       cunningDisengage: 'uses <b>Cunning Action</b> to Disengage.',
       hide: `slips into the shadows: <b>Stealth ${r.total}</b> ${stealthRoll(r)}.`,
       cunningHide: `uses <b>Cunning Action</b> to Hide: <b>Stealth ${r.total}</b> ${stealthRoll(r)}.`,
+      nimbleHide: 'ducks out of sight (<b>Nimble Escape</b>) and hides.',
       aggressive: 'roars and charges (<b>Aggressive</b>).',
       search: !r.checks?.length
         ? 'searches the shadows but finds nothing.'
         : 'searches the shadows: ' + r.checks.map((c) =>
-          `<b>Perception ${c.total}</b> <span class="dice">d20 ${c.d20} ${signed(c.bonus)}</span> vs <span class="heroes">${esc(c.unit.name)}</span>’s Stealth ${c.dc}${c.success ? '' : ', misses'}`,
+          // A hero's Stealth roll is shown; a goblin's stays secret.
+          `<b>Perception ${c.total}</b> <span class="dice">d20 ${c.d20} ${signed(c.bonus)}</span> vs <span class="${c.unit.team}">${esc(c.unit.name)}</span>${c.unit.team === 'heroes' ? `’s Stealth ${c.dc}` : ''}${c.success ? ': found' : ', misses'}`,
         ).join('; ') + '.',
       potion: `drinks a <b>potion of healing</b>: <b class="heal">+${r.healed} HP</b> ${r.roll && dice(r.roll)}.`,
       turnUndead: `presents a holy symbol: <b class="spell">Turn Undead</b> (WIS save DC ${r.dc})<br>` +
@@ -247,7 +260,7 @@ export class Hud {
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span title="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
       </div>
-      ${u.passives.length || u.items?.length || conds.length ? `<div class="passives">${conds.map((c) =>
+      ${u.passives.length || u.items?.length || conds.length ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" title="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${conds.map((c) =>
         `<span class="passive-tag cond ${c}" title="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
         `<span class="passive-tag" title="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
         `<span class="passive-tag item" title="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
@@ -283,6 +296,17 @@ export class Hud {
       disabled: !game.canAttack(u),
       active: selected?.kind === 'attack' && selected.attack === atk,
     }));
+    if (u.passives.includes('divineSmite')) {
+      const problem = game.smiteProblem(u);
+      const slot = Object.keys(u.slots).map(Number).sort((a, b) => a - b).find((l) => u.slots[l] > 0);
+      atks.push(button({
+        kind: 'smite', id: 'smite', name: u.smiteArmed ? 'Smite armed' : 'Divine Smite', cls: `spell ${u.smiteArmed ? 'armed' : ''}`,
+        sub: u.smiteArmed ? 'next melee hit · click to cancel' : `+${Math.min(5, 1 + (slot ?? 1))}d8 · spends a slot`,
+        title: problem ? `${PASSIVES.divineSmite}\n(${problem})` : PASSIVES.divineSmite,
+        disabled: !!problem,
+        active: u.smiteArmed,
+      }));
+    }
     const shoveWhy = game.canAttack(u) ? null : 'Action already used this turn';
     atks.push(button({
       kind: 'shove', id: 'shove', name: SHOVE.name, cls: 'act',
@@ -302,7 +326,8 @@ export class Hud {
       const problem = game.spellProblem(u, id);
       return button({
         kind: 'spell', id, name: s.name, cls: 'spell',
-        sub: `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
+        sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
+          : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
         title: problem ? `${s.desc}\n(${problem})` : s.desc,
         disabled: !!problem,
         active: selected?.kind === 'spell' && selected.id === id,
@@ -328,7 +353,7 @@ export class Hud {
     if (!b || b.disabled) return;
     const { kind, id } = b.dataset;
     if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (kind === 'shove') this.handlers.onChoose({ kind });
+    else if (kind === 'shove' || kind === 'smite') this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 
