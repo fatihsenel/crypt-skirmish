@@ -169,7 +169,7 @@ export class Camp {
   renderHistory(runs) {
     const box = $('#title-history');
     box.querySelector('summary').textContent = `Past runs (${runs.length})`;
-    box.querySelector('.runs-empty').hidden = runs.length > 0;
+    box.hidden = runs.length === 0; // nothing to show until a run has ended
     const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
     box.querySelector('.runs').innerHTML = runs.map((r) => {
       const date = new Date(r.when).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });

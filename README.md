@@ -160,7 +160,7 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   moment they matter (moving, attacking, spells, chests, potions, opportunity attacks,
   ending the turn, camp), each once. Switch them off on any tip or on the title screen;
   switching them back on there shows them all again
-- **past runs**: the title screen lists the last 20 runs: won, or abandoned (Abandon run at
+- **past runs**: once a run has ended, the title screen lists the last 20 runs: won, or abandoned (Abandon run at
   camp, or a new campaign over the save) and how far the party got, with difficulty, date,
   party level, rooms won, rounds, the party and who dealt the most damage. An abandoned run
   that never won a room isn't kept
