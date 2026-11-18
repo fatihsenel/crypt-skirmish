@@ -156,6 +156,10 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **atmosphere**: walls in front of a figure turn see-through; hits spray blood (bone chips
   from the undead), fire bolts burst into embers, critical hits and Fireball shake the
   screen, and a natural 20 or 1 throws a tumbling d20 over the attacker
+- **tips for new players** (optional): short hints pop up during the first fights at the
+  moment they matter (moving, attacking, spells, chests, potions, opportunity attacks,
+  ending the turn, camp), each once. Switch them off on any tip or on the title screen;
+  switching them back on there shows them all again
 - **voices**: every character barks in a made-up tongue, synthesized from formant filters
   (no recordings). Heroes shout on attacks, chant spells, grunt when hit and cry out when
   they fall; goblins, bugbears and orcs snarl, the necromancer intones, specters moan,
@@ -295,6 +299,7 @@ src/
   audio/voices.js  synthesized character barks
   ui/hud.js        HTML overlay: initiative, action bar, combat log
   ui/camp.js       title screen and camp: map, party, pack, level-ups
+  ui/tips.js       optional tips for new players, shown once each
   main.js          controller: input → game → animations → HUD; campaign flow and saving
 tests/rules.test.js, tests/replay.test.js
 scripts/sim.js     headless balance simulator (npm run sim)

@@ -9,6 +9,7 @@ import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
 import { ITEMS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
+import { tips } from './tips.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -52,6 +53,7 @@ export class Camp {
       if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty, this.names(), { ...this.classes });
       if (b?.dataset.cls) this.pickClass(b.dataset.slot, b.dataset.cls);
     });
+    $('#title-tips').addEventListener('change', (ev) => tips.setOn(ev.target.checked));
     $('#title-difficulty').addEventListener('change', (ev) => {
       this.difficulty = ev.target.value;
       this.renderDifficulty();
@@ -114,6 +116,8 @@ export class Camp {
     $('#camp').hidden = true;
     $('#title').hidden = false;
     $('#title-continue').hidden = !save;
+    $('#title-tips').checked = tips.on;
+    tips.hide();
     $('#title-save').textContent = save
       ? `Saved run (${DIFFICULTIES[save.difficulty].name}): party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
         + (save.fight ? `. Mid-fight in ${nodeName(save.fight.node)}.` : '')

@@ -28,6 +28,7 @@ import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
 import { music } from './audio/music.js';
 import { voices } from './audio/voices.js';
+import { tips } from './ui/tips.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -136,6 +137,7 @@ function startCampaign(difficulty, names, classes) {
 function showCamp(report) {
   $banner.hidden = true;
   camp.show(campaign, report);
+  tips.notice('camp', { report });
 }
 
 function enterRoom(id) {
@@ -648,6 +650,10 @@ async function onTurnStart(unit) {
     sfx.turn();
     voices.bark(unit, 'turn'); // now and then
     saveFight(); // with the rooms seen so far
+    if (!debugAutoplay) {
+      const chestInSight = [...game.grid.chests.keys()].some((k) => visible.has(k));
+      tips.notice('heroTurn', { unit, chestInSight, touch: touching });
+    }
   }
   if (unit.team === 'monsters' || debugAutoplay) await runMonsterTurn(unit);
 }
@@ -714,6 +720,7 @@ function refresh() {
     const danger = provokingSteps(u, path);
     board.danger.set(danger);
     const who = game.provokers(u, path).map((f) => f.name);
+    if (who.length) tips.notice('provoke', { touch: touching });
     hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : ''), true);
   }
 }
@@ -1394,6 +1401,7 @@ async function heroCommand(cmd) {
   }
   busy = false;
   refresh();
+  if (game.current === u && cmd.type !== 'end') tips.notice('acted', { unit: u, cmd, touch: touching });
   return r;
 }
 
