@@ -113,6 +113,13 @@ export class Game {
     this.round = 0;
     this.over = null; // 'victory' | 'defeat'
     this.found = [];  // non-potion loot taken from chests, for the party's pack
+    this.stats = {};  // per hero code: { damage, kills, crits, healing, downed } (for the run's ending)
+  }
+
+  /** The tally for a hero, or null for monsters. */
+  tally(unit) {
+    if (unit?.team !== 'heroes' || !unit.code) return null;
+    return (this.stats[unit.code] ??= { damage: 0, kills: 0, crits: 0, healing: 0, downed: 0 });
   }
 
   /** XP for every monster slain in this fight (risen dead included, old corpses not). */
@@ -154,6 +161,11 @@ export class Game {
 
   enemiesOf(unit) {
     return this.units.filter((u) => u.alive && u.team !== unit.team);
+  }
+
+  /** Enemies whose whereabouts `unit` knows: monsters lose track of hidden heroes. */
+  knownFoes(unit) {
+    return this.enemiesOf(unit).filter((e) => !e.hidden);
   }
 
   alliesOf(unit) {
@@ -240,6 +252,22 @@ export class Game {
     if (!h.alive || !m.alive || m.asleep) return false;
     if (h.hidden) return gridDistance(m, h) <= 1 || (this.passivePerception(m) >= h.hidden && this.inSight(m, h));
     return this.inSight(m, h, m.unaware && h.passives.includes('skulker') ? SKULK_SIGHT : SIGHT);
+  }
+
+  /**
+   * Remember the last of `tiles` (in walking order) where an alert monster could see hero
+   * `h`. That spot is where searching monsters head once the hero hides.
+   */
+  markSeen(h, tiles) {
+    if (h.hidden || !h.alive) return;
+    const watchers = this.living('monsters').filter((m) => !m.unaware && !m.asleep);
+    for (let i = tiles.length - 1; i >= 0; i--) {
+      const t = tiles[i];
+      if (watchers.some((m) => this.inSight(m, t))) {
+        h.lastSeen = { x: t.x, z: t.z };
+        return;
+      }
+    }
   }
 
   /** A hidden hero gives themself away (or is found). */
@@ -356,6 +384,7 @@ export class Game {
     for (const m of monsters) {
       if (m.unaware && heroes.some((h) => this.notices(m, h))) this.alert(m, 'sight');
     }
+    for (const h of heroes) this.markSeen(h, [h]);
   }
 
   /** A noise at `at` wakes unaware monsters within `range` tiles of walking distance. */
@@ -465,18 +494,26 @@ export class Game {
   // --- damage & healing -----------------------------------------------------
   applyDamage(target, amount, source) {
     this.alert(target, 'hurt');
+    const before = target.hp;
     target.hp = Math.max(0, target.hp - amount);
     if (amount > 0) target.turned = 0; // damage breaks Turn Undead
+    const t = target.team === 'monsters' ? this.tally(source) : null;
+    if (t) t.damage += before - target.hp; // only what landed, not overkill
     if (target.hp <= 0 && target.alive) {
+      if (t) t.kills++;
+      const down = this.tally(target);
+      if (down) down.downed++;
       target.alive = false;
       this.emit('death', { unit: target, source });
       this.checkEnd();
     }
   }
 
-  heal(target, amount) {
+  heal(target, amount, source = target) {
     const before = target.hp;
     target.hp = Math.min(target.maxHp, target.hp + amount);
+    const t = this.tally(source);
+    if (t) t.healing += target.hp - before;
     return target.hp - before;
   }
 
@@ -612,6 +649,7 @@ export class Game {
     unit.x = x;
     unit.z = z;
     this.emit('move', { unit, path });
+    if (unit.team === 'heroes') this.markSeen(unit, path); // ducking out of view mid-move
     this.revealTraps();
     // A door creaks open: anything close by hears it.
     for (const st of steps) if (st.type === 'door') this.noise(st, 3);
@@ -798,6 +836,7 @@ export class Game {
     const total = d20 + toHit;
     const crit = d20 === 20;
     const fumble = d20 === 1;
+    if (crit && this.tally(attacker)) this.tally(attacker).crits++;
     const cover = this.coverBonus(attacker, target);
     const ac = this.acOf(target) + cover;
     let hit = crit || (!fumble && total >= ac);
@@ -910,6 +949,7 @@ export class Game {
   actionsFor(unit) {
     const list = [...STANDARD_ACTIONS, ...unit.features];
     if (unit.potions > 0) list.push('potion');
+    if (unit.team === 'monsters') list.push('search');
     return list;
   }
 
@@ -970,6 +1010,18 @@ export class Game {
         unit.hidden = Math.max(1, d20 + bonus);
         break;
       }
+      case 'search': {
+        // Perception (d20 + the passive bonus) against each hidden hero it could see.
+        const bonus = this.passivePerception(unit) - 10;
+        result.checks = this.living('heroes')
+          .filter((h) => h.hidden && this.inSight(unit, h))
+          .map((h) => {
+            const { d20 } = this.rollD20(this.has(unit, 'poisoned') ? 'dis' : 'normal');
+            return { unit: h, d20, bonus, total: d20 + bonus, dc: h.hidden, success: d20 + bonus >= h.hidden };
+          });
+        result.found = result.checks.filter((c) => c.success).map((c) => c.unit);
+        break;
+      }
       case 'disengage':
       case 'nimbleEscape':
       case 'cunningDisengage':
@@ -1000,6 +1052,10 @@ export class Game {
       }
     }
     this.emit('action', result);
+    for (const h of result.found ?? []) {
+      this.reveal(h, 'searched', unit);
+      h.lastSeen = { x: h.x, z: h.z };
+    }
     if (unit.hidden) this.updateAwareness(); // anyone close enough spots the attempt
     for (const s of result.saves ?? []) if (s.destroyed) this.applyDamage(s.unit, s.unit.hp, unit);
     return result;
@@ -1182,7 +1238,7 @@ export class Game {
         const mod = abilityMod(caster.stats[caster.castStat]);
         result.heals = this.massHealTargets(caster).map((t) => {
           const roll = rollExpr(`${1 + upcast}d4+${mod}`, { rng: this.rng });
-          return { unit: t, roll, healed: this.heal(t, roll.total) };
+          return { unit: t, roll, healed: this.heal(t, roll.total, caster) };
         });
         result.selfHeal = this.blessedHeal(caster, slot, result.heals.some((h) => h.unit !== caster));
         this.emit('spell', result);
@@ -1210,7 +1266,7 @@ export class Game {
         const [n, sides] = spell.heal;
         result.roll = rollExpr(`${n + upcast}d${sides}+${abilityMod(caster.stats[caster.castStat])}`, { rng: this.rng });
         result.target = target;
-        result.healed = this.heal(target, result.roll.total);
+        result.healed = this.heal(target, result.roll.total, caster);
         result.selfHeal = this.blessedHeal(caster, slot, target !== caster);
         this.emit('spell', result);
         break;

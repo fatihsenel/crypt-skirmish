@@ -188,6 +188,11 @@ export class Hud {
       hide: `slips into the shadows: <b>Stealth ${r.total}</b> ${stealthRoll(r)}.`,
       cunningHide: `uses <b>Cunning Action</b> to Hide: <b>Stealth ${r.total}</b> ${stealthRoll(r)}.`,
       aggressive: 'roars and charges (<b>Aggressive</b>).',
+      search: !r.checks?.length
+        ? 'searches the shadows but finds nothing.'
+        : 'searches the shadows: ' + r.checks.map((c) =>
+          `<b>Perception ${c.total}</b> <span class="dice">d20 ${c.d20} ${signed(c.bonus)}</span> vs <span class="heroes">${esc(c.unit.name)}</span>’s Stealth ${c.dc}${c.success ? '' : ', misses'}`,
+        ).join('; ') + '.',
       potion: `drinks a <b>potion of healing</b>: <b class="heal">+${r.healed} HP</b> ${r.roll && dice(r.roll)}.`,
       turnUndead: `presents a holy symbol: <b class="spell">Turn Undead</b> (WIS save DC ${r.dc})<br>` +
         (r.saves ?? []).map((s) => saveText(s, s.destroyed ? 'is destroyed' : 'is turned and flees')).join('<br>'),
@@ -354,7 +359,8 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null }) {
+    this.renderSummary(summary);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';
     const rest = longRest
@@ -363,7 +369,7 @@ export class Hud {
     $('#banner-title').textContent = won ? (final ? 'Victory' : 'Room cleared') : 'Defeat';
     $('#banner-text').textContent = won
       ? final
-        ? `${outro} Won after ${rounds}. Well fought! (+${xp} XP)`
+        ? summary ? outro : `${outro} Won after ${rounds}. Well fought! (+${xp} XP)`
         : `${level} is quiet after ${rounds}. The party shares ${xp} XP and ${rest}.`
       : `Your party has fallen in ${level}. Try the room again as you entered it, or go back to the map and pick another way.`;
     $('#next').hidden = !won || final;
@@ -372,6 +378,52 @@ export class Hud {
     $('#restart').hidden = won && !final;
     $('#banner').dataset.result = result;
     $('#banner').hidden = false;
+  }
+
+  /** The run's ending: totals, then a row per hero with the column leaders in gold. */
+  renderSummary(s) {
+    const el = $('#banner-stats');
+    $('#banner').classList.toggle('ending', !!s);
+    el.hidden = !s;
+    if (!s) {
+      el.innerHTML = '';
+      return;
+    }
+    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    const facts = [
+      ['Difficulty', s.difficulty],
+      ['Party level', s.level],
+      ['Rooms won', s.won],
+      ['Rounds', s.rounds],
+      ['Fights lost', s.lost || 'None'],
+      ['XP', s.xp],
+    ];
+    const cols = [
+      ['damage', 'Damage'],
+      ['kills', 'Kills'],
+      ['crits', 'Crits'],
+      ['healing', 'Healing'],
+      ['downed', 'Downed'],
+    ];
+    const cell = (h, f) => `<td class="${h.best.includes(f) ? 'best' : ''}">${h[f]}</td>`;
+    const top = (f) => s.heroes.filter((h) => h.best.includes(f)).map((h) => esc(h.name)).join(' & ');
+    const honours = [
+      top('damage') && `<b>${top('damage')}</b> dealt the most damage`,
+      top('healing') && `<b>${top('healing')}</b> kept everyone standing`,
+    ].filter(Boolean);
+    const closing = s.heroes.every((h) => h.downed === 0) ? 'Nobody fell. Not once.'
+      : !s.lost ? 'Not a single fight lost.'
+        : `${plural(s.lost, 'fight')} lost along the way, but the crypt is quiet at last.`;
+    el.innerHTML = `
+      <dl class="run-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+      <table class="run-heroes">
+        <thead><tr><th>Hero</th>${cols.map(([, label]) => `<th>${label}</th>`).join('')}</tr></thead>
+        <tbody>${s.heroes.map((h) => `<tr>
+          <th scope="row"><b>${esc(h.name)}</b><small>${esc(h.cls)} · Lv ${h.level}</small></th>
+          ${cols.map(([f]) => cell(h, f)).join('')}
+        </tr>`).join('')}</tbody>
+      </table>
+      <p class="run-honours">${[...honours, closing].join(' · ')}</p>`;
   }
 
   /** Level title card in the log. */

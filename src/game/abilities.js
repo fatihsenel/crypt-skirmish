@@ -8,7 +8,7 @@ export const ACTIONS = {
   disengage: { name: 'Disengage', time: 'action', desc: 'Your movement doesn’t provoke opportunity attacks this turn.' },
   hide: {
     name: 'Hide', time: 'action',
-    desc: 'Roll Stealth. Unaware monsters only spot you if their passive Perception beats it (or they are next to you); your first attack from hiding has advantage. Not while an alert enemy can see you.',
+    desc: 'Roll Stealth. Monsters only spot you if their passive Perception beats it, they are next to you, or they Search and roll high enough. Alert monsters lose track of you and hunt where they last saw you. Your first attack from hiding has advantage. Not while an alert enemy can see you.',
   },
   potion: { name: 'Potion', time: 'action', desc: 'Drink a potion of healing: regain 2d4 + 2 HP.' },
   // Fighter
@@ -25,6 +25,7 @@ export const ACTIONS = {
   // Monsters
   nimbleEscape: { name: 'Nimble Escape', time: 'bonus', feature: true, desc: 'Disengage as a bonus action.' },
   aggressive: { name: 'Aggressive', time: 'bonus', feature: true, desc: 'Move up to its speed toward an enemy.' },
+  search: { name: 'Search', time: 'action', desc: 'Perception check against the Stealth of every hidden hero in sight; a success finds them.' },
 };
 
 export const STANDARD_ACTIONS = ['dash', 'dodge', 'disengage', 'hide'];

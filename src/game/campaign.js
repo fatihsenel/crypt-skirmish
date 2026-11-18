@@ -108,6 +108,65 @@ export function heroUnit(code, rec) {
   return u;
 }
 
+const STAT_FIELDS = ['damage', 'kills', 'crits', 'healing', 'downed'];
+
+/** The run's tally, shown at the end: rooms won, fights lost, rounds, and each hero's numbers. */
+export function blankStats() {
+  const heroes = {};
+  for (const code of HERO_CODES) heroes[code] = Object.fromEntries(STAT_FIELDS.map((f) => [f, 0]));
+  return { won: 0, lost: 0, rounds: 0, heroes };
+}
+
+/** A save's stats if they look right, else a fresh tally (saves from before stats). */
+function validStats(s) {
+  const ok = s && ['won', 'lost', 'rounds'].every((f) => Number.isFinite(s[f]))
+    && HERO_CODES.every((c) => STAT_FIELDS.every((f) => Number.isFinite(s.heroes?.[c]?.[f])));
+  return ok ? s : blankStats();
+}
+
+/** Add a fight's per-hero tally (game.stats) to the run's. */
+function addStats(stats, game) {
+  stats.rounds += game.round;
+  for (const [code, t] of Object.entries(game.stats ?? {})) {
+    const h = stats.heroes[code];
+    if (h) for (const f of STAT_FIELDS) h[f] += t[f] ?? 0;
+  }
+}
+
+/** A lost fight counts toward the run's tally (its rounds, and one more defeat). */
+export function recordDefeat(prev, game) {
+  const state = clone(prev);
+  state.stats = validStats(state.stats);
+  state.stats.lost++;
+  state.stats.rounds += game.round;
+  return state;
+}
+
+/**
+ * Everything the ending screen shows, as plain data: the run's totals and one row per hero,
+ * with `best` naming the stat columns that hero leads (ties share it; zeros lead nothing).
+ */
+export function runSummary(state) {
+  const stats = validStats(state.stats);
+  const heroes = HERO_CODES.map((code) => {
+    const rec = state.party[code];
+    return { code, name: rec.name ?? TEMPLATES[code].name, cls: TEMPLATES[code].cls, level: rec.level, ...stats.heroes[code], best: [] };
+  });
+  for (const f of ['damage', 'kills', 'crits', 'healing']) {
+    const top = Math.max(...heroes.map((h) => h[f]));
+    if (top > 0) for (const h of heroes) if (h[f] === top) h.best.push(f);
+  }
+  return {
+    difficulty: DIFFICULTIES[state.difficulty]?.name ?? 'Normal',
+    xp: state.xp,
+    level: Math.max(...heroes.map((h) => h.level)),
+    won: stats.won,
+    lost: stats.lost,
+    rounds: stats.rounds,
+    heroes,
+  };
+}
+
 /** `names` may rename heroes, e.g. { F: 'Tamsin' }; blank or unusable names keep the default. */
 export function newCampaign(difficulty = 'normal', names = {}) {
   const party = {};
@@ -117,7 +176,7 @@ export function newCampaign(difficulty = 'normal', names = {}) {
     const name = cleanName(names[code]);
     if (name) party[code].name = name;
   }
-  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false, difficulty };
+  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false, difficulty, stats: blankStats() };
 }
 
 /** Rooms the party can enter next. */
@@ -164,6 +223,10 @@ export function completeFight(prev, id, game) {
     rec.alive = true;
     state.party[code] = rec;
   }
+
+  state.stats = validStats(state.stats);
+  state.stats.won++;
+  addStats(state.stats, game);
 
   const xp = game.xpEarned();
   state.xp += xp;
@@ -262,6 +325,7 @@ export function parseSave(text) {
     if (!Array.isArray(s.pack) || !s.pack.every((i) => ITEMS[i])) return null;
     if (typeof s.xp !== 'number') return null;
     if (!DIFFICULTIES[s.difficulty]) s.difficulty = 'normal'; // saves from before difficulties
+    s.stats = validStats(s.stats); // saves from before the run tally start a fresh one
     for (const code of HERO_CODES) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;

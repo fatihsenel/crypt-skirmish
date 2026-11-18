@@ -8,6 +8,7 @@ import { levelById, LEVELS } from '../src/game/maps.js';
 import { createUnit } from '../src/game/units.js';
 import {
   cleanName, newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES, DIFFICULTIES,
+  recordDefeat, runSummary,
 } from '../src/game/campaign.js';
 
 // Deterministic RNG that returns the given sequence of d-results for a die size.
@@ -646,6 +647,53 @@ describe('campaign: levels, items and the dungeon map', () => {
     expect(unequip(geared, 'F', 0).pack).toEqual(['weaponPlus1']);
   });
 
+  it('fights tally each hero\'s damage, kills, crits, healing and falls', () => {
+    const game = new Game(['#######', '#CFg.u#', '#######'], { senses: false, rng: fixed(0.99) }); // nat 20s
+    game.start();
+    const [c, f, g, u] = game.units;
+    setTurn(game, 1);
+    g.hp = 3;
+    game.attack(f, g, f.attacks[0]); // a crit for far more than 3
+    expect(game.stats.F).toMatchObject({ damage: 3, kills: 1, crits: 1 });
+    f.hp = 5;
+    game.heal(f, 10, c);
+    expect(game.stats.C.healing).toBe(10);
+    game.heal(f, 99, c);
+    expect(game.stats.C.healing).toBe(f.maxHp - 5); // overhealing doesn't count
+    game.applyDamage(c, c.hp, u);
+    expect(game.stats.C.downed).toBe(1);
+    expect(game.stats.u).toBeUndefined(); // monsters aren't tallied
+  });
+
+  it('the run adds up won fights, lost fights and rounds for the ending', () => {
+    const start = newCampaign('hard', { F: 'Tamsin' });
+    const lost = new Game(levelById('crypt'), { party: start.party });
+    lost.round = 4;
+    const afterLoss = recordDefeat(start, lost);
+    expect(afterLoss.stats).toMatchObject({ won: 0, lost: 1, rounds: 4 });
+
+    const game = new Game(levelById('crypt'), { party: afterLoss.party });
+    game.round = 6;
+    game.stats = { F: { damage: 40, kills: 3, crits: 1, healing: 0, downed: 0 }, C: { damage: 9, kills: 0, crits: 0, healing: 22, downed: 1 } };
+    for (const m of game.units) if (m.team === 'monsters') m.alive = false;
+    const { state } = completeFight(afterLoss, 'crypt', game);
+    expect(state.stats).toMatchObject({ won: 1, lost: 1, rounds: 10 });
+
+    const s = runSummary(state);
+    expect(s).toMatchObject({ difficulty: 'Hard', won: 1, lost: 1, rounds: 10, level: 3 });
+    const tamsin = s.heroes.find((h) => h.code === 'F');
+    expect(tamsin).toMatchObject({ name: 'Tamsin', cls: 'Fighter', damage: 40, kills: 3 });
+    expect(tamsin.best).toEqual(['damage', 'kills', 'crits']);
+    expect(s.heroes.find((h) => h.code === 'C').best).toEqual(['healing']);
+    expect(s.heroes.find((h) => h.code === 'W').best).toEqual([]); // zeros lead nothing
+  });
+
+  it('saves from before the run tally start a fresh one', () => {
+    const old = newCampaign();
+    delete old.stats;
+    expect(parseSave(serialize(old)).stats).toMatchObject({ won: 0, lost: 0, rounds: 0 });
+  });
+
   it('the chapel is a long rest', () => {
     const s = newCampaign();
     s.party.W.hp = 2;
@@ -860,6 +908,55 @@ describe('stealth', () => {
     const w = setTurn(game, game.units.findIndex((u) => u.code === 'W'));
     Object.assign(w, { x: 5, z: 2 });
     expect(game.actionProblem(w, 'hide')).toMatch(/watching/);
+  });
+
+  it('alert monsters remember where they last saw a hero', () => {
+    const { game, w, g } = setup();
+    g.unaware = false;
+    Object.assign(w, { x: 6, z: 2 });
+    game.updateAwareness();
+    expect(w.lastSeen).toEqual({ x: 6, z: 2 });
+  });
+
+  it('an alert monster hunts a hidden hero at the spot it was last seen, then Searches', () => {
+    const { game, w, g } = setup();
+    g.unaware = false;
+    w.hidden = 13; // above the goblin's passive Perception of 9
+    w.lastSeen = { x: 5, z: 2 };
+    setTurn(game, game.units.indexOf(g));
+    const memo = {};
+    const step = nextMonsterStep(game, g, memo);
+    expect(step.type).toBe('move'); // no attack: it doesn't know where Ilsa is
+    game.move(g, step.x, step.z);
+    expect(gridDistance(g, w.lastSeen)).toBeLessThanOrEqual(1);
+    expect(nextMonsterStep(game, g, memo)).toEqual({ type: 'action', id: 'search' });
+    expect(w.lastSeen).toBe(null); // that lead is used up
+  });
+
+  it('Search rolls Perception against Stealth and finds the hero on a success', () => {
+    const game = new Game(rows, { rng: fixed(0.99) }); // every d20 rolls 20
+    game.start();
+    const w = game.units.find((u) => u.code === 'W');
+    const g = game.units.find((u) => u.code === 'g');
+    Object.assign(w, { x: 6, z: 2, hidden: 15 });
+    g.unaware = false;
+    setTurn(game, game.units.indexOf(g));
+    const seen = [];
+    game.on('revealed', (e) => seen.push(e));
+    const r = game.doAction(g, 'search');
+    expect(r.checks[0]).toMatchObject({ unit: w, total: 19, dc: 15, success: true });
+    expect(w.hidden).toBe(0);
+    expect(seen[0]).toMatchObject({ unit: w, cause: 'searched', by: g });
+  });
+
+  it('a failed Search leaves the hero hidden', () => {
+    const { game, w, g } = setup(); // d20 11 - 1 = 10
+    Object.assign(w, { x: 6, z: 2, hidden: 13 });
+    g.unaware = false;
+    setTurn(game, game.units.indexOf(g));
+    const r = game.doAction(g, 'search');
+    expect(r.found).toEqual([]);
+    expect(w.hidden).toBe(13);
   });
 
   it('heavy armour hides with disadvantage; Wren hides as a bonus action with expertise', () => {

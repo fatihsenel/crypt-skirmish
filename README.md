@@ -95,6 +95,11 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   only spotted by a monster whose passive Perception (10 + WIS) reaches the Stealth roll,
   or one right next to them. The first attack from hiding has advantage; attacking or
   casting gives you away. You can't hide while an alert enemy can see you
+- **searching monsters**: alert monsters lose track of a hidden hero. They remember the
+  last tile where they saw each hero (even partway through a move), walk there (Dashing if
+  it's far), and take the **Search** action: a Perception roll against the hero's Stealth
+  for every hidden hero in sight, which finds them on a success. With no lead, they stay
+  put and Search
 - **atmosphere**: walls in front of a figure turn see-through; hits spray blood (bone chips
   from the undead), fire bolts burst into embers, critical hits and Fireball shake the
   screen, and a natural 20 or 1 throws a tumbling d20 over the attacker
@@ -102,6 +107,10 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   bell notes while you explore; drums, a bass ostinato and strings swell in once monsters
   notice the party, with brass and a quicker pulse in the boss rooms, then fade back when
   the room is quiet. The Music button (or N) turns it off; Sound (or M) mutes everything
+- **the ending**: beating Varek shows the run's tally: difficulty, party level, rooms won,
+  rounds fought, fights lost and XP, then each hero's damage dealt, kills, critical hits,
+  healing given and times downed, with a star on whoever leads each column. Lost fights
+  count toward the tally; hero numbers come from the fights that were won
 - **saves**: the run is saved to the browser after every room; the title screen offers
   Continue. Fights themselves are not saved: reloading mid-fight returns you to the camp
 - **house rules** (simplifications of the SRD): goblin arrows and rat bites poison
@@ -224,8 +233,8 @@ you can swap the visuals (real models, different camera) without touching rules.
 4. **A real goblin model**: goblins and Grukk reuse tinted KayKit adventurers. A dedicated
    rigged goblin would only need a `.glb` in `public/models` and its entry in `SPECS` in
    `gltfModels.js` (clip names per action; a `Armature|Clip` prefix is stripped).
-5. **Searching monsters**: alert monsters that lose track of a hidden hero could walk
-   to where they last saw them (`patrolStep` in `ai.js` already walks toward a tile).
+5. **Monsters that hide**: goblins could Hide too (Nimble Escape allows it in the SRD),
+   with the heroes using the Search action to find them.
 
 ## Credits
 

@@ -8,6 +8,7 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
+  recordDefeat, runSummary,
 } from './game/campaign.js';
 import { nextMonsterStep } from './game/ai.js';
 import { key, pathFrom, gridDistance } from './game/grid.js';
@@ -366,10 +367,10 @@ const ALERT_TEXT = {
 /** Monsters that just noticed the party: a "!" over each one in view, one log line. */
 function flushAlerts() {
   for (const { unit, cause, by } of pendingSpotted) {
-    if (cause === 'spotted') {
-      floatText(stage.scene, unit, 'Spotted!', 'warn');
+    if (cause === 'spotted' || cause === 'searched') {
+      floatText(stage.scene, unit, cause === 'searched' ? 'Found!' : 'Spotted!', 'warn');
       const finder = by && !unseen(by) ? `<span class="monsters">${by.name}</span>` : 'Something';
-      hud.log(`${finder} spots <span class="heroes">${unit.name}</span> in the shadows!`, 'sys');
+      hud.log(`${finder} ${cause === 'searched' ? 'finds' : 'spots'} <span class="heroes">${unit.name}</span> in the shadows!`, 'sys');
     } else {
       hud.log(`<span class="heroes">${unit.name}</span> steps out of hiding.`, 'sys');
     }
@@ -842,6 +843,11 @@ async function doAction(unit, id) {
       if (!unseen(unit)) floatText(stage.scene, unit, 'Charge!', 'warn');
       await wait(500);
       break;
+    case 'search':
+      if (!unseen(unit)) floatText(stage.scene, unit, 'Searching…', 'spell');
+      await wait(450);
+      syncStatus(); // "Found!" over anyone it turned up
+      break;
     default: // dash, dodge, disengage and their bonus-action versions
       sfx.maneuver();
       if (!unseen(unit)) floatText(stage.scene, unit, r.name, 'spell');
@@ -989,6 +995,7 @@ async function checkGameOver() {
   hud.renderActionBar(game, { selected: null, busy: false });
   const level = levelById(NODES[nodeId].level);
   const final = !!level.final;
+  let summary = null;
   if (game.over === 'victory') {
     sfx.victory();
     if (!final) {
@@ -998,12 +1005,18 @@ async function checkGameOver() {
       // The campaign is won: record it, and the next visit starts fresh.
       campaign = completeFight(campaign, nodeId, game).state;
       clearSave();
+      summary = runSummary(campaign);
     }
   } else {
     sfx.defeat();
+    if (campaign) {
+      campaign = recordDefeat(campaign, game);
+      writeSave(campaign);
+    }
   }
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
+    summary,
   });
   return true;
 }

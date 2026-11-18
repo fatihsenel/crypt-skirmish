@@ -8,6 +8,9 @@
 // Anything that knows Dread frightens the toughest melee hero it can see (a brute only
 // when it can't reach melee this turn).
 // Any monster that is Turned (Turn Undead) just flees.
+// Monsters lose track of hidden heroes: they only target heroes they know about. With
+// nobody in view, an alert monster hunts: it walks (Dashing if it must) to the nearest
+// spot where a hidden hero was last seen and takes the Search action there.
 //
 // nextMonsterStep() returns one decision at a time so the controller can animate
 // each step and re-plan from the new state.
@@ -30,7 +33,7 @@ export function chooseAttack(game, unit, at = unit) {
   const self = { ...unit, x: at.x, z: at.z };
   const pref = keepsDistance(unit) ? attackPrefs.ranged : attackPrefs.brute;
   let best = null;
-  for (const target of game.enemiesOf(unit)) {
+  for (const target of game.knownFoes(unit)) {
     for (const attack of unit.attacks) {
       if (game.attackProblem(self, target, attack)) continue;
       const mods = game.attackMods(self, target, attack);
@@ -48,13 +51,14 @@ export function chooseAttack(game, unit, at = unit) {
 /**
  * Tile to move to this turn, or null to stay put.
  * goal: 'attack' (find a tile to attack from), 'approach' (just get closer,
- * e.g. after Dashing), 'retreat' (back off after attacking) or 'flee' (get as far
- * away as possible, when Turned).
+ * e.g. after Dashing), 'retreat' (back off after attacking), 'flee' (get as far
+ * away as possible, when Turned) or 'search' (head for the tile `toward`).
  */
-export function chooseMove(game, unit, goal = game.canAttack(unit) ? 'attack' : 'retreat') {
-  const foes = game.enemiesOf(unit);
-  if (!foes.length || unit.movesLeft <= 0) return null;
-  const field = game.grid.distanceField(foes);
+export function chooseMove(game, unit, goal = game.canAttack(unit) ? 'attack' : 'retreat', toward = null) {
+  const foes = game.knownFoes(unit);
+  if (unit.movesLeft <= 0) return null;
+  if (goal === 'search' ? !toward : !foes.length) return null;
+  const field = game.grid.distanceField(goal === 'search' ? [toward] : foes);
   const map = game.reachable(unit);
   const skirmisher = keepsDistance(unit);
 
@@ -80,7 +84,7 @@ export function chooseMove(game, unit, goal = game.canAttack(unit) ? 'attack' : 
         score += dist; // close the distance
       }
       if (skirmisher && nearFoe) score += 30;
-    } else if (goal === 'approach') {
+    } else if (goal === 'approach' || goal === 'search') {
       score += dist;
     } else if (goal === 'flee') {
       score -= Math.min(dist, 30) * 10;
@@ -120,7 +124,7 @@ function dreadTarget(game, unit) {
   if (!unit.spells.includes('dread') || game.spellProblem(unit, 'dread')) return null;
   if (!keepsDistance(unit) && (game.isAdjacentToEnemy(unit) || meleeReachable(game, unit))) return null;
   const melee = (h) => (h.attacks[0].reach === 1 ? 100 : 0);
-  return game.spellTargets(unit, 'dread').sort((a, b) => melee(b) + b.maxHp - (melee(a) + a.maxHp))[0] ?? null;
+  return game.spellTargets(unit, 'dread').filter((h) => !h.hidden).sort((a, b) => melee(b) + b.maxHp - (melee(a) + a.maxHp))[0] ?? null;
 }
 
 /**
@@ -151,6 +155,49 @@ export function patrolStep(game, unit) {
     return { x: best.n.x, z: best.n.z };
   }
   return null;
+}
+
+/** The nearest (by walking) last-seen spot of a hidden hero, or null. */
+function searchSpot(game, unit) {
+  const spots = game.living('heroes').filter((h) => h.hidden && h.lastSeen).map((h) => h.lastSeen);
+  if (!spots.length) return null;
+  const field = game.grid.distanceField([unit]);
+  let best = null;
+  for (const s of spots) {
+    const d = field.get(key(s.x, s.z)) ?? gridDistance(unit, s) + 50;
+    if (!best || d < best.d) best = { s, d };
+  }
+  return best.s;
+}
+
+/**
+ * No hero in view: walk to where a hidden one was last seen and Search there.
+ * Arriving clears that lead, so the next monster doesn't search the same empty corner.
+ */
+function huntStep(game, unit, memo) {
+  const spot = searchSpot(game, unit);
+  const arrived = spot && gridDistance(unit, spot) <= 1;
+  if (arrived) {
+    for (const h of game.living('heroes')) {
+      if (h.lastSeen && h.lastSeen.x === spot.x && h.lastSeen.z === spot.z) h.lastSeen = null;
+    }
+  }
+  if (spot && !arrived && !memo.moved) {
+    memo.moved = true;
+    const dest = chooseMove(game, unit, 'search', spot);
+    if (dest) return { type: 'move', ...dest };
+  }
+  if (!unit.actionUsed) {
+    // Still far off: Dash to close in, otherwise look around.
+    if (spot && !arrived && !memo.dashed && !game.actionProblem(unit, 'dash')) {
+      memo.dashed = true;
+      memo.moved = false;
+      return { type: 'action', id: 'dash' };
+    }
+    const hidden = game.living('heroes').some((h) => h.hidden);
+    if (hidden && !game.actionProblem(unit, 'search')) return { type: 'action', id: 'search' };
+  }
+  return { type: 'end' };
 }
 
 /**
@@ -191,6 +238,8 @@ export function nextMonsterStep(game, unit, memo) {
 
   const scared = !unit.actionUsed && dreadTarget(game, unit);
   if (scared) return { type: 'spell', id: 'dread', target: scared };
+
+  if (!game.knownFoes(unit).length) return huntStep(game, unit, memo);
 
   const plan = game.canAttack(unit) ? chooseAttack(game, unit) : null;
 
