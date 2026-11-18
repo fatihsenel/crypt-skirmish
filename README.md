@@ -159,6 +159,7 @@ rest at all) drops the Barrow to roughly two wins in three.
 | Right-drag / wheel | Pan / zoom |
 | Space / Enter | End turn |
 | M / N | Sound on/off / music on/off |
+| H | Show or hide the controls panel (its state is remembered) |
 
 ## Layout
 

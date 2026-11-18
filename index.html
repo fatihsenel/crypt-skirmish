@@ -28,7 +28,31 @@
         </div>
       </footer>
 
-      <div id="help">Left-click: move / attack<br>Right-drag: pan · Wheel: zoom<br>Space: end turn · Esc: cancel<br>M: sound on/off · N: music on/off<br>Red dots: path provokes an opportunity attack<br>Click a chest next to you to open it</div>
+      <details id="help" open>
+        <summary title="Show or hide the controls (H)">
+          <span class="help-icon" aria-hidden="true">?</span>
+          <span class="help-title">Controls</span>
+          <kbd>H</kbd>
+        </summary>
+        <div class="help-body">
+          <dl class="help-keys">
+            <dt><kbd>Click</kbd></dt><dd>Move, attack, or open a chest beside you</dd>
+            <dt><kbd>Right-drag</kbd></dt><dd>Pan the view</dd>
+            <dt><kbd>Wheel</kbd></dt><dd>Zoom</dd>
+            <dt><kbd>Space</kbd></dt><dd>End turn</dd>
+            <dt><kbd>Esc</kbd></dt><dd>Cancel attack or spell</dd>
+            <dt><kbd>M</kbd> <kbd>N</kbd></dt><dd>Sound / music on or off</dd>
+          </dl>
+          <h3>On the board</h3>
+          <ul class="help-legend">
+            <li><i class="sw reach"></i>Can move here</li>
+            <li><i class="sw path"></i>Path</li>
+            <li><i class="sw danger"></i>Step provokes an attack</li>
+            <li><i class="sw target"></i>Can attack</li>
+            <li><i class="sw ally"></i>Can heal</li>
+          </ul>
+        </div>
+      </details>
       <div id="audio">
       <button id="music" type="button" aria-pressed="true" title="Music on/off (N)">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

@@ -297,12 +297,82 @@ kbd {
 
 #help {
   position: absolute;
-  left: 12px; top: 12px;
-  max-width: 210px;
-  padding: 6px 10px;
-  font-size: 11.5px;
-  color: var(--muted);
+  left: 12px; top: 76px; /* below the initiative bar, level with the combat log */
+  width: 236px;
+  font-size: 12px;
+  color: var(--ink);
 }
+#help:not([open]) { width: auto; }
+#help summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+#help summary::-webkit-details-marker { display: none; }
+#help summary:hover .help-title { color: var(--gold); }
+#help summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 10px; }
+#help .help-icon {
+  display: grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font: 700 11px var(--body);
+}
+#help .help-title {
+  font: 600 12px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+#help summary kbd { margin-left: auto; }
+#help[open] summary { border-bottom: 1px solid var(--panel-edge); }
+#help .help-body { padding: 8px 10px 10px; }
+#help dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 10px;
+  align-items: center;
+  margin: 0;
+}
+#help dt { display: flex; gap: 3px; justify-self: end; }
+#help dd { margin: 0; color: #d8cfc0; line-height: 1.3; }
+#help kbd {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.22);
+  border-bottom-width: 2px;
+  white-space: nowrap;
+}
+#help h3 {
+  margin: 10px 0 6px;
+  font: 600 10.5px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+#help ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+#help li { display: flex; align-items: center; gap: 8px; color: #d8cfc0; }
+#help .sw {
+  flex: none;
+  width: 14px; height: 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+#help .sw.reach { background: rgba(74, 163, 255, 0.55); }
+#help .sw.path { background: none; border: 0; display: flex; justify-content: space-around; align-items: center; }
+#help .sw.path::before, #help .sw.path::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #ffd36b; }
+#help .sw.danger { background: none; border: 0; display: flex; justify-content: space-around; align-items: center; }
+#help .sw.danger::before, #help .sw.danger::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #ff3b3b; }
+#help .sw.target { background: rgba(255, 74, 74, 0.55); }
+#help .sw.ally { background: rgba(74, 222, 128, 0.55); }
 
 #audio {
   position: absolute;

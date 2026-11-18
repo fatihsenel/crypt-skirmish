@@ -156,6 +156,22 @@ function toggleMusic() {
 }
 hud.setMusic(music.enabled);
 
+// The controls panel: open the first time, then remembered.
+const HELP_KEY = 'crypt-skirmish:help';
+const helpBox = document.getElementById('help');
+try {
+  if (localStorage.getItem(HELP_KEY) === '0') helpBox.open = false;
+} catch {
+  /* storage unavailable: start open */
+}
+helpBox.addEventListener('toggle', () => {
+  try {
+    localStorage.setItem(HELP_KEY, helpBox.open ? '1' : '0');
+  } catch {
+    /* setting just won't persist */
+  }
+});
+
 /** What the music should be doing right now (polled; music.setMood ignores repeats). */
 function currentMood() {
   if (!game || camp.open || game.over === 'defeat') return 'calm';
@@ -1195,6 +1211,7 @@ window.addEventListener('keydown', (ev) => {
   }
   if (ev.code === 'KeyM') toggleSound();
   if (ev.code === 'KeyN') toggleMusic();
+  if (ev.code === 'KeyH') helpBox.open = !helpBox.open;
   if (ev.code === 'Escape') {
     selected = null;
     if (isHeroTurn() && !busy) refresh();
