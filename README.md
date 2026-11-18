@@ -1,5 +1,7 @@
 # Crypt Skirmish — isometric D&D-style tactics in three.js
 
+**Play it in the browser: https://fatihsenel.github.io/crypt-skirmish/**
+
 A small turn-based dungeon crawl: a party of four (Fighter, Wizard, Rogue, Cleric) fights
 its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 
@@ -53,8 +55,12 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 npm install
 npm run dev      # http://localhost:5173
 npm test         # rules unit tests (Vitest)
-npm run build    # production bundle in dist/
+npm run build    # production bundle in dist/ (served from /crypt-skirmish/)
+npm run preview  # http://localhost:4173/crypt-skirmish/ to check the build
 ```
+
+Every push to `main` runs the tests, builds, and deploys to GitHub Pages
+(`.github/workflows/pages.yml`). The base path lives in `vite.config.js`.
 
 Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 Warren,
 3 Ossuary, 4 Sanctum) with a fresh level-3 party; this doesn't touch the save.
