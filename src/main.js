@@ -1523,8 +1523,20 @@ function testParty(state, level) {
 // The title waits only for the dungeon tiles (~1 MB); the .glb figures (~7 MB) keep
 // loading behind it, and a fight started before they're here waits for them. Any that
 // fail fall back to the built-in miniatures.
+// #boot (inline in index.html) covers the page until the title is up.
+const $boot = document.getElementById('boot');
+function bootProgress(done, total) {
+  if (!$boot) return;
+  $boot.querySelector('.boot-fill').style.width = `${Math.round(10 + (90 * done) / total)}%`;
+  $boot.querySelector('.boot-status').textContent = `Laying the crypt stones… ${done}/${total}`;
+}
+function hideBoot() {
+  if (!$boot) return;
+  $boot.classList.add('done');
+  setTimeout(() => $boot.remove(), 600);
+}
 showBackdrop();
-preloadDungeon().then(() => {
+preloadDungeon(bootProgress).then(() => {
   // rebuild the backdrop from the tile kit now that it's here
   if (!game) {
     stage.scene.remove(board.group);
@@ -1542,6 +1554,7 @@ preloadDungeon().then(() => {
   } else {
     camp.showTitle(loadSave());
   }
+  hideBoot();
 });
 
 // Handy for debugging in the console.

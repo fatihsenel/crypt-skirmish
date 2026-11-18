@@ -7,8 +7,37 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <!-- The boot screen is styled inline so it paints before the game's JS and CSS arrive. -->
+    <style>
+      html, body { margin: 0; background: #0d0b10; }
+      #boot {
+        position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+        background: radial-gradient(ellipse at center, #1a1520, #0d0b10 70%);
+        color: #ece4d4; font: 14px Inter, system-ui, sans-serif; transition: opacity 0.5s ease;
+      }
+      #boot.done { opacity: 0; pointer-events: none; }
+      #boot .boot-card { width: min(320px, calc(100vw - 32px)); text-align: center; }
+      #boot h1 {
+        margin: 0 0 22px; font: 700 clamp(30px, 8vw, 48px) Cinzel, Georgia, serif;
+        color: #d9b45a; letter-spacing: 0.04em;
+      }
+      #boot .boot-bar { height: 6px; border-radius: 3px; background: #ffffff14; overflow: hidden; }
+      #boot .boot-fill {
+        width: 4%; height: 100%; border-radius: 3px; background: #d9b45a;
+        transition: width 0.3s ease;
+      }
+      #boot .boot-status { margin: 12px 0 0; color: #9d927f; font-size: 13px; min-height: 1.3em; }
+      @media (prefers-reduced-motion: reduce) { #boot, #boot .boot-fill { transition: none; } }
+    </style>
   </head>
   <body>
+    <div id="boot" role="status" aria-live="polite">
+      <div class="boot-card">
+        <h1>Crypt Skirmish</h1>
+        <div class="boot-bar"><div class="boot-fill"></div></div>
+        <p class="boot-status">Opening the crypt…</p>
+      </div>
+    </div>
     <div id="app">
       <div id="stage"></div>
 

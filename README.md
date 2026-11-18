@@ -261,8 +261,9 @@ scripts/sim.js     headless balance simulator (npm run sim)
 scripts/trim-models.js  strips the character .glb files down to the clips in modelSpecs.js
 ```
 
-The title screen waits only for the dungeon tiles; the character models keep loading behind
-it, and a fight started before they arrive waits for them. three.js is built into a chunk of
+A boot screen, styled inline in `index.html` so it paints before any script arrives, shows
+the tiles' loading progress. The title screen waits only for the dungeon tiles; the
+character models keep loading behind it, and a fight started before they arrive waits for them. three.js is built into a chunk of
 its own, so browsers keep it cached when only the game changes. The packs ship 14 to 95
 animation clips per model and the game plays about ten, so `node scripts/trim-models.js`
 drops the rest (30 MB of models down to under 8 MB). Adding a clip to `modelSpecs.js` means

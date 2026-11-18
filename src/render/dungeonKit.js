@@ -18,8 +18,11 @@ const SHADE = { floor: 0.55, wall: 0.78, pillar: 0.78 };
 
 const pieces = new Map();
 
-export function preloadDungeon() {
+export function preloadDungeon(onProgress) {
   const loader = new GLTFLoader();
+  let done = 0;
+  const tick = () => onProgress?.(++done, FILES.length);
+  onProgress?.(0, FILES.length);
   return Promise.all(FILES.map((f) => loader.loadAsync(`${BASE}${f}.glb`)
     .then((g) => {
       // The pack is bright and cheerful; dim it to crypt stone (floors most, so the
@@ -33,7 +36,8 @@ export function preloadDungeon() {
       });
       pieces.set(f, g.scene);
     })
-    .catch((e) => console.warn(`Dungeon piece ${f} not loaded`, e))));
+    .catch((e) => console.warn(`Dungeon piece ${f} not loaded`, e))
+    .finally(tick)));
 }
 
 /** True once the pieces the board needs are all here. */
