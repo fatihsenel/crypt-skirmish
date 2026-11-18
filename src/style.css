@@ -471,10 +471,13 @@ kbd {
 #banner {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  /* Auto margins centre the card but let it scroll from the top when it's taller than the
+     screen (several achievements on a sideways phone). */
+  display: flex;
+  overflow-y: auto;
   background: rgba(5, 4, 8, 0.6);
 }
+#banner .card { margin: auto; }
 #banner[hidden] { display: none; }
 #banner .card {
   text-align: center;
@@ -690,6 +693,41 @@ b.loot { color: var(--gold); }
 #title .history .lost { color: #c9a0a0; font-weight: 600; }
 #title .history .run-stats, #title .history .run-party { margin-top: 2px; }
 #title .history .run-party small { color: #9d927f; font-size: 11.5px; }
+#title .awards {
+  list-style: none; margin: 8px 0 0; padding: 0; max-height: min(260px, 34vh); overflow-y: auto;
+  border-top: 1px solid #c9b07a33; overscroll-behavior: contain;
+  display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 14px;
+}
+@media (max-width: 520px) { #title .awards { grid-template-columns: 1fr; } }
+#title .awards li, #banner-awards li { display: flex; gap: 8px; align-items: flex-start; text-align: left; }
+#title .awards li { padding: 7px 2px; border-bottom: 1px solid #c9b07a22; font-size: 13px; color: #d8cfc0; }
+#title .awards small, #banner-awards small { display: block; font-size: 12px; color: #a99f90; }
+#title .awards .muted { font-size: 11.5px; }
+.award-mark { flex: none; color: var(--gold); font-size: 15px; line-height: 1.2; }
+#title .awards .got b { color: var(--gold); }
+#title .awards .locked { opacity: 0.6; }
+#title .awards .locked .award-mark { color: #9d927f; }
+#banner-awards[hidden] { display: none; }
+#banner-awards {
+  list-style: none; margin: -6px auto 18px; padding: 0; display: flex; flex-direction: column; gap: 6px;
+  max-width: 320px;
+}
+#banner-awards li {
+  padding: 7px 12px; border: 1px solid #c9b07a66; border-radius: 8px; background: #c9b07a1a;
+  font-size: 13.5px; color: var(--ink); animation: award-in 0.5s ease both;
+}
+#banner-awards li:nth-child(2) { animation-delay: 0.15s; }
+#banner-awards li:nth-child(3) { animation-delay: 0.3s; }
+#banner-awards b { color: var(--gold); }
+@media (max-height: 520px) {
+  #banner-awards { flex-direction: row; flex-wrap: wrap; justify-content: center; max-width: 520px; }
+  #banner-awards small { display: none; }
+}
+@keyframes award-in { from { opacity: 0; transform: translateY(6px) scale(0.96); } }
+@media (prefers-reduced-motion: reduce) { #banner-awards li { animation: none; } }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
 
 /* --- camp ------------------------------------------------------------------- */
 #camp {

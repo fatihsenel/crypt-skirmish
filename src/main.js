@@ -30,6 +30,7 @@ import { music } from './audio/music.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
 import { recordRun } from './game/history.js';
+import { unlock } from './game/achievements.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -1316,15 +1317,20 @@ async function checkGameOver() {
   const level = levelById(NODES[nodeId].level);
   const final = !!level.final;
   let summary = null;
+  let awards = []; // achievements unlocked by this fight (none on test runs)
   if (game.over === 'victory') {
     sfx.victory();
+    if (saving) awards = unlock('room', { game, node: nodeId });
     if (!final) {
       board.lightStairs();
       setTimeout(() => sfx.stairs(), 900);
     } else {
       // The campaign is won: record it, and the next visit starts fresh.
       campaign = completeFight(campaign, nodeId, game).state;
-      if (saving) recordRun(campaign, 'won');
+      if (saving) {
+        recordRun(campaign, 'won');
+        awards.push(...unlock('run', { state: campaign }));
+      }
       clearSave();
       summary = runSummary(campaign);
     }
@@ -1337,7 +1343,7 @@ async function checkGameOver() {
   }
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary,
+    summary, awards,
   });
   return true;
 }

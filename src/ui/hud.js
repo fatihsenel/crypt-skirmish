@@ -443,8 +443,9 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [] }) {
     this.renderSummary(summary);
+    this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';
     const rest = longRest
@@ -462,6 +463,15 @@ export class Hud {
     $('#restart').hidden = won && !final;
     $('#banner').dataset.result = result;
     $('#banner').hidden = false;
+  }
+
+  /** Achievements this fight unlocked, as gold chips under the banner text. */
+  renderAwards(awards) {
+    const el = $('#banner-awards');
+    el.hidden = awards.length === 0;
+    el.innerHTML = awards.map((a) => `<li title="${esc(a.desc)}"><span class="award-mark" aria-hidden="true">★</span>`
+      + `<span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span></li>`).join('');
+    el.setAttribute('aria-label', `Achievement${awards.length === 1 ? '' : 's'} unlocked`);
   }
 
   /** The run's ending: totals, then a row per hero with the column leaders in gold. */

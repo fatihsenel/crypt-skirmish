@@ -11,6 +11,7 @@ import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
 import { loadHistory } from '../game/history.js';
+import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -125,6 +126,21 @@ export class Camp {
       : '';
     $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
     this.renderHistory(loadHistory());
+    this.renderAwards(loadAchievements());
+  }
+
+  /** Every achievement: unlocked ones in gold with the date, the rest dimmed, as goals. */
+  renderAwards(have) {
+    const box = $('#title-awards');
+    const n = ACHIEVEMENTS.filter((a) => have[a.id]).length;
+    box.querySelector('summary').textContent = `Achievements (${n}/${ACHIEVEMENTS.length})`;
+    box.querySelector('.awards').innerHTML = ACHIEVEMENTS.map((a) => {
+      const when = have[a.id] && new Date(have[a.id]).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      return `<li class="${when ? 'got' : 'locked'}">
+        <span class="award-mark" aria-hidden="true">${when ? '★' : '☆'}</span>
+        <span><b>${esc(a.name)}</b>${when ? `<span class="muted"> · ${when}</span>` : '<span class="sr-only"> (locked)</span>'}<small>${esc(a.desc)}</small></span>
+      </li>`;
+    }).join('');
   }
 
   /** Past runs, newest first: how each ended, how far the party got, and who was in it. */
