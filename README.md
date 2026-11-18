@@ -186,6 +186,13 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **settings** (the button beside Sound, on the title and camp screens too): a volume
   slider each for music, effects (with the dungeon ambience) and voices, and how fast
   monster turns play out: Normal, Fast (1.75×) or Fastest (3×). Kept in the browser
+- **enemy reach**: the Threats button (or T) stripes every tile the monsters that know
+  about the party could reach and hit on their next turn: red where they could move and
+  strike in melee, amber where only their bows, spells or breath reach (with line of sight).
+  Heroes in the way block them, except the hero whose turn it is. Hover a monster's portrait
+  (tap it on a phone) to see just that monster's reach. Monsters still unaware, turned or
+  hidden show none. The move hint names who could reach the tile you're pointing at.
+  Remembered in the browser
 - **the ending**: beating Ysolde shows the run's tally: difficulty, party level, rooms won,
   rounds fought, fights lost and XP, then each hero's damage dealt, kills, critical hits,
   healing given and times downed, with a star on whoever leads each column. Lost fights
@@ -263,6 +270,7 @@ party worn down by the Gallery was overrun while a rested one won almost every t
 | Space / Enter | End turn |
 | M / N | Sound on/off / music on/off |
 | H | Show or hide the controls panel (its state is remembered) |
+| T | Show or hide enemy reach (hover a monster's portrait for just that one) |
 
 On phones and tablets:
 
@@ -271,7 +279,7 @@ On phones and tablets:
 | Tap a tile, enemy, chest or target | Preview what would happen (the hint shows it) |
 | Tap the same spot again | Do it |
 | Drag / pinch | Pan / zoom |
-| Tap a tag or portrait | Show its tooltip |
+| Tap a tag or portrait | Show its tooltip; with Threats on, a monster's portrait also shows just its reach (tap again to see all) |
 | Hold an attack, spell or action | Show what it does (with a mouse: hover it) |
 | Log button (top right) | Open or close the combat log; a gold dot means new lines. Below 900 px wide the log is hidden otherwise |
 

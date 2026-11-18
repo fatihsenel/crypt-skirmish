@@ -125,8 +125,17 @@ html, body {
   overflow-x: auto;
   scrollbar-width: none;
 }
+@media (min-width: 1401px) {
+  #initiative { max-width: calc(100% - 840px); } /* clear of the labelled buttons on the right */
+}
 @media (max-width: 900px) {
-  #initiative { max-width: calc(100% - 160px); left: 12px; transform: none; }
+  /* Left-aligned, stopping short of the five icon buttons on the right. */
+  #initiative { max-width: calc(100% - 248px); left: 12px; transform: none; }
+}
+@media (max-width: 600px) and (min-height: 521px) {
+  /* An upright phone: too narrow for both on one line, so the portraits get their own row
+     under the buttons, full width, and the controls panel moves down to match. */
+  #initiative { top: 56px; max-width: calc(100% - 24px); }
 }
 .chip {
   display: grid;
@@ -449,6 +458,8 @@ kbd {
 #help .sw.danger::before, #help .sw.danger::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #ff3b3b; }
 #help .sw.target { background: rgba(255, 74, 74, 0.55); }
 #help .sw.ally { background: rgba(74, 222, 128, 0.55); }
+#help .sw.threat { background: repeating-linear-gradient(-45deg, rgba(255, 42, 26, 0.75) 0 2px, transparent 2px 5px); }
+#help .sw.threat-ranged { background: repeating-linear-gradient(-45deg, rgba(255, 179, 71, 0.55) 0 1px, transparent 1px 5px); }
 
 #audio {
   position: absolute;
@@ -457,7 +468,7 @@ kbd {
   gap: 6px;
   z-index: 22; /* above the title and camp screens, so sound and settings work there too */
 }
-#sound, #music, #settings-toggle {
+#sound, #music, #settings-toggle, #threats-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -486,6 +497,7 @@ kbd {
 }
 #log-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
 #settings-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
+#threats-toggle[aria-pressed='true'] { border-color: #ff7a4a; color: #ff9a6a; background: rgba(255, 90, 46, 0.14); }
 
 /* --- the settings panel, dropped down under the buttons --------------------------- */
 #settings {
@@ -646,9 +658,11 @@ kbd {
   #log-list { font-size: 13px; }
   #help { width: min(260px, calc(100% - 24px)); max-height: calc(100% - 300px); overflow-y: auto; z-index: 4; }
 }
-@media (max-width: 900px) {
-  #audio > button > span { display: none; } /* icons only */
+@media (max-width: 1400px) {
+  #audio > button > span { display: none; } /* icons only: the row would run into the portraits */
   #audio > button { padding: 7px 9px; }
+}
+@media (max-width: 900px) {
   #settings { top: 52px; }
 }
 /* Phones, upright or on their side: a compact action bar. */
@@ -939,8 +953,9 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
   .camp-card { padding: 14px 16px 18px; }
 }
 /* The fight HUD steps back while the title or camp is up. */
-#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle),
-#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle) { visibility: hidden; }
+#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle),
+#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle) { visibility: hidden; }
+#app:has(#title:not([hidden])) #threats-toggle, #app:has(#camp:not([hidden])) #threats-toggle { display: none; } /* no gap in the row */
 
 /* Shown while a fight waits for the character models to finish downloading. */
 #loading {
@@ -1003,4 +1018,10 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
   #tip .tip-text { margin-bottom: 6px; }
   #tip button { padding: 4px 10px; font-size: 12px; }
   #app:has(#camp:not([hidden])) #tip { top: auto; bottom: 12px; }
+}
+
+/* An upright phone (see #initiative): the controls panel sits below the portraits' row.
+   Last in the file, so it wins over #help's own position. */
+@media (max-width: 600px) and (min-height: 521px) {
+  #help { top: 116px; }
 }

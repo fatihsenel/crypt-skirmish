@@ -97,6 +97,7 @@
             <dt class="mouse"><kbd>Wheel</kbd></dt><dd class="mouse">Zoom</dd>
             <dt class="mouse"><kbd>Space</kbd></dt><dd class="mouse">End turn</dd>
             <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Cancel attack or spell</dd>
+            <dt class="mouse"><kbd>T</kbd></dt><dd class="mouse">Show where monsters can reach (hover a portrait: just that one)</dd>
             <dt class="mouse"><kbd>M</kbd> <kbd>N</kbd></dt><dd class="mouse">Sound / music on or off</dd>
             <dt class="touch"><kbd>Tap</kbd></dt><dd class="touch">Show the move, attack or spell there</dd>
             <dt class="touch"><kbd>Tap again</kbd></dt><dd class="touch">Do it</dd>
@@ -104,6 +105,7 @@
             <dt class="touch"><kbd>Pinch</kbd></dt><dd class="touch">Zoom</dd>
             <dt class="touch"><kbd>Tap a tag</kbd></dt><dd class="touch">What a feature or condition does</dd>
             <dt class="touch"><kbd>Hold a button</kbd></dt><dd class="touch">What an attack, spell or action does</dd>
+            <dt class="touch"><kbd>Threats</kbd></dt><dd class="touch">Where monsters can reach (tap a portrait: just that one)</dd>
           </dl>
           <h3>On the board</h3>
           <ul class="help-legend">
@@ -112,10 +114,19 @@
             <li><i class="sw danger"></i>Step provokes an attack</li>
             <li><i class="sw target"></i>Can attack</li>
             <li><i class="sw ally"></i>Can heal</li>
+            <li><i class="sw threat"></i>A monster can reach and strike</li>
+            <li><i class="sw threat-ranged"></i>A monster can shoot here</li>
           </ul>
         </div>
       </details>
       <div id="audio">
+      <button id="threats-toggle" type="button" aria-pressed="false" title="Show where the monsters can reach next turn (T)">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M4 4l9 9M4 4v4M4 4h4M20 4l-9 9M20 4v4M20 4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          <path d="M7.5 14.5l2 2M16.5 14.5l-2 2M6 18l2-2M18 18l-2-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <span>Threats</span>
+      </button>
       <button id="log-toggle" type="button" aria-controls="log" aria-expanded="false" title="Combat log">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M6 4h10a2 2 0 0 1 2 2v13a1 1 0 0 0 2 0V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />

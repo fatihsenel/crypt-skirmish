@@ -294,7 +294,7 @@ export class Hud {
           </div>`;
         }
         const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
-        return `<div class="${cls}" title="${esc(u.name)} (${esc(u.cls)}) · initiative ${u.initiative}">
+        return `<div class="${cls}" data-unit="${u.id}" title="${esc(u.name)} (${esc(u.cls)}) · initiative ${u.initiative}">
           <span class="pic" style="--c:${color}">${unitIcon(u)}<b class="init">${u.initiative}</b></span>
           <span class="nm">${esc(u.name)}</span>
           <span class="mini"><i style="width:${pct}%"></i></span>

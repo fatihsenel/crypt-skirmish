@@ -628,6 +628,54 @@ export class Game {
     return this.grid.flood(unit.x, unit.z, unit.movesLeft, this.passableFor(unit));
   }
 
+  /**
+   * Where `monster` could hurt someone on its next turn, moving at its normal speed (no Dash):
+   * `melee`, the tiles it could step next to and strike; `ranged`, the tiles it could shoot
+   * from somewhere it could stand, with a line of sight. Both are Sets of tile keys. `ignore`
+   * is a unit to leave out of the way: the hero deciding where to go, who won't be there.
+   * Monsters that haven't noticed the party, or are fleeing a Turn Undead, threaten nothing.
+   */
+  threatOf(monster, { ignore = null } = {}) {
+    const melee = new Set();
+    const ranged = new Set();
+    if (!monster.alive || monster.unaware || monster.turned) return { melee, ranged };
+    const ready = monster.attacks.filter((a) => !monster.spent?.[a.name]);
+    const reach = Math.max(0, ...ready.filter((a) => a.reach > 1).map((a) => a.reach));
+    if (!ready.length) return { melee, ranged };
+
+    let moves = monster.speed;
+    if (this.has(monster, 'restrained')) moves = 0;
+    else if (this.has(monster, 'prone')) moves -= Math.ceil(monster.speed / 2);
+    const pass = this.passableFor(monster);
+    const away = (x, z) => ignore && ignore.x === x && ignore.z === z;
+    const map = this.grid.flood(monster.x, monster.z, Math.max(0, moves), (x, z) => away(x, z) || pass(x, z));
+    const spots = [...map.values()].filter((n) => {
+      if (n.dist === 0) return true;
+      const o = this.unitAt(n.x, n.z);
+      return !o || o === ignore;
+    });
+
+    if (ready.some((a) => a.reach === 1)) {
+      for (const { x, z } of spots) {
+        for (let dz = -1; dz <= 1; dz++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if ((dx || dz) && !this.grid.isSolid(x + dx, z + dz)) melee.add(key(x + dx, z + dz));
+          }
+        }
+      }
+    }
+    if (reach > 1) {
+      for (let z = 0; z < this.grid.height; z++) {
+        for (let x = 0; x < this.grid.width; x++) {
+          if (this.grid.isSolid(x, z) || melee.has(key(x, z))) continue;
+          const t = { x, z };
+          if (spots.some((p) => gridDistance(p, t) <= reach && this.grid.lineOfSight(p.x, p.z, x, z))) ranged.add(key(x, z));
+        }
+      }
+    }
+    return { melee, ranged };
+  }
+
   /** Tiles the unit could end its move on (excludes its own tile). */
   destinations(unit) {
     return [...this.reachable(unit).values()].filter(

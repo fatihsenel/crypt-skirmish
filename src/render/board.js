@@ -102,6 +102,27 @@ function bannerSpots(grid, torches) {
 const overlay = (color, opacity) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
+/**
+ * Diagonal stripes, for the threat zones: they read as "danger" on any floor, and can't be
+ * mistaken for the solid move, attack and heal highlights drawn over them.
+ */
+function stripes(color, opacity, width) {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.strokeStyle = '#fff';
+  g.lineWidth = width;
+  for (let i = -64; i <= 128; i += 16) {
+    g.beginPath();
+    g.moveTo(i, 64);
+    g.lineTo(i + 64, 0);
+    g.stroke();
+  }
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshBasicMaterial({ color, map, transparent: true, opacity, depthWrite: false });
+}
+
 export class Board {
   constructor(grid, stage) {
     this.grid = grid;
@@ -201,6 +222,10 @@ export class Board {
     this.danger = new TileLayer(this.group, overlay(0xff3b3b, 0.55), 0.3, 0.017); // provoking steps
     this.allies = new TileLayer(this.group, overlay(0x4ade80, 0.4), 0.92, 0.013); // heal targets
     this.layers = [this.reach, this.path, this.hover, this.targets, this.active, this.cone, this.teleport, this.danger, this.allies];
+    // Where the monsters could hurt a hero next turn (the Threats toggle). Drawn under the
+    // other highlights, and left alone by clearHighlights: main.js sets them on their own.
+    this.threatMelee = new TileLayer(this.group, stripes(0xff2a1a, 0.6, 6), 0.98, 0.0104);
+    this.threatRanged = new TileLayer(this.group, stripes(0xffb347, 0.4, 2.5), 0.98, 0.0102);
   }
 
   // --- fog of war & wall fading ----------------------------------------------

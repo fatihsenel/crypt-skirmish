@@ -742,9 +742,114 @@ function modsText(m) {
   return '';
 }
 
+// --- threat zones: where the monsters in sight could strike next turn ------------------
+const THREATS_KEY = 'crypt-skirmish:threats';
+let threatsOn = false;
+try {
+  threatsOn = localStorage.getItem(THREATS_KEY) === '1';
+} catch {
+  /* storage unavailable: starts off */
+}
+let threatFocus = null; // a monster whose portrait is hovered (or tapped): just its zone
+let threatCache = { sig: '', melee: [], ranged: [] };
+const $threats = document.getElementById('threats-toggle');
+$threats.setAttribute('aria-pressed', String(threatsOn));
+
+function toggleThreats(on = !threatsOn) {
+  threatsOn = on;
+  $threats.setAttribute('aria-pressed', String(on));
+  try {
+    localStorage.setItem(THREATS_KEY, on ? '1' : '0');
+  } catch {
+    /* storage unavailable: just this session */
+  }
+  if (game && board) refresh();
+}
+$threats.addEventListener('click', () => toggleThreats());
+
+/** The monsters whose zones show: the focused one, or (toggle on) every one in sight. */
+function threatSources() {
+  if (threatFocus) return threatFocus.alive && !unseen(threatFocus) ? [threatFocus] : [];
+  if (!threatsOn) return [];
+  return game.units.filter((m) => m.team === 'monsters' && m.alive && !m.hidden && !unseen(m));
+}
+
+/** Threat tiles for the hero whose turn it is (they're the one about to move, so not in the way). */
+function threatTiles() {
+  const u = game.current;
+  const sources = threatSources();
+  const sig = [game.round, u?.id, threatFocus?.id ?? '', ...game.units.map((m) =>
+    `${m.id}:${m.x},${m.z}:${m.alive ? 1 : 0}${m.unaware ? 'u' : ''}${m.turned ? 't' : ''}${Object.keys(m.conditions ?? {}).join('')}`),
+  ...sources.map((m) => m.id)].join('|');
+  if (sig === threatCache.sig) return threatCache;
+  const melee = new Set();
+  const ranged = new Set();
+  for (const m of sources) {
+    const t = game.threatOf(m, { ignore: u?.team === 'heroes' ? u : null });
+    t.melee.forEach((k) => melee.add(k));
+    t.ranged.forEach((k) => ranged.add(k));
+  }
+  const tiles = (set) => [...set].map((k) => k.split(',').map(Number)).map(([x, z]) => ({ x, z }))
+    .filter((t) => board.isExplored(t.x, t.z));
+  threatCache = { sig, melee: tiles(melee), ranged: tiles([...ranged].filter((k) => !melee.has(k))) };
+  return threatCache;
+}
+
+function drawThreats() {
+  const show = game && !game.over && isHeroTurn() && !busy && (threatsOn || threatFocus);
+  if (!show) {
+    board.threatMelee.clear();
+    board.threatRanged.clear();
+    return;
+  }
+  const { melee, ranged } = threatTiles();
+  board.threatMelee.set(melee);
+  board.threatRanged.set(ranged);
+}
+
+/** "A", "A and B", "A, B and C", or "4 monsters". */
+const listNames = (names) => (names.length > 3 ? `${names.length} monsters`
+  : names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0]);
+
+/** The monsters in sight that could strike a hero standing on (x, z) next turn. */
+function threatsAt(x, z) {
+  const u = game.current;
+  return game.units.filter((m) => m.team === 'monsters' && m.alive && !m.hidden && !unseen(m)
+    && game.threatOf(m, { ignore: u }).melee.has(key(x, z)));
+}
+
+// Hovering a monster's portrait shows just its reach; on a touch screen, tapping does.
+const $initiative = document.getElementById('initiative');
+const portraitUnit = (ev) => {
+  const id = Number(ev.target.closest('[data-unit]')?.dataset.unit);
+  const m = game?.units.find((x) => x.id === id);
+  return m?.team === 'monsters' && m.alive && !unseen(m) ? m : null;
+};
+$initiative.addEventListener('pointerover', (ev) => {
+  if (ev.pointerType !== 'mouse' || !game) return;
+  const m = portraitUnit(ev);
+  if (m === threatFocus) return;
+  threatFocus = m;
+  if (board) refresh();
+});
+$initiative.addEventListener('pointerleave', (ev) => {
+  if (ev.pointerType !== 'mouse' || !threatFocus) return;
+  threatFocus = null;
+  if (board) refresh();
+});
+window.addEventListener('pointerdown', (ev) => {
+  if (ev.pointerType === 'mouse' || !game || !board) return;
+  const m = $initiative.contains(ev.target) ? portraitUnit(ev) : null;
+  const next = m && m !== threatFocus ? m : null; // tap it again (or anything else) to clear
+  if (next === threatFocus) return;
+  threatFocus = next;
+  refresh();
+});
+
 function refresh() {
   hud.renderActionBar(game, { selected, busy });
   board.clearHighlights();
+  drawThreats();
   const u = game.current;
   if (!u || game.over) return;
   if (!unseen(u)) board.active.set([u]);
@@ -789,7 +894,9 @@ function refresh() {
     board.danger.set(danger);
     const who = game.provokers(u, path).map((f) => f.name);
     if (who.length) tips.notice('provoke', { touch: touching });
-    hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : ''), true);
+    const reachers = threatsOn || threatFocus ? threatsAt(hovered.x, hovered.z).map((m) => m.name) : [];
+    hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
+      + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : ''), true);
   }
 }
 
@@ -1671,6 +1778,7 @@ window.addEventListener('keydown', (ev) => {
     ev.preventDefault();
     endHeroTurn();
   }
+  if (ev.code === 'KeyT') toggleThreats();
   if (ev.code === 'KeyM') toggleSound();
   if (ev.code === 'KeyN') toggleMusic();
   if (ev.code === 'KeyH') helpBox.open = !helpBox.open;
@@ -1735,6 +1843,12 @@ preloadDungeon(bootProgress).then(() => {
 // Handy for debugging in the console.
 window.__debug = {
   game: () => game,
+  /** How many tiles each threat layer shows right now, and whose zone it is. */
+  threats: () => ({
+    on: threatsOn, focus: threatFocus?.name ?? null,
+    melee: board?.threatMelee.meshes.filter((m) => m.visible).length ?? 0,
+    ranged: board?.threatRanged.meshes.filter((m) => m.visible).length ?? 0,
+  }),
   views: () => views,
   stage,
   sfx,
