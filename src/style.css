@@ -603,13 +603,18 @@ b.loot { color: var(--gold); }
 #title {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  /* Flex with auto margins centres the card, and still lets it scroll from its top when
+     it's taller than the screen (a phone, with the names or past runs open). */
+  display: flex;
+  overflow-y: auto;
+  padding: 16px 0;
+  box-sizing: border-box;
   background: radial-gradient(ellipse at center, rgba(5, 4, 8, 0.35), rgba(5, 4, 8, 0.85));
   z-index: 20;
 }
 #title[hidden] { display: none; }
 #title .card {
+  margin: auto;
   text-align: center; padding: 22px 34px 18px; max-width: calc(100vw - 32px); box-sizing: border-box;
   background: rgba(10, 8, 12, 0.78); border: 1px solid #c9b07a33; border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
@@ -667,6 +672,24 @@ b.loot { color: var(--gold); }
 #title .title-buttons button { padding: 10px 20px; }
 #title-continue[hidden] { display: none; }
 #title-save { min-height: 1.4em; margin-top: 14px; font-size: 12.5px; }
+#title .history { max-width: 460px; margin: 4px auto 0; text-align: left; }
+#title .history[hidden] { display: none; }
+#title .history summary {
+  cursor: pointer; padding: 4px 0; text-align: center;
+  font: 600 12px var(--display, inherit); color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
+}
+#title .history summary:hover { color: #e6cf98; }
+#title .history .runs {
+  list-style: none; margin: 8px 0 0; padding: 0; max-height: min(260px, 34vh); overflow-y: auto;
+  border-top: 1px solid #c9b07a33; overscroll-behavior: contain;
+}
+#title .history li { padding: 8px 2px; border-bottom: 1px solid #c9b07a22; font-size: 12.5px; color: #d8cfc0; }
+#title .history .run-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13.5px; }
+#title .history .run-head .muted { font-size: 12px; }
+#title .history .won { color: var(--gold); }
+#title .history .lost { color: #c9a0a0; font-weight: 600; }
+#title .history .run-stats, #title .history .run-party { margin-top: 2px; }
+#title .history .run-party small { color: #9d927f; font-size: 11.5px; }
 
 /* --- camp ------------------------------------------------------------------- */
 #camp {

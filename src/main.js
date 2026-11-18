@@ -29,6 +29,7 @@ import { sfx } from './audio/sfx.js';
 import { music } from './audio/music.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
+import { recordRun } from './game/history.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -129,6 +130,9 @@ const camp = new Camp({
 function startCampaign(difficulty, names, classes) {
   sfx.ui();
   saving = true;
+  // A run being replaced (Abandon run, or New campaign over a save) goes into the history.
+  const old = loadSave();
+  if (old && !old.done) recordRun(old, 'abandoned');
   campaign = newCampaign(difficulty, names, classes);
   writeSave(campaign);
   showCamp(null);
@@ -1320,6 +1324,7 @@ async function checkGameOver() {
     } else {
       // The campaign is won: record it, and the next visit starts fresh.
       campaign = completeFight(campaign, nodeId, game).state;
+      if (saving) recordRun(campaign, 'won');
       clearSave();
       summary = runSummary(campaign);
     }

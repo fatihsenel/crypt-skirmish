@@ -10,6 +10,7 @@ import { ITEMS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
+import { loadHistory } from '../game/history.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -123,6 +124,28 @@ export class Camp {
         + (save.fight ? `. Mid-fight in ${nodeName(save.fight.node)}.` : '')
       : '';
     $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
+    this.renderHistory(loadHistory());
+  }
+
+  /** Past runs, newest first: how each ended, how far the party got, and who was in it. */
+  renderHistory(runs) {
+    const box = $('#title-history');
+    box.hidden = runs.length === 0;
+    box.querySelector('summary').textContent = `Past runs (${runs.length})`;
+    const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+    box.querySelector('.runs').innerHTML = runs.map((r) => {
+      const date = new Date(r.when).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+      const how = r.result === 'won'
+        ? '<b class="won">Victory</b>'
+        : `<b class="lost">Abandoned</b>${r.reached ? ` after ${esc(r.reached)}` : ''}`;
+      const party = (r.heroes ?? []).map((h) => `${esc(h.name)} <small>${esc(h.cls)}</small>`).join(', ');
+      return `<li>
+        <div class="run-head"><span>${how}</span><span class="muted">${esc(r.difficulty)} · ${date}</span></div>
+        <div class="run-stats">Party level ${r.level} · ${plural(r.won, 'room')} won · ${plural(r.rounds, 'round')}`
+        + (r.mvp ? ` · most damage: ${esc(r.mvp.name)} (${r.mvp.damage})` : '') + `</div>
+        <div class="run-party">${party}</div>
+      </li>`;
+    }).join('');
   }
 
   hide() {

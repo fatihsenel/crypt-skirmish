@@ -160,6 +160,10 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   moment they matter (moving, attacking, spells, chests, potions, opportunity attacks,
   ending the turn, camp), each once. Switch them off on any tip or on the title screen;
   switching them back on there shows them all again
+- **past runs**: the title screen keeps the last 20 runs: won, or abandoned (Abandon run at
+  camp, or a new campaign over the save) and how far the party got, with difficulty, date,
+  party level, rooms won, rounds, the party and who dealt the most damage. An abandoned run
+  that never won a room isn't kept
 - **voices**: every character barks in a made-up tongue, synthesized from formant filters
   (no recordings). Heroes shout on attacks, chant spells, grunt when hit and cry out when
   they fall; goblins, bugbears and orcs snarl, the necromancer intones, specters moan,
@@ -276,6 +280,7 @@ src/
                    party carry-over between levels, events
     ai.js          monster brains (brute / skirmisher / caster), one step at a time
     replay.js      fight saves: hero commands, monster turns and replaying them from a seed
+    history.js     past runs for the title screen (won or abandoned), newest 20 kept
   render/          three.js only
     stage.js       renderer, isometric orthographic camera, lights, loop, screen shake
     board.js       dungeon meshes, torches, doors, chests, traps, stairs, banners, props,
