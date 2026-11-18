@@ -85,7 +85,7 @@ const camp = new Camp({
     writeSave(campaign);
     camp.show(campaign);
   },
-  onNewCampaign: (difficulty) => startCampaign(difficulty),
+  onNewCampaign: (difficulty, names) => startCampaign(difficulty, names),
   onContinue: () => {
     sfx.ui();
     saving = true;
@@ -94,10 +94,10 @@ const camp = new Camp({
   },
 });
 
-function startCampaign(difficulty) {
+function startCampaign(difficulty, names) {
   sfx.ui();
   saving = true;
-  campaign = newCampaign(difficulty);
+  campaign = newCampaign(difficulty, names);
   writeSave(campaign);
   showCamp(null);
 }
@@ -312,6 +312,11 @@ function newGame() {
   game.on('mimicFound', (r) => pendingReveals.push(r));
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
   game.on('shove', (r) => hud.logShove(r));
+  game.on('stench', (r) => {
+    hud.logStench(r);
+    floatText(stage.scene, r.target, r.rider.success ? 'Resists the stench' : 'Gagging!', r.rider.success ? 'miss' : 'cond');
+    view(r.target)?.updateStatus();
+  });
   game.on('condition', (r) => { if (!unseen(r.unit)) hud.logCondition(r); });
   game.on('trapFound', (r) => pendingReveals.push(r));
   game.on('alert', (r) => pendingAlerts.push(r));
@@ -1182,6 +1187,7 @@ stage.dom.addEventListener('click', (ev) => {
 });
 
 window.addEventListener('keydown', (ev) => {
+  if (ev.target instanceof HTMLInputElement) return; // typing a hero's name
   if (ev.code === 'Space' || ev.code === 'Enter') {
     if (ev.target instanceof HTMLButtonElement) return;
     ev.preventDefault();

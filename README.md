@@ -50,7 +50,10 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **act two**: Morvath's fall is followed by a long rest, then the **Catacombs** (ghouls: two
   poisoning claws each),
   a fork between the **Sealed Vault** (treasure, including a Cloak of Protection, and a
-  **mimic** posing as a chest) and a rest at the **Still Well**, and finally the
+  **mimic** posing as a chest) and a rest at the **Still Well**, then an optional detour
+  through the **Larder** (a **ghast** and its ghouls; the ghast's stench poisons any hero
+  who starts a turn next to it and fails a DC 10 CON save, and one success makes them
+  immune for the fight), and finally the
   **Wight's Barrow**, where Varek the wight (110 HP, two attacks, a longbow, Dread) waits. The
   party reaches act two at level 5 and level 6 after the Catacombs, and these monsters are
   tougher than their SRD stat blocks
@@ -72,6 +75,9 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **difficulty**, picked on the title screen for a new run: **Story** (monsters have ¾ HP
   and −1 to hit and damage), **Normal**, or **Hard** (1.2× HP, +1 to hit and damage). It
   applies to every monster, including mimics and the risen dead; the heroes are unchanged
+- **hero names**: "Name your heroes" on the title screen renames Brannoc, Ilsa, Wren and
+  Maela for a new run (letters, numbers, spaces, apostrophes and hyphens, up to 14 characters;
+  a blank field keeps the default)
 - **magic items** from chests (Runed Weapon +1, Ring of Protection, Cloak of Protection) go into the pack and
   are handed out at camp
 - **fog of war**: you only see what your heroes can see. Rooms you have seen stay dimly
@@ -102,7 +108,8 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   (DC 10 CON); ghoul claws poison instead of paralysing; the mimic's pseudopod knocks
   prone (DC 13 STR) instead of grappling; Grukk's second attack is the only clumsy one;
   Sculpt Spells (an Evocation feature) and Sneak Attack 4d6 arrive at level 6, and Sculpt
-  simply leaves all allies out of the blast
+  simply leaves all allies out of the blast; the ghast's stench poisons only until the end
+  of the victim's turn
 
 ## Run
 
@@ -119,7 +126,7 @@ Every push to `main` runs the tests, builds, and deploys to GitHub Pages
 (`.github/workflows/pages.yml`). The base path lives in `vite.config.js`.
 
 Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 Warren,
-3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those); this doesn't touch the save.
+3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those); this doesn't touch the save.
 In the browser console, `__debug.autoplay()` lets the monster AI play the heroes too, and
 `__debug.win()` / `__debug.lose()` end the current fight on the spot.
 
@@ -132,7 +139,9 @@ otherwise use the monster AI's tactics. Gear found goes to whoever suits it.
 act two only, from a pool of real end-of-act-one parties (faster when tuning). Set `SEED=n`
 to change the dice and `DIFFICULTY=story|hard` to play another difficulty. Act two was tuned against act one's numbers from the same simulator:
 roughly 80% of the party's HP left after the Catacombs, 65% after the Vault, and a Barrow
-that is a clear step harder when the party skips the well's rest.
+that is a clear step harder when the party skips the well's rest. The Larder is the greedy
+option: on Normal it's won almost always after the well, but taking it after the Vault (no
+rest at all) drops the Barrow to roughly two wins in three.
 
 ## Controls
 
@@ -175,9 +184,11 @@ src/
                    highlight layers, fog of war (per-tile dimming) and wall fading
     dungeonKit.js  loads the dungeon tiles (public/models/dungeon); walls are built from
                    wall segments between neighbouring wall tiles, with pillars at corners
-    gltfModels.js  loads the .glb heroes, undead, orc and rats (public/models), picks weapons,
-                   plays their animation clips (idle, walk, attack, cast, hit, death, rise)
-    models.js      rigged procedural miniatures: goblins, Grukk and the mimic, plus
+    gltfModels.js  loads the .glb heroes, undead, orc, rats and goblins (public/models), picks
+                   weapons, plays their animation clips (idle, walk, attack, cast, hit, death,
+                   rise); goblins are the hooded rogue scaled down and tinted green, Grukk a
+                   green-tinted barbarian, the ghast a tinted skeleton minion
+    models.js      rigged procedural miniatures: the mimic, plus
                    fallbacks for every other unit if its .glb fails to load
     unitView.js    base + label, idle/walk/swing/cast/teleport/death animations
     effects.js     spell effects: missiles, fire cone, mist, shield dome, healing,
@@ -209,8 +220,8 @@ you can swap the visuals (real models, different camera) without touching rules.
    monsters can inflict it through an attack `rider` or a spell's `condition`.
 3. **More rooms**: add a map to `LEVELS` in `maps.js` and a node in `NODES` in `campaign.js`
    (its column, row and `next` links); the camp map draws it.
-4. **A goblin model**: goblins and Grukk are still procedural (the CC0 goblins found were
-   voxel-styled and clashed). Add a `.glb` to `public/models` and an entry in `SPECS` in
+4. **A real goblin model**: goblins and Grukk reuse tinted KayKit adventurers. A dedicated
+   rigged goblin would only need a `.glb` in `public/models` and its entry in `SPECS` in
    `gltfModels.js` (clip names per action; a `Armature|Clip` prefix is stripped).
 5. **Searching monsters**: alert monsters that lose track of a hidden hero could walk
    to where they last saw them (`patrolStep` in `ai.js` already walks toward a tile).

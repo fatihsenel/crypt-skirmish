@@ -156,7 +156,12 @@ function equipAll(state) {
 }
 
 const ACT_ONE = [['crypt', 'warren', 'chapel', 'sanctum'], ['crypt', 'ossuary', 'chapel', 'sanctum'], ['crypt', 'warren', 'ossuary', 'sanctum']];
-const ACT_TWO = [['catacombs', 'vault', 'barrow'], ['catacombs', 'well', 'barrow']];
+const ACT_TWO = [
+  ['catacombs', 'vault', 'barrow'], ['catacombs', 'well', 'barrow'],
+  ['catacombs', 'vault', 'larder', 'barrow'], ['catacombs', 'well', 'larder', 'barrow'],
+];
+/** "vault", "well+larder", ...: the part of an act-two route between the catacombs and the barrow. */
+const via = (two) => two.slice(1, -1).join('+');
 
 /** Play a whole campaign along `route`; returns per-room results until the party falls. */
 function campaign(route, rng, start = newCampaign(process.env.DIFFICULTY ?? 'normal')) {
@@ -190,10 +195,10 @@ function actTwo(runs, rng) {
     let won = 0;
     for (let i = 0; i < runs; i++) {
       const res = campaign(two, rng, pool[i % pool.length]);
-      for (const r of res) (stats[r.id === 'catacombs' ? r.id : `${r.id} (${two[1]})`] ??= []).push(r);
+      for (const r of res) (stats[r.id === 'catacombs' ? r.id : `${r.id} (${via(two)})`] ??= []).push(r);
       if (res.at(-1).id === 'barrow' && res.at(-1).won) won++;
     }
-    whole[two[1]] = pct(won, runs);
+    whole[via(two)] = pct(won, runs);
   }
   console.log(`Act two, ${runs} runs per route from 60 act-one parties`);
   for (const [room, list] of Object.entries(stats)) {
@@ -218,12 +223,12 @@ function main() {
   for (const one of ACT_ONE) {
     for (const two of ACT_TWO) {
       const route = [...one, ...two];
-      const name = `${one[1]}${one[2] === 'chapel' ? '' : '+' + one[2]} / ${two[1]}`;
+      const name = `${one[1]}${one[2] === 'chapel' ? '' : '+' + one[2]} / ${via(two)}`;
       let won = 0;
       for (let i = 0; i < runs; i++) {
         const res = campaign(route, rng);
         for (const r of res) {
-          const key = r.id === 'vault' || r.id === 'barrow' ? `${r.id} (${two[1]})` : r.id;
+          const key = ['vault', 'larder', 'barrow'].includes(r.id) ? `${r.id} (${via(two)})` : r.id;
           (stats[key] ??= []).push(r);
         }
         if (res.length === route.filter((x) => x !== 'chapel' && x !== 'well').length && res.at(-1).won) won++;

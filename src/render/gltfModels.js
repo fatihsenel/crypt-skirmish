@@ -61,12 +61,28 @@ const SPECS = {
     file: 'Skeleton_Minion', height: 1.2, tint: 0x9fb88a,
     clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
   },
+  // The ghast: a bigger, darker ghoul.
+  h: {
+    file: 'Skeleton_Minion', height: 1.38, tint: 0x6f8060,
+    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
+  },
   w: {
     file: 'Skeleton_Warrior', height: 1.5, blade: true, tint: 0x8fa0d0,
     clips: { melee: '1H_Melee_Attack_Slice_Diagonal', walk: 'Walking_D_Skeletons' },
   },
-  // The orc and the rats: Quaternius (CC0), one swing clip for every attack. Goblins keep
-  // their procedural figures (the CC0 goblins on offer are voxel-styled and clash).
+  // Goblins: the KayKit rogue, small and green, knife and crossbow; Grukk is a green,
+  // goblin-sized barbarian with axe and shield.
+  g: {
+    file: 'Rogue_Hooded', height: 1.0, tint: 0x9ccf6e,
+    show: ['Knife'], ranged: ['1H_Crossbow'],
+    clips: { melee: '1H_Melee_Attack_Stab', arrow: '1H_Ranged_Shoot' },
+  },
+  b: {
+    file: 'Barbarian', height: 1.12, tint: 0xa8d080,
+    show: ['1H_Axe', 'Barbarian_Round_Shield'],
+    clips: { melee: '1H_Melee_Attack_Chop' },
+  },
+  // The orc and the rats: Quaternius (CC0), one swing clip for every attack.
   o: { file: 'monsters/Orc', height: 1.45, clips: { ...QUATERNIUS, melee: 'Weapon', javelin: 'Weapon', arrow: 'Weapon', hit: 'HitReact' } },
   r: { file: 'monsters/Rat', height: 0.5, quadruped: true, clips: { ...QUATERNIUS, melee: 'Rat_Attack', idle: 'Rat_Idle', walk: 'Rat_Walk', die: 'Rat_Death', dead: 'Rat_Death' } },
 };

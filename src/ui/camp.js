@@ -3,7 +3,9 @@
 
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, DIFFICULTIES,
+  cleanName,
 } from '../game/campaign.js';
+import { TEMPLATES } from '../game/units.js';
 import { ITEMS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
@@ -39,7 +41,7 @@ export class Camp {
     $('#title').addEventListener('click', (ev) => {
       const b = ev.target.closest('button');
       if (b?.id === 'title-continue') this.h.onContinue();
-      if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty);
+      if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty, this.names());
     });
     $('#title-difficulty').addEventListener('change', (ev) => {
       this.difficulty = ev.target.value;
@@ -61,9 +63,28 @@ export class Camp {
     $('#difficulty-desc').textContent = DIFFICULTIES[this.difficulty].desc;
   }
 
+  /** The names typed for a new run, by hero code (blank ones are left out). */
+  names() {
+    const out = {};
+    for (const input of document.querySelectorAll('#title-names input')) {
+      const name = cleanName(input.value);
+      if (name) out[input.dataset.code] = name;
+    }
+    return out;
+  }
+
+  renderNames() {
+    const grid = $('#title-names .name-grid');
+    if (grid.children.length) return; // keep whatever was typed
+    grid.innerHTML = HERO_CODES.map((code) => `
+      <label><small>${esc(TEMPLATES[code].cls)}</small>
+      <input type="text" data-code="${code}" maxlength="14" placeholder="${esc(TEMPLATES[code].name)}" autocomplete="off" spellcheck="false"></label>`).join('');
+  }
+
   showTitle(save) {
     this.difficulty ??= save?.difficulty ?? 'normal';
     this.renderDifficulty();
+    this.renderNames();
     $('#camp').hidden = true;
     $('#title').hidden = false;
     $('#title-continue').hidden = !save;

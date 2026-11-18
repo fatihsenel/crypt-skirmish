@@ -172,6 +172,30 @@ export const LEVELS = [
   },
 ];
 
+// Listed after the Barrow so the ?level= numbers of the older rooms stay put.
+LEVELS.push({
+  id: 'larder',
+  name: 'The Ghast’s Larder',
+  intro: 'The ghouls drag what they find down here. Their elder keeps it, and the air is thick with rot.',
+  rows: [
+    '################',
+    '#F.R..#....u...#',
+    '#.....+..=.....#',
+    '#W.C..#.....##+#',
+    '#.....#..h..#..#',
+    '###+###.....#$.#',
+    '#.....##+####..#',
+    '#..u..#......&.#',
+    '#.....+..u.....#',
+    '#.$...#.|...u..#',
+    '#.....#......>.#',
+    '################',
+  ],
+  loot: [['weaponPlus1', 'potion'], ['potion', 'potion']],
+  asleep: ['3,7'], // gnawing on something in the side room
+  patrols: { '11,1': [[14, 1], [14, 2]] },
+});
+
 /** The first level's map, kept for older code and tests. */
 export const CRYPT = LEVELS[0].rows;
 

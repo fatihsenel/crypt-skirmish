@@ -138,6 +138,19 @@ export const TEMPLATES = {
       { name: 'Claws', stat: 'dex', damage: '2d4', reach: 1, rider: { save: 'con', dc: 10, condition: 'poisoned', turns: 2 } },
     ],
   },
+  // The ghouls' elder: tougher, and its stench turns the stomach of anyone close by.
+  h: {
+    name: 'Ghast', cls: 'Ghast', team: 'monsters', color: 0x6f7d5c,
+    hp: 52, ac: 13, speed: 6, prof: 2, xp: 450, cr: 2,
+    multiattack: 2,
+    ai: 'brute',
+    undead: true,
+    stench: { dc: 10 }, // a hero starting its turn next to it: CON save or poisoned (combat.js)
+    stats: { str: 16, dex: 17, con: 10, int: 11, wis: 10, cha: 8 },
+    attacks: [
+      { name: 'Claws', stat: 'dex', damage: '2d6', reach: 1, rider: { save: 'con', dc: 12, condition: 'poisoned', turns: 2 } },
+    ],
+  },
   w: {
     name: 'Varek', cls: 'Wight', team: 'monsters', color: 0x5a6a88,
     hp: 110, ac: 15, speed: 6, prof: 2, xp: 700, cr: 3,

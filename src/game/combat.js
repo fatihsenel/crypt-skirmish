@@ -87,6 +87,7 @@ export class Game {
         const saved = party[u.code];
         if (u.team !== 'heroes' || !saved) continue;
         if (saved.level) applyLevel(u, saved.level);
+        if (saved.name) u.name = saved.name;
         applyItems(u, saved.items);
         for (const f of ['hp', 'alive', 'slots', 'potions']) {
           if (saved[f] !== undefined) u[f] = structuredClone(saved[f]);
@@ -285,6 +286,23 @@ export class Game {
     this.removeCondition(unit, 'prone', 'stand');
   }
 
+  /**
+   * Start of a turn next to a ghast: CON save or poisoned until the end of this turn. A
+   * hero who passes is used to the smell for the rest of the fight.
+   */
+  checkStench(u) {
+    if (!u.alive || u.team !== 'heroes' || u.stenchSafe || this.has(u, 'poisoned')) return;
+    const by = this.enemiesOf(u).find((m) => m.stench && !m.unaware && gridDistance(m, u) <= 1);
+    if (!by) return;
+    const s = this.save(u, 'con', by.stench.dc);
+    if (s.success) u.stenchSafe = true;
+    else this.addCondition(u, 'poisoned', { turns: 0, by }); // the rest of this turn
+    this.emit('stench', {
+      by, target: u,
+      rider: { stat: 'con', dc: by.stench.dc, d20: s.d20, total: s.total, success: s.success, condition: 'poisoned' },
+    });
+  }
+
   /** End of a turn: frightened units try to shake it off, and timed conditions tick down. */
   tickConditions(unit) {
     if (!unit.alive) return;
@@ -404,6 +422,7 @@ export class Game {
     this.standUp(u);
     this.updateAwareness();
     this.emit('turnStart', { unit: u });
+    this.checkStench(u);
   }
 
   endTurn() {

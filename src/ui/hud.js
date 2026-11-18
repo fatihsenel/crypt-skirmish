@@ -83,6 +83,11 @@ export class Hud {
       (x.success ? `<b class="hit">shrugs it off</b>.` : `<b class="cond ${x.condition}">${CONDITION_VERB[x.condition]}</b>`));
   }
 
+  logStench(r) {
+    this.log(`The stench of ${who(r.by)} reaches ${who(r.target)}.`);
+    this.logRider(r);
+  }
+
   logShove(r) {
     const roll = `<span class="dice">${r.roll.rolls.length > 1 ? `d20 [${r.roll.rolls.join(', ')}] → ${r.roll.d20}` : `d20 ${r.roll.d20}`} ${signed(r.roll.bonus)} = ${r.roll.total}</span>`;
     const resist = `<span class="dice">${r.resist.d20} ${signed(r.resist.bonus)} = ${r.resist.total}</span>`;

@@ -145,6 +145,7 @@ class Sfx {
 
   // --- movement -------------------------------------------------------------
   step(code) {
+    if (code === 'h') code = 'u'; // a ghast sounds like a ghoul
     this.play((t) => {
       if (code === 'F' || code === 'C') {
         this.noise(t, { dur: 0.09, filter: 'lowpass', freq: 380, gain: 0.35 });
@@ -218,6 +219,7 @@ class Sfx {
 
   /** Sound of a blow landing; depends on what got hit. */
   hit(targetCode, { crit = false, fire = false } = {}) {
+    if (targetCode === 'h') targetCode = 'u';
     if (fire) this.fireImpact();
     this.play((t) => {
       if (!fire) {
@@ -266,6 +268,7 @@ class Sfx {
   }
 
   death(code) {
+    if (code === 'h') code = 'u'; // a ghast sounds like a ghoul
     this.play((t) => {
       if (code === 'g' || code === 'b') {
         this.tone(t, { type: 'sawtooth', freq: code === 'b' ? 520 : 820, freqEnd: 180, dur: 0.5, gain: 0.12, lowpass: 2200 }); // squeal
@@ -298,6 +301,7 @@ class Sfx {
 
   /** A monster's cry as it attacks: rat squeak, ghoul hiss, wight groan, mimic chomp, orc grunt. */
   voice(code) {
+    if (code === 'h') code = 'u'; // a ghast sounds like a ghoul
     this.play((t) => {
       if (code === 'r') this.squeakNow(t, 1);
       else if (code === 'u') this.hissNow(t, 1);

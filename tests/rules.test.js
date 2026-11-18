@@ -7,7 +7,7 @@ import { coneTiles } from '../src/game/abilities.js';
 import { levelById, LEVELS } from '../src/game/maps.js';
 import { createUnit } from '../src/game/units.js';
 import {
-  newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES, DIFFICULTIES,
+  cleanName, newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES, DIFFICULTIES,
 } from '../src/game/campaign.js';
 
 // Deterministic RNG that returns the given sequence of d-results for a die size.
@@ -1148,12 +1148,13 @@ describe('act two', () => {
     expect(choices(state)).toEqual(['catacombs']);
   });
 
-  it('after the catacombs: the vault or the well, then the barrow, which ends the campaign', () => {
+  it('after the catacombs: the vault or the well, maybe the larder, then the barrow, which ends the campaign', () => {
     const base = { ...newCampaign(), cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs'], at: 'catacombs' };
     expect(choices(base)).toEqual(['vault', 'well']);
-    expect(choices({ ...base, at: 'vault', cleared: [...base.cleared, 'vault'] })).toEqual(['barrow']);
+    expect(choices({ ...base, at: 'vault', cleared: [...base.cleared, 'vault'] })).toEqual(['barrow', 'larder']);
     const rested = takeRest(base, 'well');
-    expect(choices(rested)).toEqual(['barrow']);
+    expect(choices(rested)).toEqual(['barrow', 'larder']);
+    expect(choices({ ...rested, at: 'larder', cleared: [...rested.cleared, 'larder'] })).toEqual(['barrow']);
     const game = new Game(levelById('barrow'), { party: rested.party });
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;
     expect(completeFight(rested, 'barrow', game).state.done).toBe(true);
@@ -1344,3 +1345,62 @@ describe('level 6 and difficulty', () => {
     expect(parseSave(serialize(old)).difficulty).toBe('normal');
   });
 });
+
+describe('the ghast', () => {
+  it('a hero starting its turn next to an alert ghast saves or is poisoned for that turn', () => {
+    const game = new Game(['######', '#Fh..#', '######'], { rng: () => 0.01 }); // the save fails
+    game.start();
+    const [f, h] = game.units;
+    h.unaware = false;
+    const seen = [];
+    game.on('stench', (r) => seen.push(r));
+    setTurn(game, 0);
+    game.checkStench(f);
+    expect(seen).toHaveLength(1);
+    expect(game.has(f, 'poisoned')).toBe(true);
+    game.tickConditions(f);
+    expect(game.has(f, 'poisoned')).toBe(false); // only for the rest of that turn
+  });
+
+  it('passing the save makes a hero used to the smell for the fight', () => {
+    const game = new Game(['######', '#Fh..#', '######'], { rng: () => 0.99 });
+    game.start();
+    const [f, h] = game.units;
+    h.unaware = false;
+    setTurn(game, 0);
+    game.checkStench(f);
+    expect(f.stenchSafe).toBe(true);
+    let more = 0;
+    game.on('stench', () => more++);
+    game.checkStench(f);
+    expect(more).toBe(0);
+  });
+});
+
+describe('hero names', () => {
+  it('names typed for a new run are cleaned and carried into fights and level-ups', () => {
+    expect(cleanName('  <b>Tam&sin</b> ')).toBe('bTamsinb');
+    expect(cleanName("D'Arcy  Vel-Mor")).toBe("D'Arcy Vel-Mor");
+    expect(cleanName('Ölvir the Exceedingly Long')).toBe('Ölvir the Exce');
+    const s = newCampaign('normal', { F: 'Tamsin', W: '   ', R: '<>' });
+    expect(s.party.F.name).toBe('Tamsin');
+    expect(s.party.W.name).toBeUndefined();
+    expect(s.party.R.name).toBeUndefined();
+    const game = new Game(levelById('crypt'), { party: s.party });
+    expect(game.units.find((u) => u.code === 'F').name).toBe('Tamsin');
+    expect(game.units.find((u) => u.code === 'W').name).toBe('Ilsa');
+    for (const u of game.units) if (u.team === 'monsters') u.alive = false;
+    s.xp = 440;
+    const { report } = completeFight(s, 'crypt', game);
+    expect(report.levelUps.find((l) => l.code === 'F').name).toBe('Tamsin');
+  });
+
+  it('a save with a tampered name drops it', () => {
+    const s = newCampaign('normal', { F: 'Tamsin' });
+    s.party.R.name = '<img src=x>';
+    const loaded = parseSave(serialize(s));
+    expect(loaded.party.F.name).toBe('Tamsin');
+    expect(loaded.party.R.name).toBeUndefined();
+  });
+});
+

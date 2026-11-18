@@ -391,19 +391,44 @@ b.loot { color: var(--gold); }
   z-index: 20;
 }
 #title[hidden] { display: none; }
-#title .card { text-align: center; padding: 16px; }
+#title .card {
+  text-align: center; padding: 22px 34px 18px; max-width: calc(100vw - 32px); box-sizing: border-box;
+  background: rgba(10, 8, 12, 0.78); border: 1px solid #c9b07a33; border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
 #title h1 { margin: 0; font: 700 clamp(36px, 7vw, 64px) var(--display); color: var(--gold); letter-spacing: 0.04em; }
 #title .tagline { margin: 6px 0 26px; color: var(--ink); opacity: 0.85; }
 #title .difficulty { border: 0; margin: 14px 0 6px; padding: 0; }
-#title .difficulty legend { font-size: 12px; color: var(--muted); margin: 0 auto 6px; padding: 0; }
-#title .difficulty .seg { display: inline-flex; border: 1px solid #ffffff22; border-radius: 8px; overflow: hidden; }
+#title .difficulty legend,
+#title .names summary {
+  font: 600 12px var(--display, inherit); color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
+}
+#title .difficulty legend { margin: 0 auto 8px; padding: 0; }
+#title .difficulty .seg {
+  display: inline-flex; border: 1px solid #c9b07a55; border-radius: 8px; overflow: hidden;
+  background: rgba(0, 0, 0, 0.45); color: var(--ink);
+}
 #title .difficulty label { cursor: pointer; }
 #title .difficulty input { position: absolute; opacity: 0; pointer-events: none; }
 #title .difficulty span { display: block; padding: 6px 16px; font-size: 13px; }
-#title .difficulty label + label span { border-left: 1px solid #ffffff22; }
+#title .difficulty label + label span { border-left: 1px solid #c9b07a55; }
+#title .difficulty label:hover input:not(:checked) + span { background: #c9b07a22; }
 #title .difficulty input:checked + span { background: #c9b07a; color: #1a1410; font-weight: 600; }
 #title .difficulty input:focus-visible + span { outline: 2px solid #c9b07a; outline-offset: -2px; }
-#title .difficulty p { font-size: 12px; margin: 6px 0 0; min-height: 1.2em; }
+#title .difficulty p { font-size: 13px; margin: 8px 0 0; min-height: 1.2em; color: #d8cfc0; }
+#title .names { margin: 10px auto 16px; max-width: 460px; }
+#title .names summary { cursor: pointer; padding: 4px 0; }
+#title .names summary:hover { color: #e6cf98; }
+#title .names .name-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+#title .names label { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+#title .names small { font-size: 12px; color: #d8cfc0; }
+#title .names input {
+  width: 100%; box-sizing: border-box; padding: 6px 8px; font: inherit; font-size: 14px;
+  color: #f3ead8; background: #000000a0; border: 1px solid #c9b07a66; border-radius: 6px;
+}
+#title .names input::placeholder { color: #a99f90; opacity: 1; }
+#title .names input:focus { outline: 2px solid #c9b07a; outline-offset: -1px; }
+@media (max-width: 520px) { #title .names .name-grid { grid-template-columns: repeat(2, 1fr); } }
 #title .title-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 #title .title-buttons button { padding: 10px 20px; }
 #title-continue[hidden] { display: none; }

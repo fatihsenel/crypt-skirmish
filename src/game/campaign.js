@@ -54,28 +54,41 @@ export const NODES = {
     boss: true, actBreak: true,
     teaser: 'Morvath the necromancer, the end of the first act. Afterwards the party takes a long rest.',
   },
-  // Act two: one fight, then the vault's loot or the well's rest, then the wight.
+  // Act two: one fight, then the vault's loot or the well's rest, an optional larder, then the wight.
   catacombs: {
     kind: 'fight', level: 'catacombs', col: 4, row: 1, next: ['vault', 'well'],
     teaser: 'Ghouls: their claws poison. Skeletons besides.',
   },
   vault: {
-    kind: 'fight', level: 'vault', short: 'Vault', col: 5, row: 0, next: ['barrow'],
+    kind: 'fight', level: 'vault', short: 'Vault', col: 5, row: 0, next: ['barrow', 'larder'],
     teaser: 'Guarded treasure: a magic cloak and weapon. Skip the rest at the well.',
   },
   well: {
-    kind: 'rest', col: 5, row: 2, next: ['barrow'],
+    kind: 'rest', col: 5, row: 2, next: ['barrow', 'larder'],
     name: 'The Still Well', short: 'Well', verb: 'Rest at the well',
     intro: 'Clean water and a door that bars from the inside. The party takes a long rest.',
     teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
   },
+  // Optional: a ghast's hoard on the way down, but no rest before the wight.
+  larder: {
+    kind: 'fight', level: 'larder', short: 'Larder', col: 6, row: 2, next: ['barrow'],
+    teaser: 'A ghast and its ghouls. A runed weapon and potions, but no rest before the Barrow.',
+  },
   barrow: {
-    kind: 'fight', level: 'barrow', short: 'Barrow', col: 6, row: 1, next: [], boss: true,
+    kind: 'fight', level: 'barrow', short: 'Barrow', col: 7, row: 1, next: [], boss: true,
     teaser: 'Varek the wight. The end of the road.',
   },
 };
 
 export const START_NODE = 'crypt';
+
+/**
+ * A hero name as typed on the title screen, made safe: letters, digits, spaces, apostrophes
+ * and hyphens only (so it can go straight into the log's HTML), at most 14 characters.
+ */
+export function cleanName(text) {
+  return String(text ?? '').replace(/[^\p{L}\p{N} '’-]/gu, '').replace(/\s+/g, ' ').trim().slice(0, 14).trim();
+}
 
 export const nodeName = (id) => NODES[id].name ?? levelById(NODES[id].level).name;
 
@@ -91,14 +104,18 @@ export function heroUnit(code, rec) {
   applyLevel(u, rec.level);
   applyItems(u, rec.items);
   for (const f of ['hp', 'alive', 'slots', 'potions']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
+  if (rec.name) u.name = rec.name;
   return u;
 }
 
-export function newCampaign(difficulty = 'normal') {
+/** `names` may rename heroes, e.g. { F: 'Tamsin' }; blank or unusable names keep the default. */
+export function newCampaign(difficulty = 'normal', names = {}) {
   const party = {};
   for (const code of HERO_CODES) {
     const u = createUnit(code, 0, 0);
     party[code] = { level: u.level, hp: u.hp, alive: true, slots: { ...u.slots }, potions: u.potions, items: [] };
+    const name = cleanName(names[code]);
+    if (name) party[code].name = name;
   }
   return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false, difficulty };
 }
@@ -163,7 +180,7 @@ export function completeFight(prev, id, game) {
       rec.slots[l] = (rec.slots[l] ?? 0) + n - (before.slotMax[l] ?? 0);
     }
     for (let l = rec.level + 1; l <= target; l++) {
-      levelUps.push({ code, name: TEMPLATES[code].name, level: l, note: PROGRESSION[code][l]?.note ?? '' });
+      levelUps.push({ code, name: rec.name ?? TEMPLATES[code].name, level: l, note: PROGRESSION[code][l]?.note ?? '' });
     }
     rec.level = target;
   }
@@ -214,7 +231,7 @@ export function takeRest(prev, id) {
 export function equipProblem(state, i, code) {
   const id = state.pack[i];
   if (!id || ITEMS[id]?.kind !== 'gear') return 'Nothing to equip';
-  if (state.party[code].items.includes(id)) return `${TEMPLATES[code].name} already has one`;
+  if (state.party[code].items.includes(id)) return `${state.party[code].name ?? TEMPLATES[code].name} already has one`;
   return null;
 }
 
@@ -249,6 +266,7 @@ export function parseSave(text) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;
       if (!r.items.every((i) => ITEMS[i]) || typeof r.slots !== 'object') return null;
+      if (r.name !== undefined && (typeof r.name !== 'string' || !r.name || cleanName(r.name) !== r.name)) delete r.name;
     }
     // A run finished before act two existed ended at the Sanctum: open the way on, after
     // the long rest the act break gives.
