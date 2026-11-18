@@ -206,6 +206,7 @@ export class UnitView {
       u.conditions?.prone && ['prone', 'Prone'],
       u.conditions?.poisoned && ['poisoned', 'Poisoned'],
       u.conditions?.frightened && ['frightened', 'Frightened'],
+      u.conditions?.restrained && ['restrained', 'Webbed'],
       u.marked && u.alive && ['marked', 'Marked'],
       // A hero's own Stealth roll is theirs to see; a goblin's isn't.
       u.hidden && ['hidden', u.team === 'heroes' ? `Hidden · ${u.hidden}` : 'Hidden'],
@@ -384,7 +385,7 @@ export class UnitView {
       if (kind === 'fire') sfx.cast();
       if (kind === 'necro') sfx.necro();
       if (kind === 'arrow') this.rig.drawRanged(true);
-      const { hit, done } = this.rig.play(spell ? 'spell' : kind, { at: 0.45 });
+      const { hit, done } = this.rig.play(spell ? 'spell' : kind === 'web' ? 'melee' : kind, { at: 0.45 });
       await hit;
       if (spell) this.model.flare?.();
       if (kind === 'arrow') sfx.bow();
@@ -460,11 +461,17 @@ export class UnitView {
   }
 }
 
-/** Projectile flight between two units. kind: 'fire' | 'necro' | 'arrow' | 'javelin' */
+/** Projectile flight between two units. kind: 'fire' | 'necro' | 'arrow' | 'javelin' | 'web' */
 export async function shootProjectile(scene, from, to, kind) {
   let mesh;
-  const bolt = kind === 'fire' || kind === 'necro';
-  if (bolt) {
+  const bolt = kind === 'fire' || kind === 'necro' || kind === 'web';
+  if (kind === 'web') {
+    // a wad of grey-white silk
+    mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0),
+      new THREE.MeshBasicMaterial({ color: 0xe8e4d8, wireframe: true }));
+    mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xf4f0e4, transparent: true, opacity: 0.6 })));
+  } else if (bolt) {
     const color = kind === 'fire' ? 0xff7a1a : 0x50ff80;
     mesh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), new THREE.MeshBasicMaterial({ color }));
     if (kind === 'necro') {

@@ -8,6 +8,8 @@
 
 const STORAGE_KEY = 'crypt-skirmish:muted';
 const rand = (a, b) => a + Math.random() * (b - a);
+/** Monsters that borrow another's voice: the ghast and the ghosts hiss like ghouls, spiders like rats. */
+const SOUND_ALIAS = { h: 'u', e: 'u', q: 'u', k: 'r' };
 
 function loadMuted() {
   try {
@@ -145,7 +147,7 @@ class Sfx {
 
   // --- movement -------------------------------------------------------------
   step(code) {
-    if (code === 'h') code = 'u'; // a ghast sounds like a ghoul
+    code = SOUND_ALIAS[code] ?? code; // a ghast sounds like a ghoul, a spider like a rat
     if (code === 'P') code = 'F'; // a paladin clanks like a fighter
     this.play((t) => {
       if (code === 'F' || code === 'C') {
@@ -220,7 +222,7 @@ class Sfx {
 
   /** Sound of a blow landing; depends on what got hit. */
   hit(targetCode, { crit = false, fire = false } = {}) {
-    if (targetCode === 'h') targetCode = 'u';
+    targetCode = SOUND_ALIAS[targetCode] ?? targetCode;
     if (targetCode === 'P') targetCode = 'F';
     if (fire) this.fireImpact();
     this.play((t) => {
@@ -270,7 +272,7 @@ class Sfx {
   }
 
   death(code) {
-    if (code === 'h') code = 'u'; // a ghast sounds like a ghoul
+    code = SOUND_ALIAS[code] ?? code; // a ghast sounds like a ghoul, a spider like a rat
     if (code === 'P') code = 'F'; // a paladin clanks like a fighter
     this.play((t) => {
       if (code === 'g' || code === 'b') {
@@ -304,7 +306,7 @@ class Sfx {
 
   /** A monster's cry as it attacks: rat squeak, ghoul hiss, wight groan, mimic chomp, orc grunt. */
   voice(code) {
-    if (code === 'h') code = 'u'; // a ghast sounds like a ghoul
+    code = SOUND_ALIAS[code] ?? code; // a ghast sounds like a ghoul, a spider like a rat
     if (code === 'P') code = 'F'; // a paladin clanks like a fighter
     this.play((t) => {
       if (code === 'r') this.squeakNow(t, 1);

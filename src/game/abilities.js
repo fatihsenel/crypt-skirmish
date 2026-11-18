@@ -42,6 +42,7 @@ export const CONDITION_INFO = {
   prone: 'Prone: melee attacks against it have advantage, ranged ones disadvantage; its own attacks have disadvantage. Standing up costs half its movement.',
   poisoned: 'Poisoned: disadvantage on attack rolls and Stealth.',
   frightened: 'Frightened: disadvantage on attacks while it can see the source of its fear, and it can’t move closer to it. A WIS save at the end of each turn ends it.',
+  restrained: 'Restrained: can’t move; attacks against it have advantage, its own attacks and DEX saves disadvantage. Wears off at the end of its next turn.',
 };
 
 /** Passive features (no button): documented here for the HUD tooltips. */

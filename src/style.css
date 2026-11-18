@@ -83,6 +83,7 @@ html, body {
 .tag.prone, .cond.prone { color: #e0a060; }
 .tag.poisoned, .cond.poisoned { color: #9ad45a; }
 .tag.frightened, .cond.frightened { color: #c79bff; }
+.tag.restrained, .cond.restrained { color: #e8e2d0; }
 .passive-tag.cond { border-color: currentColor; }
 .float-text.cond { font-size: 15px; color: #d6c27a; }
 .float-text.heal { color: var(--heal); }
@@ -693,7 +694,9 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 .levelups b:first-child { color: var(--gold); font-family: var(--display); }
 .levelups ul { margin: 4px 0 0; padding-left: 18px; }
 
-#camp-map svg { width: 100%; height: auto; display: block; }
+.camp-left, .camp-right { min-width: 0; } /* let the map scroll instead of widening its column */
+#camp-map { overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
+#camp-map svg { width: 100%; min-width: 820px; height: auto; display: block; } /* about 75% scale at the narrowest */
 #camp-map .edge { stroke: rgba(255, 255, 255, 0.16); stroke-width: 2; stroke-dasharray: 4 5; }
 #camp-map .edge.done { stroke: var(--gold); stroke-dasharray: none; opacity: 0.7; }
 #camp-map .edge.open { stroke: var(--gold); stroke-dasharray: 4 5; opacity: 0.9; }

@@ -214,6 +214,48 @@ export const TEMPLATES = {
       { name: 'Pseudopod', stat: 'str', damage: '2d8', reach: 1, rider: { save: 'str', dc: 13, condition: 'prone' } },
     ],
   },
+  // --- act three -------------------------------------------------------------
+  // SRD giant spider. Its web (Recharge 5–6) restrains whoever it hits until the end of
+  // their next turn (SRD: until they break free, DC 12); the bite's venom poisons rather
+  // than adding 2d8 poison damage.
+  k: {
+    name: 'Giant Spider', cls: 'Giant Spider', team: 'monsters', color: 0x3a3440,
+    hp: 26, ac: 14, speed: 6, prof: 2, xp: 200, cr: 1,
+    ai: 'brute',
+    stats: { str: 14, dex: 16, con: 12, int: 2, wis: 11, cha: 4 },
+    attacks: [
+      { name: 'Bite', stat: 'dex', damage: '1d8', reach: 1, rider: { save: 'con', dc: 11, condition: 'poisoned', turns: 1 } },
+      { name: 'Web', stat: 'dex', damage: null, reach: 6, recharge: 5, projectile: 'web', rider: { condition: 'restrained', turns: 1 } },
+    ],
+  },
+  // SRD specter: a Life Drain touch (3d6 necrotic). Here its chill frightens (WIS save)
+  // instead of lowering the victim's maximum HP, which the campaign doesn't track.
+  e: {
+    name: 'Specter', cls: 'Specter', team: 'monsters', color: 0xb8c8d8,
+    hp: 22, ac: 12, speed: 8, prof: 2, xp: 200, cr: 1,
+    ai: 'brute',
+    undead: true,
+    stats: { str: 1, dex: 14, con: 11, int: 10, wis: 10, cha: 11 },
+    attacks: [
+      { name: 'Life Drain', stat: 'dex', damage: '3d6', reach: 1, addMod: false, rider: { save: 'wis', dc: 11, condition: 'frightened', turns: 2 } },
+    ],
+  },
+  // The last boss: a banshee (SRD Corrupting Touch and Horrifying Visage, as Dread), made
+  // tougher and given a second touch to stand up to a level 6 party. No Wail.
+  q: {
+    name: 'Ysolde', cls: 'Banshee', team: 'monsters', color: 0xd8e4f0,
+    hp: 100, ac: 13, speed: 8, prof: 3, xp: 1100, cr: 4,
+    multiattack: 2,
+    ai: 'brute',
+    undead: true,
+    castStat: 'cha',
+    spells: ['dread'],
+    slots: { 1: 3 },
+    stats: { str: 1, dex: 14, con: 10, int: 12, wis: 11, cha: 17 },
+    attacks: [
+      { name: 'Corrupting Touch', stat: 'dex', damage: '3d6', reach: 1, addMod: false, rider: { save: 'wis', dc: 13, condition: 'frightened', turns: 2 } },
+    ],
+  },
 };
 
 let nextId = 1;

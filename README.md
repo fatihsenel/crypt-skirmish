@@ -41,7 +41,8 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - monsters: goblins (skirmishers), skeletons (brutes, undead), an **orc** that charges
   (Aggressive), **giant rats** with Pack Tactics, **Grukk the goblin boss** (two attacks, the
   second at disadvantage) and **Morvath the necromancer**, who raises corpses with
-  **Animate Dead**, and the risen skeleton acts right after him (he also casts **Dread**)
+  **Animate Dead**, and the risen skeleton acts right after him (he also casts **Dread**).
+  Act three adds **giant spiders**, **specters** and **Ysolde the banshee** (see below)
 - **conditions** that feed advantage / disadvantage:
   - **prone**: melee attacks against you have advantage, ranged ones disadvantage, and your
     own attacks have disadvantage. You stand up at the start of your turn for half your
@@ -53,7 +54,10 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   - **frightened** (**Dread**, 1st-level spell, WIS save): disadvantage on attacks while the
     source is in sight, and you can't step closer to it. Repeat the save at the end of each
     of your turns; it also ends if the source dies
-  - poisoned and frightened always last through the victim's next turn. Tags show on the figure
+  - **restrained** (a giant spider's **Web**: a ranged attack with no damage and no save,
+    Recharge 5–6): you can't move, attacks against you have advantage, and your own attacks
+    and DEX saves have disadvantage. It wears off at the end of your next turn
+  - poisoned, frightened and restrained always last through the victim's next turn. Tags show on the figure
 - the dungeon: **doors** that block sight until opened, hidden **spike traps** (DEX save,
   2d6), **chests** with potions of healing, and **stairs** to the next level
 - **room dressing**: barrels and crates are in the way and give **half cover**: +2 AC
@@ -78,6 +82,13 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   mimic wakes it: it joins the initiative right after the opener and bites with advantage,
   unless Wren's Keen Eyes spotted it from within 10 ft (the log warns you, and hovering the
   chest says so)
+- **act three**: the Barrow now ends act two with a long rest. Below it, the **Spider Nest**
+  (giant spiders that web and poison, and rats), then a fork between the **Haunted Gallery**
+  (specters, whose Life Drain touch frightens, and skeletons, guarding a Cloak of Protection
+  and a Runed Weapon) and a rest at the **Silent Shrine**, and finally the **Weeping Throne**,
+  where **Ysolde the banshee** (100 HP, two frightening touches, Dread) waits with her
+  specters and spiders. Specters and the banshee are undead, so Turn Undead works on them.
+  A run that already finished at the Barrow carries on into act three, rested
 - between rooms the party keeps HP, spell slots and potions, takes a short rest (regain half
   the missing HP; the fallen get back up) and shares **XP**. A lost fight can be retried as
   you entered it, or you can go back to the map and pick another way
@@ -111,7 +122,8 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **turn order**: each initiative chip carries a small portrait on the unit's own colour: a
   class icon for the heroes (sword, crested shield, wizard's hat, hood, bow, sun) and a silhouette
   for each monster (goblin, crowned boss, orc, rat, skull, hooded necromancer, ghoul claws,
-  the ghast's reeking claws, the wight's crowned skull, a toothy chest), with the
+  the ghast's reeking claws, the wight's crowned skull, a toothy chest, a spider, a hooded
+  wisp for the specter and a crowned one for the banshee), with the
   initiative number on a badge
 - **fog of war**: you only see what your heroes can see. Rooms you have seen stay dimly
   drawn; monsters out of sight are hidden (their initiative chips show a `?` and read `???` until spotted)
@@ -148,7 +160,7 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   bell notes while you explore; drums, a bass ostinato and strings swell in once monsters
   notice the party, with brass and a quicker pulse in the boss rooms, then fade back when
   the room is quiet. The Music button (or N) turns it off; Sound (or M) mutes everything
-- **the ending**: beating Varek shows the run's tally: difficulty, party level, rooms won,
+- **the ending**: beating Ysolde shows the run's tally: difficulty, party level, rooms won,
   rounds fought, fights lost and XP, then each hero's damage dealt, kills, critical hits,
   healing given and times downed, with a star on whoever leads each column. Lost fights
   count toward the tally; hero numbers come from the fights that were won
@@ -162,7 +174,9 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   prone (DC 13 STR) instead of grappling; Grukk's second attack is the only clumsy one;
   Sculpt Spells (an Evocation feature) and Sneak Attack 4d6 arrive at level 6, and Sculpt
   simply leaves all allies out of the blast; the ghast's stench poisons only until the end
-  of the victim's turn
+  of the victim's turn; a giant spider's bite poisons instead of dealing 2d8 poison, and its
+  web wears off on its own instead of needing a STR check; a specter's Life Drain frightens
+  instead of lowering maximum HP; the banshee has no Wail
 
 ## Run
 
@@ -179,7 +193,7 @@ Every push to `main` runs the tests, builds, and deploys to GitHub Pages
 (`.github/workflows/pages.yml`). The base path lives in `vite.config.js`.
 
 Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 Warren,
-3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those, `&party=5` for
+3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those, `&party=5` for
 heroes of another level from 3 to 6, `&paladin` for a Paladin instead of the Fighter and
 `&ranger` for a Ranger instead of the Rogue);
 this doesn't touch the save.
@@ -192,14 +206,17 @@ In the browser console, `__debug.autoplay()` lets the monster AI play the heroes
 Lightning Bolt a line of them), keep Spiritual Weapon swinging, Magic
 Missile the weakest foe, drink potions when low, sometimes loot chests mid-fight, and
 otherwise use the monster AI's tactics. Gear found goes to whoever suits it.
-`npm run sim -- 300` plays 300 campaigns down each route; `npm run sim -- 300 act2` replays
-act two only, from a pool of real end-of-act-one parties (faster when tuning). Set `SEED=n`
+`npm run sim -- 300` plays 300 campaigns down each route (acts one and two); `npm run sim -- 300 act2` replays
+act two only, from a pool of real end-of-act-one parties (faster when tuning), and
+`act3` plays act three from a pool of parties that won the Barrow. Set `SEED=n`
 to change the dice and `DIFFICULTY=story|hard` to play another difficulty; `PALADIN=1` and
 `RANGER=1` swap those classes in (the Ranger keeps its mark on the toughest foe). Act two was tuned against act one's numbers from the same simulator:
 roughly 80% of the party's HP left after the Catacombs, 65% after the Vault, and a Barrow
 that is a clear step harder when the party skips the well's rest. The Larder is the greedy
 option: on Normal it's won almost always after the well, but taking it after the Vault (no
-rest at all) drops the Barrow to roughly two wins in three.
+rest at all) drops the Barrow to roughly two wins in three. Act three follows the same
+shape: the Nest is the warm-up, and the Throne is won about 96% of the time after the
+shrine's rest but about 83% after the Gallery (Hard: 97% and 47%).
 
 ## Controls
 
@@ -297,9 +314,14 @@ you can swap the visuals (real models, different camera) without touching rules.
    automatically (quadrupeds wire their front legs as arms and set `bite: true`). For downloaded `.glb` models, load them
    with `GLTFLoader` and map their bones onto the same rig fields.
 2. **More conditions**: add one to `CONDITIONS` in `combat.js` and a line in `attackMods`;
-   monsters can inflict it through an attack `rider` or a spell's `condition`.
+   monsters can inflict it through an attack `rider` or a spell's `condition`. Restrained
+   is the latest example: a rider with no `save` lands on any hit, an attack with
+   `damage: null` deals none, and `recharge: 5` makes an attack Recharge 5–6.
 3. **More rooms**: add a map to `LEVELS` in `maps.js` and a node in `NODES` in `campaign.js`
-   (its column, row and `next` links); the camp map draws it.
+   (its column, row and `next` links); the camp map draws it. Act three is the latest
+   example. `final: true` marks the last room. A real spider or ghost model would
+   replace act three's stand-ins: a dyed rat and see-through skeletons (`ghost` in
+   `modelSpecs.js` sets their opacity).
 4. **A real goblin model**: goblins and Grukk reuse tinted KayKit adventurers (the goblins
    with procedural ears on the head bone). A dedicated rigged goblin would only need a `.glb`
    in `public/models` and its entry in `SPECS` in `modelSpecs.js` (clip names per action; a

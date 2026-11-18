@@ -1308,7 +1308,7 @@ describe('act two', () => {
     expect(choices(state)).toEqual(['catacombs']);
   });
 
-  it('after the catacombs: the vault or the well, maybe the larder, then the barrow, which ends the campaign', () => {
+  it('after the catacombs: the vault or the well, maybe the larder, then the barrow, which ends the act', () => {
     const base = { ...newCampaign(), cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs'], at: 'catacombs' };
     expect(choices(base)).toEqual(['vault', 'well']);
     expect(choices({ ...base, at: 'vault', cleared: [...base.cleared, 'vault'] })).toEqual(['barrow', 'larder']);
@@ -1317,9 +1317,33 @@ describe('act two', () => {
     expect(choices({ ...rested, at: 'larder', cleared: [...rested.cleared, 'larder'] })).toEqual(['barrow']);
     const game = new Game(levelById('barrow'), { party: rested.party });
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;
-    expect(completeFight(rested, 'barrow', game).state.done).toBe(true);
-    expect(levelById('barrow').final).toBe(true);
-    expect(LEVELS.filter((l) => l.final).map((l) => l.id)).toEqual(['barrow']);
+    rested.party.W.slots = { 1: 0 };
+    const { state, report } = completeFight(rested, 'barrow', game);
+    expect([state.done, report.longRest]).toEqual([false, true]);
+    expect(state.party.W.slots[1]).toBeGreaterThan(0); // the act break's long rest
+    expect(choices(state)).toEqual(['nest']);
+  });
+
+  it('act three: the nest, then the gallery or the shrine, then the throne, which ends the campaign', () => {
+    const base = { ...newCampaign(), at: 'nest', cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs', 'well', 'barrow', 'nest'] };
+    expect(choices(base)).toEqual(['gallery', 'shrine']);
+    expect(choices({ ...base, at: 'gallery', cleared: [...base.cleared, 'gallery'] })).toEqual(['throne']);
+    const rested = takeRest(base, 'shrine');
+    expect(choices(rested)).toEqual(['throne']);
+    const game = new Game(levelById('throne'), { party: rested.party });
+    expect(game.units.find((u) => u.code === 'q')).toMatchObject({ name: 'Ysolde', undead: true });
+    for (const u of game.units) if (u.team === 'monsters') u.alive = false;
+    expect(completeFight(rested, 'throne', game).state.done).toBe(true);
+    expect(LEVELS.filter((l) => l.final).map((l) => l.id)).toEqual(['throne']);
+  });
+
+  it('a save that finished at the barrow before act three carries on, rested', () => {
+    const finished = { ...newCampaign(), at: 'barrow', cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs', 'well', 'barrow'], done: true };
+    finished.party.F.hp = 2;
+    const loaded = parseSave(serialize(finished));
+    expect(loaded.done).toBe(false);
+    expect(loaded.party.F.hp).toBe(31);
+    expect(choices(loaded)).toEqual(['nest']);
   });
 
   it('every campaign node has its level, and saves from before act two still load', () => {
@@ -1887,5 +1911,56 @@ describe('level-5 spell choices', () => {
     expect(game.spellProblem(c, 'spiritualWeapon', g)).toBe('Too far from the spectral weapon (25 ft)');
     game.applyDamage(c, 999, g);
     expect(c.spiritWeapon).toBeNull();
+  });
+});
+
+describe('act three monsters', () => {
+  const lair = (rng = fixed(0.95)) => new Game(['########', '#W..k..#', '########'], { senses: false, rng });
+
+  it('a spider’s web hits for no damage, restrains, then has to recharge', () => {
+    const game = lair();
+    const [w, k] = game.units;
+    setTurn(game, 1);
+    const hp = w.hp;
+    const web = k.attacks[1];
+    expect(chooseAttack(game, k).attack).toBe(web); // at range, someone not yet caught
+    const r = game.attack(k, w, web);
+    expect([r.hit, r.damage, w.hp]).toEqual([true, 0, hp]);
+    expect(r.rider).toMatchObject({ stat: null, success: false, condition: 'restrained' });
+    expect(game.has(w, 'restrained')).toBe(true);
+    k.actionUsed = false;
+    expect(game.attackProblem(k, w, web)).toBe('Web hasn\'t recharged');
+    expect(game.attackMods(k, w, k.attacks[0]).adv).toContain('target restrained');
+    expect(game.attackMods(w, k, w.attacks[0]).dis).toContain('restrained');
+
+    setTurn(game, 0); // caught: no movement this turn
+    expect(w.movesLeft).toBe(0);
+    game.rng = fixed(0.95, 0);
+    expect(game.save(w, 'dex', 10).d20).toBe(1); // DEX saves at disadvantage
+    game.endTurn();
+    expect(game.has(w, 'restrained')).toBe(false); // wears off at the end of that turn
+  });
+
+  it('the web recharges on a 5 or 6 at the start of the spider’s turn', () => {
+    const game = lair();
+    const [w, k] = game.units;
+    setTurn(game, 1);
+    game.attack(k, w, k.attacks[1]);
+    game.rng = fixed(0.5); // a 4
+    setTurn(game, 1);
+    expect(k.spent.Web).toBe(true);
+    game.rng = fixed(0.9); // a 6
+    setTurn(game, 1);
+    expect(k.spent.Web).toBeUndefined();
+  });
+
+  it('a specter is undead; its Life Drain adds no modifier and frightens on a failed WIS save', () => {
+    const game = new Game(['#######', '#We...#', '#######'], { senses: false, rng: fixed(0) });
+    const [w, e] = game.units;
+    expect(e.undead).toBe(true);
+    const touch = e.attacks[0];
+    expect(game.damageBonus(e, touch)).toBe(0);
+    expect(game.applyRider(e, w, touch.rider)).toMatchObject({ stat: 'wis', success: false, condition: 'frightened' });
+    expect(game.fearSource(w)).toBe(e);
   });
 });

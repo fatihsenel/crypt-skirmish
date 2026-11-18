@@ -857,7 +857,7 @@ async function animateAttack(r, at = r.target) {
       }
       const hunter = [r.mark && 'Hunter’s Mark', r.colossus && 'Colossus Slayer'].filter(Boolean).join(' · ');
       if (hunter) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, hunter, 'spell');
-      floatText(stage.scene, pos, r.crit ? `CRIT −${r.damage}` : `−${r.damage}`, r.crit ? 'crit' : 'dmg');
+      if (attack.damage) floatText(stage.scene, pos, r.crit ? `CRIT −${r.damage}` : `−${r.damage}`, r.crit ? 'crit' : 'dmg');
       tv.updateHp();
       if (r.rider && target.alive) {
         const text = r.rider.success ? 'Resists' : CONDITION_FLOAT[r.rider.condition];
@@ -879,7 +879,7 @@ async function animateAttack(r, at = r.target) {
   hud.renderInitiative(game);
 }
 
-const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!' };
+const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!' };
 
 function damageReaction(unit) {
   const v = view(unit);

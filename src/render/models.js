@@ -757,6 +757,7 @@ const BUILDERS = {
   g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer,
   // act two: ghouls and the wight fall back to the skeleton miniature if their .glb fails
   u: skeleton, w: skeleton, m: mimic,
+  k: giantRat, e: skeleton, q: necromancer, // act three
 };
 
 export function buildModel(unit) {

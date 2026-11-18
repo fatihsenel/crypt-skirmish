@@ -38,7 +38,10 @@ export function chooseAttack(game, unit, at = unit) {
       if (game.attackProblem(self, target, attack)) continue;
       const mods = game.attackMods(self, target, attack);
       let score = 40 - target.hp + pref(attack);
-      if (target.hp <= 4) score += 8; // likely kill
+      if (target.hp <= 4 && attack.damage) score += 8; // likely kill
+      // A web (no damage, a sure condition) is worth throwing first at someone not yet caught.
+      if (!attack.damage && attack.rider && !game.has(target, attack.rider.condition)) score += 10;
+      if (!attack.damage && attack.rider && game.has(target, attack.rider.condition)) continue;
       if (mods.mode === 'adv') score += 4;
       if (mods.mode === 'dis') score -= 25;
       score -= game.coverBonus(self, target) * 5; // a barrel in the way

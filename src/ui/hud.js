@@ -14,7 +14,7 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
-const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!' };
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
@@ -76,13 +76,13 @@ export class Hud {
 
   logAttack(r) {
     const outcome = r.crit
-      ? `<b class="crit">Critical hit!</b> ${r.damage} damage`
+      ? `<b class="crit">Critical hit!</b>${r.attack.damage ? ` ${r.damage} damage` : ''}`
       : r.fumble
         ? `<b class="miss">Natural 1, miss.</b>`
         : r.shielded
           ? `<b class="spell">Blocked by Shield</b>`
           : r.hit
-            ? `<b class="hit">Hit</b> for ${r.damage} damage`
+            ? r.attack.damage ? `<b class="hit">Hit</b> for ${r.damage} damage` : `<b class="hit">Hit</b>`
             : `<b class="miss">Miss</b>`;
     const dmg = r.damageRoll ? ` <span class="dice">[${r.damageRoll.rolls.join('+')}]</span>` : '';
     const d20 = r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`;
@@ -107,6 +107,10 @@ export class Hud {
   logRider(r) {
     const x = r.rider;
     if (!x) return;
+    if (!x.stat) { // no save against it
+      this.log(`${who(r.target)} <b class="cond ${x.condition}">${CONDITION_VERB[x.condition]}</b>`);
+      return;
+    }
     this.log(`${who(r.target)} <span class="dice">${x.stat.toUpperCase()} save ${x.total} vs DC ${x.dc}</span>: ` +
       (x.success ? `<b class="hit">shrugs it off</b>.` : `<b class="cond ${x.condition}">${CONDITION_VERB[x.condition]}</b>`));
   }
@@ -129,7 +133,8 @@ export class Hud {
     const text = {
       stand: `gets up off the floor (half movement).`,
       save: `shakes off the fear.`,
-      expired: name === 'poisoned' ? 'is no longer poisoned.' : name === 'frightened' ? 'is no longer frightened.' : 'recovers.',
+      expired: name === 'poisoned' ? 'is no longer poisoned.' : name === 'frightened' ? 'is no longer frightened.'
+        : name === 'restrained' ? 'tears free of the web.' : 'recovers.',
     }[cause] ?? 'recovers.';
     this.log(`${who(unit)} ${text}`, 'sys');
   }

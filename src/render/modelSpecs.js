@@ -94,6 +94,17 @@ export const SPECS = {
   // The orc and the rats: Quaternius (CC0), one swing clip for every attack.
   o: { file: 'monsters/Orc', height: 1.45, clips: { ...QUATERNIUS, melee: 'Weapon', javelin: 'Weapon', arrow: 'Weapon', hit: 'HitReact' } },
   r: { file: 'monsters/Rat', height: 0.5, quadruped: true, clips: { ...QUATERNIUS, melee: 'Rat_Attack', idle: 'Rat_Idle', walk: 'Rat_Walk', die: 'Rat_Death', dead: 'Rat_Death' } },
+  // Act three. No spider in the packs: a bigger rat rig, dyed near-black and purple.
+  k: { file: 'monsters/Rat', height: 0.62, quadruped: true, tint: 0x4a3f58, clips: { ...QUATERNIUS, melee: 'Rat_Attack', idle: 'Rat_Idle', walk: 'Rat_Walk', die: 'Rat_Death', dead: 'Rat_Death' } },
+  // Specters and the banshee: skeleton rigs made pale and see-through (`ghost` = opacity).
+  e: {
+    file: 'Skeleton_Minion', height: 1.25, tint: 0xc8dcff, ghost: 0.5,
+    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
+  },
+  q: {
+    file: 'Skeleton_Mage', height: 1.55, tint: 0xe8f0ff, ghost: 0.6,
+    clips: { melee: '1H_Melee_Attack_Stab', walk: 'Walking_D_Skeletons' },
+  },
 };
 
 export const DEFAULT_CLIPS = {

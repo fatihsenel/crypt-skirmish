@@ -137,7 +137,11 @@ export class Camp {
     $('#title').hidden = true;
     $('#camp').hidden = false;
     $('#camp-report').innerHTML = this.reportHtml(state, report);
-    $('#camp-map').innerHTML = this.mapSvg(state, options);
+    const map = $('#camp-map');
+    map.innerHTML = this.mapSvg(state, options);
+    // Three acts don't fit a narrow panel at a readable size: scroll to where the party is.
+    const here = state.at ? pos(state.at).x : 0;
+    map.scrollLeft = Math.max(0, here * (map.scrollWidth / MAP_W) - map.clientWidth / 2);
     $('#camp-room').innerHTML = this.roomHtml(state);
     $('#camp-party').innerHTML = this.partyHtml(state);
     $('#camp-pack').innerHTML = this.packHtml(state);

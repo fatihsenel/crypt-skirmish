@@ -145,8 +145,13 @@ export function buildGltfModel(unit) {
       } else if (o.visible) melee.push(o);
     }
     if (spec.hide?.includes(o.name)) o.visible = false;
-    if (spec.tint || spec.recolor) o.material = o.material.clone();
+    if (spec.tint || spec.recolor || spec.ghost) o.material = o.material.clone();
     if (spec.tint) o.material.color.multiply(new THREE.Color(spec.tint));
+    if (spec.ghost) { // see-through and faintly glowing (specters, the banshee)
+      Object.assign(o.material, { transparent: true, opacity: spec.ghost, depthWrite: false });
+      o.material.emissive?.set(spec.tint ?? 0xffffff);
+      if (o.material.emissive) o.material.emissiveIntensity = 0.35;
+    }
     if (spec.recolor && o.material.map) o.material.map = recolorMap(o.material.map, spec.recolor);
   });
 

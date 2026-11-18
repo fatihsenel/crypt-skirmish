@@ -1,6 +1,6 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
-//   node scripts/sim.js [runs] [act2]
+//   node scripts/sim.js [runs] [act2|act3]
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
 // RANGER=1 (a Ranger in the Rogue's).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
@@ -216,6 +216,8 @@ const ACT_TWO = [
   ['catacombs', 'vault', 'barrow'], ['catacombs', 'well', 'barrow'],
   ['catacombs', 'vault', 'larder', 'barrow'], ['catacombs', 'well', 'larder', 'barrow'],
 ];
+const ACT_THREE = [['nest', 'gallery', 'throne'], ['nest', 'shrine', 'throne']];
+const REST = new Set(['chapel', 'well', 'shrine']);
 /** "vault", "well+larder", ...: the part of an act-two route between the catacombs and the barrow. */
 const via = (two) => two.slice(1, -1).join('+');
 
@@ -224,7 +226,7 @@ function campaign(route, rng, start = freshCampaign()) {
   let state = start;
   const out = [];
   for (const id of route) {
-    if (id === 'chapel' || id === 'well') {
+    if (REST.has(id)) {
       state = takeRest(state, id);
       continue;
     }
@@ -264,6 +266,32 @@ function actTwo(runs, rng) {
   console.log('  act two won via', whole);
 }
 
+/** Act three only, from a pool of real parties that won the barrow (rested by its act break). */
+function actThree(runs, rng) {
+  const pool = [];
+  let tries = 0;
+  while (pool.length < 40) {
+    const route = [...ACT_ONE[tries % 3], ...ACT_TWO[tries % 4]];
+    tries++;
+    const res = campaign(route, rng);
+    if (res.at(-1).id === 'barrow' && res.at(-1).won) pool.push(res.at(-1).after);
+  }
+  const stats = {};
+  const whole = {};
+  for (const three of ACT_THREE) {
+    let won = 0;
+    for (let i = 0; i < runs; i++) {
+      const res = campaign(three, rng, pool[i % pool.length]);
+      for (const r of res) (stats[r.id === 'nest' ? r.id : `${r.id} (${three[1]})`] ??= []).push(r);
+      if (res.at(-1).id === 'throne' && res.at(-1).won) won++;
+    }
+    whole[three[1]] = pct(won, runs);
+  }
+  console.log(`Act three, ${runs} runs per route from 40 parties that won act two`);
+  for (const [room, list] of Object.entries(stats)) report(`${room} L${[...new Set(list.map((r) => r.level))].join('/')}`, list);
+  console.log('  act three won via', whole);
+}
+
 function report(name, results) {
   const wins = results.filter((r) => r.won);
   const avg = (f, list = results) => (list.reduce((s, r) => s + f(r), 0) / Math.max(1, list.length)).toFixed(1);
@@ -274,6 +302,7 @@ function main() {
   const runs = Number(process.argv[2]) || 500;
   const rng = seeded(Number(process.env.SEED) || 1);
   if (process.argv[3] === 'act2') return actTwo(runs, rng);
+  if (process.argv[3] === 'act3') return actThree(runs, rng);
   const stats = {};
   let wholeRuns = {};
   for (const one of ACT_ONE) {

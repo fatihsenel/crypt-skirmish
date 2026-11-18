@@ -34,8 +34,12 @@ export const PATROL_PACE = 3;
 //   poisoned    disadvantage on attack rolls and ability checks (Stealth).
 //   frightened  disadvantage on attack rolls while it can see the source of its fear, and it
 //               can't willingly move closer to it. A WIS save at the end of each turn ends it.
+//   restrained  speed 0; attacks against it have advantage, its own attacks and DEX saves
+//               disadvantage (a spider's web).
 // `turns` counts the victim's own turns: it ticks down at the end of each of them.
-export const CONDITIONS = ['prone', 'poisoned', 'frightened'];
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained'];
+/** Conditions that simply run out after their `turns`. */
+const TIMED = ['poisoned', 'frightened', 'restrained'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
@@ -216,7 +220,8 @@ export class Game {
 
   /** Roll a saving throw: d20 + ability modifier + item bonuses + a paladin's aura. */
   save(unit, stat, dc) {
-    const d20 = rollDice(1, 20, this.rng).total;
+    let d20 = rollDice(1, 20, this.rng).total;
+    if (stat === 'dex' && this.has(unit, 'restrained')) d20 = Math.min(d20, rollDice(1, 20, this.rng).total);
     const aura = this.auraBonus(unit);
     const total = d20 + abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0) + aura;
     return { unit, d20, total, aura, success: total >= dc };
@@ -326,7 +331,7 @@ export class Game {
     const own = unit === this.current;
     const fresh = !unit.conditions[name];
     unit.conditions[name] = { turns: turns + (own && turns !== Infinity ? 1 : 0), by, dc };
-    if (name === 'prone' && own) unit.movesLeft = 0; // knocked down mid-move: that's it for this turn
+    if ((name === 'prone' || name === 'restrained') && own) unit.movesLeft = 0; // knocked down or caught mid-move
     if (fresh) this.emit('condition', { unit, name, on: true, by });
   }
 
@@ -374,7 +379,7 @@ export class Game {
       if (!this.fearSource(unit)) this.removeCondition(unit, 'frightened', 'expired');
       else if (this.save(unit, 'wis', c.dc).success) this.removeCondition(unit, 'frightened', 'save');
     }
-    for (const name of ['poisoned', 'frightened']) {
+    for (const name of TIMED) {
       const c = unit.conditions[name];
       if (c && --c.turns <= 0) this.removeCondition(unit, name, 'expired');
     }
@@ -386,6 +391,10 @@ export class Game {
    */
   applyRider(attacker, target, rider) {
     if (!rider || !target.alive || this.has(target, rider.condition)) return null;
+    if (!rider.save) { // no save: a hit is enough (a web)
+      this.addCondition(target, rider.condition, { turns: rider.turns ?? Infinity, by: attacker });
+      return { stat: null, success: false, condition: rider.condition };
+    }
     const s = this.save(target, rider.save, rider.dc);
     const out = { stat: rider.save, dc: rider.dc, d20: s.d20, total: s.total, success: s.success, condition: rider.condition };
     if (!s.success) this.addCondition(target, rider.condition, { turns: rider.turns ?? Infinity, by: attacker });
@@ -490,9 +499,27 @@ export class Game {
       interacted: false,
     });
     this.standUp(u);
+    if (this.has(u, 'restrained')) u.movesLeft = 0;
+    this.recharge(u);
     this.updateAwareness();
     this.emit('turnStart', { unit: u });
     this.checkStench(u);
+  }
+
+  /**
+   * Start of a turn: each spent attack with `recharge: n` comes back on a d6 roll of n or
+   * more (SRD "Recharge 5–6"). Dice are only rolled for spent attacks.
+   */
+  recharge(u) {
+    if (!u.spent) return;
+    for (const name of Object.keys(u.spent)) {
+      const attack = u.attacks.find((a) => a.name === name);
+      const d6 = rollDice(1, 6, this.rng).total;
+      if (d6 >= (attack?.recharge ?? 1)) {
+        delete u.spent[name];
+        this.emit('recharged', { unit: u, attack, d6 });
+      }
+    }
   }
 
   endTurn() {
@@ -800,6 +827,7 @@ export class Game {
     if (!opportunity && attacker.turned) return 'Turned: can only flee';
     if (!target?.alive) return 'No valid target';
     if (target.team === attacker.team) return 'That is an ally';
+    if (attacker.spent?.[attack.name]) return `${attack.name} hasn't recharged`;
     if (target.hidden && target.team === 'monsters') return `${target.name} is hidden: Search to find it`;
     const d = gridDistance(attacker, target);
     if (d > attack.reach) return `Out of range (${d * 5} ft, ${attack.name} reaches ${attack.reach * 5} ft)`;
@@ -841,6 +869,8 @@ export class Game {
       else dis.push('target prone');
     }
     if (this.has(attacker, 'poisoned')) dis.push('poisoned');
+    if (this.has(attacker, 'restrained')) dis.push('restrained');
+    if (this.has(target, 'restrained')) adv.push('target restrained');
     const fear = this.fearSource(attacker);
     if (fear && this.inSight(attacker, fear, 99)) dis.push('frightened');
     if (attack.reach === 1 && this.isFlanking(attacker, target)) adv.push('flanking');
@@ -910,6 +940,7 @@ export class Game {
     } else {
       attacker.attacksLeft--;
     }
+    if (attack.recharge) (attacker.spent ??= {})[attack.name] = true;
 
     const { d20, rolls } = this.rollD20(mods.mode);
     const toHit = this.toHitBonus(attacker, attack);
@@ -936,7 +967,7 @@ export class Game {
     let smite = null;
     let mark = null;
     let colossus = null;
-    if (hit) {
+    if (hit && attack.damage) { // a web hits for no damage: only its rider matters
       damageRoll = rollExpr(attack.damage, { crit, rng: this.rng });
       damage = Math.max(1, damageRoll.total + this.damageBonus(attacker, attack));
       if (this.canSneak(attacker, target, mods)) {
@@ -962,7 +993,7 @@ export class Game {
 
     // Uncanny Dodge: a reaction that halves an attack's damage. Saved for hits that matter.
     let uncanny = false;
-    if (hit && this.canUncannyDodge(target) && (damage >= 6 || damage >= target.hp)) {
+    if (hit && damage && this.canUncannyDodge(target) && (damage >= 6 || damage >= target.hp)) {
       target.reactionUsed = true;
       uncanny = true;
       damage = Math.floor(damage / 2);
@@ -978,7 +1009,7 @@ export class Game {
       this.emit('spell', { ok: true, kind: 'spell', id: 'shield', spell: SPELLS.shield, caster: target, slot: shieldSlot });
     }
     if (hit) {
-      this.applyDamage(target, damage, attacker);
+      if (damage) this.applyDamage(target, damage, attacker);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
     }
@@ -1097,7 +1128,7 @@ export class Game {
       case 'dash':
       case 'cunningDash':
       case 'aggressive':
-        unit.movesLeft += unit.speed;
+        if (!this.has(unit, 'restrained')) unit.movesLeft += unit.speed; // speed 0 doubled is 0
         break;
       case 'dodge':
         unit.dodging = true;

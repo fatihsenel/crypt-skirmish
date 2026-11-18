@@ -67,6 +67,18 @@ const ICONS = {
     <path fill="var(--icon-hole)" stroke="none" d="M3 11h18v2H3z"/>
     <path stroke="none" d="M4.5 11l1.3 2.6L7.2 11l1.3 2.6L9.8 11l1.3 2.6 1.3-2.6 1.3 2.6 1.3-2.6 1.3 2.6L17.6 11l1.3 2.6L20.2 11z"/>
     <path fill="var(--icon-hole)" stroke="none" d="M10.8 15.2h2.4v2.4h-2.4z"/>`),
+  // act three: a spider (body and eight legs), a hooded wisp, and the banshee's crowned wisp
+  k: svg(`<ellipse stroke="none" cx="12" cy="13.5" rx="4" ry="4.5"/><circle stroke="none" cx="12" cy="7.5" r="2.6"/>
+    <path fill="none" stroke-width="1.8" d="M8.5 11 4 7.5 2 9.5M8.3 13.5H3.5L1.5 15.5M8.6 15.8 4.5 18.5l-1 3M9.5 17.5 7.5 21.5M15.5 11 20 7.5l2 2M15.7 13.5h4.8l2 2M15.4 15.8l4.1 2.7 1 3M14.5 17.5l2 4"/>`),
+  e: svg(`<path stroke="none" d="M12 2C7.6 2 5 5.4 5 9.5V22l2.3-2 2.4 2 2.3-2 2.3 2 2.4-2L19 22V9.5C19 5.4 16.4 2 12 2z"/>
+    <ellipse cx="9.4" cy="10" rx="1.4" ry="2" fill="var(--icon-hole)" stroke="none"/>
+    <ellipse cx="14.6" cy="10" rx="1.4" ry="2" fill="var(--icon-hole)" stroke="none"/>
+    <ellipse cx="12" cy="15" rx="1.3" ry="1.8" fill="var(--icon-hole)" stroke="none"/>`),
+  q: svg(`<path stroke="none" d="M7 1.5 8.8 4 12 1l3.2 3L17 1.5V5H7z"/>
+    <path stroke="none" d="M12 5.5c-4 0-6.5 3-6.5 6.8V22l2.2-1.8 2.1 1.8 2.2-1.8 2.2 1.8 2.1-1.8 2.2 1.8v-9.7c0-3.8-2.5-6.8-6.5-6.8z"/>
+    <ellipse cx="9.6" cy="12" rx="1.3" ry="1.8" fill="var(--icon-hole)" stroke="none"/>
+    <ellipse cx="14.4" cy="12" rx="1.3" ry="1.8" fill="var(--icon-hole)" stroke="none"/>
+    <ellipse cx="12" cy="16.5" rx="1.5" ry="2.2" fill="var(--icon-hole)" stroke="none"/>`),
   unknown: svg(`<path fill="none" stroke-width="2.4" d="M8.8 8.6c0-2 1.5-3.4 3.4-3.4 2 0 3.4 1.3 3.4 3.1 0 2.6-3.4 2.8-3.4 5.6"/>
     <circle stroke="none" cx="12.2" cy="18.3" r="1.6"/>`),
 };

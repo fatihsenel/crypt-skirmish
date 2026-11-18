@@ -30,6 +30,7 @@ export const DIFFICULTIES = {
  * (more XP and loot) and face the necromancer without that rest.
  * `boss` draws a crown on the map; `actBreak` gives a long rest after the fight.
  * Act two (after the sanctum) asks the same question once more: the vault or the well.
+ * Act three (after the barrow) asks it a last time: the gallery's loot or the shrine's rest.
  */
 export const NODES = {
   crypt: { kind: 'fight', level: 'crypt', col: 0, row: 1, next: ['warren', 'ossuary'] },
@@ -75,8 +76,28 @@ export const NODES = {
     teaser: 'A ghast and its ghouls. A runed weapon and potions, but no rest before the Barrow.',
   },
   barrow: {
-    kind: 'fight', level: 'barrow', short: 'Barrow', col: 7, row: 1, next: [], boss: true,
-    teaser: 'Varek the wight. The end of the road.',
+    kind: 'fight', level: 'barrow', short: 'Barrow', col: 7, row: 1, next: ['nest'], boss: true,
+    actBreak: true,
+    teaser: 'Varek the wight, the end of the second act. Afterwards the party takes a long rest.',
+  },
+  // Act three: the nest, then the gallery's loot or the shrine's rest, then the banshee.
+  nest: {
+    kind: 'fight', level: 'nest', short: 'Nest', col: 8, row: 1, next: ['gallery', 'shrine'],
+    teaser: 'Giant spiders: their webs hold you fast, their bites poison.',
+  },
+  gallery: {
+    kind: 'fight', level: 'gallery', short: 'Gallery', col: 9, row: 0, next: ['throne'],
+    teaser: 'Specters and skeletons. A magic cloak and weapon, but no rest before the throne.',
+  },
+  shrine: {
+    kind: 'rest', col: 9, row: 2, next: ['throne'],
+    name: 'The Silent Shrine', short: 'Shrine', verb: 'Rest at the shrine',
+    intro: 'A shrine to a forgotten saint, where no ghost will tread. The party takes a long rest.',
+    teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
+  },
+  throne: {
+    kind: 'fight', level: 'throne', short: 'Throne', col: 10, row: 1, next: [], boss: true,
+    teaser: 'Ysolde the banshee. The end of the road.',
   },
 };
 

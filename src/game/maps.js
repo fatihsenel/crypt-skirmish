@@ -150,9 +150,7 @@ export const LEVELS = [
   {
     id: 'barrow',
     name: 'The Wight’s Barrow',
-    final: true,
     intro: 'Morvath served something older. In the deepest barrow, Varek the wight rises from his bier in rusted mail.',
-    outro: 'Varek crumbles to dust and the barrow falls silent. The crypt is cleansed at last.',
     rows: [
       '################',
       '#F.R..#........#',
@@ -195,6 +193,76 @@ LEVELS.push({
   asleep: ['3,7'], // gnawing on something in the side room
   patrols: { '11,1': [[14, 1], [14, 2]] },
 });
+
+// Act three, below the barrow: spiders, then the haunted gallery or the shrine, then the
+// banshee who called Varek back.
+LEVELS.push(
+  {
+    id: 'nest',
+    name: 'The Spider Nest',
+    intro: 'Below the barrow the walls are grey with silk. Something big shifts in the webs overhead.',
+    rows: [
+      '################',
+      '#F.R..#..k..k..#',
+      '#.....+.....k..#',
+      '#W.C..#..|..|..#',
+      '#.....#.k......#',
+      '###+####..k..k.#',
+      '#......#..k..&.#',
+      '#..r...+.......#',
+      '#.r....#.|..|..#',
+      '#$..^..#..k.k..#',
+      '#......#.....>.#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+    asleep: ['3,7', '2,8'], // rats nesting in the silk
+    patrols: { '12,1': [[14, 3], [12, 2]] },
+  },
+  {
+    id: 'gallery',
+    name: 'The Haunted Gallery',
+    intro: 'Portraits of the barrow’s old lords line the walls. Their eyes follow you, and so do their ghosts.',
+    rows: [
+      '################',
+      '#F.R..#..e..e..#',
+      '#.....#.....s..#',
+      '#W.C..+..|..|..#',
+      '#.....#........#',
+      '##+####..e...e.#',
+      '#.....#........#',
+      '#..$..+..|..|..#',
+      '#..s..#.....s..#',
+      '#..^..##+###.e.#',
+      '#.........$#.>.#',
+      '################',
+    ],
+    loot: [['cloakProtection', 'potion'], ['weaponPlus1', 'potion']],
+    patrols: { '9,1': [[14, 1], [14, 4]] },
+  },
+  {
+    id: 'throne',
+    name: 'The Weeping Throne',
+    final: true,
+    intro: 'A woman in grey weeps on a throne of bones. It was her grief that woke Varek, and she will not let you leave.',
+    outro: 'Ysolde’s wail breaks into silence and the throne room goes still. The crypt is cleansed at last.',
+    rows: [
+      '################',
+      '#F.R..#........#',
+      '#.....#..e..e..#',
+      '#W.C..+........#',
+      '#.....#.|....|.#',
+      '###+###........#',
+      '#.....#.e.q..e.#',
+      '#..^..+........#',
+      '#.....#.|....|.#',
+      '#.$...##..k.k..#',
+      '#.....#......>.#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+  },
+);
 
 /** The first level's map, kept for older code and tests. */
 export const CRYPT = LEVELS[0].rows;
