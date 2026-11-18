@@ -187,7 +187,7 @@ export class Game {
   }
 
   toHitBonus(unit, attack) {
-    const archery = unit.passives?.includes('archery') && isWeapon(attack) && !isMelee(attack) ? 2 : 0;
+    const archery = unit.passives?.includes('archery') && isWeapon(attack) && !isMelee(attack) ? 1 : 0; // SRD +2, halved for balance
     return abilityMod(unit.stats[attack.stat]) + unit.prof + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + archery;
   }
 
@@ -1318,13 +1318,11 @@ export class Game {
   }
 
   /**
-   * A spell that costs no slot this time: Spiritual Weapon striking again, or Hunter's Mark
-   * moving on once its foe has dropped.
+   * A spell that costs no slot this time: Spiritual Weapon striking again. (Hunter's Mark
+   * moves on for free in the SRD; here every new mark costs a slot, for balance.)
    */
   freeRecast(caster, id) {
-    if (id === 'spiritualWeapon') return !!caster.spiritWeapon;
-    if (id === 'huntersMark') return !!caster.mark && !this.units.find((u) => u.id === caster.mark.id)?.alive;
-    return false;
+    return id === 'spiritualWeapon' && !!caster.spiritWeapon;
   }
 
   castSpell(caster, id, target) {
@@ -1334,8 +1332,7 @@ export class Game {
     if (spell.time === 'action') caster.actionUsed = true;
     else caster.bonusUsed = true;
     const again = this.freeRecast(caster, id);
-    const slot = !again ? this.spendSlot(caster, spell.level)
-      : id === 'spiritualWeapon' ? caster.spiritWeapon.slot : caster.mark.slot;
+    const slot = again ? caster.spiritWeapon.slot : this.spendSlot(caster, spell.level);
     const upcast = Math.max(0, slot - spell.level);
     this.reveal(caster, 'spell');
     const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot };
@@ -1461,9 +1458,7 @@ export class Game {
       }
       case 'huntersMark': {
         result.target = target;
-        result.again = again;
         const old = caster.mark && this.units.find((u) => u.id === caster.mark.id);
-        result.from = again ? old : null;
         result.unmarked = old || null; // whose tag to clear
         if (old) old.marked = false; // for the status tags; caster.mark is what the rules read
         target.marked = true;

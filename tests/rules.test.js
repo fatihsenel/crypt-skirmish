@@ -1717,7 +1717,7 @@ describe('the ranger', () => {
 
   it('takes the Rogue slot: a Ranger template, keyed as R, that still spots traps', () => {
     const c = newCampaign('normal', { R: 'Ash' }, { R: 'A' });
-    expect(c.party.R).toMatchObject({ cls: 'A', hp: 28, slots: { 1: 3 }, name: 'Ash' });
+    expect(c.party.R).toMatchObject({ cls: 'A', hp: 24, slots: { 1: 3 }, name: 'Ash' });
     expect(newCampaign().party.R.cls).toBeUndefined(); // the Rogue by default
     expect(newCampaign('normal', {}, { F: 'A' }).party.F.cls).toBeUndefined(); // not a choice there
     const game = arena(['######', '#Rg..#', '######']);
@@ -1727,21 +1727,21 @@ describe('the ranger', () => {
     expect(Object.keys(game.partyState())).toEqual(['R']);
   });
 
-  it('Archery adds 2 to hit with the bow, not the sword', () => {
+  it('Archery adds 1 to hit with the bow, not the sword', () => {
     const game = arena(['######', '#Rg..#', '######']);
     const r = game.units.find((u) => u.code === 'A');
-    expect(game.toHitBonus(r, r.attacks[1])).toBe(3 + 2 + 2);
+    expect(game.toHitBonus(r, r.attacks[1])).toBe(3 + 2 + 1);
     expect(game.toHitBonus(r, r.attacks[0])).toBe(3 + 2);
   });
 
-  it('Hunter’s Mark: +1d6 on weapon hits on the marked foe, moves free once it drops', () => {
+  it('Hunter’s Mark: +1d6 on weapon hits on the marked foe; a new mark always costs a slot', () => {
     const game = arena(['#########', '#R...g.g#', '#########']);
     const [r, g1, g2] = game.units;
     setTurn(game, 0);
     g1.hp = g1.maxHp = 999;
     g2.hp = g2.maxHp = 999;
     const cast = game.castSpell(r, 'huntersMark', g1);
-    expect(cast).toMatchObject({ ok: true, slot: 1, again: false });
+    expect(cast).toMatchObject({ ok: true, slot: 1 });
     expect([r.slots[1], r.bonusUsed, r.mark]).toEqual([2, true, { id: g1.id, slot: 1 }]);
     const hit = game.attack(r, g1, r.attacks[1]);
     expect(hit.hit).toBe(true);
@@ -1753,13 +1753,15 @@ describe('the ranger', () => {
     expect(other.mark).toBeNull(); // only the marked foe
     r.bonusUsed = false;
     expect(game.spellProblem(r, 'huntersMark', g1)).toBe('Goblin 1 is already marked');
-    // Moving it while the foe stands costs a new slot; once it falls, it is free.
+    // Even once the marked foe falls, moving the mark takes a new slot (SRD: free).
     game.applyDamage(g1, 9999, r);
     r.slots = { 1: 0 };
-    expect(game.spellProblem(r, 'huntersMark', g2)).toBeNull();
+    expect(game.freeRecast(r, 'huntersMark')).toBe(false);
+    expect(game.spellProblem(r, 'huntersMark', g2)).not.toBeNull(); // no slots left
+    r.slots = { 1: 1 };
     const moved = game.castSpell(r, 'huntersMark', g2);
-    expect(moved).toMatchObject({ ok: true, slot: 0, again: true, from: g1 });
-    expect(r.mark).toEqual({ id: g2.id, slot: 1 });
+    expect(moved).toMatchObject({ ok: true, slot: 1 });
+    expect([r.slots[1], r.mark]).toEqual([0, { id: g2.id, slot: 1 }]);
     r.bonusUsed = false;
     game.applyDamage(r, 999, g2);
     expect(r.mark).toBeNull(); // a fallen ranger's mark ends
@@ -1772,7 +1774,7 @@ describe('the ranger', () => {
     game.castSpell(r, 'huntersMark', g1);
     r.bonusUsed = false;
     const moved = game.castSpell(r, 'huntersMark', g2);
-    expect(moved).toMatchObject({ ok: true, slot: 1, again: false, from: null, unmarked: g1 });
+    expect(moved).toMatchObject({ ok: true, slot: 1, unmarked: g1 });
     expect([r.slots[1], g1.marked, g2.marked]).toEqual([1, false, true]);
     const deaths = [];
     game.on('death', (e) => deaths.push(e));
@@ -1780,8 +1782,12 @@ describe('the ranger', () => {
     expect([g2.marked, deaths[0].unmarked]).toEqual([false, g2]);
   });
 
-  it('Colossus Slayer: +1d8 once per turn, only on a foe that is already hurt', () => {
-    const game = arena(['########', '#R...g.#', '########']);
+  it('Colossus Slayer (from level 5): +1d8 once per turn, only on a foe that is already hurt', () => {
+    expect(rangerParty(3).R.level).toBe(3);
+    const low = arena(['########', '#R...g.#', '########']);
+    expect(low.units[0].passives).not.toContain('colossusSlayer');
+    expect(low.units[0].spells).toEqual(['huntersMark']); // no Cure Wounds
+    const game = arena(['########', '#R...g.#', '########'], 5);
     const [r, g] = game.units;
     setTurn(game, 0);
     g.hp = g.maxHp = 999;
@@ -1800,7 +1806,7 @@ describe('the ranger', () => {
     expect(party.R).toMatchObject({ cls: 'A', level: 6 });
     const game = new Game(['######', '#Rg..#', '######'], { party, senses: false, rng: fixed(0.5) });
     const [r, g] = game.units;
-    expect([r.maxHp, game.acOf(r), r.extraAttack, r.slotMax, r.stats.dex]).toEqual([52, 16, 2, { 1: 4, 2: 2 }, 18]);
+    expect([r.maxHp, game.acOf(r), r.extraAttack, r.slotMax, r.stats.dex]).toEqual([48, 16, 2, { 1: 4, 2: 2 }, 18]);
     expect(game.attackMods(g, r, g.attacks[0], { opportunity: true }).dis).toContain('escape the horde');
     expect(game.attackMods(g, r, g.attacks[0]).dis).not.toContain('escape the horde');
   });

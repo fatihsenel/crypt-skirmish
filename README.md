@@ -30,13 +30,14 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   **Shield of Faith** (bonus action, 60 ft) gives one ally +2 AC for the fight, until it moves
   to someone else or the paladin falls
 - **Ranger** (optional: picked on the title screen in place of the Rogue, as Wren in dark
-  leather with a crossbow; the rules call it a longbow, as the model pack has no bow): 28 HP,
-  AC 15, a 120-ft longbow with the **Archery** style (+2 to hit with ranged weapons), three
+  leather with a crossbow; the rules call it a longbow, as the model pack has no bow): 24 HP,
+  AC 15, a 120-ft longbow with the **Archery** style (+1 to hit with ranged weapons), three
   1st-level slots and the Rogue's Keen Eyes for traps and mimics. **Hunter's Mark** (bonus
   action, 90 ft) adds 1d6 to every weapon hit on one foe for the fight (marking wakes it if
-  it was asleep or unaware); when that foe drops, moving the mark is a bonus action with no
-  slot. The Ranger hides as an action, trained in Stealth but not an expert. **Colossus Slayer** adds 1d8 once per turn
-  to a weapon hit on a foe that is already hurt. **Cure Wounds** heals by touch with WIS
+  it was asleep or unaware). The Ranger hides as an action, trained in Stealth but not an
+  expert, and has no healing. Toned down from the SRD so it doesn't outclass the Rogue: no
+  Cure Wounds, 24 HP instead of 28, Archery +1 instead of +2, every new Hunter's Mark costs
+  a slot (the SRD moves it for free when its foe drops), and Colossus Slayer waits for level 5
 - monsters: goblins (skirmishers), skeletons (brutes, undead), an **orc** that charges
   (Aggressive), **giant rats** with Pack Tactics, **Grukk the goblin boss** (two attacks, the
   second at disadvantage) and **Morvath the necromancer**, who raises corpses with
@@ -84,7 +85,8 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   at 5, Brannoc gets **Extra Attack** (the Paladin also two 2nd-level slots), Ilsa
   **Fireball** (20-ft radius, hits allies too) and **Lightning Bolt** (a 100-ft line, 5 ft
   wide, 8d6 lightning with a DEX save for half; walls stop it, and it hits allies in the
-  line too), Wren Sneak Attack 3d6 and **Uncanny Dodge** (the Ranger Extra Attack, a fourth
+  line too), Wren Sneak Attack 3d6 and **Uncanny Dodge** (the Ranger Extra Attack, **Colossus Slayer**
+  (+1d8 once per turn to a weapon hit on a foe that is already hurt), a fourth
   1st-level slot and two 2nd-level ones), Maela **Mass Healing Word**,
   **Spiritual Weapon** (bonus action: a floating spectral mace appears beside a foe within
   60 ft and makes a melee spell attack for 1d8 + WIS force; for the rest of the fight it
@@ -193,8 +195,7 @@ otherwise use the monster AI's tactics. Gear found goes to whoever suits it.
 `npm run sim -- 300` plays 300 campaigns down each route; `npm run sim -- 300 act2` replays
 act two only, from a pool of real end-of-act-one parties (faster when tuning). Set `SEED=n`
 to change the dice and `DIFFICULTY=story|hard` to play another difficulty; `PALADIN=1` and
-`RANGER=1` swap those classes in (the Ranger keeps its mark on the toughest foe and Cure
-Wounds a badly hurt neighbour). Act two was tuned against act one's numbers from the same simulator:
+`RANGER=1` swap those classes in (the Ranger keeps its mark on the toughest foe). Act two was tuned against act one's numbers from the same simulator:
 roughly 80% of the party's HP left after the Catacombs, 65% after the Vault, and a Barrow
 that is a clear step harder when the party skips the well's rest. The Larder is the greedy
 option: on Normal it's won almost always after the well, but taking it after the Vault (no

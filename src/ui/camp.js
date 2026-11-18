@@ -31,7 +31,7 @@ const CLASS_BLURB = {
   F: 'Fighter: the most HP, Second Wind to heal mid-fight, Extra Attack at level 5.',
   P: 'Paladin: Divine Smite burns spell slots for radiant damage, Lay on Hands and Shield of Faith protect the party, Aura of Protection at level 6.',
   R: 'Rogue: Sneak Attack, hides as a bonus action and slips past monsters unseen, spots traps.',
-  A: 'Ranger: a longbow with Archery, Hunter’s Mark and Colossus Slayer for extra damage, Cure Wounds, spots traps. Extra Attack at level 5.',
+  A: 'Ranger: a longbow with Archery, Hunter’s Mark for extra damage on one foe, spots traps. Extra Attack and Colossus Slayer at level 5.',
 };
 
 export class Camp {

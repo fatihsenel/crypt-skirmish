@@ -196,9 +196,7 @@ export class Hud {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} lays hands on ${self}: <b class="heal">+${r.healed} HP</b> <span class="dice">${r.left} left in the pool</span>.`);
     } else if (r.id === 'huntersMark') {
-      this.log(r.again
-        ? `${who(r.caster)} moves ${name} from the fallen ${who(r.from)} to ${who(r.target)}. <span class="dice">bonus action, no slot</span>`
-        : `${who(r.caster)} casts ${name} on ${who(r.target)}: <b>+1d6</b> on every weapon hit against it. ${slot}`);
+      this.log(`${who(r.caster)} casts ${name} on ${who(r.target)}: <b>+1d6</b> on every weapon hit against it. ${slot}`);
     } else if (r.id === 'shieldOfFaith') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} casts ${name} on ${self}: <b>AC +2</b> for the rest of the fight. ${slot}`);
@@ -375,9 +373,7 @@ export class Hud {
       return button({
         kind: 'spell', id, name: s.name, cls: 'spell',
         sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
-          : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus'
-          : id === 'huntersMark' && game.freeRecast(u, id) ? 'move it, no slot · bonus'
-          : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
+          : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus'          : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
         title: problem ? `${s.desc}\n(${problem})` : s.desc,
         disabled: !!problem,
         active: selected?.kind === 'spell' && selected.id === id,

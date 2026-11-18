@@ -703,7 +703,7 @@ function spellPreview(u, id, t) {
       return `Spiritual Weapon → ${t.name}: ${signed(u.prof + mod)} vs AC ${game.acOf(t)}, 1d8${signed(mod)} force · ${cost}`;
     }
     case 'huntersMark':
-      return `Hunter’s Mark → ${t.name}: +1d6 on your weapon hits against it · ${game.freeRecast(u, id) ? 'no slot' : 'a 1st-level slot'}`;
+      return `Hunter’s Mark → ${t.name}: +1d6 on your weapon hits against it · a 1st-level slot`;
     case 'sacredFlame':
       return `Sacred Flame → ${t.name}: ${s.damage} radiant, DEX save DC ${game.spellDC(u)} negates (their DEX ${signed(abilityMod(t.stats.dex))})`;
     case 'cureWounds':

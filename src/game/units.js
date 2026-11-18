@@ -61,17 +61,18 @@ export const TEMPLATES = {
       { name: 'Shortbow', stat: 'dex', damage: '1d6', reach: 16, projectile: 'arrow' },
     ],
   },
-  // The Ranger (a Hunter) can take the Rogue's place: a longbow, Hunter's Mark and the
-  // ranger's own healing. Keeps the Rogue's eye for traps so the slot still finds them.
+  // The Ranger (a Hunter) can take the Rogue's place: a longbow and Hunter's Mark, with
+  // Colossus Slayer from level 5 (SRD: 3) so it doesn't outclass the Rogue. Keeps the
+  // Rogue's eye for traps so the slot still finds them.
   A: {
     name: 'Wren', cls: 'Ranger', team: 'heroes', color: 0x9a7a4a,
-    hp: 28, ac: 15, speed: 6, prof: 2, level: 3, // studded leather
+    hp: 24, ac: 15, speed: 6, prof: 2, level: 3, // studded leather; HP below the SRD's 28 to offset the bow
     stealth: 'trained',
     ai: 'skirmisher', // when the AI plays it (autoplay, the simulator): keep away and shoot
     castStat: 'wis',
-    spells: ['huntersMark', 'cureWounds'],
+    spells: ['huntersMark'], // no Cure Wounds: the slot doesn't heal, as the Rogue's doesn't
     slots: { 1: 3 },
-    passives: ['archery', 'colossusSlayer', 'trapSense'],
+    passives: ['archery', 'trapSense'],
     stats: { str: 12, dex: 16, con: 14, int: 10, wis: 14, cha: 8 },
     attacks: [
       { name: 'Shortsword', stat: 'dex', damage: '1d6', reach: 1 },
@@ -301,8 +302,8 @@ export const PROGRESSION = {
   A: {
     4: { hp: 8, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
     5: {
-      hp: 8, prof: 3, extraAttack: 2, slots: { 1: 4, 2: 2 }, passives: ['extraAttack'],
-      note: 'Extra Attack, a fourth 1st-level slot and two 2nd-level ones',
+      hp: 8, prof: 3, extraAttack: 2, slots: { 1: 4, 2: 2 }, passives: ['extraAttack', 'colossusSlayer'],
+      note: 'Extra Attack and Colossus Slayer (+1d8 once per turn on a hurt foe)',
     },
     6: { hp: 8, passives: ['escapeTheHorde'], note: 'Escape the Horde: opportunity attacks against you have disadvantage' },
   },

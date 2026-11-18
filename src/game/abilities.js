@@ -55,7 +55,7 @@ export const PASSIVES = {
   divineSmite: 'Divine Smite: arm it, and your next melee weapon hit spends a spell slot for 2d8 radiant (+1d8 per slot level above 1st, +1d8 against undead).',
   dueling: 'Dueling: +2 damage with melee weapon attacks.',
   auraOfProtection: 'Aura of Protection: you and allies within 10 ft add your CHA modifier to saving throws.',
-  archery: 'Archery: +2 to hit with ranged weapon attacks.',
+  archery: 'Archery: +1 to hit with ranged weapon attacks.',
   colossusSlayer: 'Colossus Slayer: once per turn, a weapon hit on a foe that is already hurt deals an extra 1d8.',
   escapeTheHorde: 'Escape the Horde: opportunity attacks against you have disadvantage.',
   packTactics:'Pack Tactics: advantage when an ally is next to the target.',
@@ -113,7 +113,7 @@ export const SPELLS = {
   huntersMark: {
     name: 'Hunter’s Mark', level: 1, time: 'bonus', range: 18, targeting: 'enemy',
     damage: '1d6',
-    desc: 'Bonus action, 90 ft: mark a foe. Your weapon hits on it deal an extra 1d6 for the rest of the fight. When it drops, move the mark to another foe as a bonus action, no slot. One mark at a time. The foe feels it: marking wakes a sleeping or unaware one.',
+    desc: 'Bonus action, 90 ft: mark a foe. Your weapon hits on it deal an extra 1d6 for the rest of the fight. One mark at a time; marking another foe, even after this one drops, takes a new slot. The foe feels it: marking wakes a sleeping or unaware one.',
   },
   fireball: {
     name: 'Fireball', level: 3, time: 'action', range: 30, radius: 4, targeting: 'area',

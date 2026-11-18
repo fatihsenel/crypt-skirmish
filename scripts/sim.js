@@ -118,7 +118,7 @@ function heroOpening(game, u) {
   }
   if (u.code === 'F' && u.hp < u.maxHp / 2 && !game.actionProblem(u, 'secondWind')) game.doAction(u, 'secondWind');
   if (u.code === 'P') paladinOpening(game, u, heroes);
-  if (u.code === 'A') rangerOpening(game, u, hurt);
+  if (u.code === 'A') rangerOpening(game, u);
   if (!u.actionUsed && u.hp < u.maxHp * 0.35 && u.potions > 0 && !game.actionProblem(u, 'potion')) game.doAction(u, 'potion');
 }
 
@@ -138,18 +138,13 @@ function paladinOpening(game, u, heroes) {
   if (!u.smiteArmed && slots > 0 && (worthy || slots >= 3)) game.toggleSmite(u);
 }
 
-/**
- * Hunter's Mark on the toughest foe in sight (moved for free once it drops), and Cure
- * Wounds on a hero in real trouble next to the ranger while slots remain.
- */
-function rangerOpening(game, u, hurt) {
+/** Hunter's Mark on the toughest foe in sight, when the fight looks worth a slot. */
+function rangerOpening(game, u) {
   const foes = game.spellTargets(u, 'huntersMark').filter((e) => !e.unaware);
   const markedAlive = u.mark && game.units.find((e) => e.id === u.mark.id)?.alive;
-  if (!markedAlive && foes.length && (game.freeRecast(u, 'huntersMark') || foes.length >= 2 || foes.some((e) => (e.cr ?? 0) >= 1))) {
+  if (!markedAlive && foes.length && (foes.length >= 2 || foes.some((e) => (e.cr ?? 0) >= 1))) {
     game.castSpell(u, 'huntersMark', foes.sort((a, b) => b.hp - a.hp)[0]);
   }
-  const low = hurt.find((h) => h.hp < h.maxHp * 0.3 && !game.spellProblem(u, 'cureWounds', h));
-  if (low) game.castSpell(u, 'cureWounds', low);
 }
 
 const gridDistanceTo =(a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
