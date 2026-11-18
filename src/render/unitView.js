@@ -87,6 +87,20 @@ export class UnitView {
     this.fadeMeshes(0.75);
   }
 
+  /** Already dead when the view is made (a restored fight): no fall, just the body. */
+  restoreDead() {
+    if (this.unit.raised) {
+      this.gone = true;
+      this.group.visible = false;
+      return;
+    }
+    if (this.unit.corpse) return; // laid out in the constructor
+    this.label.visible = false;
+    if (this.rig) this.rig.pose('dead');
+    else this.deadPose(1);
+    this.fadeMeshes(0.4);
+  }
+
   deadPose(t) {
     const fig = this.model.root;
     if (this.model.dieAxis === 'z') fig.rotation.z = (Math.PI / 2) * t;

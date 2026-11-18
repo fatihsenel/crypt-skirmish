@@ -29,6 +29,8 @@ html, body {
   color: var(--ink);
   font: 14px/1.4 var(--body);
   overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* no double-tap zoom on the HUD */
 }
 
 #app, #stage { position: fixed; inset: 0; }
@@ -115,7 +117,7 @@ html, body {
   scrollbar-width: none;
 }
 @media (max-width: 900px) {
-  #initiative { max-width: calc(100% - 130px); left: 12px; transform: none; }
+  #initiative { max-width: calc(100% - 160px); left: 12px; transform: none; }
 }
 .chip {
   display: grid;
@@ -177,12 +179,19 @@ html, body {
   flex-direction: column;
   padding: 10px 0 0;
 }
-#log h2 {
+#log .log-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin: 0 14px 6px;
+}
+#log h2 {
+  margin: 0;
   font: 600 13px var(--display);
   letter-spacing: 0.06em;
   color: var(--gold);
 }
+#log-close { display: none; padding: 2px 9px; font-size: 13px; line-height: 1.4; }
 #log-list {
   list-style: none;
   margin: 0;
@@ -411,6 +420,25 @@ kbd {
   border-color: var(--panel-edge);
   font-size: 12px;
 }
+#log-toggle {
+  display: none;
+  position: relative;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-color: var(--panel-edge);
+  font-size: 12px;
+}
+#log-toggle.unread::after {
+  content: '';
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+#log-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
 #sound .cross, #music .cross { display: none; }
 #music.off { color: var(--muted); }
 #music.off .cross { display: inline; }
@@ -500,10 +528,59 @@ kbd {
   cursor: help;
 }
 
+/* --- narrow screens: the log becomes a panel of its own, opened from a button -------- */
 @media (max-width: 900px) {
   #log { display: none; }
-  #help { display: none; }
+  #log-toggle { display: flex; }
+  #app.log-open #log {
+    display: flex;
+    z-index: 5;
+    top: 64px; right: 12px; bottom: 12px;
+    width: min(360px, calc(100% - 24px));
+    background: rgba(18, 14, 20, 0.96);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+  #app.log-open #log-close { display: block; }
+  #log-list { font-size: 13px; }
+  #help { width: min(260px, calc(100% - 24px)); max-height: calc(100% - 300px); overflow-y: auto; z-index: 4; }
 }
+@media (max-width: 900px) {
+  #audio > button > span { display: none; } /* icons only */
+  #audio > button { padding: 7px 9px; }
+}
+/* Phones, upright or on their side: a compact action bar. */
+@media (max-width: 640px), (max-height: 520px) {
+  #actionbar { bottom: calc(8px + env(safe-area-inset-bottom)); max-width: calc(100% - 16px); }
+  #actionbar .bar { padding: 6px 8px 8px; gap: 6px 10px; }
+  #who { gap: 2px 10px; padding-bottom: 4px; }
+  .who-name { font-size: 15px; }
+  /* One row of abilities that scrolls sideways, rather than a wall of buttons over the board. */
+  #attacks { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+  #attacks::-webkit-scrollbar { display: none; }
+  #attacks .group { flex: none; }
+  #hint { font-size: 12px; max-width: 100%; }
+}
+@media (max-height: 520px) {
+  #help { display: none; }
+  #actionbar { gap: 4px; }
+  #actionbar .bar { grid-template-columns: minmax(0, 1fr) auto; }
+  /* One line of name, stats and tags, scrolling sideways like the abilities. */
+  #who { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+  #who::-webkit-scrollbar { display: none; }
+  #who > * { flex: none; }
+  .passives, .economy, .stats { flex-wrap: nowrap; }
+  #attacks .group-label { display: none; }
+  #app.log-open #log { top: 56px; bottom: 8px; }
+}
+
+/* --- touch: bigger targets, no keyboard hints, touch wording in the controls --------- */
+.help-keys .touch { display: none; }
+body.touch .help-keys .mouse { display: none; }
+body.touch .help-keys .touch { display: revert; }
+body.touch #end-turn kbd, body.touch #help summary kbd { display: none; }
+body.touch button.ability { padding: 7px 10px; min-height: 40px; }
+body.touch #end-turn { min-height: 44px; padding: 8px 14px; }
+body.touch .passive-tag { padding: 2px 7px; }
 #next[hidden] { display: none; }
 #to-map[hidden], #restart[hidden] { display: none; }
 button.primary { border-color: var(--gold); background: rgba(217, 180, 90, 0.2); font-weight: 600; }
@@ -673,5 +750,5 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
   .camp-card { padding: 14px 16px 18px; }
 }
 /* The fight HUD steps back while the title or camp is up. */
-#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative),
-#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative) { visibility: hidden; }
+#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle),
+#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle) { visibility: hidden; }

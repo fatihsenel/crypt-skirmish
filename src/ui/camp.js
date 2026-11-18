@@ -114,6 +114,7 @@ export class Camp {
     $('#title-continue').hidden = !save;
     $('#title-save').textContent = save
       ? `Saved run (${DIFFICULTIES[save.difficulty].name}): party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
+        + (save.fight ? `. Mid-fight in ${nodeName(save.fight.node)}.` : '')
       : '';
     $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
   }

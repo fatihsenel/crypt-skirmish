@@ -32,7 +32,30 @@ export class Hud {
     $('#sound').addEventListener('click', onToggleSound);
     $('#music').addEventListener('click', onToggleMusic);
     $('#attacks').addEventListener('click', (ev) => this.onAbilityClick(ev));
+    // No hover on a touch screen: tapping a tag or a portrait shows its tooltip instead.
+    for (const id of ['#who', '#initiative']) {
+      $(id).addEventListener('click', (ev) => {
+        const tip = ev.target.closest('[title]');
+        if (this.touch && tip) this.toast(tip.title);
+      });
+    }
+    $('#log-toggle').addEventListener('click', () => this.toggleLog());
+    $('#log-close').addEventListener('click', () => this.toggleLog(false));
     this.toastTimer = null;
+    this.touch = false;
+    this.logOpen = false;
+  }
+
+  /** The combat log as a panel of its own, for screens too narrow to keep it beside the board. */
+  toggleLog(open = !this.logOpen) {
+    this.logOpen = open;
+    $('#app').classList.toggle('log-open', open);
+    $('#log-toggle').setAttribute('aria-expanded', String(open));
+    if (open) {
+      $('#log-toggle').classList.remove('unread');
+      const list = $('#log-list');
+      list.scrollTop = list.scrollHeight; // a hidden list can't scroll, so catch up now
+    }
   }
 
   reset() {
@@ -48,6 +71,7 @@ export class Hud {
     const list = $('#log-list');
     list.appendChild(li);
     list.scrollTop = list.scrollHeight;
+    if (!this.logOpen) $('#log-toggle').classList.add('unread');
   }
 
   logAttack(r) {
@@ -288,6 +312,9 @@ export class Hud {
     // constantly, and replacing buttons mid-click would swallow the click.
     this.setHtml($('#attacks'), mine ? this.abilityButtons(game, u, selected, busy)
       : game.over ? '' : `<span class="waiting">${esc(u.name)} ${u.unaware ? "hasn't noticed you yet…" : 'is acting…'}</span>`);
+    // On a phone the row scrolls sideways: keep the chosen attack or spell in view.
+    const chosen = $('#attacks .selected');
+    if (chosen) chosen.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   setHtml(el, html) {
@@ -386,7 +413,15 @@ export class Hud {
     b.querySelector('span').textContent = on ? 'Sound' : 'Muted';
   }
 
-  hint(text) {
+  /**
+   * The line above the action bar. `act`: it previews something a click would do; on a
+   * touch screen that takes a second tap, so the hint says so.
+   */
+  hint(text, act = false) {
+    if (this.touch && text) {
+      text = text.replace(/\bclick\b/g, 'tap').replace(/\bClick\b/g, 'Tap').replace(/ with the mouse/g, '').replace(' · Esc to cancel', '');
+      if (act) text += ' · tap again to confirm';
+    }
     $('#hint').textContent = text;
     $('#hint').classList.toggle('show', !!text);
   }
@@ -396,7 +431,7 @@ export class Hud {
     el.textContent = text;
     el.classList.add('show');
     clearTimeout(this.toastTimer);
-    this.toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+    this.toastTimer = setTimeout(() => el.classList.remove('show'), Math.max(2200, text.length * 55));
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */

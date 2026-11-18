@@ -140,7 +140,10 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   healing given and times downed, with a star on whoever leads each column. Lost fights
   count toward the tally; hero numbers come from the fights that were won
 - **saves**: the run is saved to the browser after every room; the title screen offers
-  Continue. Fights themselves are not saved: reloading mid-fight returns you to the camp
+  Continue. A fight in progress is saved too, as its dice seed plus the commands the
+  heroes were given; reloading replays them and picks up on the same turn. If a save
+  no longer replays to the same state (say, after a rules change), the party is sent
+  back to the camp instead. The combat log's earlier lines are not restored
 - **house rules** (simplifications of the SRD): goblin arrows and rat bites poison
   (DC 10 CON); ghoul claws poison instead of paralysing; the mimic's pseudopod knocks
   prone (DC 13 STR) instead of grappling; Grukk's second attack is the only clumsy one;
@@ -201,6 +204,16 @@ rest at all) drops the Barrow to roughly two wins in three.
 | M / N | Sound on/off / music on/off |
 | H | Show or hide the controls panel (its state is remembered) |
 
+On phones and tablets:
+
+| Touch | Action |
+| --- | --- |
+| Tap a tile, enemy, chest or target | Preview what would happen (the hint shows it) |
+| Tap the same spot again | Do it |
+| Drag / pinch | Pan / zoom |
+| Tap a tag or portrait | Show its tooltip |
+| Log button (top right) | Open or close the combat log; a gold dot means new lines. Below 900 px wide the log is hidden otherwise |
+
 ## Layout
 
 ```
@@ -219,6 +232,7 @@ src/
                    attack, advantage, sneak attack, actions, spells & slots, chests,
                    party carry-over between levels, events
     ai.js          monster brains (brute / skirmisher / caster), one step at a time
+    replay.js      fight saves: hero commands, monster turns and replaying them from a seed
   render/          three.js only
     stage.js       renderer, isometric orthographic camera, lights, loop, screen shake
     board.js       dungeon meshes, torches, doors, chests, traps, stairs, banners, props,
@@ -241,7 +255,7 @@ src/
   ui/hud.js        HTML overlay: initiative, action bar, combat log
   ui/camp.js       title screen and camp: map, party, pack, level-ups
   main.js          controller: input → game → animations → HUD; campaign flow and saving
-tests/rules.test.js
+tests/rules.test.js, tests/replay.test.js
 scripts/sim.js     headless balance simulator (npm run sim)
 ```
 

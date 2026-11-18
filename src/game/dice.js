@@ -23,6 +23,16 @@ export function rollExpr(expr, { crit = false, rng = Math.random } = {}) {
   return { ...r, bonus, total: r.total + bonus };
 }
 
-export const abilityMod = (score) => Math.floor((score - 10) / 2);
+/** Seeded PRNG (mulberry32): the same seed rolls the same dice, so a fight can be replayed. */
+export function seeded(seed) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export const abilityMod =(score) => Math.floor((score - 10) / 2);
 
 export const signed = (n) => (n >= 0 ? `+${n}` : `${n}`);

@@ -333,6 +333,20 @@ export function unequip(prev, code, i) {
 
 export const serialize = (state) => JSON.stringify(state);
 
+/**
+ * A fight saved mid-battle (see replay.js): { node, seed, log, check, explored, seen }.
+ * Only its shape is checked here; a log that no longer replays is caught on loading.
+ */
+function validFight(f) {
+  return !!f && typeof f === 'object'
+    && !!NODES[f.node]?.level
+    && Number.isInteger(f.seed)
+    && Array.isArray(f.log) && f.log.every((c) => c && typeof c.type === 'string')
+    && (f.check === null || typeof f.check === 'string')
+    && Array.isArray(f.explored) && f.explored.every((k) => typeof k === 'string')
+    && Array.isArray(f.seen) && f.seen.every(Number.isInteger);
+}
+
 /** Parse save data. Returns null for anything missing, corrupt or from another version. */
 export function parseSave(text) {
   try {
@@ -354,6 +368,7 @@ export function parseSave(text) {
       if (max) r.layOnHands = Number.isFinite(r.layOnHands) ? Math.max(0, Math.min(max, r.layOnHands)) : max;
       else delete r.layOnHands;
     }
+    if (s.fight !== undefined && !validFight(s.fight)) delete s.fight;
     // A run finished before act two existed ended at the Sanctum: open the way on, after
     // the long rest the act break gives.
     if (s.done && NODES[s.at]?.next.length) {

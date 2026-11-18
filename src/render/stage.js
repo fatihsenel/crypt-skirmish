@@ -53,16 +53,16 @@ export function createStage(container, { width, height }) {
   sun.shadow.bias = -0.0005;
   scene.add(sun, sun.target);
 
+  // Room the HUD takes at the edges, in CSS px; replaced through setInsets.
+  let insets = (w) => ({ top: 60, bottom: 120, right: w > 900 ? 310 : 0 });
   const fit = () => {
     const w = container.clientWidth;
     const h = container.clientHeight;
     const aspect = w / h;
     // Keep the board's diamond footprint inside the area not covered by HUD panels.
-    const sidePanel = w > 900 ? 310 : 0; // combat log on the right
-    const topBar = 60;
-    const bottomBar = 120;
+    const { top: topBar, bottom: bottomBar, right: sidePanel } = insets(w, h);
     const freeW = w - sidePanel;
-    const freeH = h - topBar - bottomBar;
+    const freeH = Math.max(h * 0.35, h - topBar - bottomBar);
     const diag = (width + height) * Math.SQRT1_2;
     const needW = diag + 1;
     const needH = diag * 0.58 + 1.6;
@@ -109,5 +109,11 @@ export function createStage(container, { width, height }) {
     if (left > 0) camera.position.sub(jitter);
   });
 
-  return { scene, camera, renderer, controls, tickers, shake, dom: renderer.domElement };
+  /** `fn(width, height)` returns { top, bottom, right }: the px the HUD covers. Re-fits. */
+  const setInsets = (fn) => {
+    insets = fn;
+    fit();
+  };
+
+  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, dom: renderer.domElement };
 }

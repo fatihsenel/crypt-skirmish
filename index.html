@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Crypt Skirmish</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,7 +15,10 @@
       <header id="initiative" aria-label="Initiative order"></header>
 
       <aside id="log" aria-label="Combat log">
-        <h2>Combat log</h2>
+        <div class="log-head">
+          <h2>Combat log</h2>
+          <button id="log-close" type="button" aria-label="Close the combat log">✕</button>
+        </div>
         <ol id="log-list"></ol>
       </aside>
 
@@ -36,12 +39,17 @@
         </summary>
         <div class="help-body">
           <dl class="help-keys">
-            <dt><kbd>Click</kbd></dt><dd>Move, attack, or open a chest beside you</dd>
-            <dt><kbd>Right-drag</kbd></dt><dd>Pan the view</dd>
-            <dt><kbd>Wheel</kbd></dt><dd>Zoom</dd>
-            <dt><kbd>Space</kbd></dt><dd>End turn</dd>
-            <dt><kbd>Esc</kbd></dt><dd>Cancel attack or spell</dd>
-            <dt><kbd>M</kbd> <kbd>N</kbd></dt><dd>Sound / music on or off</dd>
+            <dt class="mouse"><kbd>Click</kbd></dt><dd class="mouse">Move, attack, or open a chest beside you</dd>
+            <dt class="mouse"><kbd>Right-drag</kbd></dt><dd class="mouse">Pan the view</dd>
+            <dt class="mouse"><kbd>Wheel</kbd></dt><dd class="mouse">Zoom</dd>
+            <dt class="mouse"><kbd>Space</kbd></dt><dd class="mouse">End turn</dd>
+            <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Cancel attack or spell</dd>
+            <dt class="mouse"><kbd>M</kbd> <kbd>N</kbd></dt><dd class="mouse">Sound / music on or off</dd>
+            <dt class="touch"><kbd>Tap</kbd></dt><dd class="touch">Show the move, attack or spell there</dd>
+            <dt class="touch"><kbd>Tap again</kbd></dt><dd class="touch">Do it</dd>
+            <dt class="touch"><kbd>Drag</kbd></dt><dd class="touch">Pan the view</dd>
+            <dt class="touch"><kbd>Pinch</kbd></dt><dd class="touch">Zoom</dd>
+            <dt class="touch"><kbd>Tap a tag</kbd></dt><dd class="touch">What a feature or condition does</dd>
           </dl>
           <h3>On the board</h3>
           <ul class="help-legend">
@@ -54,6 +62,14 @@
         </div>
       </details>
       <div id="audio">
+      <button id="log-toggle" type="button" aria-controls="log" aria-expanded="false" title="Combat log">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M6 4h10a2 2 0 0 1 2 2v13a1 1 0 0 0 2 0V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />
+          <path d="M6 4a2 2 0 0 0-2 2v13a1 1 0 0 0 1 1h15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          <path d="M8 9h6M8 12.5h6M8 16h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        </svg>
+        <span>Log</span>
+      </button>
       <button id="music" type="button" aria-pressed="true" title="Music on/off (N)">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M9 17V6l10-2v11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />

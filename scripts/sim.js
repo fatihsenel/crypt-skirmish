@@ -11,6 +11,7 @@ import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
 import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
+import { seeded } from '../src/game/dice.js';
 
 const CLASSES = process.env.PALADIN ? { F: 'P' } : {};
 const freshCampaign = () => newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES);
@@ -186,16 +187,6 @@ function mimicCheck(level, runs) {
 }
 
 const pct = (n, d) => `${Math.round((100 * n) / d)}%`;
-
-/** Seeded PRNG (mulberry32) so before/after runs compare like with like. */
-function seeded(seed) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /** Hand pack gear to whoever it suits: weapons to the fighter then the rogue, the rest to the casters. */
 function equipAll(state) {

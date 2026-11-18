@@ -10,9 +10,9 @@ import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
   recordDefeat, runSummary, heroUnit,
 } from './game/campaign.js';
-import { nextMonsterStep } from './game/ai.js';
+import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed, unitRef, targetRef } from './game/replay.js';
 import { key, pathFrom, gridDistance } from './game/grid.js';
-import { signed, abilityMod } from './game/dice.js';
+import { signed, abilityMod, seeded } from './game/dice.js';
 import { SPELLS, ACTIONS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { createStage } from './render/stage.js';
 import { Board } from './render/board.js';
@@ -54,6 +54,19 @@ function clearSave() {
 let campaign = null;
 /** The map node being fought. */
 let nodeId = null;
+/**
+ * The fight in progress, saved with the campaign so a reload picks it up again:
+ * { node, seed, log, check, explored, seen } (see replay.js). null when it can't be saved.
+ */
+let fight = null;
+
+/** Save the campaign together with the fight in progress. */
+function saveFight() {
+  if (!fight || !game || game.over === 'defeat') return;
+  fight.explored = board ? [...board.explored] : [];
+  fight.seen = [...seenIds].map((id) => game.units.findIndex((u) => u.id === id)).filter((i) => i >= 0);
+  writeSave({ ...campaign, fight });
+}
 
 const hud = new Hud({
   onEndTurn: () => endHeroTurn(),
@@ -91,7 +104,15 @@ const camp = new Camp({
     sfx.ui();
     saving = true;
     campaign = loadSave() ?? newCampaign();
-    showCamp(null);
+    const saved = campaign.fight;
+    delete campaign.fight;
+    if (saved) {
+      camp.hide();
+      nodeId = saved.node;
+      newGame(saved);
+    } else {
+      showCamp(null);
+    }
   },
 });
 
@@ -135,6 +156,35 @@ function leaveRoom() {
 
 const $banner = document.getElementById('banner');
 
+// --- framing the board around the HUD ------------------------------------------
+// The camera keeps the board clear of the panels as they are actually laid out, which
+// matters on a phone, where the action bar can be twice its desktop height.
+const $actionbar = document.getElementById('actionbar');
+let barRoom = 0; // the tallest action bar since the window last changed size
+let framedFor = '';
+function hudInsets(w, h) {
+  if (framedFor !== `${w}x${h}`) {
+    framedFor = `${w}x${h}`;
+    barRoom = 0;
+  }
+  const bar = $actionbar.getBoundingClientRect();
+  if (bar.height) barRoom = Math.max(barRoom, h - bar.top);
+  const top = document.getElementById('initiative').getBoundingClientRect().bottom;
+  const log = document.getElementById('log');
+  const beside = getComputedStyle(log).display !== 'none' && !hud.logOpen;
+  return {
+    top: Math.max(56, top + 6),
+    bottom: Math.max(80, barRoom + 6),
+    right: beside ? w - log.getBoundingClientRect().left : 0,
+  };
+}
+stage.setInsets(hudInsets);
+// A taller action bar (a hero with more to choose from) moves the board up, once.
+new ResizeObserver(() => {
+  const h = window.innerHeight;
+  if (h - $actionbar.getBoundingClientRect().top > barRoom + 4) stage.fit();
+}).observe($actionbar);
+
 // Audio may only start after a user gesture.
 const unlockAudio = () => {
   sfx.unlock();
@@ -157,15 +207,18 @@ function toggleMusic() {
 }
 hud.setMusic(music.enabled);
 
-// The controls panel: open the first time, then remembered.
+// The controls panel: open the first time, then remembered. On a phone it would cover
+// the board, so there it starts closed.
 const HELP_KEY = 'crypt-skirmish:help';
 const helpBox = document.getElementById('help');
+if (matchMedia('(max-width: 900px)').matches) helpBox.open = false;
 try {
   if (localStorage.getItem(HELP_KEY) === '0') helpBox.open = false;
 } catch {
   /* storage unavailable: start open */
 }
 helpBox.addEventListener('toggle', () => {
+  if (matchMedia('(max-width: 900px)').matches) return; // phones always start closed
   try {
     localStorage.setItem(HELP_KEY, helpBox.open ? '1' : '0');
   } catch {
@@ -269,7 +322,11 @@ function clearSpiritWeapon(id) {
   spiritWeapons.delete(id);
 }
 
-function newGame() {
+/**
+ * Start the fight at `nodeId` with the party as it entered. With `resume` (a saved fight),
+ * replay it to where it was saved instead; if that fails, the party is back at camp.
+ */
+function newGame(resume = null) {
   for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
   if (board) {
     stage.scene.remove(board.group);
@@ -281,7 +338,19 @@ function newGame() {
   }
 
   const level = levelById(NODES[nodeId].level);
-  game = new Game(level, { party: campaign.party, difficulty: DIFFICULTIES[campaign.difficulty] });
+  const seed = resume?.seed ?? newSeed();
+  game = new Game(level, { party: campaign.party, difficulty: DIFFICULTIES[campaign.difficulty], rng: seeded(seed) });
+  fight = { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
+  if (resume && !replaySaved(resume)) {
+    game = null;
+    views = new Map();
+    fight = null;
+    showBackdrop();
+    writeSave(campaign);
+    showCamp(null);
+    hud.toast('The fight in progress couldn’t be restored, so the party is back at camp.');
+    return;
+  }
   board = new Board(game.grid, stage);
   stage.scene.add(board.group);
   views = new Map();
@@ -295,6 +364,7 @@ function newGame() {
   pendingSpotted = [];
   visionSig = '';
   seenIds = new Set();
+  if (resume) restoreBoard(resume);
   board.fadeSources = () => [...views.values()]
     .filter((v) => v.unit.alive && v.group.visible)
     .map((v) => v.group.position);
@@ -303,6 +373,7 @@ function newGame() {
   hud.hidden = (u) => unseen(u);
   hud.reset();
   hud.levelIntro(level, campaign.party.F.level);
+  if (resume) hud.log(`The fight picks up where you left it: round ${game.round}.`, 'sys');
 
   game.on('initiative', ({ order }) => {
     hud.log('<b>Roll for initiative!</b>', 'sys');
@@ -349,7 +420,73 @@ function newGame() {
   game.on('alert', (r) => pendingAlerts.push(r));
   game.on('revealed', (r) => pendingSpotted.push(r));
 
-  game.start();
+  frameParty();
+  if (!resume) {
+    game.start();
+    saveFight();
+  } else if (game.over) {
+    checkGameOver(); // saved on the victory banner
+  } else {
+    onTurnStart(game.current);
+  }
+}
+
+/** On a phone the whole crypt is small: start zoomed in on the party (pinch and drag from there). */
+function frameParty() {
+  if (Math.min(window.innerWidth, window.innerHeight) >= 600) return;
+  const heroes = game.living('heroes');
+  if (!heroes.length) return;
+  const x = heroes.reduce((a, u) => a + u.x, 0) / heroes.length;
+  const z = heroes.reduce((a, u) => a + u.z, 0) / heroes.length;
+  lookAt(x, z, 2);
+}
+
+/** Centre the view on a tile at a zoom level, in the middle of the area the HUD leaves free. */
+function lookAt(x, z, zoom) {
+  const cam = stage.camera;
+  cam.zoom = zoom;
+  cam.updateProjectionMatrix();
+  cam.updateMatrixWorld();
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const { top, bottom, right } = hudInsets(w, h);
+  // Where the free area's middle is on the ground, and how far the tile is from it.
+  const ndc = new THREE.Vector2(((w - right) / 2 / w) * 2 - 1, -(((top + h - bottom) / 2) / h) * 2 + 1);
+  raycaster.setFromCamera(ndc, cam);
+  const ground = new THREE.Vector3();
+  if (!raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ground)) return;
+  const shift = new THREE.Vector3(x, 0, z).sub(ground);
+  stage.controls.target.add(shift);
+  cam.position.add(shift);
+}
+
+/** Replay a saved fight on the new `game`. False if it didn't land where it was saved. */
+function replaySaved(saved) {
+  try {
+    const r = replayFight(game, saved.log);
+    if (!r.ok || r.check !== saved.check) return false;
+    fight.log = [...saved.log];
+    fight.check = saved.check;
+    return true;
+  } catch (err) {
+    console.warn('Saved fight did not replay:', err);
+    return false;
+  }
+}
+
+/** Draw a replayed fight as it stood: the dead, sprung traps, explored rooms, spirit weapons. */
+function restoreBoard(saved) {
+  board.explored = new Set(saved.explored);
+  seenIds = new Set(saved.seen.map((i) => game.units[i]?.id).filter(Boolean));
+  for (const v of views.values()) if (!v.unit.alive) v.restoreDead();
+  for (const t of game.grid.traps.values()) {
+    if (!t.revealed) continue;
+    board.showTrap(t).then(() => t.sprung && board.retractTrap(t));
+  }
+  for (const u of game.units) {
+    const w = u.alive && u.spiritWeapon;
+    if (w) spiritWeapons.set(u.id, spiritWeapon(stage.scene, { x: w.x, z: w.z }));
+  }
 }
 
 function isHeroTurn() {
@@ -431,7 +568,10 @@ async function onTurnStart(unit) {
   syncStatus();
   hud.renderInitiative(game);
   refresh();
-  if (unit.team === 'heroes') sfx.turn();
+  if (unit.team === 'heroes') {
+    sfx.turn();
+    saveFight(); // with the rooms seen so far
+  }
   if (unit.team === 'monsters' || debugAutoplay) await runMonsterTurn(unit);
 }
 
@@ -478,7 +618,7 @@ function refresh() {
     const atk = selected?.attack ?? game.bestAttack(u, foe);
     if (atk && !game.attackProblem(u, foe, atk)) {
       const m = game.attackMods(u, foe, atk);
-      hud.hint(`${atk.name} → ${foe.name}: ${signed(game.toHitBonus(u, atk))} to hit vs AC ${game.acOf(foe)}, ${atk.damage} damage${modsText(m)}`);
+      hud.hint(`${atk.name} → ${foe.name}: ${signed(game.toHitBonus(u, atk))} to hit vs AC ${game.acOf(foe)}, ${atk.damage} damage${modsText(m)}`, true);
     } else {
       hud.hint(`${foe.name}: ${game.attackProblem(u, foe, atk ?? u.attacks[0])}`);
     }
@@ -487,7 +627,7 @@ function refresh() {
   if (game.grid.chests.has(key(hovered.x, hovered.z))) {
     const why = game.chestProblem(u, hovered.x, hovered.z);
     const odd = game.grid.chests.get(key(hovered.x, hovered.z)).suspected;
-    hud.hint(why ?? (odd ? 'Open the chest… if you dare. Those are teeth marks.' : 'Open the chest (free, once per turn)'));
+    hud.hint(why ?? (odd ? 'Open the chest… if you dare. Those are teeth marks.' : 'Open the chest (free, once per turn)'), !why);
     return;
   }
   const node = reach.get(key(hovered.x, hovered.z));
@@ -497,7 +637,7 @@ function refresh() {
     const danger = provokingSteps(u, path);
     board.danger.set(danger);
     const who = game.provokers(u, path).map((f) => f.name);
-    hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : ''));
+    hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : ''), true);
   }
 }
 
@@ -512,7 +652,7 @@ function refreshShove(u) {
   board.hover.set([hovered]);
   const why = game.shoveProblem(u, foe);
   hud.hint(why ? `${foe.name}: ${why}`
-    : `Shove → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and it is knocked prone`);
+    : `Shove → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and it is knocked prone`, !why);
 }
 
 const UNIT_TARGETING = ['enemy', 'ally', 'corpse'];
@@ -565,7 +705,7 @@ function refreshSpell(u, id) {
       if (t) {
         board.hover.set([hovered]);
         const why = game.spellProblem(u, id, t);
-        hud.hint(why ? `${t.name}: ${why}` : spellPreview(u, id, t));
+        hud.hint(why ? `${t.name}: ${why}` : spellPreview(u, id, t), !why);
       } else {
         const what = { enemy: 'an enemy', ally: 'an ally or yourself', corpse: 'a corpse' }[s.targeting];
         hud.hint(`${s.name}: click ${what} · Esc to cancel`);
@@ -587,6 +727,7 @@ function refreshSpell(u, id) {
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the cone') +
           (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
             : ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!`) : ''),
+        true,
       );
       break;
     }
@@ -605,6 +746,7 @@ function refreshSpell(u, id) {
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the line') +
           (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
             : ` · ⚠ also strikes ${allies.map((a) => a.name).join(', ')}!`) : ''),
+        true,
       );
       break;
     }
@@ -629,6 +771,7 @@ function refreshSpell(u, id) {
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies caught') +
           (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
             : ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!`) : ''),
+        true,
       );
       break;
     }
@@ -637,7 +780,7 @@ function refreshSpell(u, id) {
       if (hovered) {
         const ok = !game.spellProblem(u, id, hovered);
         if (ok) board.hover.set([hovered]);
-        hud.hint(ok ? `${s.name}: teleport here (bonus action)` : 'Pick an empty spot you can see within 30 ft');
+        hud.hint(ok ? `${s.name}: teleport here (bonus action)` : 'Pick an empty spot you can see within 30 ft', ok);
       } else {
         hud.hint(`${s.name}: click a purple tile · Esc to cancel`);
       }
@@ -780,21 +923,14 @@ async function animateSteps(unit, steps) {
   }
 }
 
-async function moveUnit(unit, x, z) {
-  const r = game.move(unit, x, z);
-  if (!r) return null;
+async function playMove(unit, r) {
   await animateSteps(unit, r.steps);
   flushReveals();
   syncStatus();
-  return r;
 }
 
-async function openChest(unit, x, z) {
-  const r = game.openChest(unit, x, z);
-  if (!r.ok) {
-    hud.toast(r.reason);
-    return r;
-  }
+async function playChest(unit, r) {
+  const { x, z } = r.chest;
   await view(unit).turnTowards(x, z);
   if (r.mimic) {
     // The chest yawns open on a mouthful of teeth and lunges.
@@ -806,7 +942,7 @@ async function openChest(unit, x, z) {
     await wait(450);
     if (r.bite?.ok) await animateAttack(r.bite);
     hud.renderInitiative(game);
-    return r;
+    return;
   }
   sfx.chest();
   await board.openChest(x, z);
@@ -816,25 +952,10 @@ async function openChest(unit, x, z) {
   if (items.length) sfx.discover();
   floatText(stage.scene, { x, z }, text || 'Empty', 'heal');
   await wait(300);
-  return r;
 }
 
-async function attackUnit(attacker, target, attack) {
-  const r = game.attack(attacker, target, attack);
-  if (!r.ok) {
-    hud.toast(r.reason);
-    return r;
-  }
-  await animateAttack(r);
-  return r;
-}
-
-async function shoveUnit(attacker, target) {
-  const r = game.shove(attacker, target);
-  if (!r.ok) {
-    hud.toast(r.reason);
-    return r;
-  }
+async function playShove(r) {
+  const { attacker, target } = r;
   await view(attacker).swing(target, () => {
     if (r.success) {
       sfx.hit(target.code);
@@ -845,17 +966,11 @@ async function shoveUnit(attacker, target) {
     }
   });
   hud.renderInitiative(game);
-  return r;
 }
 
-async function doAction(unit, id) {
-  const r = game.doAction(unit, id);
-  if (!r.ok) {
-    hud.toast(r.reason);
-    return r;
-  }
+async function playAction(unit, r) {
   const v = view(unit);
-  switch (id) {
+  switch (r.id) {
     case 'secondWind':
     case 'potion':
       if (id === 'potion') sfx.potion();
@@ -899,15 +1014,10 @@ async function doAction(unit, id) {
       await wait(450);
   }
   hud.renderInitiative(game);
-  return r;
 }
 
-async function castSpell(caster, id, target) {
-  const r = game.castSpell(caster, id, target);
-  if (!r.ok) {
-    hud.toast(r.reason);
-    return r;
-  }
+async function playSpell(r) {
+  const { caster, id } = r;
   const cv = view(caster);
   if (unseen(caster) && id === 'animateDead') {
     // Raised out of sight: no show, the risen one is simply there when you find it.
@@ -916,7 +1026,7 @@ async function castSpell(caster, id, target) {
     addView(r.risen);
     await wait(300);
     hud.renderInitiative(game);
-    return r;
+    return;
   }
   switch (id) {
     case 'magicMissile':
@@ -1073,10 +1183,23 @@ async function castSpell(caster, id, target) {
       });
       break;
     default:
-      throw new Error(`castSpell: no animation for "${id}"`);
+      throw new Error(`playSpell: no animation for "${id}"`);
   }
   hud.renderInitiative(game);
-  return r;
+}
+
+/** Play back a resolved command or monster step (`kind`: its type). */
+function play(unit, kind, r) {
+  switch (kind) {
+    case 'move': return playMove(unit, r);
+    case 'attack': return animateAttack(r);
+    case 'shove': return playShove(r);
+    case 'chest': return playChest(unit, r);
+    case 'bonus':
+    case 'action': return playAction(unit, r);
+    case 'spell': return playSpell(r);
+    default: return null; // smite and end have nothing to show
+  }
 }
 
 /** Shows the end banner once the game is decided. Returns true if over. */
@@ -1124,27 +1247,8 @@ async function runMonsterTurn(unit) {
   const pace = (ms) => wait(unit.team === 'monsters' && (unseen(unit) || unit.unaware) ? ms / 4 : ms);
   await pace(450);
 
-  const memo = {};
-  for (let guard = 0; guard < 12 && game === g && !g.over && unit.alive; guard++) {
-    const step = nextMonsterStep(game, unit, memo);
-    if (step.type === 'end') break;
-    switch (step.type) {
-      case 'attack':
-        await attackUnit(unit, step.target, step.attack);
-        break;
-      case 'move':
-        await moveUnit(unit, step.x, step.z);
-        break;
-      case 'spell':
-        await castSpell(unit, step.id, step.target);
-        break;
-      case 'bonus':
-      case 'action':
-        await doAction(unit, step.id);
-        break;
-      default:
-        throw new Error(`runMonsterTurn: unknown step "${step.type}"`);
-    }
+  for (const { step, result } of monsterTurn(g, unit)) {
+    if (result.ok) await play(unit, step.type, result);
     if (game !== g) return;
     syncStatus();
     hud.renderActionBar(game, { selected, busy });
@@ -1160,26 +1264,51 @@ async function runMonsterTurn(unit) {
 
 function endHeroTurn() {
   if (!isHeroTurn() || busy) return;
-  game.endTurn();
+  command({ type: 'end' });
 }
 
-/** Run a hero's action with input locked, then tidy up. */
-async function heroDoes(fn) {
+/**
+ * The player's command for the hero whose turn it is: resolve it, save it, then play it
+ * back with input locked. Every hero action goes through here (see replay.js).
+ */
+async function heroCommand(cmd) {
   const u = game.current;
+  const r = command(cmd);
+  if (!r.ok) {
+    hud.toast(r.reason);
+    return r;
+  }
+  const g = game;
   busy = true;
   selected = null;
+  hovered = null;
   refresh();
-  await fn();
+  await play(u, cmd.type, r);
+  if (game !== g) return r;
   syncStatus();
-  if (await checkGameOver()) return;
-  busy = false;
+  if (await checkGameOver()) return r;
   if (!u.alive) {
-    // Cut down by an opportunity attack mid-move.
+    // Cut down by an opportunity attack mid-move: input stays locked until the turn passes.
     await wait(500);
-    game.endTurn();
-    return;
+    if (game !== g) return r;
+    busy = false;
+    heroFell(game, u);
+    return r;
   }
+  busy = false;
   refresh();
+  return r;
+}
+
+/** Resolve a command and add it to the fight's save. */
+function command(cmd) {
+  const r = applyCommand(game, cmd);
+  if (r.ok && fight) {
+    fight.log.push(cmd);
+    fight.check = fightCheck(game);
+    saveFight();
+  }
+  return r;
 }
 
 function choose(choice) {
@@ -1187,22 +1316,24 @@ function choose(choice) {
   sfx.ui();
   const u = game.current;
   if (choice.kind === 'action') {
-    heroDoes(() => doAction(u, choice.id));
+    heroCommand({ type: 'action', id: choice.id });
     return;
   }
   if (choice.kind === 'smite') {
-    const r = game.toggleSmite(u);
+    const r = command({ type: 'smite' });
     if (r.ok) hud.logSmiteArmed(u, r.armed);
+    else hud.toast(r.reason);
     refresh();
     return;
   }
   if (choice.kind === 'spell' && SPELLS[choice.id].targeting === 'self') {
-    heroDoes(() => castSpell(u, choice.id));
+    heroCommand({ type: 'spell', id: choice.id });
     return;
   }
   const same = selected?.kind === choice.kind
     && (choice.kind === 'attack' ? selected.attack === choice.attack : selected.id === choice.id);
   selected = same ? null : choice;
+  if (touching) hovered = null; // aim afresh: a tap from before must not cast at once
   refresh();
 }
 
@@ -1235,22 +1366,47 @@ function tileFromEvent(ev) {
   return game.grid.inBounds(x, z) && !game.grid.isWall(x, z) ? { x, z } : null;
 }
 
+// A finger has no hover: the first tap on a tile shows what would happen there (the path,
+// the odds, the blast), and a second tap on the same tile does it. Dragging pans the view.
+let touching = matchMedia('(hover: none)').matches; // the last pointer was a finger or pen
+hud.touch = touching;
+document.body.classList.toggle('touch', touching);
+let downAt = null;
+window.addEventListener('pointerdown', (ev) => {
+  const touch = ev.pointerType !== 'mouse';
+  if (touch === touching) return;
+  touching = hud.touch = touch;
+  document.body.classList.toggle('touch', touch);
+  if (isHeroTurn() && !busy) refresh(); // hints say "tap" now
+}, { capture: true });
+stage.dom.addEventListener('pointerdown', (ev) => {
+  downAt = { x: ev.clientX, y: ev.clientY };
+});
+
 stage.dom.addEventListener('pointermove', (ev) => {
+  if (ev.pointerType !== 'mouse') return;
   const t = tileFromEvent(ev);
   if (t?.x === hovered?.x && t?.z === hovered?.z) return;
   hovered = t;
   if (isHeroTurn() && !busy) refresh();
 });
 
-stage.dom.addEventListener('pointerleave', () => {
+stage.dom.addEventListener('pointerleave', (ev) => {
+  if (ev.pointerType !== 'mouse') return; // a lifted finger leaves its preview up
   hovered = null;
   if (isHeroTurn() && !busy) refresh();
 });
 
 stage.dom.addEventListener('click', (ev) => {
   if (!isHeroTurn() || busy) return;
+  if (downAt && Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y) > 10) return; // a drag
   const t = tileFromEvent(ev);
   if (!t) return;
+  if (touching && (t.x !== hovered?.x || t.z !== hovered?.z)) {
+    hovered = t;
+    refresh();
+    return;
+  }
   const u = game.current;
   const other = visibleUnitAt(t.x, t.z);
 
@@ -1267,7 +1423,7 @@ stage.dom.addEventListener('click', (ev) => {
       hud.toast(why);
       return;
     }
-    heroDoes(() => castSpell(u, id, target));
+    heroCommand({ type: 'spell', id, ...targetRef(game, target) });
     return;
   }
 
@@ -1281,7 +1437,7 @@ stage.dom.addEventListener('click', (ev) => {
       hud.toast(why);
       return;
     }
-    heroDoes(() => shoveUnit(u, other));
+    heroCommand({ type: 'shove', target: unitRef(game, other) });
     return;
   }
 
@@ -1292,7 +1448,7 @@ stage.dom.addEventListener('click', (ev) => {
       hud.toast(why ?? 'Cannot attack');
       return;
     }
-    heroDoes(() => attackUnit(u, other, atk));
+    heroCommand({ type: 'attack', target: unitRef(game, other), attack: u.attacks.indexOf(atk) });
     return;
   }
 
@@ -1302,7 +1458,7 @@ stage.dom.addEventListener('click', (ev) => {
       hud.toast(why);
       return;
     }
-    heroDoes(() => openChest(u, t.x, t.z));
+    heroCommand({ type: 'chest', x: t.x, z: t.z });
     return;
   }
 
@@ -1312,7 +1468,7 @@ stage.dom.addEventListener('click', (ev) => {
     if (gridDistance(u, t) > u.movesLeft) hud.toast('Too far, not enough movement left');
     return;
   }
-  heroDoes(() => moveUnit(u, t.x, t.z));
+  heroCommand({ type: 'move', x: t.x, z: t.z });
 });
 
 window.addEventListener('keydown', (ev) => {
@@ -1373,9 +1529,15 @@ window.__debug = {
   stage,
   sfx,
   /** The controller's animated actions, for scripted play-testing. */
-  act: { moveUnit, attackUnit, castSpell, doAction, openChest, shoveUnit },
+  /** Give the current hero a command, e.g. __debug.command({ type: 'move', x: 3, z: 4 }). */
+  command: (cmd) => heroCommand(cmd),
   autoplay(on = true) {
     debugAutoplay = on;
+    if (on && fight) {
+      // The AI's hero turns aren't commands, so this fight can't be replayed.
+      fight = null;
+      writeSave(campaign);
+    }
     if (on && isHeroTurn() && !busy) runMonsterTurn(game.current);
   },
   /** Jump into a room with a fresh party (no save), e.g. __debug.level(4). */
@@ -1405,11 +1567,7 @@ window.__debug = {
   },
   /** Zoom the camera onto a tile, e.g. __debug.focus(11, 2, 3). */
   focus(x, z, zoom = 2.5) {
-    const shift = new THREE.Vector3(x, 0, z).sub(stage.controls.target);
-    stage.controls.target.add(shift);
-    stage.camera.position.add(shift);
-    stage.camera.zoom = zoom;
-    stage.camera.updateProjectionMatrix();
+    lookAt(x, z, zoom);
   },
   /** Screen position (CSS px) of a tile, useful for scripted play-testing. */
   tileToScreen(x, z) {
