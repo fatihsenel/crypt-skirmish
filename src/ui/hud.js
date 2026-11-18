@@ -3,6 +3,7 @@
 import { signed } from '../game/dice.js';
 import { ACTIONS, SPELLS, PASSIVES, SHOVE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
+import { unitIcon, unknownIcon } from './icons.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -140,6 +141,19 @@ export class Hud {
             (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b>`)).join('<br>')
         : '<span class="miss">The blast catches no one.</span>';
       this.log(`${who(r.caster)} hurls a ${name} <span class="dice">${r.roll.total} fire [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
+    } else if (r.id === 'lightningBolt') {
+      const saves = r.saves.length
+        ? r.saves.map((s) => `${who(s.unit)} <span class="dice">DEX ${s.total}</span> ` +
+            (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b>`)).join('<br>')
+        : '<span class="miss">The bolt strikes no one.</span>';
+      this.log(`${who(r.caster)} casts ${name} <span class="dice">${r.roll.total} lightning [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
+    } else if (r.id === 'spiritualWeapon') {
+      const d20 = `<span class="dice">d20 ${r.d20} ${signed(r.toHit)} = ${r.total}</span> vs AC ${r.ac}`;
+      const outcome = r.crit ? `<b class="crit">Critical hit!</b> ${r.damage} force ${dice(r.roll)}`
+        : r.hit ? `<b class="hit">Hit</b> for ${r.damage} force ${dice(r.roll)}` : '<b class="miss">Miss</b>';
+      this.log(r.again
+        ? `${who(r.caster)}'s ${name} swings at ${who(r.target)}: ${d20}. ${outcome}. <span class="dice">bonus action, no slot</span>`
+        : `${who(r.caster)} casts ${name}: a spectral mace appears beside ${who(r.target)}. ${d20}. ${outcome}. ${slot}`);
     } else if (r.id === 'massHealingWord') {
       this.log(`${who(r.caster)} calls out a ${name}. ${slot}<br>` +
         r.heals.map((h) => `${who(h.unit)} <b class="heal">+${h.healed} HP</b> ${dice(h.roll)}`).join('<br>') + blessed(r));
@@ -220,11 +234,12 @@ export class Hud {
         const pct = Math.max(0, (u.hp / u.maxHp) * 100);
         if (this.unknown?.(u)) {
           return `<div class="${cls} unknown" title="Something you haven't seen yet">
-            <span class="init">?</span><span class="nm">???</span><span class="mini"><i style="width:100%"></i></span>
+            <span class="pic">${unknownIcon()}<b class="init">?</b></span><span class="nm">???</span><span class="mini"><i style="width:100%"></i></span>
           </div>`;
         }
-        return `<div class="${cls}" title="Initiative ${u.initiative}">
-          <span class="init">${u.initiative}</span>
+        const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
+        return `<div class="${cls}" title="${esc(u.name)} (${esc(u.cls)}) · initiative ${u.initiative}">
+          <span class="pic" style="--c:${color}">${unitIcon(u)}<b class="init">${u.initiative}</b></span>
           <span class="nm">${esc(u.name)}</span>
           <span class="mini"><i style="width:${pct}%"></i></span>
         </div>`;
@@ -327,6 +342,7 @@ export class Hud {
       return button({
         kind: 'spell', id, name: s.name, cls: 'spell',
         sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
+          : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus'
           : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
         title: problem ? `${s.desc}\n(${problem})` : s.desc,
         disabled: !!problem,

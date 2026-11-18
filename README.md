@@ -73,12 +73,17 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   the missing HP; the fallen get back up) and shares **XP**. A lost fight can be retried as
   you entered it, or you can go back to the map and pick another way
 - **levelling** from 3 to 6 (450 / 900 / 2000 party XP): more HP and a +2 to the main ability at 4;
-  at 5, Brannoc gets **Extra Attack** (the Paladin also two 2nd-level slots), Ilsa **Fireball** (20-ft radius, hits allies too),
-  Wren Sneak Attack 3d6 and **Uncanny Dodge**, Maela **Mass Healing Word** and
-  **Destroy Undead**, plus 3rd-level slots for both casters. Level 6 comes after the
+  at 5, Brannoc gets **Extra Attack** (the Paladin also two 2nd-level slots), Ilsa
+  **Fireball** (20-ft radius, hits allies too) and **Lightning Bolt** (a 100-ft line, 5 ft
+  wide, 8d6 lightning with a DEX save for half; walls stop it, and it hits allies in the
+  line too), Wren Sneak Attack 3d6 and **Uncanny Dodge**, Maela **Mass Healing Word**,
+  **Spiritual Weapon** (bonus action: a floating spectral mace appears beside a foe within
+  60 ft and makes a melee spell attack for 1d8 + WIS force; for the rest of the fight it
+  strikes again as a bonus action, with no slot, at any foe within 25 ft of it, and it fades
+  if Maela falls) and **Destroy Undead**, plus 3rd-level slots for both casters. Level 6 comes after the
   Catacombs: Brannoc Strength 20 (the Paladin **Aura of Protection**: allies within 10 ft add
-  the paladin's CHA modifier, +3, to saving throws), Ilsa **Sculpt Spells** (her Fireball and Burning Hands
-  spare the party), Wren Sneak Attack 4d6, Maela Turn Undead twice per fight and
+  the paladin's CHA modifier, +3, to saving throws), Ilsa **Sculpt Spells** (her Fireball, Lightning Bolt and
+  Burning Hands spare the party), Wren Sneak Attack 4d6, Maela Turn Undead twice per fight and
   **Blessed Healer** (healing someone else with a slot heals her for 2 + the slot level),
   and a third 3rd-level slot for both casters
 - **difficulty**, picked on the title screen for a new run: **Story** (monsters have ¾ HP
@@ -90,8 +95,13 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   switch picks the first hero's class. The choice is kept in the save; older saves load as a Fighter
 - **magic items** from chests (Runed Weapon +1, Ring of Protection, Cloak of Protection) go into the pack and
   are handed out at camp
+- **turn order**: each initiative chip carries a small portrait on the unit's own colour: a
+  class icon for the heroes (sword, crested shield, wizard's hat, hood, sun) and a silhouette
+  for each monster (goblin, crowned boss, orc, rat, skull, hooded necromancer, ghoul claws,
+  the ghast's reeking claws, the wight's crowned skull, a toothy chest), with the
+  initiative number on a badge
 - **fog of war**: you only see what your heroes can see. Rooms you have seen stay dimly
-  drawn; monsters out of sight are hidden (their initiative chips read `???` until spotted)
+  drawn; monsters out of sight are hidden (their initiative chips show a `?` and read `???` until spotted)
   and their turns pass quickly while "something moves in the dark"
 - **monster senses**: monsters start unaware. They notice a hero they can see within 8
   tiles (3 for Wren, a *skulker*), hear fighting within 5 tiles of walking distance (a closed
@@ -153,13 +163,16 @@ Every push to `main` runs the tests, builds, and deploys to GitHub Pages
 (`.github/workflows/pages.yml`). The base path lives in `vite.config.js`.
 
 Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 Warren,
-3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those); this doesn't touch the save.
+3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those, `&party=5` for
+heroes of another level from 3 to 6, and `&paladin` for a Paladin instead of the Fighter);
+this doesn't touch the save.
 In the browser console, `__debug.autoplay()` lets the monster AI play the heroes too, and
 `__debug.win()` / `__debug.lose()` end the current fight on the spot.
 
 ## Balance
 
-`scripts/sim.js` plays the campaign without graphics: heroes heal, Fireball crowds, Magic
+`scripts/sim.js` plays the campaign without graphics: heroes heal, Fireball crowds (or
+Lightning Bolt a line of them), keep Spiritual Weapon swinging, Magic
 Missile the weakest foe, drink potions when low, sometimes loot chests mid-fight, and
 otherwise use the monster AI's tactics. Gear found goes to whoever suits it.
 `npm run sim -- 300` plays 300 campaigns down each route; `npm run sim -- 300 act2` replays

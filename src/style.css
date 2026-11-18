@@ -121,19 +121,38 @@ html, body {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
-  column-gap: 5px;
+  column-gap: 6px;
+  row-gap: 3px;
   align-items: center;
-  padding: 3px 6px;
+  padding: 3px 6px 3px 3px;
   border-radius: 7px;
   border: 1px solid transparent;
   flex: 0 0 auto;
-  width: 78px;
+  width: 92px;
   font-size: 11px;
 }
-.chip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chip .init {
+.chip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; }
+.chip .mini { align-self: start; }
+/* The portrait: a class icon or monster silhouette on the unit's own colour. */
+.chip .pic {
+  --c: #6a6470;
+  --icon-hole: color-mix(in srgb, var(--c) 45%, #141018);
+  position: relative;
   grid-row: span 2;
-  font: 700 15px var(--display);
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--icon-hole);
+  color: #f6eedd;
+  border: 1.5px solid color-mix(in srgb, var(--c) 70%, #fff 10%);
+}
+.chip .pic svg { width: 19px; height: 19px; }
+.chip.monsters .pic { color: #f1dcd2; }
+.chip .init {
+  position: absolute; right: -5px; bottom: -4px;
+  min-width: 14px; height: 14px; padding: 0 2px; box-sizing: border-box;
+  border-radius: 7px; background: #120e14; border: 1px solid #3a3440;
+  font: 700 9.5px/12px var(--display); text-align: center;
   color: var(--muted);
 }
 .chip.heroes .nm { color: var(--hero); }
@@ -144,6 +163,9 @@ html, body {
 .chip.current .init { color: var(--gold); }
 .chip.dead { opacity: 0.35; }
 .chip.unknown .nm, .chip.unknown .init { color: #8a8494; font-style: italic; }
+.chip.unknown .pic { color: #8a8494; --c: #3a3440; }
+.chip.current .pic { box-shadow: 0 0 0 2px var(--gold); }
+.chip.dead .pic { filter: grayscale(1); }
 .chip.unknown .mini i { background: #4a4552; }
 .chip.dead .nm { text-decoration: line-through; }
 

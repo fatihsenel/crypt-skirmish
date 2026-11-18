@@ -242,6 +242,7 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     layOnHandsMax: t.layOnHands ?? 0,
     smiteArmed: false,  // Divine Smite on the next melee hit
     faithFrom: null,    // the paladin whose Shield of Faith is on it (+2 AC)
+    spiritWeapon: null, // a cleric's Spiritual Weapon: { x, z, slot } once cast this fight
     conditions: {},     // prone / poisoned / frightened (combat.js)
   };
 }
@@ -267,10 +268,10 @@ export const PROGRESSION = {
   },
   W: {
     4: { hp: 5, stats: { int: 2 }, slots: { 2: 3 }, note: 'Intelligence 18, a third 2nd-level slot' },
-    5: { hp: 5, prof: 3, slots: { 3: 2 }, spells: ['fireball'], note: 'Fireball and two 3rd-level slots' },
+    5: { hp: 5, prof: 3, slots: { 3: 2 }, spells: ['fireball', 'lightningBolt'], note: 'Fireball, Lightning Bolt and two 3rd-level slots' },
     6: {
       hp: 5, slots: { 3: 3 }, sculpt: true, passives: ['sculptSpells'],
-      note: 'Sculpt Spells: Fireball and Burning Hands spare the party; a third 3rd-level slot',
+      note: 'Sculpt Spells: Fireball, Lightning Bolt and Burning Hands spare the party; a third 3rd-level slot',
     },
   },
   R: {
@@ -281,8 +282,8 @@ export const PROGRESSION = {
   C: {
     4: { hp: 7, stats: { wis: 2 }, slots: { 2: 3 }, note: 'Wisdom 18, a third 2nd-level slot' },
     5: {
-      hp: 7, prof: 3, slots: { 3: 2 }, spells: ['massHealingWord'], destroyUndead: 0.5,
-      passives: ['destroyUndead'], note: 'Mass Healing Word, Destroy Undead and two 3rd-level slots',
+      hp: 7, prof: 3, slots: { 3: 2 }, spells: ['massHealingWord', 'spiritualWeapon'], destroyUndead: 0.5,
+      passives: ['destroyUndead'], note: 'Mass Healing Word, Spiritual Weapon, Destroy Undead and two 3rd-level slots',
     },
     6: {
       hp: 7, slots: { 3: 3 }, channelUses: 2, passives: ['blessedHealer'],

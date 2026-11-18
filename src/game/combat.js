@@ -6,7 +6,7 @@ import { rollDice, rollExpr, abilityMod } from './dice.js';
 import { Grid, key, gridDistance, pathFrom } from './grid.js';
 import { createUnit, applyLevel, classOf, TEMPLATES } from './units.js';
 import { applyItems } from './items.js';
-import { ACTIONS, STANDARD_ACTIONS, SPELLS, coneTiles, areaTiles, directionTo } from './abilities.js';
+import { ACTIONS, STANDARD_ACTIONS, SPELLS, coneTiles, lineTiles, areaTiles, directionTo } from './abilities.js';
 
 export const TRAP_DC = 13;
 export const TRAP_DAMAGE = '2d6';
@@ -545,6 +545,7 @@ export class Game {
       if (down) down.downed++;
       target.alive = false;
       for (const u of this.units) if (u.faithFrom === target.id) u.faithFrom = null; // Shield of Faith drops
+      target.spiritWeapon = null; // and a fallen cleric's spectral weapon fades
       this.emit('death', { unit: target, source });
       this.checkEnd();
     }
@@ -1216,7 +1217,8 @@ export class Game {
     if (caster.turned) return 'Turned: can only flee';
     if (s.time === 'action' && caster.actionUsed) return 'Action already used this turn';
     if (s.time === 'bonus' && caster.bonusUsed) return 'Bonus action already used this turn';
-    if (!this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
+    const again = id === 'spiritualWeapon' && caster.spiritWeapon; // strikes again for free
+    if (!again && !this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
     if (s.pool && !(caster.layOnHands > 0)) return 'Your healing pool is spent';
     if (s.targeting === 'self') {
       if (id === 'massHealingWord' && !this.massHealTargets(caster).length) return 'No one nearby is hurt';
@@ -1230,7 +1232,9 @@ export class Game {
       case 'enemy':
         if (!target.alive || target.team === caster.team) return 'Choose an enemy';
         if (target.hidden && target.team === 'monsters') return `${target.name} is hidden: Search to find it`;
-        if (!inRange(target)) return `Out of range or not in sight (${s.range * 5} ft)`;
+        if (again) {
+          if (gridDistance(caster.spiritWeapon, target) > s.reach) return `Too far from the spectral weapon (${s.reach * 5} ft)`;
+        } else if (!inRange(target)) return `Out of range or not in sight (${s.range * 5} ft)`;
         if (s.condition && this.has(target, s.condition)) return `${target.name} is already ${s.condition}`;
         break;
       case 'ally':
@@ -1250,6 +1254,7 @@ export class Game {
         }
         break;
       case 'cone':
+      case 'line':
         if (target.x === caster.x && target.z === caster.z) return 'Pick a direction';
         break;
       case 'area':
@@ -1259,6 +1264,22 @@ export class Game {
         break;
     }
     return null;
+  }
+
+  /** A floor tile next to `target`, the one closest to `from` (for things that float there). */
+  besideTile(target, from) {
+    let best = { x: target.x, z: target.z };
+    let bestD = Infinity;
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = target.x + dx;
+        const z = target.z + dz;
+        if ((!dx && !dz) || this.grid.blocksSight(x, z) || this.grid.isSolid(x, z)) continue;
+        const d = Math.hypot(x - from.x, z - from.z);
+        if (d < bestD) [best, bestD] = [{ x, z }, d];
+      }
+    }
+    return best;
   }
 
   /** Who a blast over `tiles` catches. Sculpt Spells leaves the caster's side out. */
@@ -1279,10 +1300,11 @@ export class Game {
     const spell = SPELLS[id];
     if (spell.time === 'action') caster.actionUsed = true;
     else caster.bonusUsed = true;
-    const slot = this.spendSlot(caster, spell.level);
+    const again = id === 'spiritualWeapon' && !!caster.spiritWeapon;
+    const slot = again ? caster.spiritWeapon.slot : this.spendSlot(caster, spell.level);
     const upcast = Math.max(0, slot - spell.level);
     this.reveal(caster, 'spell');
-    const result = { ok: true, kind: 'spell', id, spell, caster, slot };
+    const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot };
 
     switch (id) {
       case 'magicMissile': {
@@ -1304,6 +1326,38 @@ export class Game {
         result.saves = this.areaSaves(victims, dc, roll.total);
         this.emit('spell', result);
         for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        break;
+      }
+      case 'lightningBolt': {
+        const tiles = lineTiles(this.grid, caster, target, spell.range);
+        const roll = rollExpr(`${8 + upcast}d6`, { rng: this.rng });
+        const dc = this.spellDC(caster);
+        const victims = this.blastVictims(caster, tiles);
+        Object.assign(result, { toward: { x: target.x, z: target.z }, tiles, roll, dc });
+        result.saves = this.areaSaves(victims, dc, roll.total);
+        this.emit('spell', result);
+        for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        break;
+      }
+      case 'spiritualWeapon': {
+        // The weapon floats to the foe (it fills no tile), then makes a melee spell attack.
+        const from = caster.spiritWeapon ?? caster;
+        result.again = again;
+        result.from = { x: from.x, z: from.z };
+        result.to = this.besideTile(target, from);
+        caster.spiritWeapon = { ...result.to, slot };
+        const { d20 } = this.rollD20('normal');
+        const mod = abilityMod(caster.stats[caster.castStat]);
+        const toHit = caster.prof + mod;
+        const ac = this.acOf(target);
+        const crit = d20 === 20;
+        const hit = crit || (d20 !== 1 && d20 + toHit >= ac);
+        const dice = 1 + Math.floor(Math.max(0, slot - 2) / 2);
+        const roll = hit ? rollExpr(`${dice}d8+${mod}`, { crit, rng: this.rng }) : null;
+        Object.assign(result, { target, d20, toHit, total: d20 + toHit, ac, hit, crit, roll, damage: roll ? Math.max(1, roll.total) : 0 });
+        if (crit && this.tally(caster)) this.tally(caster).crits++;
+        this.emit('spell', result);
+        if (hit) this.applyDamage(target, result.damage, caster);
         break;
       }
       case 'fireball': {

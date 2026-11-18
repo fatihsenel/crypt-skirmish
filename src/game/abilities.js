@@ -50,7 +50,7 @@ export const PASSIVES = {
   extraAttack: 'Extra Attack: the Attack action lets you attack twice.',
   uncannyDodge: 'Uncanny Dodge: reaction to halve the damage of a hit (used automatically on hits of 6+).',
   destroyUndead: 'Destroy Undead: weak undead (CR ½ or lower) that fail against Turn Undead are destroyed.',
-  sculptSpells: 'Sculpt Spells: your Fireball and Burning Hands leave the party unharmed.',
+  sculptSpells: 'Sculpt Spells: your Fireball, Lightning Bolt and Burning Hands leave the party unharmed.',
   blessedHealer: 'Blessed Healer: healing someone else with a spell slot heals you too (2 + the slot level).',
   divineSmite: 'Divine Smite: arm it, and your next melee weapon hit spends a spell slot for 2d8 radiant (+1d8 per slot level above 1st, +1d8 against undead).',
   dueling: 'Dueling: +2 damage with melee weapon attacks.',
@@ -61,7 +61,7 @@ export const PASSIVES = {
 };
 
 /**
- * targeting: 'enemy' | 'ally' (incl. self) | 'cone' | 'area' (a point; radius in tiles) | 'tile'
+ * targeting: 'enemy' | 'ally' (incl. self) | 'cone' | 'line' (toward a point) | 'area' (a point; radius in tiles) | 'tile'
  *            | 'corpse' | 'self' (no target, cast at once) | 'none' (reaction)
  * level 0 = cantrip, no slot needed.
  */
@@ -112,6 +112,16 @@ export const SPELLS = {
     damage: '8d6', save: 'dex',
     desc: 'A bead of fire bursts in a 20-ft radius: 8d6 fire, DEX save for half. Hits allies too!',
   },
+  lightningBolt: {
+    name: 'Lightning Bolt', level: 3, time: 'action', range: 20, targeting: 'line',
+    damage: '8d6', save: 'dex',
+    desc: 'A 100-ft line of lightning, 5 ft wide: 8d6 lightning to everything in it, DEX save for half. Walls stop it. Hits allies too!',
+  },
+  spiritualWeapon: {
+    name: 'Spiritual Weapon', level: 2, time: 'bonus', range: 12, targeting: 'enemy',
+    damage: '1d8', reach: 5,
+    desc: 'Bonus action: a floating spectral mace appears next to a foe within 60 ft and strikes (spell attack, 1d8 + WIS force). For the rest of the fight it can strike again as a bonus action, at no slot, at any foe within 25 ft of it.',
+  },
   massHealingWord: {
     name: 'Mass Healing Word', level: 3, time: 'bonus', range: 12, targeting: 'self',
     desc: 'Bonus action: up to six hurt allies within 60 ft you can see regain 1d4 + WIS HP.',
@@ -156,6 +166,31 @@ export function coneTiles(grid, origin, dir, length = 3) {
       if (grid.blocksSight(x, z) || !grid.lineOfSight(origin.x, origin.z, x, z)) continue;
       out.push({ x, z });
     }
+  }
+  return out;
+}
+
+/**
+ * Tiles a `length`-tile line from `origin` toward `toward` passes through, one tile wide.
+ * The first wall, column or closed door stops it.
+ */
+export function lineTiles(grid, origin, toward, length = 20) {
+  const dx = toward.x - origin.x;
+  const dz = toward.z - origin.z;
+  const n = Math.hypot(dx, dz);
+  if (!n) return [];
+  const out = [];
+  const seen = new Set();
+  for (let d = 0.5; d <= length + 0.25; d += 0.25) {
+    const x = Math.round(origin.x + (dx / n) * d);
+    const z = Math.round(origin.z + (dz / n) * d);
+    if (x === origin.x && z === origin.z) continue;
+    if (grid.blocksSight(x, z)) break;
+    if (Math.max(Math.abs(x - origin.x), Math.abs(z - origin.z)) > length) break;
+    const k = `${x},${z}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push({ x, z });
   }
   return out;
 }

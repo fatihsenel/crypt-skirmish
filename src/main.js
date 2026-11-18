@@ -8,18 +8,18 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
-  recordDefeat, runSummary,
+  recordDefeat, runSummary, heroUnit,
 } from './game/campaign.js';
 import { nextMonsterStep } from './game/ai.js';
 import { key, pathFrom, gridDistance } from './game/grid.js';
 import { signed, abilityMod } from './game/dice.js';
-import { SPELLS, ACTIONS, coneTiles, areaTiles, directionTo } from './game/abilities.js';
+import { SPELLS, ACTIONS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { createStage } from './render/stage.js';
 import { Board } from './render/board.js';
 import { UnitView, shootProjectile, floatText } from './render/unitView.js';
 import { preloadModels } from './render/gltfModels.js';
 import { preloadDungeon } from './render/dungeonKit.js';
-import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, hitFx, fireBurstFx, d20Fx } from './render/effects.js';
+import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon } from './render/effects.js';
 import { wait } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Camp } from './ui/camp.js';
@@ -261,7 +261,16 @@ function addView(u) {
 }
 
 // --- setup ----------------------------------------------------------------
+/** Spectral weapons on the board, by the id of the cleric who summoned them. */
+let spiritWeapons = new Map();
+
+function clearSpiritWeapon(id) {
+  spiritWeapons.get(id)?.remove();
+  spiritWeapons.delete(id);
+}
+
 function newGame() {
+  for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
   if (board) {
     stage.scene.remove(board.group);
     board.dispose();
@@ -317,6 +326,7 @@ function newGame() {
   });
   game.on('action', (r) => { if (!unseen(r.unit)) hud.logAction(r); });
   game.on('death', ({ unit }) => {
+    clearSpiritWeapon(unit.id); // a fallen cleric's weapon fades
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
     else hud.log(`<span class="${unit.team}">${unit.name}</span> falls.`, 'death');
   });
@@ -526,6 +536,11 @@ function spellPreview(u, id, t) {
   switch (id) {
     case 'magicMissile':
       return `Magic Missile → ${t.name}: 3 darts × 1d4+1, never misses`;
+    case 'spiritualWeapon': {
+      const mod = abilityMod(u.stats[u.castStat]);
+      const cost = u.spiritWeapon ? 'no slot' : `a ${u.slots[2] ? '2nd' : '3rd'}-level slot`;
+      return `Spiritual Weapon → ${t.name}: ${signed(u.prof + mod)} vs AC ${game.acOf(t)}, 1d8${signed(mod)} force · ${cost}`;
+    }
     case 'sacredFlame':
       return `Sacred Flame → ${t.name}: ${s.damage} radiant, DEX save DC ${game.spellDC(u)} negates (their DEX ${signed(abilityMod(t.stats.dex))})`;
     case 'cureWounds':
@@ -572,6 +587,24 @@ function refreshSpell(u, id) {
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the cone') +
           (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
             : ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!`) : ''),
+      );
+      break;
+    }
+    case 'line': {
+      if (!hovered || (hovered.x === u.x && hovered.z === u.z)) {
+        hud.hint(`${s.name}: aim the bolt with the mouse, click to cast · Esc to cancel`);
+        return;
+      }
+      const tiles = lineTiles(game.grid, u, hovered, s.range);
+      board.cone.set(tiles);
+      const caught = tiles.map((t) => visibleUnitAt(t.x, t.z)).filter(Boolean);
+      const allies = caught.filter((c) => c.team === u.team);
+      const foes = caught.filter((c) => c.team !== u.team);
+      hud.hint(
+        `${s.name}: ${s.damage} lightning in a line, DEX save DC ${game.spellDC(u)} for half · ` +
+          (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the line') +
+          (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
+            : ` · ⚠ also strikes ${allies.map((a) => a.name).join(', ')}!`) : ''),
       );
       break;
     }
@@ -911,6 +944,41 @@ async function castSpell(caster, id, target) {
         if (s.damage) hitFx(stage.scene, s.unit);
         return damageReaction(s.unit);
       }));
+      break;
+    }
+    case 'lightningBolt':
+      await cv.cast(r.toward, async () => {
+        sfx.thunder();
+        stage.shake(0.25, 400);
+        await lightningFx(stage.scene, caster, r.tiles);
+      });
+      await Promise.all(r.saves.map((s) => {
+        floatText(stage.scene, s.unit, s.success ? `Save −${s.damage}` : `−${s.damage}`, 'crit');
+        if (s.damage) hitFx(stage.scene, s.unit);
+        return damageReaction(s.unit);
+      }));
+      break;
+    case 'spiritualWeapon': {
+      let w = spiritWeapons.get(caster.id);
+      const summon = async () => {
+        sfx.radiant();
+        w = spiritWeapon(stage.scene, r.from.x === caster.x && r.from.z === caster.z ? r.to : r.from);
+        spiritWeapons.set(caster.id, w);
+        await radiantFx(stage.scene, r.to);
+      };
+      if (!w) await cv.cast(r.target, summon);
+      await w.flyTo(r.to);
+      await w.strike(r.target);
+      if (r.hit) {
+        sfx.chime();
+        sfx.hit(r.target.code, { crit: r.crit });
+        floatText(stage.scene, r.target, r.crit ? `CRIT −${r.damage}` : `−${r.damage}`, r.crit ? 'crit' : 'dmg');
+        hitFx(stage.scene, r.target, r.to, { crit: r.crit });
+        await damageReaction(r.target);
+      } else {
+        sfx.miss();
+        floatText(stage.scene, r.target, 'Miss', 'miss');
+      }
       break;
     }
     case 'fireball':
@@ -1263,7 +1331,19 @@ window.addEventListener('keydown', (ev) => {
   }
 });
 
-// ?level=3 jumps straight into a room with a fresh party (handy for testing).
+/** A rested party at `level` (3 to 6), for the ?level= test route (&party=5). */
+function testParty(state, level) {
+  if (!(level > 3 && level <= 6)) return state;
+  for (const [code, rec] of Object.entries(state.party)) {
+    const u = heroUnit(code, { cls: rec.cls, level });
+    Object.assign(rec, { level, hp: u.maxHp, slots: { ...u.slotMax } });
+    if (u.layOnHandsMax) rec.layOnHands = u.layOnHandsMax;
+  }
+  return state;
+}
+
+// ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets
+// the heroes' level and &paladin swaps the Fighter for a Paladin.
 // The .glb figures load first; any that fail fall back to the built-in miniatures.
 showBackdrop();
 Promise.all([preloadModels(), preloadDungeon()]).then(() => {
@@ -1276,8 +1356,9 @@ Promise.all([preloadModels(), preloadDungeon()]).then(() => {
   const levelParam = Number(new URLSearchParams(location.search).get('level'));
   if (levelParam >= 1 && levelParam <= LEVELS.length) {
     saving = false;
-    const d = new URLSearchParams(location.search).get('difficulty'); // e.g. &difficulty=hard
-    campaign = newCampaign(DIFFICULTIES[d] ? d : 'normal');
+    const q = new URLSearchParams(location.search);
+    const d = q.get('difficulty'); // e.g. &difficulty=hard
+    campaign = testParty(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, q.has('paladin') ? { F: 'P' } : {}), Number(q.get('party')));
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
   } else {

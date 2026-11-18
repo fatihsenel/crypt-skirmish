@@ -474,6 +474,25 @@ class Sfx {
     });
   }
 
+  /** Lightning Bolt: a crackling crack and a rolling rumble. */
+  thunder() {
+    this.play((t) => {
+      this.noise(t, { dur: 0.12, filter: 'highpass', freq: 2500, gain: 0.7, attack: 0.002 });
+      for (let i = 0; i < 18; i++) this.click(t + Math.random() * 0.35, rand(2000, 7000), rand(0.06, 0.16));
+      this.noise(t + 0.05, { dur: 1.3, filter: 'lowpass', freq: 900, freqEnd: 90, gain: 0.6, attack: 0.02 });
+      this.tone(t + 0.04, { type: 'sine', freq: 60, freqEnd: 32, dur: 1.1, gain: 0.5 });
+    });
+  }
+
+  /** Spiritual Weapon: a ringing chime as the spectral mace strikes. */
+  chime() {
+    this.play((t) => {
+      this.tone(t, { type: 'triangle', freq: 1175, dur: 0.7, gain: 0.08, attack: 0.005 });
+      this.tone(t + 0.02, { type: 'sine', freq: 1760, dur: 0.6, gain: 0.05 });
+      this.tone(t, { type: 'sine', freq: 220, freqEnd: 140, dur: 0.18, gain: 0.25 });
+    });
+  }
+
   /** Fireball: a hiss as the bead flies. */
   fireballLaunch() {
     this.play((t) => {

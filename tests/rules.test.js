@@ -3,12 +3,12 @@ import { parseDice, rollExpr, abilityMod } from '../src/game/dice.js';
 import { Grid, gridDistance } from '../src/game/grid.js';
 import { Game } from '../src/game/combat.js';
 import { chooseAttack, chooseMove, nextMonsterStep } from '../src/game/ai.js';
-import { coneTiles } from '../src/game/abilities.js';
+import { coneTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById, LEVELS } from '../src/game/maps.js';
 import { createUnit } from '../src/game/units.js';
 import {
   cleanName, newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES, DIFFICULTIES,
-  recordDefeat, runSummary,
+  recordDefeat, runSummary, heroUnit,
 } from '../src/game/campaign.js';
 
 // Deterministic RNG that returns the given sequence of d-results for a die size.
@@ -1697,5 +1697,64 @@ describe('the paladin', () => {
     expect(fixedSave.party.F.cls).toBeUndefined();
     expect(fixedSave.party.F.layOnHands).toBeUndefined();
     expect(fixedSave.party.W.layOnHands).toBeUndefined();
+  });
+});
+
+describe('level-5 spell choices', () => {
+  const at5 = (classes = {}) => {
+    const party = newCampaign('normal', {}, classes).party;
+    for (const [code, r] of Object.entries(party)) {
+      const u = heroUnit(code, { cls: r.cls, level: 5 });
+      Object.assign(r, { level: 5, hp: u.maxHp, slots: { ...u.slotMax } });
+    }
+    return party;
+  };
+
+  it('lineTiles runs straight from the caster and stops at a wall', () => {
+    const grid = new Grid(['########', '#......#', '#...#..#', '########']);
+    expect(lineTiles(grid, { x: 1, z: 1 }, { x: 3, z: 1 }, 20)).toEqual([2, 3, 4, 5, 6].map((x) => ({ x, z: 1 })));
+    const diag = lineTiles(grid, { x: 1, z: 1 }, { x: 2, z: 2 }, 20);
+    expect(diag).toEqual([{ x: 2, z: 2 }]); // the next step is the wall row
+    expect(lineTiles(grid, { x: 1, z: 1 }, { x: 6, z: 1 }, 2)).toHaveLength(2);
+  });
+
+  it('Lightning Bolt: 8d6 down the line, DEX half, the party too (until Sculpt Spells)', () => {
+    const game = new Game(['##########', '#W.g.R.g.#', '##########'], { party: at5(), senses: false, rng: fixed(0.5) });
+    const w = game.units.find((u) => u.code === 'W');
+    setTurn(game, game.units.indexOf(w));
+    expect(w.spells).toContain('lightningBolt');
+    for (const g of game.units.filter((u) => u.code === 'g')) g.hp = 999;
+    const r = game.castSpell(w, 'lightningBolt', { x: 3, z: 1 });
+    expect(r.ok).toBe(true);
+    expect(r.saves.map((s) => s.unit.code)).toEqual(['g', 'R', 'g']);
+    expect(r.roll.rolls).toHaveLength(8);
+    expect(w.slots[3]).toBe(1);
+    w.sculpt = true;
+    expect(game.blastVictims(w, r.tiles).map((u) => u.code)).toEqual(['g', 'g']);
+  });
+
+  it('Spiritual Weapon: a slot to summon, then free bonus-action strikes within 25 ft of it', () => {
+    const game = new Game(['###########', '#C.....g..#', '###########'], { party: at5(), senses: false, rng: () => 0.9 }); // d20 19, d8 8
+    const c = game.units.find((u) => u.code === 'C');
+    const g = game.units.find((u) => u.code === 'g');
+    g.hp = 999;
+    setTurn(game, game.units.indexOf(c));
+    expect(c.spells).toContain('spiritualWeapon');
+    const r = game.castSpell(c, 'spiritualWeapon', g);
+    expect(r).toMatchObject({ ok: true, again: false, hit: true, slot: 2, to: { x: 6, z: 1 } });
+    expect(r.damage).toBe(8 + 4); // 1d8 (max) + WIS (18 from level 4)
+    expect(c.slots[2]).toBe(2); // 3 at level 4+, one spent
+    expect(c.spiritWeapon).toEqual({ x: 6, z: 1, slot: 2 });
+    expect(game.spellProblem(c, 'spiritualWeapon', g)).toBe('Bonus action already used this turn');
+    setTurn(game, game.units.indexOf(c));
+    const again = game.castSpell(c, 'spiritualWeapon', g);
+    expect(again).toMatchObject({ ok: true, again: true, slot: 0 });
+    expect(c.slots[2]).toBe(2); // no slot spent
+    g.x = 9;
+    c.spiritWeapon = { x: 2, z: 1, slot: 2 };
+    c.bonusUsed = false;
+    expect(game.spellProblem(c, 'spiritualWeapon', g)).toBe('Too far from the spectral weapon (25 ft)');
+    game.applyDamage(c, 999, g);
+    expect(c.spiritWeapon).toBeNull();
   });
 });

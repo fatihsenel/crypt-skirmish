@@ -212,6 +212,106 @@ export async function radiantFx(scene, at) {
   dispose(group);
 }
 
+/** Lightning Bolt: a jagged white-blue bolt down the line, flickering, then gone. */
+export async function lightningFx(scene, from, tiles) {
+  const end = tiles.at(-1) ?? from;
+  const a = new THREE.Vector3(from.x, 0.8, from.z);
+  const b = new THREE.Vector3(end.x, 0.7, end.z);
+  const len = Math.max(1, a.distanceTo(b));
+  const side = new THREE.Vector3(b.z - a.z, 0, a.x - b.x).normalize();
+  const group = new THREE.Group();
+  scene.add(group);
+  const lights = [0.25, 0.6, 0.95].map((f) => {
+    const l = new THREE.PointLight(0x9ccaff, 0, 6, 1.4);
+    l.position.copy(a).lerp(b, f);
+    group.add(l);
+    return l;
+  });
+  // A fresh jagged path for each flicker.
+  const bolt = () => {
+    const pts = [];
+    const n = Math.max(4, Math.round(len * 2));
+    for (let i = 0; i <= n; i++) {
+      const p = a.clone().lerp(b, i / n);
+      if (i && i < n) p.addScaledVector(side, (Math.random() - 0.5) * 0.45).y += (Math.random() - 0.5) * 0.3;
+      pts.push(p);
+    }
+    const path = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.1);
+    const core = new THREE.Mesh(new THREE.TubeGeometry(path, n * 4, 0.035, 5), glow(0xffffff, 1));
+    const halo = new THREE.Mesh(new THREE.TubeGeometry(path, n * 4, 0.13, 6), glow(0x6aa8ff, 0.5));
+    const g = new THREE.Group();
+    g.add(core, halo);
+    return g;
+  };
+  let current = null;
+  let flicks = 0;
+  await tween(650, (t) => {
+    const want = Math.min(3, Math.floor(t * 9)); // three flickers, then fade
+    if (!current || want > flicks) {
+      if (current) { group.remove(current); dispose(current); }
+      current = bolt();
+      group.add(current);
+      flicks = want;
+    }
+    const o = t < 0.35 ? 1 : 1 - (t - 0.35) / 0.65;
+    current.children[0].material.opacity = o * (0.7 + Math.random() * 0.3);
+    current.children[1].material.opacity = o * 0.5;
+    for (const l of lights) l.intensity = o * (6 + Math.random() * 6);
+  }, linear);
+  scene.remove(group);
+  dispose(group);
+}
+
+/**
+ * Spiritual Weapon: a floating spectral mace that stays on the board for the fight.
+ * Returns { group, flyTo(to), strike(), remove() }.
+ */
+export function spiritWeapon(scene, at) {
+  const group = new THREE.Group();
+  const mace = new THREE.Group();
+  const gold = () => glow(0xffd76b, 0.85);
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.55, 8), gold());
+  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), glow(0xfff1c0, 0.95));
+  head.position.y = 0.32;
+  for (let i = 0; i < 4; i++) {
+    const fl = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.16, 0.12), gold());
+    fl.position.y = 0.32;
+    fl.rotation.y = (i * Math.PI) / 4;
+    mace.add(fl);
+  }
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), glow(0xffc84a, 0.18));
+  halo.position.y = 0.3;
+  mace.add(handle, head, halo);
+  mace.rotation.z = 0.35;
+  group.add(mace, new THREE.PointLight(0xffd070, 2.5, 3, 1.6));
+  group.position.set(at.x, 0.9, at.z);
+  scene.add(group);
+  const bob = setInterval(() => {
+    group.position.y = 0.9 + Math.sin(performance.now() / 380) * 0.06;
+    mace.rotation.y += 0.04;
+  }, 33);
+  return {
+    group,
+    async flyTo(to) {
+      const from = group.position.clone();
+      await tween(320 + from.distanceTo(new THREE.Vector3(to.x, 0.9, to.z)) * 40, (t) => {
+        group.position.x = from.x + (to.x - from.x) * t;
+        group.position.z = from.z + (to.z - from.z) * t;
+      }, easeOut);
+    },
+    async strike(toward) {
+      // Swing down through the foe and back up.
+      await tween(160, (t) => { mace.rotation.z = 0.35 - t * 1.9; }, easeOut);
+      await tween(220, (t) => { mace.rotation.z = -1.55 + t * 1.9; });
+    },
+    remove() {
+      clearInterval(bob);
+      scene.remove(group);
+      dispose(group);
+    },
+  };
+}
+
 /** Turn Undead: a golden ring of holy light sweeping outward. */
 export async function turnFx(scene, at, radius) {
   const group = new THREE.Group();

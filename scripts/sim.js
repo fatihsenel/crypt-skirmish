@@ -7,7 +7,7 @@
 
 import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
-import { areaTiles } from '../src/game/abilities.js';
+import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
 import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
@@ -35,6 +35,11 @@ function apply(game, unit, step) {
   }
 }
 
+function foesIn(game, u, p) {
+  const tiles = new Set(areaTiles(game.grid, p, 4).map((t) => `${t.x},${t.z}`));
+  return game.living().filter((t) => t.team !== u.team && !t.unaware && tiles.has(`${t.x},${t.z}`)).length;
+}
+
 function bestFireball(game, u) {
   if (game.spellProblem(u, 'fireball')) return null;
   let best = null;
@@ -51,6 +56,20 @@ function bestFireball(game, u) {
     }
   }
   return best?.p ?? null;
+}
+
+/** The Lightning Bolt aim (toward a foe) that catches the most foes, or null below two. */
+function bestBolt(game, u) {
+  if (game.spellProblem(u, 'lightningBolt')) return null;
+  let best = null;
+  for (const aim of game.knownFoes(u).filter((e) => !e.unaware)) {
+    const caught = lineTiles(game.grid, u, aim, 20).map((t) => game.unitAt(t.x, t.z)).filter((v) => v?.alive);
+    const foes = caught.filter((t) => t.team !== u.team && !t.unaware).length;
+    const friends = caught.filter((t) => t.team === u.team).length;
+    if ((friends && !u.sculpt) || foes < 2) continue;
+    if (!best || foes > best.foes) best = { p: { x: aim.x, z: aim.z }, foes };
+  }
+  return best;
 }
 
 /** Spells and potions first; whatever is left of the turn goes to the AI. */
@@ -76,10 +95,20 @@ function heroOpening(game, u) {
     if (hurt.length >= 2 && !game.spellProblem(u, 'massHealingWord')) game.castSpell(u, 'massHealingWord');
     else for (const h of hurt) if (!game.spellProblem(u, 'healingWord', h)) { game.castSpell(u, 'healingWord', h); break; }
     if (game.turnTargets(u).length >= 3 && !game.actionProblem(u, 'turnUndead')) game.doAction(u, 'turnUndead');
+    // Spiritual Weapon with the bonus action left: free once summoned; summoned with a
+    // 2nd-level slot when the fight is worth it (keeping 3rd-level slots for healing).
+    const foes = game.knownFoes(u).filter((e) => !e.unaware);
+    const worth = u.spiritWeapon || (u.slots[2] > 0 && (foes.length >= 2 || foes.some((e) => (e.cr ?? 0) >= 1)));
+    if (worth && !u.bonusUsed) {
+      const t = game.spellTargets(u, 'spiritualWeapon').filter((e) => !e.unaware).sort((a, b) => a.hp - b.hp)[0];
+      if (t) game.castSpell(u, 'spiritualWeapon', t);
+    }
   }
   if (u.code === 'W' && !u.actionUsed) {
     const p = bestFireball(game, u);
-    if (p) game.castSpell(u, 'fireball', p);
+    const bolt = bestBolt(game, u);
+    if (bolt && (!p || bolt.foes > foesIn(game, u, p))) game.castSpell(u, 'lightningBolt', bolt.p);
+    else if (p) game.castSpell(u, 'fireball', p);
     else if ((u.slots[1] ?? 0) + (u.slots[2] ?? 0) > 0) {
       const t = game.spellTargets(u, 'magicMissile').filter((e) => !e.unaware).sort((a, b) => a.hp - b.hp)[0];
       if (t) game.castSpell(u, 'magicMissile', t);
