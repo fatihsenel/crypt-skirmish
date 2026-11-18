@@ -51,8 +51,9 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   poisoning claws each),
   a fork between the **Sealed Vault** (treasure, including a Cloak of Protection, and a
   **mimic** posing as a chest) and a rest at the **Still Well**, and finally the
-  **Wight's Barrow**, where Varek the wight (85 HP, two attacks, a longbow, Dread) waits. The
-  party reaches act two at level 5, and these monsters are tougher than their SRD stat blocks
+  **Wight's Barrow**, where Varek the wight (110 HP, two attacks, a longbow, Dread) waits. The
+  party reaches act two at level 5 and level 6 after the Catacombs, and these monsters are
+  tougher than their SRD stat blocks
   to match (see Balance below). Opening the
   mimic wakes it: it joins the initiative right after the opener and bites with advantage,
   unless Wren's Keen Eyes spotted it from within 10 ft (the log warns you, and hovering the
@@ -60,11 +61,17 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - between rooms the party keeps HP, spell slots and potions, takes a short rest (regain half
   the missing HP; the fallen get back up) and shares **XP**. A lost fight can be retried as
   you entered it, or you can go back to the map and pick another way
-- **levelling** from 3 to 5 (450 / 900 party XP): more HP and a +2 to the main ability at 4;
+- **levelling** from 3 to 6 (450 / 900 / 2000 party XP): more HP and a +2 to the main ability at 4;
   at 5, Brannoc gets **Extra Attack**, Ilsa **Fireball** (20-ft radius, hits allies too),
   Wren Sneak Attack 3d6 and **Uncanny Dodge**, Maela **Mass Healing Word** and
-  **Destroy Undead**, plus 3rd-level slots for both casters. The level cap stays at 5 for
-  act two; the extra rooms bring loot and XP, but no level 6
+  **Destroy Undead**, plus 3rd-level slots for both casters. Level 6 comes after the
+  Catacombs: Brannoc Strength 20, Ilsa **Sculpt Spells** (her Fireball and Burning Hands
+  spare the party), Wren Sneak Attack 4d6, Maela Turn Undead twice per fight and
+  **Blessed Healer** (healing someone else with a slot heals her for 2 + the slot level),
+  and a third 3rd-level slot for both casters
+- **difficulty**, picked on the title screen for a new run: **Story** (monsters have ¾ HP
+  and −1 to hit and damage), **Normal**, or **Hard** (1.2× HP, +1 to hit and damage). It
+  applies to every monster, including mimics and the risen dead; the heroes are unchanged
 - **magic items** from chests (Runed Weapon +1, Ring of Protection, Cloak of Protection) go into the pack and
   are handed out at camp
 - **fog of war**: you only see what your heroes can see. Rooms you have seen stay dimly
@@ -89,7 +96,9 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   Continue. Fights themselves are not saved: reloading mid-fight returns you to the camp
 - **house rules** (simplifications of the SRD): goblin arrows and rat bites poison
   (DC 10 CON); ghoul claws poison instead of paralysing; the mimic's pseudopod knocks
-  prone (DC 13 STR) instead of grappling; Grukk's second attack is the only clumsy one
+  prone (DC 13 STR) instead of grappling; Grukk's second attack is the only clumsy one;
+  Sculpt Spells (an Evocation feature) and Sneak Attack 4d6 arrive at level 6, and Sculpt
+  simply leaves all allies out of the blast
 
 ## Run
 
@@ -106,7 +115,7 @@ Every push to `main` runs the tests, builds, and deploys to GitHub Pages
 (`.github/workflows/pages.yml`). The base path lives in `vite.config.js`.
 
 Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 Warren,
-3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow) with a fresh level-3 party; this doesn't touch the save.
+3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those); this doesn't touch the save.
 In the browser console, `__debug.autoplay()` lets the monster AI play the heroes too, and
 `__debug.win()` / `__debug.lose()` end the current fight on the spot.
 
@@ -117,7 +126,7 @@ Missile the weakest foe, drink potions when low, sometimes loot chests mid-fight
 otherwise use the monster AI's tactics. Gear found goes to whoever suits it.
 `npm run sim -- 300` plays 300 campaigns down each route; `npm run sim -- 300 act2` replays
 act two only, from a pool of real end-of-act-one parties (faster when tuning). Set `SEED=n`
-to change the dice. Act two was tuned against act one's numbers from the same simulator:
+to change the dice and `DIFFICULTY=story|hard` to play another difficulty. Act two was tuned against act one's numbers from the same simulator:
 roughly 80% of the party's HP left after the Catacombs, 65% after the Vault, and a Barrow
 that is a clear step harder when the party skips the well's rest.
 
@@ -144,7 +153,7 @@ src/
   game/            pure rules, no three.js (unit-testable)
     dice.js        dice rolling, "2d6+3" parsing, ability modifiers
     grid.js        map grid, BFS movement, distance field, line of sight, fog-of-war vision
-    units.js       stat blocks, XP values, and what heroes gain at levels 4 and 5
+    units.js       stat blocks, XP values, and what heroes gain at levels 4 to 6
     items.js       magic items and what they do
     abilities.js   action and spell definitions, cone geometry
     campaign.js    the dungeon map, XP and levelling, the pack, rests, save data (pure state)

@@ -7,7 +7,7 @@ import { coneTiles } from '../src/game/abilities.js';
 import { levelById, LEVELS } from '../src/game/maps.js';
 import { createUnit } from '../src/game/units.js';
 import {
-  newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES,
+  newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES, DIFFICULTIES,
 } from '../src/game/campaign.js';
 
 // Deterministic RNG that returns the given sequence of d-results for a die size.
@@ -1270,5 +1270,77 @@ describe('balance simulator', () => {
     const r = fight('barrow', c, rng);
     expect(r.game.over).toBeTruthy();
     expect(r.rounds).toBeGreaterThan(1);
+  });
+});
+
+describe('level 6 and difficulty', () => {
+  const party = (overrides) => {
+    const s = newCampaign();
+    for (const [code, rec] of Object.entries(overrides)) {
+      Object.assign(s.party[code], rec);
+      delete s.party[code].slots;
+      delete s.party[code].hp;
+    }
+    return s.party;
+  };
+
+  it('2000 XP reaches level 6, the new cap', () => {
+    expect(levelForXp(1999)).toBe(5);
+    expect(levelForXp(2000)).toBe(6);
+    expect(levelForXp(99999)).toBe(6);
+  });
+
+  it('Sculpt Spells: a level-6 Fireball spares the party', () => {
+    const game = new Game(['##########', '#W..gg.#g#', '#..F....##', '##########'], { party: party({ W: { level: 6 } }), rng: () => 0.01 });
+    game.start();
+    const w = setTurn(game, 0);
+    expect(w.slotMax[3]).toBe(3);
+    const r = game.castSpell(w, 'fireball', { x: 5, z: 1 });
+    expect(r.saves.map((s) => s.unit.code).sort()).toEqual(['g', 'g']);
+  });
+
+  it('a level-6 cleric turns undead twice per fight and is a Blessed Healer', () => {
+    const game = new Game(['#######', '#CF.s.#', '#######'], { party: party({ C: { level: 6 } }), rng: () => 0.99 });
+    game.start();
+    const [c, f] = game.units;
+    setTurn(game, 0);
+    expect(game.doAction(c, 'turnUndead').ok).toBe(true);
+    c.actionUsed = false;
+    expect(game.doAction(c, 'turnUndead').ok).toBe(true);
+    c.actionUsed = false;
+    expect(game.doAction(c, 'turnUndead').ok).toBe(false);
+    c.hp = 10;
+    f.hp = 5;
+    const r = game.castSpell(c, 'healingWord', f);
+    expect(r.selfHeal).toBe(2 + r.slot);
+    expect(c.hp).toBe(10 + 2 + r.slot);
+  });
+
+  it('a level-6 rogue sneak attacks with 4d6', () => {
+    const game = new Game(['######', '#R.g.#', '######'], { party: party({ R: { level: 6 } }) });
+    expect(game.units[0].sneakDice).toBe(4);
+  });
+
+  it('difficulty scales monster HP and weapon bonus, mimics included', () => {
+    const hard = new Game(levelById('vault'), { difficulty: DIFFICULTIES.hard });
+    const ghoul = hard.units.find((u) => u.code === 'u');
+    expect(ghoul.maxHp).toBe(Math.round(createUnit('u', 0, 0).maxHp * 1.2));
+    expect(ghoul.weaponBonus).toBe(1);
+    expect(hard.units.find((u) => u.code === 'F').maxHp).toBe(createUnit('F', 0, 0).maxHp); // heroes untouched
+    hard.start();
+    const f = hard.units.find((u) => u.code === 'F');
+    const chest = [...hard.grid.chests.values()].find((c) => c.mimic);
+    Object.assign(f, { x: chest.x - 1, z: chest.z, interacted: false });
+    const r = hard.springMimic(f, chest);
+    expect(r.mimic.maxHp).toBe(Math.round(createUnit('m', 0, 0).maxHp * 1.2));
+    const story = new Game(levelById('vault'), { difficulty: DIFFICULTIES.story });
+    expect(story.units.find((u) => u.code === 'u').weaponBonus).toBe(-1);
+  });
+
+  it('a new run keeps its difficulty; older saves load as Normal', () => {
+    expect(newCampaign('hard').difficulty).toBe('hard');
+    const old = newCampaign();
+    delete old.difficulty;
+    expect(parseSave(serialize(old)).difficulty).toBe('normal');
   });
 });

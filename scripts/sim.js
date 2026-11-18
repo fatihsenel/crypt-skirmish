@@ -8,7 +8,7 @@ import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
 import { areaTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
-import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES } from '../src/game/campaign.js';
+import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
 
 /** A rested party at `level`. */
@@ -41,7 +41,7 @@ function bestFireball(game, u) {
       const inside = game.living().filter((t) => tiles.has(`${t.x},${t.z}`));
       const foes = inside.filter((t) => t.team !== u.team && !t.unaware).length;
       const friends = inside.filter((t) => t.team === u.team).length;
-      if (friends || foes < 2) continue;
+      if ((friends && !u.sculpt) || foes < 2) continue;
       if (!best || foes > best.foes) best = { p, foes };
     }
   }
@@ -95,7 +95,7 @@ function playTurn(game, u) {
 
 /** One fight. Returns { won, rounds, downed, state }. */
 export function fight(levelId, campaign, rng) {
-  const game = new Game(levelById(levelId), { party: campaign.party, rng });
+  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: DIFFICULTIES[campaign.difficulty] });
   game.start();
   let turns = 0;
   while (!game.over && turns++ < 600) {
@@ -159,7 +159,7 @@ const ACT_ONE = [['crypt', 'warren', 'chapel', 'sanctum'], ['crypt', 'ossuary', 
 const ACT_TWO = [['catacombs', 'vault', 'barrow'], ['catacombs', 'well', 'barrow']];
 
 /** Play a whole campaign along `route`; returns per-room results until the party falls. */
-function campaign(route, rng, start = newCampaign()) {
+function campaign(route, rng, start = newCampaign(process.env.DIFFICULTY ?? 'normal')) {
   let state = start;
   const out = [];
   for (const id of route) {

@@ -52,7 +52,7 @@ export class Game {
    * @param party  hero state from the previous level, keyed by unit code
    */
   /** senses: false makes every monster aware from the start (the old behaviour). */
-  constructor(level, { rng = Math.random, party = null, senses = true } = {}) {
+  constructor(level, { rng = Math.random, party = null, senses = true, difficulty = null } = {}) {
     const rows = Array.isArray(level) ? level : level.rows;
     this.rng = rng;
     this.listeners = {};
@@ -74,7 +74,9 @@ export class Game {
       seen[s.code] = (seen[s.code] || 0) + 1;
       return createUnit(s.code, s.x, s.z, seen[s.code], totals[s.code]);
     };
+    this.difficulty = difficulty; // { hp, bonus } from DIFFICULTIES, or null for as written
     this.units = this.grid.spawns.map(make);
+    for (const u of this.units) this.toughen(u);
     for (const c of this.grid.corpses) {
       const u = make(c);
       Object.assign(u, { alive: false, hp: 0, corpse: true, name: `Dead ${u.cls}` });
@@ -422,6 +424,16 @@ export class Game {
   }
 
   /** Add a unit mid-fight, acting right after `after` in the initiative order. */
+  /** Apply the run's difficulty to a monster (on creation, and to a mimic as it wakes). */
+  toughen(u) {
+    const d = this.difficulty;
+    if (!d || u.team !== 'monsters') return u;
+    u.maxHp = Math.max(1, Math.round(u.maxHp * d.hp));
+    u.hp = u.maxHp;
+    u.weaponBonus += d.bonus;
+    return u;
+  }
+
   addUnit(unit, after) {
     this.units.push(unit);
     const i = this.order.indexOf(after);
@@ -663,7 +675,7 @@ export class Game {
    */
   springMimic(unit, c) {
     this.grid.chests.delete(key(c.x, c.z));
-    const mimic = createUnit('m', c.x, c.z);
+    const mimic = this.toughen(createUnit('m', c.x, c.z));
     this.addUnit(mimic, unit);
     const result = { ok: true, unit, chest: c, loot: [], mimic, bite: null };
     this.emit('mimic', result);
@@ -900,7 +912,7 @@ export class Game {
     }
     if (id === 'potion' && unit.hp >= unit.maxHp) return 'Already at full HP';
     if (id === 'turnUndead') {
-      if (unit.channelUsed) return 'Already used this fight';
+      if (unit.channelUsed >= (unit.channelUses ?? 1)) return 'Already used this fight';
       if (!this.turnTargets(unit).length) return 'No undead within 30 ft';
     }
     if (['disengage', 'nimbleEscape', 'cunningDisengage'].includes(id) && unit.disengaged) return 'Already disengaged';
@@ -955,7 +967,7 @@ export class Game {
         result.healed = this.heal(unit, result.roll.total);
         break;
       case 'turnUndead': {
-        unit.channelUsed = true;
+        unit.channelUsed = (unit.channelUsed || 0) + 1;
         const dc = this.spellDC(unit);
         result.dc = dc;
         result.saves = this.turnTargets(unit).map((v) => {
@@ -1091,6 +1103,18 @@ export class Game {
     return null;
   }
 
+  /** Who a blast over `tiles` catches. Sculpt Spells leaves the caster's side out. */
+  blastVictims(caster, tiles) {
+    return tiles.map((t) => this.unitAt(t.x, t.z))
+      .filter((u) => u && !(caster.sculpt && u.team === caster.team));
+  }
+
+  /** Blessed Healer: a cleric who heals someone else with a slot regains 2 + its level. */
+  blessedHeal(caster, slot, healedOthers) {
+    if (!caster.passives.includes('blessedHealer') || !slot || !healedOthers) return null;
+    return this.heal(caster, 2 + slot) || null;
+  }
+
   castSpell(caster, id, target) {
     const problem = this.spellProblem(caster, id, target);
     if (problem) return { ok: false, reason: problem };
@@ -1117,7 +1141,7 @@ export class Game {
         const tiles = coneTiles(this.grid, caster, dir, spell.range);
         const roll = rollExpr(`${3 + upcast}d6`, { rng: this.rng });
         const dc = this.spellDC(caster);
-        const victims = tiles.map((t) => this.unitAt(t.x, t.z)).filter(Boolean);
+        const victims = this.blastVictims(caster, tiles);
         Object.assign(result, { dir, tiles, roll, dc });
         result.saves = this.areaSaves(victims, dc, roll.total);
         this.emit('spell', result);
@@ -1128,7 +1152,7 @@ export class Game {
         const tiles = areaTiles(this.grid, target, spell.radius);
         const roll = rollExpr(`${8 + upcast}d6`, { rng: this.rng });
         const dc = this.spellDC(caster);
-        const victims = tiles.map((t) => this.unitAt(t.x, t.z)).filter(Boolean);
+        const victims = this.blastVictims(caster, tiles);
         Object.assign(result, { center: { x: target.x, z: target.z }, tiles, roll, dc });
         result.saves = this.areaSaves(victims, dc, roll.total);
         this.emit('spell', result);
@@ -1141,6 +1165,7 @@ export class Game {
           const roll = rollExpr(`${1 + upcast}d4+${mod}`, { rng: this.rng });
           return { unit: t, roll, healed: this.heal(t, roll.total) };
         });
+        result.selfHeal = this.blessedHeal(caster, slot, result.heals.some((h) => h.unit !== caster));
         this.emit('spell', result);
         break;
       }
@@ -1167,6 +1192,7 @@ export class Game {
         result.roll = rollExpr(`${n + upcast}d${sides}+${abilityMod(caster.stats[caster.castStat])}`, { rng: this.rng });
         result.target = target;
         result.healed = this.heal(target, result.roll.total);
+        result.selfHeal = this.blessedHeal(caster, slot, target !== caster);
         this.emit('spell', result);
         break;
       }
@@ -1183,6 +1209,7 @@ export class Game {
         const risen = createUnit('s', target.x, target.z);
         risen.name = `Risen ${target.cls}`;
         risen.team = caster.team;
+        this.toughen(risen);
         result.corpse = target;
         result.risen = risen;
         this.addUnit(risen, caster);

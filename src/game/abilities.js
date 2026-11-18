@@ -44,10 +44,12 @@ export const CONDITION_INFO = {
 
 /** Passive features (no button): documented here for the HUD tooltips. */
 export const PASSIVES = {
-  sneakAttack: 'Sneak Attack: extra d6s (2d6, 3d6 from level 5) once per turn when you have advantage, or an ally is next to the target.',
+  sneakAttack: 'Sneak Attack: extra d6s (2d6; 3d6 from level 5, 4d6 from 6) once per turn when you have advantage, or an ally is next to the target.',
   extraAttack: 'Extra Attack: the Attack action lets you attack twice.',
   uncannyDodge: 'Uncanny Dodge: reaction to halve the damage of a hit (used automatically on hits of 6+).',
   destroyUndead: 'Destroy Undead: weak undead (CR ½ or lower) that fail against Turn Undead are destroyed.',
+  sculptSpells: 'Sculpt Spells: your Fireball and Burning Hands leave the party unharmed.',
+  blessedHealer: 'Blessed Healer: healing someone else with a spell slot heals you too (2 + the slot level).',
   packTactics: 'Pack Tactics: advantage when an ally is next to the target.',
   trapSense: 'Keen Eyes: spots traps within 10 ft.',
   skulker: 'Skulker: monsters that have not noticed the party only spot you within 15 ft.',

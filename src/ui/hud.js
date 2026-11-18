@@ -15,6 +15,9 @@ const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
 const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!' };
 
+/** Blessed Healer's line under a healing spell, if the cleric healed too. */
+const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
+
 export class Hud {
   /**
    * onChoose receives { kind: 'attack', attack } | { kind: 'spell', id } | { kind: 'action', id }
@@ -128,7 +131,7 @@ export class Hud {
       this.log(`${who(r.caster)} hurls a ${name} <span class="dice">${r.roll.total} fire [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
     } else if (r.id === 'massHealingWord') {
       this.log(`${who(r.caster)} calls out a ${name}. ${slot}<br>` +
-        r.heals.map((h) => `${who(h.unit)} <b class="heal">+${h.healed} HP</b> ${dice(h.roll)}`).join('<br>'));
+        r.heals.map((h) => `${who(h.unit)} <b class="heal">+${h.healed} HP</b> ${dice(h.roll)}`).join('<br>') + blessed(r));
     } else if (r.id === 'mistyStep') {
       this.log(`${who(r.caster)} casts ${name} and vanishes in silver mist. ${slot}`);
     } else if (r.id === 'sacredFlame') {
@@ -137,7 +140,7 @@ export class Hud {
         `${saveText({ ...r.save, unit: r.target })}${out}. ${slot}`);
     } else if (r.id === 'cureWounds' || r.id === 'healingWord') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
-      this.log(`${who(r.caster)} casts ${name} on ${self}: <b class="heal">+${r.healed} HP</b> ${dice(r.roll)}. ${slot}`);
+      this.log(`${who(r.caster)} casts ${name} on ${self}: <b class="heal">+${r.healed} HP</b> ${dice(r.roll)}. ${slot}${blessed(r)}`);
     } else if (r.id === 'dread') {
       this.log(`${who(r.caster)} whispers ${name} at ${who(r.target)}. WIS save DC ${r.dc}: ` +
         `${saveText({ ...r.save, unit: r.target }, 'is frightened')}. ${slot}`);

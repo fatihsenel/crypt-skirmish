@@ -7,7 +7,7 @@ import { Game } from './game/combat.js';
 import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
-  NODES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
+  NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
 } from './game/campaign.js';
 import { nextMonsterStep } from './game/ai.js';
 import { key, pathFrom, gridDistance } from './game/grid.js';
@@ -83,7 +83,7 @@ const camp = new Camp({
     writeSave(campaign);
     camp.show(campaign);
   },
-  onNewCampaign: () => startCampaign(),
+  onNewCampaign: (difficulty) => startCampaign(difficulty),
   onContinue: () => {
     sfx.ui();
     saving = true;
@@ -92,10 +92,10 @@ const camp = new Camp({
   },
 });
 
-function startCampaign() {
+function startCampaign(difficulty) {
   sfx.ui();
   saving = true;
-  campaign = newCampaign();
+  campaign = newCampaign(difficulty);
   writeSave(campaign);
   showCamp(null);
 }
@@ -233,7 +233,7 @@ function newGame() {
   }
 
   const level = levelById(NODES[nodeId].level);
-  game = new Game(level, { party: campaign.party });
+  game = new Game(level, { party: campaign.party, difficulty: DIFFICULTIES[campaign.difficulty] });
   board = new Board(game.grid, stage);
   stage.scene.add(board.group);
   views = new Map();
@@ -522,7 +522,8 @@ function refreshSpell(u, id) {
       hud.hint(
         `${s.name}: ${s.damage} fire, DEX save DC ${game.spellDC(u)} for half · ` +
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the cone') +
-          (allies.length ? ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!` : ''),
+          (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
+            : ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!`) : ''),
       );
       break;
     }
@@ -545,7 +546,8 @@ function refreshSpell(u, id) {
       hud.hint(
         `${s.name}: ${s.damage} fire in ${s.radius * 5} ft, DEX save DC ${game.spellDC(u)} for half · ` +
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies caught') +
-          (allies.length ? ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!` : ''),
+          (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
+            : ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!`) : ''),
       );
       break;
     }
@@ -566,6 +568,13 @@ function refreshSpell(u, id) {
 }
 
 // --- animation of resolved results ----------------------------------------
+/** Blessed Healer: the cleric's own small heal, shown just above them. */
+function blessedHealerFx(caster, amount) {
+  if (!amount) return;
+  floatText(stage.scene, { x: caster.x, z: caster.z - 0.5 }, `+${amount}`, 'heal');
+  view(caster).updateHp();
+}
+
 /**
  * Plays back an attack the engine already resolved.
  * `at` overrides the target's position (opportunity attacks happen mid-move).
@@ -866,6 +875,7 @@ async function castSpell(caster, id, target) {
           view(h.unit).updateHp();
           await healFx(stage.scene, h.unit);
         }));
+        blessedHealerFx(caster, r.selfHeal);
       });
       break;
     case 'mistyStep':
@@ -906,6 +916,7 @@ async function castSpell(caster, id, target) {
         floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
         view(r.target).updateHp();
         await healFx(stage.scene, r.target);
+        blessedHealerFx(caster, r.selfHeal);
       });
       break;
     case 'animateDead':
@@ -1174,7 +1185,8 @@ Promise.all([preloadModels(), preloadDungeon()]).then(() => {
   const levelParam = Number(new URLSearchParams(location.search).get('level'));
   if (levelParam >= 1 && levelParam <= LEVELS.length) {
     saving = false;
-    campaign = newCampaign();
+    const d = new URLSearchParams(location.search).get('difficulty'); // e.g. &difficulty=hard
+    campaign = newCampaign(DIFFICULTIES[d] ? d : 'normal');
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
   } else {

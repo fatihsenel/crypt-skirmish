@@ -1,7 +1,9 @@
 // Between fights: the dungeon map, the party, the pack of loot, and what just happened.
 // Also the title screen. Plain HTML/SVG; all state changes go through the handlers.
 
-import { NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem } from '../game/campaign.js';
+import {
+  NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, DIFFICULTIES,
+} from '../game/campaign.js';
 import { ITEMS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
@@ -37,7 +39,11 @@ export class Camp {
     $('#title').addEventListener('click', (ev) => {
       const b = ev.target.closest('button');
       if (b?.id === 'title-continue') this.h.onContinue();
-      if (b?.id === 'title-new') this.h.onNewCampaign();
+      if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty);
+    });
+    $('#title-difficulty').addEventListener('change', (ev) => {
+      this.difficulty = ev.target.value;
+      this.renderDifficulty();
     });
   }
 
@@ -46,12 +52,23 @@ export class Camp {
   }
 
   // --- title ------------------------------------------------------------------
+  /** The Story / Normal / Hard picker; the choice is remembered for the next new run. */
+  renderDifficulty() {
+    this.difficulty ??= 'normal';
+    $('#title-difficulty .seg').innerHTML = Object.entries(DIFFICULTIES).map(([id, d]) => `
+      <label><input type="radio" name="difficulty" value="${id}"${id === this.difficulty ? ' checked' : ''}>
+      <span>${esc(d.name)}</span></label>`).join('');
+    $('#difficulty-desc').textContent = DIFFICULTIES[this.difficulty].desc;
+  }
+
   showTitle(save) {
+    this.difficulty ??= save?.difficulty ?? 'normal';
+    this.renderDifficulty();
     $('#camp').hidden = true;
     $('#title').hidden = false;
     $('#title-continue').hidden = !save;
     $('#title-save').textContent = save
-      ? `Saved run: party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
+      ? `Saved run (${DIFFICULTIES[save.difficulty].name}): party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
       : '';
     $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
   }
@@ -87,7 +104,7 @@ export class Camp {
     const bar = `<div class="xp" title="Party XP">
       <span>Party level <b>${lvl}</b></span>
       <span class="xpbar"><i style="width:${pct}%"></i></span>
-      <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`}</span>
+      <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · ${esc(DIFFICULTIES[state.difficulty ?? 'normal'].name)}</span>
     </div>`;
     let news = '';
     if (report?.rest) {

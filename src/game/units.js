@@ -128,7 +128,7 @@ export const TEMPLATES = {
   // --- act two ---------------------------------------------------------------
   u: {
     name: 'Ghoul', cls: 'Ghoul', team: 'monsters', color: 0x8a9a78,
-    hp: 28, ac: 13, speed: 6, prof: 2, xp: 200, cr: 1,
+    hp: 32, ac: 13, speed: 6, prof: 2, xp: 200, cr: 1,
     multiattack: 2, // claw, claw
     ai: 'brute',
     undead: true,
@@ -140,7 +140,7 @@ export const TEMPLATES = {
   },
   w: {
     name: 'Varek', cls: 'Wight', team: 'monsters', color: 0x5a6a88,
-    hp: 85, ac: 15, speed: 6, prof: 2, xp: 700, cr: 3,
+    hp: 110, ac: 15, speed: 6, prof: 2, xp: 700, cr: 3,
     multiattack: 2,
     ai: 'brute',
     undead: true,
@@ -194,7 +194,7 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     attacksLeft: 0,     // extra attacks left this turn (Multiattack)
     sneakUsed: false,
     turned: 0,          // turns left fleeing from Turn Undead
-    channelUsed: false, // Turn Undead
+    channelUsed: 0,     // Turn Undead uses this fight (of channelUses)
     corpse: false,
     spells: t.spells ? [...t.spells] : [],
     slots: t.slots ? { ...t.slots } : {},
@@ -220,14 +220,20 @@ export const PROGRESSION = {
   F: {
     4: { hp: 8, stats: { str: 2 }, note: 'Strength 18: +1 to hit and damage' },
     5: { hp: 8, prof: 3, extraAttack: 2, passives: ['extraAttack'], note: 'Extra Attack: two swings per Attack action' },
+    6: { hp: 8, stats: { str: 2 }, note: 'Strength 20: +1 to hit and damage' },
   },
   W: {
     4: { hp: 5, stats: { int: 2 }, slots: { 2: 3 }, note: 'Intelligence 18, a third 2nd-level slot' },
     5: { hp: 5, prof: 3, slots: { 3: 2 }, spells: ['fireball'], note: 'Fireball and two 3rd-level slots' },
+    6: {
+      hp: 5, slots: { 3: 3 }, sculpt: true, passives: ['sculptSpells'],
+      note: 'Sculpt Spells: Fireball and Burning Hands spare the party; a third 3rd-level slot',
+    },
   },
   R: {
     4: { hp: 6, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
     5: { hp: 6, prof: 3, sneakDice: 3, passives: ['uncannyDodge'], note: 'Sneak Attack 3d6 and Uncanny Dodge' },
+    6: { hp: 6, sneakDice: 4, note: 'Sneak Attack 4d6' },
   },
   C: {
     4: { hp: 7, stats: { wis: 2 }, slots: { 2: 3 }, note: 'Wisdom 18, a third 2nd-level slot' },
@@ -235,10 +241,14 @@ export const PROGRESSION = {
       hp: 7, prof: 3, slots: { 3: 2 }, spells: ['massHealingWord'], destroyUndead: 0.5,
       passives: ['destroyUndead'], note: 'Mass Healing Word, Destroy Undead and two 3rd-level slots',
     },
+    6: {
+      hp: 7, slots: { 3: 3 }, channelUses: 2, passives: ['blessedHealer'],
+      note: 'Turn Undead twice per fight, Blessed Healer and a third 3rd-level slot',
+    },
   },
 };
 
-export const MAX_LEVEL = 5;
+export const MAX_LEVEL = 6;
 
 /** Raise a freshly created unit to `level`. Slots are refilled to the new maximum. */
 export function applyLevel(unit, level) {

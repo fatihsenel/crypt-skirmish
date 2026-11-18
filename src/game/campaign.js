@@ -10,7 +10,17 @@ export const SAVE_VERSION = 1;
 export const HERO_CODES = ['F', 'W', 'R', 'C'];
 
 /** Party XP (shared) needed for each level. Heroes start at level 3. */
-export const XP_LEVELS = { 4: 450, 5: 900 };
+export const XP_LEVELS = { 4: 450, 5: 900, 6: 2000 };
+
+/**
+ * Chosen for the whole run. Monsters' HP is scaled and their weapon attacks get a bonus
+ * (or penalty) to hit and damage; the heroes are untouched.
+ */
+export const DIFFICULTIES = {
+  story: { name: 'Story', hp: 0.75, bonus: -1, desc: 'Weaker monsters: for enjoying the tale.' },
+  normal: { name: 'Normal', hp: 1, bonus: 0, desc: 'The crypt as intended.' },
+  hard: { name: 'Hard', hp: 1.2, bonus: 1, desc: 'Tougher monsters that hit harder. Every choice counts.' },
+};
 
 /**
  * The dungeon map. Columns go deeper; `next` lists where you can go from here. An entry
@@ -84,13 +94,13 @@ export function heroUnit(code, rec) {
   return u;
 }
 
-export function newCampaign() {
+export function newCampaign(difficulty = 'normal') {
   const party = {};
   for (const code of HERO_CODES) {
     const u = createUnit(code, 0, 0);
     party[code] = { level: u.level, hp: u.hp, alive: true, slots: { ...u.slots }, potions: u.potions, items: [] };
   }
-  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false };
+  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false, difficulty };
 }
 
 /** Rooms the party can enter next. */
@@ -234,6 +244,7 @@ export function parseSave(text) {
     if (!Array.isArray(s.cleared) || !s.cleared.every((c) => NODES[c])) return null;
     if (!Array.isArray(s.pack) || !s.pack.every((i) => ITEMS[i])) return null;
     if (typeof s.xp !== 'number') return null;
+    if (!DIFFICULTIES[s.difficulty]) s.difficulty = 'normal'; // saves from before difficulties
     for (const code of HERO_CODES) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;

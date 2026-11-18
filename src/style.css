@@ -388,6 +388,16 @@ b.loot { color: var(--gold); }
 #title .card { text-align: center; padding: 16px; }
 #title h1 { margin: 0; font: 700 clamp(36px, 7vw, 64px) var(--display); color: var(--gold); letter-spacing: 0.04em; }
 #title .tagline { margin: 6px 0 26px; color: var(--ink); opacity: 0.85; }
+#title .difficulty { border: 0; margin: 14px 0 6px; padding: 0; }
+#title .difficulty legend { font-size: 12px; color: var(--muted); margin: 0 auto 6px; padding: 0; }
+#title .difficulty .seg { display: inline-flex; border: 1px solid #ffffff22; border-radius: 8px; overflow: hidden; }
+#title .difficulty label { cursor: pointer; }
+#title .difficulty input { position: absolute; opacity: 0; pointer-events: none; }
+#title .difficulty span { display: block; padding: 6px 16px; font-size: 13px; }
+#title .difficulty label + label span { border-left: 1px solid #ffffff22; }
+#title .difficulty input:checked + span { background: #c9b07a; color: #1a1410; font-weight: 600; }
+#title .difficulty input:focus-visible + span { outline: 2px solid #c9b07a; outline-offset: -2px; }
+#title .difficulty p { font-size: 12px; margin: 6px 0 0; min-height: 1.2em; }
 #title .title-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 #title .title-buttons button { padding: 10px 20px; }
 #title-continue[hidden] { display: none; }
