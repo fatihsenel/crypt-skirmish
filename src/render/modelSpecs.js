@@ -1,6 +1,8 @@
 // Which .glb each unit uses and which of its clips the game plays. Kept free of three.js so
 // scripts/trim-models.js can read it and drop the clips nobody uses from the model files.
 
+import { TEMPLATES, classOf } from '../game/units.js';
+
 /**
  * Per unit: which file, which built-in meshes to show (every other weapon/prop is hidden),
  * procedural weapons for the unarmed skeletons, figure height, and the clips used.
@@ -131,3 +133,26 @@ export function clipsByFile() {
   }
   return out;
 }
+
+const specFor = (code) => SPECS[code];
+
+/**
+ * The model files a room needs: its heroes (as the party's classes) and monsters, any
+ * corpses, and the risen-skeleton rig when someone there can cast Animate Dead. A fight
+ * waits only for these; the rest keep loading behind it.
+ * `rows` is the level's map, `party` the campaign's party records (or null).
+ */
+export function filesForRoom(rows, party) {
+  const files = new Set();
+  for (const ch of rows.join('')) {
+    if (!/[a-zA-Z]/.test(ch)) continue;
+    const code = classOf(ch, party?.[ch]);
+    const spec = specFor(code);
+    if (spec) files.add(spec.file);
+    if (TEMPLATES[code]?.spells?.includes('animateDead')) files.add(SPECS.risen.file);
+  }
+  return [...files];
+}
+
+/** Every model file, for loading in the background. */
+export const allFiles = () => [...new Set(Object.values(SPECS).map((s) => s.file))];

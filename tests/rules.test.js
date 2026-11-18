@@ -6,6 +6,7 @@ import { chooseAttack, chooseMove, nextMonsterStep } from '../src/game/ai.js';
 import { coneTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById, LEVELS } from '../src/game/maps.js';
 import { createUnit } from '../src/game/units.js';
+import { SPECS, filesForRoom } from '../src/render/modelSpecs.js';
 import {
   cleanName, newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES, DIFFICULTIES,
   recordDefeat, runSummary, heroUnit,
@@ -1970,5 +1971,28 @@ describe('act three monsters', () => {
     expect(game.damageBonus(e, touch)).toBe(0);
     expect(game.applyRider(e, w, touch.rider)).toMatchObject({ stat: 'wis', success: false, condition: 'frightened' });
     expect(game.fearSource(w)).toBe(e);
+  });
+});
+
+describe('model loading per room', () => {
+  it('the first room waits only for the six figures it shows', () => {
+    expect(filesForRoom(levelById('crypt').rows, null).sort()).toEqual(
+      ['Barbarian', 'Knight', 'Mage', 'Rogue_Hooded', 'Skeleton_Warrior', 'monsters/Rat'],
+    );
+  });
+
+  it('every room asks for the figure of every unit that can appear in it', () => {
+    for (const party of [null, newCampaign('normal', {}, { F: 'P', R: 'A' }).party]) {
+      for (const level of LEVELS) {
+        const files = new Set(filesForRoom(level.rows, party));
+        const game = new Game(level, { party });
+        for (const u of game.units) {
+          const spec = SPECS[u.code];
+          if (spec) expect(files.has(spec.file), `${level.id}: ${u.name}`).toBe(true);
+          // Anyone who can raise the dead needs the risen skeleton's rig too.
+          if (u.spells?.includes('animateDead')) expect(files.has(SPECS.risen.file), `${level.id}: risen`).toBe(true);
+        }
+      }
+    }
   });
 });

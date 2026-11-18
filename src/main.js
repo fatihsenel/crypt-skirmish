@@ -8,7 +8,7 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
-  recordDefeat, runSummary, heroUnit,
+  recordDefeat, runSummary, heroUnit, choices, START_NODE,
 } from './game/campaign.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed, unitRef, targetRef } from './game/replay.js';
 import { key, pathFrom, gridDistance } from './game/grid.js';
@@ -17,7 +17,8 @@ import { SPELLS, ACTIONS, coneTiles, lineTiles, areaTiles, directionTo } from '.
 import { createStage } from './render/stage.js';
 import { Board } from './render/board.js';
 import { UnitView, shootProjectile, floatText } from './render/unitView.js';
-import { preloadModels } from './render/gltfModels.js';
+import { loadModels, modelsSettled } from './render/gltfModels.js';
+import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
 import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon } from './render/effects.js';
 import { wait } from './render/tween.js';
@@ -60,11 +61,12 @@ let nodeId = null;
  */
 let fight = null;
 
-// The character models, loading from the moment the page opens.
+// The character models load room by room: a fight waits only for the figures it needs.
+// Once the dungeon tiles are in (they gate the title), the next room's models come first,
+// then the rest in the background (see the boot code at the bottom).
 const $loading = document.getElementById('loading');
-let figuresReady = false;
-let fightTicket = 0; // the latest fight asked for while the figures were loading
-const figuresLoading = preloadModels().then(() => { figuresReady = true; });
+let fightTicket = 0; // the latest fight asked for while its figures were loading
+const roomFiles = (id, party) => filesForRoom(levelById(NODES[id].level).rows, party);
 
 /** Save the campaign together with the fight in progress. */
 function saveFight() {
@@ -333,16 +335,19 @@ function clearSpiritWeapon(id) {
  * replay it to where it was saved instead; if that fails, the party is back at camp.
  */
 function newGame(resume = null) {
-  if (figuresReady) {
+  const files = roomFiles(nodeId, campaign.party);
+  const ticket = ++fightTicket;
+  if (modelsSettled(files)) {
+    $loading.hidden = true;
     startFight(resume);
     return;
   }
-  // The figures are still downloading (a first visit, straight into a room): wait for them.
-  const ticket = ++fightTicket;
+  // This room's figures are still downloading (a first visit, straight in): wait for them.
   $loading.hidden = false;
-  figuresLoading.then(() => {
+  loadModels(files).then(() => {
+    if (ticket !== fightTicket) return; // another fight was asked for meanwhile
     $loading.hidden = true;
-    if (ticket === fightTicket) startFight(resume);
+    startFight(resume);
   });
 }
 
@@ -1588,9 +1593,9 @@ function testParty(state, level) {
 
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets
 // the heroes' level, &paladin swaps the Fighter for a Paladin and &ranger the Rogue for a Ranger.
-// The title waits only for the dungeon tiles (~1 MB); the .glb figures (~7 MB) keep
-// loading behind it, and a fight started before they're here waits for them. Any that
-// fail fall back to the built-in miniatures.
+// The title waits only for the dungeon tiles (~0.25 MB compressed); the .glb figures
+// follow, the next room's first, and a fight waits only for its own. Any that fail fall
+// back to the built-in miniatures.
 // #boot (inline in index.html) covers the page until the title is up.
 const $boot = document.getElementById('boot');
 function bootProgress(done, total) {
@@ -1619,8 +1624,18 @@ preloadDungeon(bootProgress).then(() => {
     campaign = testParty(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('ranger') && { R: 'A' }) }), Number(q.get('party')));
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
+    loadModels(roomFiles(nodeId, campaign.party)).then(() => loadModels(allFiles())); // this room first
   } else {
-    camp.showTitle(loadSave());
+    const save = loadSave();
+    camp.showTitle(save);
+    // While the title is up: the figures for the room the player is most likely to enter
+    // next (the saved fight, the rooms open from the saved camp, or the first room), then
+    // every other model.
+    let next = [START_NODE];
+    if (save?.fight) next = [save.fight.node];
+    else if (save) next = choices(save).filter((id) => NODES[id].kind === 'fight');
+    const first = [...new Set(next.flatMap((id) => roomFiles(id, save?.party ?? null)))];
+    loadModels(first).then(() => loadModels(allFiles()));
   }
   hideBoot();
 });

@@ -14,15 +14,28 @@ import { SPECS, DEFAULT_CLIPS } from './modelSpecs.js';
 const BASE = `${import.meta.env.BASE_URL}models/`;
 
 const loaded = new Map(); // file -> gltf
+const loading = new Map(); // file -> promise, so each file is fetched once
+const settled = new Set(); // files that loaded or gave up
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); // see scripts/compress-models.js
 
-/** Load every model once. Never rejects: a model that fails just isn't used. */
-export function preloadModels() {
-  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder); // see scripts/compress-models.js
-  const files = [...new Set(Object.values(SPECS).map((s) => s.file))];
-  return Promise.all(files.map((f) => loader.loadAsync(`${BASE}${f}.glb`)
-    .then((g) => loaded.set(f, g))
-    .catch((e) => console.warn(`Model ${f} not loaded, using the built-in figure`, e))));
+/**
+ * Load these model files (each only once, however often it's asked for). Never rejects:
+ * a model that fails just isn't used, and its units get the built-in figure.
+ */
+export function loadModels(files) {
+  return Promise.all(files.map((f) => {
+    if (!loading.has(f)) {
+      loading.set(f, loader.loadAsync(`${BASE}${f}.glb`)
+        .then((g) => { loaded.set(f, g); })
+        .catch((e) => console.warn(`Model ${f} not loaded, using the built-in figure`, e))
+        .finally(() => settled.add(f)));
+    }
+    return loading.get(f);
+  }));
 }
+
+/** True once every one of these files has loaded or given up. */
+export const modelsSettled = (files) => files.every((f) => settled.has(f));
 
 const specFor = (unit) => (unit.code === 's' && unit.name.startsWith('Risen') ? SPECS.risen : SPECS[unit.code]);
 

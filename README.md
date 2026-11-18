@@ -297,8 +297,10 @@ scripts/compress-models.js  meshopt-compresses every .glb (npm run models)
 ```
 
 A boot screen, styled inline in `index.html` so it paints before any script arrives, shows
-the tiles' loading progress. The title screen waits only for the dungeon tiles; the
-character models keep loading behind it, and a fight started before they arrive waits for them. three.js is built into a chunk of
+the tiles' loading progress. The title screen waits only for the dungeon tiles. The
+character models come after them, room by room (`filesForRoom` in `modelSpecs.js`): first the
+figures for the room the player is most likely to enter next, then the rest. A fight waits
+only for its own figures (six of the nine files for the first room). three.js is built into a chunk of
 its own, so browsers keep it cached when only the game changes. The packs ship 14 to 95
 animation clips per model and the game plays about ten, so `node scripts/trim-models.js`
 drops the rest (30 MB of models down to under 8 MB). `npm run models`
