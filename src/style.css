@@ -50,7 +50,14 @@ html, body {
 }
 .unit-label.heroes .name { color: var(--hero); }
 .unit-label.monsters .name { color: var(--monster); }
-.unit-label.active .name { color: var(--gold); }
+.unit-label.active .name {
+  color: #1a1408;
+  background: var(--gold);
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-shadow: none;
+  box-shadow: 0 0 8px rgba(255, 211, 107, 0.7);
+}
 .unit-label .hpbar {
   width: 44px; height: 5px;
   background: rgba(0, 0, 0, 0.6);

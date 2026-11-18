@@ -998,7 +998,7 @@ async function playAction(unit, r) {
   switch (r.id) {
     case 'secondWind':
     case 'potion':
-      if (id === 'potion') sfx.potion();
+      if (r.id === 'potion') sfx.potion();
       else sfx.heal();
       floatText(stage.scene, unit, `+${r.healed}`, 'heal');
       v.updateHp();
@@ -1317,7 +1317,12 @@ async function heroCommand(cmd) {
   selected = null;
   hovered = null;
   refresh();
-  await play(u, cmd.type, r);
+  try {
+    await play(u, cmd.type, r);
+  } catch (err) {
+    // A broken animation must never leave the controls locked: the rules already applied.
+    console.error(err);
+  }
   if (game !== g) return r;
   syncStatus();
   if (await checkGameOver()) return r;

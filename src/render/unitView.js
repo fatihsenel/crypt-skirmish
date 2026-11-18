@@ -33,6 +33,22 @@ function buildBase(unit) {
   return base;
 }
 
+/** The whose-turn-is-it marker: a bright gold ring on the floor with a pulsing halo. */
+function buildMarker() {
+  const glow = (opacity) => new THREE.MeshBasicMaterial({
+    color: 0xffd36b, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.52, 48).rotateX(-Math.PI / 2), glow(0.95));
+  const halo = new THREE.Mesh(new THREE.RingGeometry(0.52, 0.62, 48).rotateX(-Math.PI / 2), glow(0.35));
+  ring.position.y = 0.015;
+  halo.position.y = 0.014;
+  g.add(ring, halo);
+  g.userData.halo = halo;
+  g.visible = false;
+  return g;
+}
+
 export class UnitView {
   constructor(unit, stage) {
     this.unit = unit;
@@ -42,7 +58,8 @@ export class UnitView {
     this.group.position.set(unit.x, 0, unit.z);
 
     this.base = buildBase(unit);
-    this.group.add(this.base);
+    this.marker = buildMarker();
+    this.group.add(this.base, this.marker);
 
     // `figure` turns to face targets; `model.root` sits on top of the base.
     this.figure = new THREE.Group();
@@ -158,6 +175,11 @@ export class UnitView {
 
   // --- per-frame animation ----------------------------------------------------
   animate(t, dt) {
+    if (this.marker.visible) {
+      const pulse = 0.5 + 0.5 * Math.sin(t * 4);
+      this.marker.userData.halo.scale.setScalar(1 + pulse * 0.12);
+      this.marker.userData.halo.material.opacity = 0.2 + pulse * 0.35;
+    }
     if (this.rig) {
       this.rig.update(dt, this.walking);
       return;
@@ -193,6 +215,7 @@ export class UnitView {
 
   setActive(on) {
     this.label.element.classList.toggle('active', on);
+    this.marker.visible = on && this.unit.alive;
   }
 
   /** Small status tags above the name (Dodging, Shield, Disengaged). */
@@ -438,6 +461,7 @@ export class UnitView {
 
   async die() {
     this.label.visible = false;
+    this.marker.visible = false;
     this.walking = false;
     this.prone = false;
     this.tilt.rotation.set(0, 0, 0);
