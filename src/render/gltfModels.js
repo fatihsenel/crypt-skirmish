@@ -49,6 +49,16 @@ const SPECS = {
     file: 'Skeleton_Mage', height: 1.5, staff: true,
     clips: { melee: '1H_Melee_Attack_Stab', walk: 'Walking_D_Skeletons' },
   },
+  // Act two reuses the skeleton rigs: ghouls are a grey-green, clawing minion; the wight a
+  // tall, cold-blue warrior.
+  u: {
+    file: 'Skeleton_Minion', height: 1.2, tint: 0x9fb88a,
+    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
+  },
+  w: {
+    file: 'Skeleton_Warrior', height: 1.5, blade: true, tint: 0x8fa0d0,
+    clips: { melee: '1H_Melee_Attack_Slice_Diagonal', walk: 'Walking_D_Skeletons' },
+  },
 };
 
 const DEFAULT_CLIPS = {

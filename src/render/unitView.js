@@ -50,7 +50,11 @@ export class UnitView {
     // A rigged .glb figure where there is one, else the procedural miniature.
     this.model = buildGltfModel(unit) ?? buildModel(unit);
     this.rig = this.model.gltf ?? null;
-    this.figure.add(this.model.root);
+    // `tilt` lays the figure down while it is prone.
+    this.tilt = new THREE.Group();
+    this.tilt.add(this.model.root);
+    this.figure.add(this.tilt);
+    this.prone = false;
     this.group.add(this.figure);
     this.figure.rotation.y = unit.team === 'heroes' ? Math.PI / 4 : -Math.PI * 0.75;
 
@@ -185,11 +189,29 @@ export class UnitView {
       u.shielded && ['shield', 'Shield +5'],
       u.disengaged && ['disengage', 'Disengaged'],
       u.turned && ['turned', 'Turned'],
+      u.conditions?.prone && ['prone', 'Prone'],
+      u.conditions?.poisoned && ['poisoned', 'Poisoned'],
+      u.conditions?.frightened && ['frightened', 'Frightened'],
       u.hidden && ['hidden', `Hidden · ${u.hidden}`],
       u.asleep ? ['asleep', 'Asleep'] : u.patrol && u.unaware ? ['unaware', 'Patrolling'] : u.unaware && ['unaware', 'Unaware'],
     ].filter(Boolean);
     this.label.element.querySelector('.tags').innerHTML =
       tags.map(([cls, text]) => `<i class="tag ${cls}">${text}</i>`).join('');
+    this.setProne(!!u.conditions?.prone && u.alive);
+  }
+
+  /** Knocked down / back on its feet: tip the figure over onto its back (rats onto a side). */
+  setProne(on) {
+    if (on === this.prone) return;
+    this.prone = on;
+    const axis = this.model.dieAxis === 'z' ? 'z' : 'x';
+    const down = axis === 'z' ? 1.25 : -1.2;
+    const from = this.tilt.rotation[axis];
+    const to = on ? down : 0;
+    tween(on ? 260 : 380, (t) => {
+      this.tilt.rotation[axis] = lerp(from, to, t);
+      this.tilt.position.y = (on ? t : 1 - t) * 0.12;
+    }, on ? easeIn : easeOut);
   }
 
   /** Spell-casting gesture: raise both arms, run `release`, lower them. */
@@ -391,6 +413,9 @@ export class UnitView {
   async die() {
     this.label.visible = false;
     this.walking = false;
+    this.prone = false;
+    this.tilt.rotation.set(0, 0, 0);
+    this.tilt.position.y = 0;
     if (this.rig) {
       await this.rig.play('die', { hold: true }).done;
       await tween(700, (t) => this.fadeMeshes(1 - t * 0.6));

@@ -450,7 +450,7 @@ export class Board {
       g.add(shine);
       if (opened) lid.rotation.x = -1.9;
       this.addToCell(x, z, g);
-      return { lid, shine };
+      return { g, lid, shine };
     }
     const wood = mat(0x7a4a24);
     const iron = mat(0x3d3a38, { metalness: 0.6, roughness: 0.5 });
@@ -479,7 +479,16 @@ export class Board {
     g.add(shine);
     if (opened) lid.rotation.x = -1.9;
     this.addToCell(x, z, g);
-    return { lid, shine };
+    return { g, lid, shine };
+  }
+
+  /** The chest was a mimic: its prop goes, the monster's figure takes its place. */
+  removeChest(x, z) {
+    const c = this.chests.get(key(x, z));
+    if (!c) return;
+    this.chests.delete(key(x, z));
+    this.group.remove(c.g);
+    this.pickables = this.pickables.filter((p) => p !== c.g);
   }
 
   async openChest(x, z) {

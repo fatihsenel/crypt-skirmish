@@ -27,6 +27,16 @@ export const SLEEP_DEPTH = 3;
 /** Unaware patrols walk their beat at this many tiles per turn. */
 export const PATROL_PACE = 3;
 
+// Conditions (SRD 5.1), kept in unit.conditions as { name: { turns, by } }:
+//   prone       melee attacks against it have advantage, ranged ones disadvantage; its own
+//               attacks have disadvantage. It stands up at the start of its turn for half
+//               its movement.
+//   poisoned    disadvantage on attack rolls and ability checks (Stealth).
+//   frightened  disadvantage on attack rolls while it can see the source of its fear, and it
+//               can't willingly move closer to it. A WIS save at the end of each turn ends it.
+// `turns` counts the victim's own turns: it ticks down at the end of each of them.
+export const CONDITIONS = ['prone', 'poisoned', 'frightened'];
+
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions'];
 
@@ -47,7 +57,14 @@ export class Game {
     this.rng = rng;
     this.listeners = {};
     this.grid = new Grid(rows);
-    [...this.grid.chests.values()].forEach((c, i) => { c.loot = [...(level.loot?.[i] ?? ['potion'])]; });
+    [...this.grid.chests.values()].forEach((c, i) => {
+      c.loot = [...(level.loot?.[i] ?? ['potion'])];
+      // A mimic waits as a chest until someone tries to open it (see openChest).
+      if (level.mimics?.includes(key(c.x, c.z))) {
+        c.mimic = true;
+        c.loot = [];
+      }
+    });
 
     const all = [...this.grid.spawns, ...this.grid.corpses];
     const totals = {};
@@ -217,6 +234,69 @@ export class Game {
     this.emit('revealed', { unit: h, cause, by });
   }
 
+  // --- conditions -------------------------------------------------------------
+  has(unit, name) {
+    return !!unit.conditions?.[name];
+  }
+
+  /**
+   * Give `unit` a condition for `turns` of its own turns (Infinity: until removed).
+   * Gained during its own turn, the rest of that turn doesn't count.
+   */
+  addCondition(unit, name, { turns = Infinity, by = null, dc = 10 } = {}) {
+    if (!unit.alive) return;
+    const own = unit === this.current;
+    const fresh = !unit.conditions[name];
+    unit.conditions[name] = { turns: turns + (own && turns !== Infinity ? 1 : 0), by, dc };
+    if (name === 'prone' && own) unit.movesLeft = 0; // knocked down mid-move: that's it for this turn
+    if (fresh) this.emit('condition', { unit, name, on: true, by });
+  }
+
+  removeCondition(unit, name, cause = 'expired') {
+    if (!unit.conditions[name]) return;
+    delete unit.conditions[name];
+    this.emit('condition', { unit, name, on: false, cause });
+  }
+
+  /** The unit the frightened `unit` is afraid of, if it is still up. */
+  fearSource(unit) {
+    const by = unit.conditions?.frightened?.by;
+    return by?.alive ? by : null;
+  }
+
+  /** Start of a turn: get up off the floor (half of the movement goes on it). */
+  standUp(unit) {
+    if (!this.has(unit, 'prone')) return;
+    unit.movesLeft = Math.max(0, unit.speed - Math.ceil(unit.speed / 2));
+    this.removeCondition(unit, 'prone', 'stand');
+  }
+
+  /** End of a turn: frightened units try to shake it off, and timed conditions tick down. */
+  tickConditions(unit) {
+    if (!unit.alive) return;
+    if (this.has(unit, 'frightened')) {
+      const c = unit.conditions.frightened;
+      if (!this.fearSource(unit)) this.removeCondition(unit, 'frightened', 'expired');
+      else if (this.save(unit, 'wis', c.dc).success) this.removeCondition(unit, 'frightened', 'save');
+    }
+    for (const name of ['poisoned', 'frightened']) {
+      const c = unit.conditions[name];
+      if (c && --c.turns <= 0) this.removeCondition(unit, name, 'expired');
+    }
+  }
+
+  /**
+   * An attack's rider (e.g. poisoned claws): the target saves or gains the condition.
+   * Returns { stat, dc, d20, total, success, condition } or null.
+   */
+  applyRider(attacker, target, rider) {
+    if (!rider || !target.alive || this.has(target, rider.condition)) return null;
+    const s = this.save(target, rider.save, rider.dc);
+    const out = { stat: rider.save, dc: rider.dc, d20: s.d20, total: s.total, success: s.success, condition: rider.condition };
+    if (!s.success) this.addCondition(target, rider.condition, { turns: rider.turns ?? Infinity, by: attacker });
+    return out;
+  }
+
   /** An unaware monster becomes aware; if it saw or was hurt, it shouts to friends in view. */
   alert(m, cause) {
     if (!m.unaware || !m.alive) return;
@@ -307,6 +387,7 @@ export class Game {
       sneakUsed: false,
       interacted: false,
     });
+    this.standUp(u);
     this.updateAwareness();
     this.emit('turnStart', { unit: u });
   }
@@ -315,6 +396,7 @@ export class Game {
     if (this.over) return;
     const u = this.current;
     if (u.turned > 0) u.turned--;
+    this.tickConditions(u);
     this.emit('turnEnd', { unit: u });
     do {
       this.turn++;
@@ -363,11 +445,15 @@ export class Game {
   }
 
   // --- movement -----------------------------------------------------------
-  // You may move through allies but not through enemies (5e). Heroes avoid traps they know about.
+  // You may move through allies but not through enemies (5e). Heroes avoid traps they know
+  // about. The frightened can't step any closer to what they fear.
   passableFor(unit) {
+    const fear = this.fearSource(unit);
+    const keep = fear ? gridDistance(unit, fear) : 0;
     return (x, z) => {
       const o = this.unitAt(x, z);
       if (o && o.team !== unit.team) return false;
+      if (fear && gridDistance({ x, z }, fear) < keep) return false;
       if (unit.team === 'heroes') {
         const t = this.grid.traps.get(key(x, z));
         if (t && t.revealed && !t.sprung) return false;
@@ -467,6 +553,15 @@ export class Game {
         const result = this.springTrap(trap, unit);
         steps.push({ type: 'trap', result });
         if (!unit.alive || this.over) return stop(i + 1);
+        if (result.prone) {
+          // Knocked flat: the move ends here (addCondition already spent the movement).
+          flush(to);
+          this.emit('move', { unit, path: path.slice(0, i + 2) });
+          for (const st of steps) if (st.type === 'door') this.noise(st, 3);
+          this.revealTraps();
+          this.updateAwareness();
+          return { steps, path: path.slice(0, i + 2), interrupted: true };
+        }
       }
     }
     flush(path[path.length - 1]);
@@ -487,9 +582,14 @@ export class Game {
     const { d20, total, success } = this.save(unit, 'dex', TRAP_DC);
     const roll = rollExpr(TRAP_DAMAGE, { rng: this.rng });
     const damage = success ? Math.floor(roll.total / 2) : roll.total;
-    const result = { trap, unit, d20, total, dc: TRAP_DC, success, roll, damage };
+    // Spikes through the boots: fail the save and you go down as well.
+    const result = { trap, unit, d20, total, dc: TRAP_DC, success, roll, damage, prone: false };
     this.emit('trap', result);
     this.applyDamage(unit, damage, null);
+    if (!success && unit.alive) {
+      result.prone = true;
+      this.addCondition(unit, 'prone');
+    }
     return result;
   }
 
@@ -504,6 +604,13 @@ export class Game {
         t.revealed = true;
         found.push(t);
         this.emit('trapFound', { trap: t, unit: u });
+      }
+      // The same eye for detail sees teeth marks on a chest that isn't one.
+      for (const c of this.grid.chests.values()) {
+        if (!c.mimic || c.suspected || gridDistance(u, c) > 2) continue;
+        if (!this.grid.lineOfSight(u.x, u.z, c.x, c.z)) continue;
+        c.suspected = true;
+        this.emit('mimicFound', { chest: c, unit: u });
       }
     }
     return found;
@@ -525,8 +632,9 @@ export class Game {
     const problem = this.chestProblem(unit, x, z);
     if (problem) return { ok: false, reason: problem };
     const c = this.grid.chests.get(key(x, z));
-    c.opened = true;
     unit.interacted = true;
+    if (c.mimic) return this.springMimic(unit, c);
+    c.opened = true;
     const loot = c.loot.splice(0);
     for (const item of loot) {
       if (item === 'potion') unit.potions++;
@@ -534,6 +642,20 @@ export class Game {
     }
     const result = { ok: true, unit, chest: c, loot };
     this.emit('chest', result);
+    return result;
+  }
+
+  /**
+   * The "chest" was a mimic. It joins the fight right after the hero who touched it and
+   * bites at once, with advantage unless someone had already seen through it (Keen Eyes).
+   */
+  springMimic(unit, c) {
+    this.grid.chests.delete(key(c.x, c.z));
+    const mimic = createUnit('m', c.x, c.z);
+    this.addUnit(mimic, unit);
+    const result = { ok: true, unit, chest: c, loot: [], mimic, bite: null };
+    this.emit('mimic', result);
+    result.bite = this.attack(mimic, unit, mimic.attacks[0], { ambush: !c.suspected });
     return result;
   }
 
@@ -574,12 +696,21 @@ export class Game {
   }
 
   /** Advantage / disadvantage sources for an attack. They cancel out (5e). */
-  attackMods(attacker, target, attack, { opportunity = false } = {}) {
+  attackMods(attacker, target, attack, { opportunity = false, ambush = false } = {}) {
     const adv = [];
     const dis = [];
+    if (ambush) adv.push('ambush');
     if (attack.reach > 1 && this.isAdjacentToEnemy(attacker)) dis.push('enemy adjacent');
     if (target.dodging) dis.push('target is dodging');
-    if (attacker.multiattack && attacker.actionUsed && !opportunity) dis.push('second attack');
+    if (attacker.clumsyMultiattack && attacker.actionUsed && !opportunity) dis.push('second attack');
+    if (this.has(attacker, 'prone')) dis.push('prone');
+    if (this.has(target, 'prone')) {
+      if (gridDistance(attacker, target) <= 1) adv.push('target prone');
+      else dis.push('target prone');
+    }
+    if (this.has(attacker, 'poisoned')) dis.push('poisoned');
+    const fear = this.fearSource(attacker);
+    if (fear && this.inSight(attacker, fear, 99)) dis.push('frightened');
     if (attack.reach === 1 && this.isFlanking(attacker, target)) adv.push('flanking');
     if (attacker.passives.includes('packTactics') && this.allyNextTo(attacker, target)) adv.push('pack tactics');
     if (target.turned) adv.push('target is fleeing');
@@ -604,11 +735,11 @@ export class Game {
     return mods.mode === 'adv' || (mods.mode === 'normal' && this.allyNextTo(attacker, target));
   }
 
-  attack(attacker, target, attack, { opportunity = false } = {}) {
+  attack(attacker, target, attack, { opportunity = false, ambush = false } = {}) {
     const problem = this.attackProblem(attacker, target, attack, { opportunity });
     if (problem) return { ok: false, reason: problem };
 
-    const mods = this.attackMods(attacker, target, attack, { opportunity });
+    const mods = this.attackMods(attacker, target, attack, { opportunity, ambush });
     this.reveal(attacker, 'attack');
     if (opportunity) {
       attacker.reactionUsed = true;
@@ -659,16 +790,70 @@ export class Game {
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity,
       d20, rolls, mods, toHit, total, ac: this.acOf(target),
-      hit, crit, fumble, shielded, damage, damageRoll, sneak, uncanny,
+      hit, crit, fumble, shielded, damage, damageRoll, sneak, uncanny, rider: null,
     };
     this.emit('attack', result);
     if (shielded) {
       this.emit('spell', { ok: true, kind: 'spell', id: 'shield', spell: SPELLS.shield, caster: target, slot: shieldSlot });
     }
-    if (hit) this.applyDamage(target, damage, attacker);
+    if (hit) {
+      this.applyDamage(target, damage, attacker);
+      result.rider = this.applyRider(attacker, target, attack.rider);
+      if (result.rider) this.emit('rider', result);
+    }
     this.alert(target, 'hurt'); // a miss gives you away too
     this.noise(attacker);
     return result;
+  }
+
+  /** Shove: knock an adjacent enemy prone. Takes one attack of the Attack action. */
+  shoveProblem(attacker, target) {
+    if (this.over) return 'The battle is over';
+    if (!this.canAttack(attacker)) return 'Action already used this turn';
+    if (attacker.turned) return 'Turned: can only flee';
+    if (!target?.alive || target.team === attacker.team) return 'Choose an enemy';
+    if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
+    if (this.has(target, 'prone')) return `${target.name} is already prone`;
+    if (target.huge) return `${target.name} is too big to shove`;
+    return null;
+  }
+
+  /**
+   * Athletics (d20 + STR + proficiency) against the target's best of STR or DEX.
+   * The target wins ties. Returns { ok, kind: 'shove', attacker, target, roll, resist, success }.
+   */
+  shove(attacker, target) {
+    const problem = this.shoveProblem(attacker, target);
+    if (problem) return { ok: false, reason: problem };
+    this.reveal(attacker, 'attack');
+    if (!attacker.actionUsed) {
+      attacker.actionUsed = true;
+      attacker.attacksLeft = (attacker.multiattack ?? attacker.extraAttack ?? 1) - 1;
+    } else {
+      attacker.attacksLeft--;
+    }
+    const mode = this.has(attacker, 'poisoned') ? 'dis' : 'normal';
+    const a = this.rollD20(mode);
+    const b = rollDice(1, 20, this.rng).total;
+    const bonus = this.shoveBonus(attacker);
+    const resistBonus = this.shoveResist(target);
+    const roll = { d20: a.d20, rolls: a.rolls, bonus, total: a.d20 + bonus };
+    const resist = { d20: b, bonus: resistBonus, total: b + resistBonus };
+    const result = { ok: true, kind: 'shove', attacker, target, roll, resist, success: roll.total > resist.total };
+    this.emit('shove', result);
+    this.alert(target, 'hurt');
+    if (result.success) this.addCondition(target, 'prone', { by: attacker });
+    this.noise(attacker);
+    this.updateAwareness();
+    return result;
+  }
+
+  shoveBonus(unit) {
+    return abilityMod(unit.stats.str) + (unit.team === 'heroes' ? unit.prof : 0);
+  }
+
+  shoveResist(unit) {
+    return Math.max(abilityMod(unit.stats.str), abilityMod(unit.stats.dex));
   }
 
   canUncannyDodge(unit) {
@@ -733,9 +918,10 @@ export class Game {
         break;
       case 'hide':
       case 'cunningHide': {
-        const { d20, rolls } = this.rollD20(unit.noisyArmor ? 'dis' : 'normal');
+        const poisoned = this.has(unit, 'poisoned');
+        const { d20, rolls } = this.rollD20(unit.noisyArmor || poisoned ? 'dis' : 'normal');
         const bonus = this.stealthBonus(unit);
-        Object.assign(result, { d20, rolls, bonus, total: d20 + bonus, noisy: !!unit.noisyArmor });
+        Object.assign(result, { d20, rolls, bonus, total: d20 + bonus, noisy: !!unit.noisyArmor, poisoned });
         unit.hidden = Math.max(1, d20 + bonus);
         break;
       }
@@ -862,6 +1048,7 @@ export class Game {
       case 'enemy':
         if (!target.alive || target.team === caster.team) return 'Choose an enemy';
         if (!inRange(target)) return `Out of range or not in sight (${s.range * 5} ft)`;
+        if (s.condition && this.has(target, s.condition)) return `${target.name} is already ${s.condition}`;
         break;
       case 'ally':
         if (!target.alive || target.team !== caster.team) return 'Choose an ally (or yourself)';
@@ -950,6 +1137,14 @@ export class Game {
         Object.assign(result, { target, dc, save: { d20, total, success }, roll, damage: success ? 0 : roll.total });
         this.emit('spell', result);
         if (result.damage) this.applyDamage(target, result.damage, caster);
+        break;
+      }
+      case 'dread': {
+        const dc = this.spellDC(caster);
+        const { d20, total, success } = this.save(target, 'wis', dc);
+        Object.assign(result, { target, dc, save: { d20, total, success } });
+        this.emit('spell', result);
+        if (!success) this.addCondition(target, 'frightened', { turns: spell.turns, by: caster, dc });
         break;
       }
       case 'cureWounds':

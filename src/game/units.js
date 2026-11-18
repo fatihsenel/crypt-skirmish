@@ -1,5 +1,10 @@
 // Stat blocks. Numbers follow the SRD 5.1 (CC-BY-4.0) where possible.
 // speed and reach are in tiles (1 tile = 5 ft).
+// An attack's `rider` is a save the target makes when hit, or gains a condition
+// (combat.js applyRider), e.g. { save: 'con', dc: 10, condition: 'poisoned', turns: 1 }.
+
+/** Filthy bites and fouled arrows: poisoned until the end of the victim's next turn. */
+const POISON_DC10 = { save: 'con', dc: 10, condition: 'poisoned', turns: 1 };
 
 export const TEMPLATES = {
   F: {
@@ -60,7 +65,8 @@ export const TEMPLATES = {
     stats: { str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8 },
     attacks: [
       { name: 'Scimitar', stat: 'dex', damage: '1d6', reach: 1 },
-      { name: 'Shortbow', stat: 'dex', damage: '1d6', reach: 16, projectile: 'arrow' },
+      // Dipped in something foul (a house rule: SRD goblin arrows aren't poisoned).
+      { name: 'Shortbow', stat: 'dex', damage: '1d6', reach: 16, projectile: 'arrow', rider: POISON_DC10 },
     ],
   },
   s: {
@@ -91,13 +97,14 @@ export const TEMPLATES = {
     passives: ['packTactics'],
     ai: 'brute',
     stats: { str: 7, dex: 15, con: 11, int: 2, wis: 10, cha: 4 },
-    attacks: [{ name: 'Bite', stat: 'dex', damage: '1d4', reach: 1 }],
+    attacks: [{ name: 'Bite', stat: 'dex', damage: '1d4', reach: 1, rider: POISON_DC10 }],
   },
   b: {
     name: 'Grukk', cls: 'Goblin Boss', team: 'monsters', color: 0x8a3a2a,
     hp: 21, ac: 17, speed: 6, prof: 2, xp: 200, cr: 1,
     features: ['nimbleEscape'],
-    multiattack: 2, // the second attack has disadvantage (SRD)
+    multiattack: 2,
+    clumsyMultiattack: true, // the second attack has disadvantage (SRD goblin boss)
     ai: 'brute',
     stats: { str: 10, dex: 14, con: 10, int: 10, wis: 8, cha: 10 },
     attacks: [
@@ -109,13 +116,51 @@ export const TEMPLATES = {
     name: 'Morvath', cls: 'Necromancer', team: 'monsters', color: 0x3d2a4f,
     hp: 24, ac: 12, speed: 6, prof: 2, xp: 450, cr: 2, level: 5,
     castStat: 'int',
-    spells: ['animateDead'],
-    slots: { 3: 2 },
-    ai: 'caster', // keeps its distance, raises the dead
+    spells: ['animateDead', 'dread'],
+    slots: { 1: 2, 3: 2 },
+    ai: 'caster', // keeps its distance, raises the dead, frightens the bold
     stats: { str: 9, dex: 14, con: 12, int: 17, wis: 12, cha: 11 },
     attacks: [
       { name: 'Chill Touch', stat: 'int', damage: '1d8', reach: 24, addMod: false, projectile: 'necro' },
       { name: 'Dagger', stat: 'dex', damage: '1d4', reach: 1 },
+    ],
+  },
+  // --- act two ---------------------------------------------------------------
+  u: {
+    name: 'Ghoul', cls: 'Ghoul', team: 'monsters', color: 0x8a9a78,
+    hp: 22, ac: 12, speed: 6, prof: 2, xp: 200, cr: 1,
+    ai: 'brute',
+    undead: true,
+    stats: { str: 13, dex: 15, con: 10, int: 7, wis: 10, cha: 6 },
+    attacks: [
+      // SRD ghoul claws paralyse; here the grave-filth only poisons (DC 10 CON).
+      { name: 'Claws', stat: 'dex', damage: '2d4', reach: 1, rider: { save: 'con', dc: 10, condition: 'poisoned', turns: 2 } },
+    ],
+  },
+  w: {
+    name: 'Varek', cls: 'Wight', team: 'monsters', color: 0x5a6a88,
+    hp: 45, ac: 14, speed: 6, prof: 2, xp: 700, cr: 3,
+    multiattack: 2,
+    ai: 'brute',
+    undead: true,
+    castStat: 'cha',
+    spells: ['dread'],
+    slots: { 1: 2 },
+    stats: { str: 15, dex: 14, con: 16, int: 10, wis: 13, cha: 15 },
+    attacks: [
+      { name: 'Longsword', stat: 'str', damage: '1d8', reach: 1 },
+      { name: 'Longbow', stat: 'dex', damage: '1d8', reach: 24, projectile: 'arrow' },
+    ],
+  },
+  m: {
+    name: 'Mimic', cls: 'Mimic', team: 'monsters', color: 0x7a4a24,
+    hp: 58, ac: 12, speed: 3, prof: 2, xp: 450, cr: 2,
+    ai: 'brute',
+    huge: true, // too heavy to shove over
+    stats: { str: 17, dex: 12, con: 15, int: 5, wis: 13, cha: 8 },
+    attacks: [
+      // A sticky pseudopod slam: STR save or you are dragged off your feet.
+      { name: 'Pseudopod', stat: 'str', damage: '2d8', reach: 1, rider: { save: 'str', dc: 13, condition: 'prone' } },
     ],
   },
 };
@@ -160,6 +205,7 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     disengaged: false,  // this turn
     shielded: false,    // Shield spell, until the start of its next turn
     secondWindUsed: false,
+    conditions: {},     // prone / poisoned / frightened (combat.js)
   };
 }
 

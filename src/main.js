@@ -286,6 +286,11 @@ function newGame() {
     else hud.logTrap(r);
   });
   game.on('chest', (r) => hud.logChest(r));
+  game.on('mimic', (r) => hud.logMimic(r));
+  game.on('mimicFound', (r) => pendingReveals.push(r));
+  game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
+  game.on('shove', (r) => hud.logShove(r));
+  game.on('condition', (r) => { if (!unseen(r.unit)) hud.logCondition(r); });
   game.on('trapFound', (r) => pendingReveals.push(r));
   game.on('alert', (r) => pendingAlerts.push(r));
   game.on('revealed', (r) => pendingSpotted.push(r));
@@ -347,6 +352,12 @@ function flushAlerts() {
 /** Shows traps a hero spotted, after their move has finished playing. */
 function flushReveals() {
   for (const r of pendingReveals) {
+    if (r.chest) {
+      hud.logMimicFound(r);
+      sfx.discover();
+      floatText(stage.scene, r.chest, 'Teeth?!', 'warn');
+      continue;
+    }
     hud.logTrapFound(r);
     board.showTrap(r.trap);
     sfx.discover();
@@ -392,6 +403,7 @@ function refresh() {
   if (!isHeroTurn() || busy) return;
 
   if (selected?.kind === 'spell') return refreshSpell(u, selected.id);
+  if (selected?.kind === 'shove') return refreshShove(u);
 
   const reach = game.reachable(u);
   board.reach.set(game.destinations(u).filter((t) => board.isExplored(t.x, t.z)));
@@ -416,7 +428,8 @@ function refresh() {
   }
   if (game.grid.chests.has(key(hovered.x, hovered.z))) {
     const why = game.chestProblem(u, hovered.x, hovered.z);
-    hud.hint(why ?? 'Open the chest (free, once per turn)');
+    const odd = game.grid.chests.get(key(hovered.x, hovered.z)).suspected;
+    hud.hint(why ?? (odd ? 'Open the chest… if you dare. Those are teeth marks.' : 'Open the chest (free, once per turn)'));
     return;
   }
   const node = reach.get(key(hovered.x, hovered.z));
@@ -428,6 +441,20 @@ function refresh() {
     const who = game.provokers(u, path).map((f) => f.name);
     hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : ''));
   }
+}
+
+/** Shove targeting: adjacent enemies light up, the hint shows the contest. */
+function refreshShove(u) {
+  board.targets.set(game.enemiesOf(u).filter((f) => !unseen(f) && !game.shoveProblem(u, f)));
+  const foe = hovered && visibleUnitAt(hovered.x, hovered.z);
+  if (!foe || foe.team === u.team) {
+    hud.hint('Shove: click an enemy next to you · Esc to cancel');
+    return;
+  }
+  board.hover.set([hovered]);
+  const why = game.shoveProblem(u, foe);
+  hud.hint(why ? `${foe.name}: ${why}`
+    : `Shove → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and it is knocked prone`);
 }
 
 const UNIT_TARGETING = ['enemy', 'ally', 'corpse'];
@@ -569,6 +596,11 @@ async function animateAttack(r, at = r.target) {
       if (r.uncanny) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Uncanny Dodge ½', 'spell');
       floatText(stage.scene, pos, r.crit ? `CRIT −${r.damage}` : `−${r.damage}`, r.crit ? 'crit' : 'dmg');
       tv.updateHp();
+      if (r.rider && target.alive) {
+        const text = r.rider.success ? 'Resists' : CONDITION_FLOAT[r.rider.condition];
+        setTimeout(() => floatText(stage.scene, { x: pos.x, z: pos.z - 0.5 }, text, r.rider.success ? 'miss' : 'cond'), 350);
+        tv.updateStatus();
+      }
       reaction = damageReaction(target);
     } else {
       sfx.miss();
@@ -583,6 +615,8 @@ async function animateAttack(r, at = r.target) {
   await reaction;
   hud.renderInitiative(game);
 }
+
+const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!' };
 
 function damageReaction(unit) {
   const v = view(unit);
@@ -637,6 +671,10 @@ async function animateSteps(unit, steps) {
         floatText(stage.scene, r.unit, r.success ? `Save −${r.damage}` : `Trap −${r.damage}`, 'crit');
         hitFx(stage.scene, r.unit);
         await damageReaction(r.unit);
+        if (r.prone && r.unit.alive) {
+          floatText(stage.scene, r.unit, 'Prone!', 'cond');
+          view(r.unit).updateStatus();
+        }
         board.retractTrap(r.trap);
         hud.renderInitiative(game);
         break;
@@ -663,6 +701,19 @@ async function openChest(unit, x, z) {
     return r;
   }
   await view(unit).turnTowards(x, z);
+  if (r.mimic) {
+    // The chest yawns open on a mouthful of teeth and lunges.
+    sfx.chest();
+    board.removeChest(x, z);
+    addView(r.mimic);
+    sfx.roar();
+    floatText(stage.scene, { x, z }, 'Mimic!', 'warn');
+    stage.shake(0.25, 350);
+    await wait(450);
+    if (r.bite?.ok) await animateAttack(r.bite);
+    hud.renderInitiative(game);
+    return r;
+  }
   sfx.chest();
   await board.openChest(x, z);
   const n = r.loot.filter((l) => l === 'potion').length;
@@ -681,6 +732,25 @@ async function attackUnit(attacker, target, attack) {
     return r;
   }
   await animateAttack(r);
+  return r;
+}
+
+async function shoveUnit(attacker, target) {
+  const r = game.shove(attacker, target);
+  if (!r.ok) {
+    hud.toast(r.reason);
+    return r;
+  }
+  await view(attacker).swing(target, () => {
+    if (r.success) {
+      sfx.hit(target.code);
+      floatText(stage.scene, target, 'Prone!', 'cond');
+      view(target).updateStatus();
+    } else {
+      floatText(stage.scene, target, 'Holds firm', 'miss');
+    }
+  });
+  hud.renderInitiative(game);
   return r;
 }
 
@@ -821,6 +891,15 @@ async function castSpell(caster, id, target) {
         floatText(stage.scene, r.target, 'Save', 'miss');
       }
       break;
+    case 'dread':
+      await cv.cast(r.target, async () => {
+        sfx.necro();
+        await shootProjectile(stage.scene, caster, r.target, 'necro');
+      });
+      floatText(stage.scene, r.target, r.save.success ? 'Resists' : 'Frightened!', r.save.success ? 'miss' : 'cond');
+      view(r.target).updateStatus();
+      await wait(300);
+      break;
     case 'cureWounds':
     case 'healingWord':
       await cv.cast(r.target === caster ? null : r.target, async () => {
@@ -870,7 +949,9 @@ async function checkGameOver() {
   } else {
     sfx.defeat();
   }
-  hud.banner(game.over, { round: game.round, level: level.name, final, xp: game.xpEarned() });
+  hud.banner(game.over, {
+    round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
+  });
   return true;
 }
 
@@ -1024,6 +1105,20 @@ stage.dom.addEventListener('click', (ev) => {
     return;
   }
 
+  if (selected?.kind === 'shove') {
+    if (!other || other.team === u.team) {
+      hud.toast('Click an enemy next to you');
+      return;
+    }
+    const why = game.shoveProblem(u, other);
+    if (why) {
+      hud.toast(why);
+      return;
+    }
+    heroDoes(() => shoveUnit(u, other));
+    return;
+  }
+
   if (other && other.team !== u.team) {
     const atk = selected?.attack ?? game.bestAttack(u, other);
     const why = game.attackProblem(u, other, atk ?? u.attacks[0]);
@@ -1095,7 +1190,7 @@ window.__debug = {
   stage,
   sfx,
   /** The controller's animated actions, for scripted play-testing. */
-  act: { moveUnit, attackUnit, castSpell, doAction, openChest },
+  act: { moveUnit, attackUnit, castSpell, doAction, openChest, shoveUnit },
   autoplay(on = true) {
     debugAutoplay = on;
     if (on && isHeroTurn() && !busy) runMonsterTurn(game.current);

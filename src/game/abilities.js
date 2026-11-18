@@ -29,6 +29,19 @@ export const ACTIONS = {
 
 export const STANDARD_ACTIONS = ['dash', 'dodge', 'disengage', 'hide'];
 
+/** Shove sits with the attacks: it takes one attack of the Attack action. */
+export const SHOVE = {
+  name: 'Shove', reach: 1,
+  desc: 'Instead of one attack: Athletics (STR + proficiency) against the target’s STR or DEX. Win and it is knocked prone: melee attacks against it have advantage until it gets up on its turn.',
+};
+
+/** What each condition does, for tooltips and the log. */
+export const CONDITION_INFO = {
+  prone: 'Prone: melee attacks against it have advantage, ranged ones disadvantage; its own attacks have disadvantage. Standing up costs half its movement.',
+  poisoned: 'Poisoned: disadvantage on attack rolls and Stealth.',
+  frightened: 'Frightened: disadvantage on attacks while it can see the source of its fear, and it can’t move closer to it. A WIS save at the end of each turn ends it.',
+};
+
 /** Passive features (no button): documented here for the HUD tooltips. */
 export const PASSIVES = {
   sneakAttack: 'Sneak Attack: extra d6s (2d6, 3d6 from level 5) once per turn when you have advantage, or an ally is next to the target.',
@@ -87,6 +100,11 @@ export const SPELLS = {
   massHealingWord: {
     name: 'Mass Healing Word', level: 3, time: 'bonus', range: 12, targeting: 'self',
     desc: 'Bonus action: up to six hurt allies within 60 ft you can see regain 1d4 + WIS HP.',
+  },
+  dread: {
+    name: 'Dread', level: 1, time: 'action', range: 12, targeting: 'enemy',
+    save: 'wis', condition: 'frightened', turns: 2,
+    desc: 'A whisper from the grave: one foe within 60 ft makes a WIS save or is frightened for 2 turns.',
   },
   animateDead: {
     name: 'Animate Dead', level: 3, time: 'action', range: 6, targeting: 'corpse',

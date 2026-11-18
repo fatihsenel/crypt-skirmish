@@ -24,20 +24,40 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - monsters: goblins (skirmishers), skeletons (brutes, undead), an **orc** that charges
   (Aggressive), **giant rats** with Pack Tactics, **Grukk the goblin boss** (two attacks, the
   second at disadvantage) and **Morvath the necromancer**, who raises corpses with
-  **Animate Dead**, and the risen skeleton acts right after him
+  **Animate Dead**, and the risen skeleton acts right after him (he also casts **Dread**)
+- **conditions** that feed advantage / disadvantage:
+  - **prone**: melee attacks against you have advantage, ranged ones disadvantage, and your
+    own attacks have disadvantage. You stand up at the start of your turn for half your
+    movement. Failing a trap's save knocks you prone and ends your move there
+  - **Shove** (uses one attack): STR (Athletics) against the target's STR or DEX; a win knocks
+    it prone, and ties go to the target. Too-big targets (the mimic) can't be shoved
+  - **poisoned**: disadvantage on attacks and on Hide. Goblin arrows, rat bites and ghoul claws
+    poison on a failed CON save
+  - **frightened** (**Dread**, 1st-level spell, WIS save): disadvantage on attacks while the
+    source is in sight, and you can't step closer to it. Repeat the save at the end of each
+    of your turns; it also ends if the source dies
+  - poisoned and frightened always last through the victim's next turn. Tags show on the figure
 - the dungeon: **doors** that block sight until opened, hidden **spike traps** (DEX save,
   2d6), **chests** with potions of healing, and **stairs** to the next level
 - **a campaign**: a dungeon map with a fork. After the Crypt Door, pick the Goblin Warren or
   the Flooded Ossuary; then either rest at the Forgotten Chapel (long rest) or clear the
   other room too (more XP and loot, but no rest) before the Necromancer's Sanctum
+- **act two**: Morvath's fall is followed by a long rest, then the **Catacombs** (ghouls),
+  a fork between the **Sealed Vault** (treasure, including a Cloak of Protection, and a
+  **mimic** posing as a chest) and a rest at the **Still Well**, and finally the
+  **Wight's Barrow**, where Varek the wight (two attacks, a longbow, Dread) waits. Opening the
+  mimic wakes it: it joins the initiative right after the opener and bites with advantage,
+  unless Wren's Keen Eyes spotted it from within 10 ft (the log warns you, and hovering the
+  chest says so)
 - between rooms the party keeps HP, spell slots and potions, takes a short rest (regain half
   the missing HP; the fallen get back up) and shares **XP**. A lost fight can be retried as
   you entered it, or you can go back to the map and pick another way
 - **levelling** from 3 to 5 (450 / 900 party XP): more HP and a +2 to the main ability at 4;
   at 5, Brannoc gets **Extra Attack**, Ilsa **Fireball** (20-ft radius, hits allies too),
   Wren Sneak Attack 3d6 and **Uncanny Dodge**, Maela **Mass Healing Word** and
-  **Destroy Undead**, plus 3rd-level slots for both casters
-- **magic items** from chests (Runed Weapon +1, Ring of Protection) go into the pack and
+  **Destroy Undead**, plus 3rd-level slots for both casters. The level cap stays at 5 for
+  act two; the extra rooms bring loot and XP, but no level 6
+- **magic items** from chests (Runed Weapon +1, Ring of Protection, Cloak of Protection) go into the pack and
   are handed out at camp
 - **fog of war**: you only see what your heroes can see. Rooms you have seen stay dimly
   drawn; monsters out of sight are hidden (their initiative chips read `???` until spotted)
@@ -59,6 +79,9 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   screen, and a natural 20 or 1 throws a tumbling d20 over the attacker
 - **saves**: the run is saved to the browser after every room; the title screen offers
   Continue. Fights themselves are not saved: reloading mid-fight returns you to the camp
+- **house rules** (simplifications of the SRD): goblin arrows and rat bites poison
+  (DC 10 CON); ghoul claws poison instead of paralysing; the mimic's pseudopod knocks
+  prone (DC 13 STR) instead of grappling; Grukk's second attack is the only clumsy one
 
 ## Run
 
@@ -74,7 +97,7 @@ Every push to `main` runs the tests, builds, and deploys to GitHub Pages
 (`.github/workflows/pages.yml`). The base path lives in `vite.config.js`.
 
 Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 Warren,
-3 Ossuary, 4 Sanctum) with a fresh level-3 party; this doesn't touch the save.
+3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow) with a fresh level-3 party; this doesn't touch the save.
 In the browser console, `__debug.autoplay()` lets the monster AI play the heroes too, and
 `__debug.win()` / `__debug.lose()` end the current fight on the spot.
 
@@ -84,7 +107,7 @@ In the browser console, `__debug.autoplay()` lets the monster AI play the heroes
 | --- | --- |
 | Left-click tile | Move (blue tiles = reachable, gold dots = path, red dots = provokes an opportunity attack) |
 | Left-click enemy | Attack (red tiles = targetable); uses the best weapon in range |
-| Attack buttons | Force a specific attack |
+| Attack buttons | Force a specific attack, or pick **Shove** and click an adjacent enemy |
 | Spell buttons | Enter targeting: enemy (red), ally (green), aim a cone (Burning Hands), pick a purple tile (Misty Step) |
 | Action buttons | Dash / Dodge / Disengage / Second Wind / Potion / Turn Undead take effect immediately |
 | Left-click chest | Open it when standing next to it (free, once per turn) |
@@ -120,7 +143,7 @@ src/
     gltfModels.js  loads the .glb heroes and undead (public/models), picks their weapons,
                    plays their animation clips (idle, walk, attack, cast, hit, death, rise)
     models.js      rigged procedural miniatures (fighter, wizard, rogue, cleric, goblin,
-                   goblin boss, skeleton, orc, giant rat, necromancer)
+                   goblin boss, skeleton, orc, giant rat, necromancer, mimic)
     unitView.js    base + label, idle/walk/swing/cast/teleport/death animations
     effects.js     spell effects: missiles, fire cone, mist, shield dome, healing,
                    sacred flame, turn undead, raise dead, fireball; hit particles,
@@ -134,8 +157,8 @@ tests/rules.test.js
 ```
 
 The rules engine resolves everything instantly and emits events (`initiative`, `turnStart`,
-`move`, `attack`, `spell`, `action`, `door`, `trap`, `trapFound`, `chest`, `death`,
-`gameOver`); `move()` returns a list of steps (`walk`, `door`, `opportunity`, `trap`) that
+`move`, `attack`, `spell`, `action`, `door`, `trap`, `trapFound`, `chest`, `mimic`,
+`mimicFound`, `shove`, `rider`, `condition`, `death`, `gameOver`); `move()` returns a list of steps (`walk`, `door`, `opportunity`, `trap`) that
 the controller plays back in order. Keep it that way and
 you can swap the visuals (real models, different camera) without touching rules.
 
@@ -145,7 +168,8 @@ you can swap the visuals (real models, different camera) without touching rules.
    (`body`, `head`, `armL/R`, `legL/R`, `rest`, `height`); animations work
    automatically (quadrupeds wire their front legs as arms and set `bite: true`). For downloaded `.glb` models, load them
    with `GLTFLoader` and map their bones onto the same rig fields.
-2. **Conditions**: prone, poisoned, frightened as flags that feed `attackMods`.
+2. **More conditions**: add one to `CONDITIONS` in `combat.js` and a line in `attackMods`;
+   monsters can inflict it through an attack `rider` or a spell's `condition`.
 3. **More rooms**: add a map to `LEVELS` in `maps.js` and a node in `NODES` in `campaign.js`
    (its column, row and `next` links); the camp map draws it.
 4. **More .glb models**: goblins, orcs and rats are still procedural. Add a CC0 pack's file

@@ -1,7 +1,7 @@
 // HTML overlay: initiative tracker, action bar, combat log, banners.
 
 import { signed } from '../game/dice.js';
-import { ACTIONS, SPELLS, PASSIVES } from '../game/abilities.js';
+import { ACTIONS, SPELLS, PASSIVES, SHOVE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -10,9 +10,10 @@ const who = (u) => `<span class="${u.team}">${esc(u.name)}</span>`;
 const ordinal = (n) => ['', '1st', '2nd', '3rd'][n] ?? `${n}th`;
 const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus ? ` ${signed(roll.bonus)}` : ''}]</span>`;
 // (logAction builds every action's text, so this must cope with results that have no roll)
-const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}</span>`;
+const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!' };
 
 export class Hud {
   /**
@@ -70,6 +71,41 @@ export class Hud {
     );
   }
 
+  /** The save against an attack's rider (logged once the hit has landed). */
+  logRider(r) {
+    const x = r.rider;
+    if (!x) return;
+    this.log(`${who(r.target)} <span class="dice">${x.stat.toUpperCase()} save ${x.total} vs DC ${x.dc}</span>: ` +
+      (x.success ? `<b class="hit">shrugs it off</b>.` : `<b class="cond ${x.condition}">${CONDITION_VERB[x.condition]}</b>`));
+  }
+
+  logShove(r) {
+    const roll = `<span class="dice">${r.roll.rolls.length > 1 ? `d20 [${r.roll.rolls.join(', ')}] → ${r.roll.d20}` : `d20 ${r.roll.d20}`} ${signed(r.roll.bonus)} = ${r.roll.total}</span>`;
+    const resist = `<span class="dice">${r.resist.d20} ${signed(r.resist.bonus)} = ${r.resist.total}</span>`;
+    this.log(`${who(r.attacker)} shoves ${who(r.target)}: ${roll} vs ${resist}. ` +
+      (r.success ? '<b class="cond prone">Knocked prone!</b>' : '<b class="miss">It keeps its feet.</b>'));
+  }
+
+  /** A condition starts or ends. (Starting ones from riders and spells are logged with them.) */
+  logCondition({ unit, name, on, cause }) {
+    if (on) return;
+    const text = {
+      stand: `gets up off the floor (half movement).`,
+      save: `shakes off the fear.`,
+      expired: name === 'poisoned' ? 'is no longer poisoned.' : name === 'frightened' ? 'is no longer frightened.' : 'recovers.',
+    }[cause] ?? 'recovers.';
+    this.log(`${who(unit)} ${text}`, 'sys');
+  }
+
+  logMimic({ unit, mimic, chest }) {
+    this.log(`${who(unit)} reaches for the chest… and it opens its mouth. <b class="crit">A ${esc(mimic.name.toLowerCase())}!</b>` +
+      (chest.suspected ? '' : ' It strikes before anyone can react.'), 'death');
+  }
+
+  logMimicFound({ unit }) {
+    this.log(`${who(unit)} eyes a chest warily: <b class="opp">those aren't scratches, they're teeth marks</b>.`);
+  }
+
   logSpell(r) {
     const slot = r.slot ? `<span class="dice">${ordinal(r.slot)}-level slot</span>` : '<span class="dice">cantrip</span>';
     const name = `<b class="spell">${esc(r.spell.name)}</b>`;
@@ -102,6 +138,9 @@ export class Hud {
     } else if (r.id === 'cureWounds' || r.id === 'healingWord') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} casts ${name} on ${self}: <b class="heal">+${r.healed} HP</b> ${dice(r.roll)}. ${slot}`);
+    } else if (r.id === 'dread') {
+      this.log(`${who(r.caster)} whispers ${name} at ${who(r.target)}. WIS save DC ${r.dc}: ` +
+        `${saveText({ ...r.save, unit: r.target }, 'is frightened')}. ${slot}`);
     } else if (r.id === 'animateDead') {
       this.log(`${who(r.caster)} casts ${name}. The ${esc(r.corpse.cls.toLowerCase())} corpse rises as ` +
         `<span class="monsters">${esc(r.risen.name)}</span>! ${slot}`, 'death');
@@ -110,7 +149,9 @@ export class Hud {
 
   logTrap(r) {
     this.log(`<b class="crit">A hidden trap!</b> Spikes burst from the floor under ${who(r.unit)}. ` +
-      `DEX save DC ${r.dc}: ${saveText(r)}, takes <b class="hit">${r.damage} piercing</b> ${dice(r.roll)}.`);
+      `DEX save DC ${r.dc}: ${saveText(r)}, takes <b class="hit">${r.damage} piercing</b> ${dice(r.roll)}` +
+      // (logged before the damage lands: it goes down only if it survives the spikes)
+      (!r.success && r.unit.hp > r.damage ? ' and is <b class="cond prone">knocked prone</b>.' : '.'));
   }
 
   logTrapFound({ unit }) {
@@ -180,6 +221,7 @@ export class Hud {
       return;
     }
     const pip = (label, used) => `<span class="pip ${used ? 'used' : 'ready'}">${label}</span>`;
+    const conds = Object.keys(u.conditions ?? {});
     const slots = Object.entries(u.slots)
       .map(([l, n]) => `<span class="slots" title="${ordinal(+l)}-level spell slots">${ordinal(+l)} ${'◆'.repeat(n)}<s>${'◇'.repeat(Math.max(0, (u.slotMax?.[l] ?? n) - n))}</s></span>`)
       .join('');
@@ -191,7 +233,8 @@ export class Hud {
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span title="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
       </div>
-      ${u.passives.length || u.items?.length ? `<div class="passives">${u.passives.map((p) =>
+      ${u.passives.length || u.items?.length || conds.length ? `<div class="passives">${conds.map((c) =>
+        `<span class="passive-tag cond ${c}" title="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
         `<span class="passive-tag" title="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
         `<span class="passive-tag item" title="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
       <div class="economy">
@@ -225,6 +268,14 @@ export class Hud {
       title: 'Select, then click an enemy (or just click an enemy to use the best weapon)',
       disabled: !game.canAttack(u),
       active: selected?.kind === 'attack' && selected.attack === atk,
+    }));
+    const shoveWhy = game.canAttack(u) ? null : 'Action already used this turn';
+    atks.push(button({
+      kind: 'shove', id: 'shove', name: SHOVE.name, cls: 'act',
+      sub: `${signed(game.shoveBonus(u))} · knock prone · 5 ft`,
+      title: shoveWhy ? `${SHOVE.desc}\n(${shoveWhy})` : SHOVE.desc,
+      disabled: !!shoveWhy,
+      active: selected?.kind === 'shove',
     }));
 
     const spells = u.spells.map((id) => {
@@ -263,6 +314,7 @@ export class Hud {
     if (!b || b.disabled) return;
     const { kind, id } = b.dataset;
     if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
+    else if (kind === 'shove') this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 
@@ -287,14 +339,17 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false }) {
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';
+    const rest = longRest
+      ? 'takes a long rest before going deeper (full HP and spell slots)'
+      : 'catches its breath (short rest: regain half your missing HP)';
     $('#banner-title').textContent = won ? (final ? 'Victory' : 'Room cleared') : 'Defeat';
     $('#banner-text').textContent = won
       ? final
-        ? `Morvath is destroyed and the crypt is cleansed after ${rounds}. Well fought! (+${xp} XP)`
-        : `${level} is quiet after ${rounds}. The party shares ${xp} XP and catches its breath (short rest: regain half your missing HP).`
+        ? `${outro} Won after ${rounds}. Well fought! (+${xp} XP)`
+        : `${level} is quiet after ${rounds}. The party shares ${xp} XP and ${rest}.`
       : `Your party has fallen in ${level}. Try the room again as you entered it, or go back to the map and pick another way.`;
     $('#next').hidden = !won || final;
     $('#to-map').hidden = won;

@@ -10,7 +10,10 @@ const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const ordinal = (n) => ['', '1st', '2nd', '3rd'][n] ?? `${n}th`;
 
-const pos = (id) => ({ x: 62 + NODES[id].col * 125, y: 40 + NODES[id].row * 82 });
+const COLS = Math.max(...Object.values(NODES).map((n) => n.col)) + 1;
+const COL_W = 104;
+const MAP_W = COL_W * COLS;
+const pos = (id) => ({ x: COL_W / 2 + NODES[id].col * COL_W, y: 40 + NODES[id].row * 82 });
 
 /** Small glyphs drawn inside the map nodes. */
 const GLYPH = {
@@ -90,7 +93,9 @@ export class Camp {
     if (report?.rest) {
       news = `<p><b>${esc(nodeName(report.rest))}.</b> ${esc(NODES[report.rest].intro)} Everyone is back to full HP with every spell slot.</p>`;
     } else if (report) {
-      const parts = [`<p>The room is cleared: <b>+${report.xp} XP</b>. A short rest restores half of everyone's missing HP.</p>`];
+      const parts = [report.longRest
+        ? `<p>The room is cleared: <b>+${report.xp} XP</b>. Before going deeper the party takes a long rest: full HP and every spell slot back.</p>`
+        : `<p>The room is cleared: <b>+${report.xp} XP</b>. A short rest restores half of everyone's missing HP.</p>`];
       if (report.potions) {
         parts.push(`<p>Searching the room turns up <b class="loot">${report.potions} potion${report.potions > 1 ? 's' : ''} of healing</b>, shared out among the party.</p>`);
       }
@@ -122,7 +127,7 @@ export class Camp {
     }).join('');
     const nodes = Object.entries(NODES).map(([id, n]) => {
       const p = pos(id);
-      const kind = n.kind === 'rest' ? 'rest' : n.next.length ? 'fight' : 'boss';
+      const kind = n.kind === 'rest' ? 'rest' : n.boss ? 'boss' : 'fight';
       const state_ = cleared.has(id) ? 'cleared' : options.includes(id) ? 'available' : 'locked';
       const cls = ['node', kind, state_, id === state.at ? 'here' : '', id === this.selected ? 'selected' : ''].join(' ');
       const label = n.short ?? nodeName(id).replace(/^The /, '');
@@ -134,7 +139,7 @@ export class Camp {
         <text y="${kind === 'boss' ? 38 : 34}">${esc(label)}</text>
       </g>`;
     }).join('');
-    return `<svg viewBox="0 0 500 248" role="img" aria-label="Dungeon map">${edges}${nodes}</svg>`;
+    return `<svg viewBox="0 0 ${MAP_W} 248" role="img" aria-label="Dungeon map">${edges}${nodes}</svg>`;
   }
 
   roomHtml(state) {
@@ -142,7 +147,7 @@ export class Camp {
     if (!id) return '<p class="muted">No way onward.</p>';
     const n = NODES[id];
     const intro = n.kind === 'rest' ? n.intro : levelById(n.level).intro;
-    const verb = n.kind === 'rest' ? 'Rest at the chapel' : `Enter ${nodeName(id)}`;
+    const verb = n.verb ?? `Enter ${nodeName(id)}`;
     return `<h3>${esc(nodeName(id))}</h3>
       <p>${esc(intro)}</p>
       ${n.teaser ? `<p class="teaser">${esc(n.teaser)}</p>` : ''}

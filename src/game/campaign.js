@@ -18,6 +18,8 @@ export const XP_LEVELS = { 4: 450, 5: 900 };
  * `unlessAll` on a node hides it once all those rooms are cleared.
  * The fork: take one middle room and rest at the chapel, or clear both middle rooms
  * (more XP and loot) and face the necromancer without that rest.
+ * `boss` draws a crown on the map; `actBreak` gives a long rest after the fight.
+ * Act two (after the sanctum) asks the same question once more: the vault or the well.
  */
 export const NODES = {
   crypt: { kind: 'fight', level: 'crypt', col: 0, row: 1, next: ['warren', 'ossuary'] },
@@ -33,13 +35,33 @@ export const NODES = {
   },
   chapel: {
     kind: 'rest', col: 2, row: 1, next: ['sanctum'], unlessAll: ['warren', 'ossuary'],
-    name: 'The Forgotten Chapel', short: 'Chapel',
+    name: 'The Forgotten Chapel', short: 'Chapel', verb: 'Rest at the chapel',
     intro: 'A quiet chapel, untouched by the dead. The party takes a long rest.',
     teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
   },
   sanctum: {
-    kind: 'fight', level: 'sanctum', short: 'Sanctum', col: 3, row: 1, next: [],
-    teaser: 'Morvath the necromancer. The end of the road.',
+    kind: 'fight', level: 'sanctum', short: 'Sanctum', col: 3, row: 1, next: ['catacombs'],
+    boss: true, actBreak: true,
+    teaser: 'Morvath the necromancer, the end of the first act. Afterwards the party takes a long rest.',
+  },
+  // Act two: one fight, then the vault's loot or the well's rest, then the wight.
+  catacombs: {
+    kind: 'fight', level: 'catacombs', col: 4, row: 1, next: ['vault', 'well'],
+    teaser: 'Ghouls: their claws poison. Skeletons and a rat besides.',
+  },
+  vault: {
+    kind: 'fight', level: 'vault', short: 'Vault', col: 5, row: 0, next: ['barrow'],
+    teaser: 'Guarded treasure: a magic cloak and weapon. Skip the rest at the well.',
+  },
+  well: {
+    kind: 'rest', col: 5, row: 2, next: ['barrow'],
+    name: 'The Still Well', short: 'Well', verb: 'Rest at the well',
+    intro: 'Clean water and a door that bars from the inside. The party takes a long rest.',
+    teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
+  },
+  barrow: {
+    kind: 'fight', level: 'barrow', short: 'Barrow', col: 6, row: 1, next: [], boss: true,
+    teaser: 'Varek the wight. The end of the road.',
   },
 };
 
@@ -140,7 +162,7 @@ export function completeFight(prev, id, game) {
   const loot = [...game.found];
   let potions = 0;
   for (const c of game.grid.chests.values()) {
-    if (c.opened) continue;
+    if (c.opened || c.mimic) continue; // a sleeping mimic is best left alone
     for (const item of c.loot) {
       if (item !== 'potion') loot.push(item);
       else {
@@ -154,17 +176,25 @@ export function completeFight(prev, id, game) {
   state.cleared.push(id);
   state.at = id;
   if (NODES[id].next.length === 0) state.done = true;
-  return { state, report: { xp, total: state.xp, levelUps, loot, potions } };
+  // The end of an act: a long rest before the next one (casters would start it empty).
+  const longRest = !!NODES[id].actBreak;
+  if (longRest) restParty(state);
+  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest } };
 }
 
-/** A rest room: long rest, everyone back to full HP and spell slots. */
-export function takeRest(prev, id) {
-  const state = clone(prev);
+/** Everyone back to full HP and spell slots. */
+function restParty(state) {
   for (const code of HERO_CODES) {
     const rec = state.party[code];
     const u = heroUnit(code, { level: rec.level });
     Object.assign(rec, { hp: u.maxHp, alive: true, slots: { ...u.slotMax } });
   }
+}
+
+/** A rest room: long rest, everyone back to full HP and spell slots. */
+export function takeRest(prev, id) {
+  const state = clone(prev);
+  restParty(state);
   state.cleared.push(id);
   state.at = id;
   return state;
@@ -208,6 +238,12 @@ export function parseSave(text) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;
       if (!r.items.every((i) => ITEMS[i]) || typeof r.slots !== 'object') return null;
+    }
+    // A run finished before act two existed ended at the Sanctum: open the way on, after
+    // the long rest the act break gives.
+    if (s.done && NODES[s.at]?.next.length) {
+      s.done = false;
+      restParty(s);
     }
     return s;
   } catch {

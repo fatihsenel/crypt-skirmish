@@ -4,9 +4,10 @@ import { Grid, gridDistance } from '../src/game/grid.js';
 import { Game } from '../src/game/combat.js';
 import { chooseAttack, chooseMove, nextMonsterStep } from '../src/game/ai.js';
 import { coneTiles } from '../src/game/abilities.js';
-import { levelById } from '../src/game/maps.js';
+import { levelById, LEVELS } from '../src/game/maps.js';
+import { createUnit } from '../src/game/units.js';
 import {
-  newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave,
+  newCampaign, choices, completeFight, takeRest, equip, unequip, levelForXp, serialize, parseSave, NODES,
 } from '../src/game/campaign.js';
 
 // Deterministic RNG that returns the given sequence of d-results for a die size.
@@ -352,7 +353,12 @@ describe('map features', () => {
     const [f, g] = game.units;
     setTurn(game, 0);
     const r = game.move(f, 4, 1);
-    expect(r.steps.map((s) => s.type)).toEqual(['walk', 'trap', 'walk']);
+    // A failed save also knocks you prone, which ends the move on the trap.
+    expect(r.steps.map((s) => s.type)).toEqual(['walk', 'trap']);
+    expect(r.interrupted).toBe(true);
+    expect([f.x, f.z]).toEqual([3, 1]);
+    expect(game.has(f, 'prone')).toBe(true);
+    expect(f.movesLeft).toBe(0);
     expect(f.hp).toBe(f.maxHp - 2);
     expect(game.grid.traps.get('3,1').sprung).toBe(true);
 
@@ -698,7 +704,7 @@ describe('fog of war', () => {
   });
 
   it('sees every tile that can see a viewer (sight works both ways)', () => {
-    for (const id of ['crypt', 'warren', 'ossuary', 'sanctum']) {
+    for (const { id } of LEVELS) {
       const grid = new Grid(levelById(id).rows);
       const eyes = grid.spawns.filter((sp) => 'FWRC'.includes(sp.code));
       const seen = grid.visibleFrom(eyes);
@@ -937,4 +943,265 @@ describe('sleepers and patrols', () => {
     expect(s.unaware).toBe(false);
     expect(s.patrol).toBeNull();
   });
+});
+
+describe('conditions', () => {
+  it('prone: melee against it has advantage, ranged disadvantage, and its own attacks disadvantage', () => {
+    const game = new Game(['#########', '#F.g...W#', '#########'], { senses: false });
+    game.start();
+    const [f, g, w] = game.units;
+    game.addCondition(g, 'prone');
+    Object.assign(f, { x: 2 });
+    expect(game.attackMods(f, g, f.attacks[0]).adv).toContain('target prone');
+    expect(game.attackMods(w, g, w.attacks[0]).dis).toContain('target prone');
+    expect(game.attackMods(g, f, g.attacks[0]).dis).toContain('prone');
+  });
+
+  it('a prone unit stands up at the start of its turn for half its movement', () => {
+    const game = new Game(['######', '#F.g.#', '######'], { senses: false });
+    game.start();
+    const [, g] = game.units;
+    game.addCondition(g, 'prone');
+    setTurn(game, 1);
+    expect(game.has(g, 'prone')).toBe(false);
+    expect(g.movesLeft).toBe(3);
+  });
+
+  it('Shove: a won contest knocks the target prone and takes one attack', () => {
+    const game = new Game(['######', '#Fg..#', '######'], { senses: false, rng: fixed(0.9, 0.1) });
+    game.start();
+    const [f, g] = game.units;
+    setTurn(game, 0);
+    const r = game.shove(f, g);
+    expect(r.success).toBe(true);
+    expect(r.roll.total).toBe(19 + 3 + 2); // d20 + STR 16 + proficiency
+    expect(game.has(g, 'prone')).toBe(true);
+    expect(f.actionUsed).toBe(true);
+    expect(game.shoveProblem(f, g)).toMatch(/Action already used|already prone/);
+    // the follow-up is at advantage for anyone next to it
+    expect(game.attackMods(f, g, f.attacks[0]).mode).toBe('adv');
+  });
+
+  it('Shove: ties go to the target, and a mimic is too big to shove', () => {
+    const game = new Game(['######', '#Fg..#', '######'], { senses: false, rng: fixed(0.5) });
+    game.start();
+    const [f, g] = game.units;
+    setTurn(game, 0);
+    const m = createUnit('m', 1, 2);
+    expect(game.shoveProblem(f, Object.assign(m, { x: 2, z: 1 }))).toMatch(/too big/);
+    g.stats.str = 20; // +5 resists +5 (STR 16 + proficiency 2 = +5)
+    expect(game.shove(f, g).success).toBe(false);
+    expect(game.has(g, 'prone')).toBe(false);
+  });
+
+  it('poison from a hit lasts until the end of the victim’s next turn', () => {
+    // After setup, the queue gives the attack a 19; everything after rolls 1s (the save fails).
+    const queue = [];
+    const game = new Game(['######', '#Fr..#', '######'], { senses: false, rng: () => queue.shift() ?? 0.01 });
+    game.start();
+    const [f, r] = game.units;
+    f.hp = 999;
+    setTurn(game, 1);
+    queue.push(0.9);
+    const hit = game.attack(r, f, r.attacks[0]);
+    expect(hit.hit).toBe(true);
+    expect(hit.rider).toMatchObject({ condition: 'poisoned', success: false });
+    expect(game.has(f, 'poisoned')).toBe(true);
+    expect(game.attackMods(f, r, f.attacks[0]).dis).toContain('poisoned');
+    game.endTurn(); // the rat's turn ends: still poisoned
+    expect(game.current).toBe(f);
+    expect(game.has(f, 'poisoned')).toBe(true);
+    game.endTurn(); // the fighter's own turn ends: it wears off
+    expect(game.has(f, 'poisoned')).toBe(false);
+  });
+
+  it('a condition gained on your own turn still lasts through your next one', () => {
+    const game = new Game(['######', '#Fr..#', '######'], { senses: false });
+    game.start();
+    const [f] = game.units;
+    setTurn(game, 0);
+    game.addCondition(f, 'poisoned', { turns: 1 });
+    game.endTurn();
+    expect(game.has(f, 'poisoned')).toBe(true);
+    game.endTurn(); // the rat
+    game.endTurn(); // the fighter again
+    expect(game.has(f, 'poisoned')).toBe(false);
+  });
+
+  it('poisoned heroes hide at disadvantage', () => {
+    const game = new Game(['#########', '#R#....g#', '#########']);
+    game.start();
+    const r = setTurn(game, 0);
+    game.addCondition(r, 'poisoned', { turns: 1 });
+    const res = game.doAction(r, 'hide');
+    expect(res.rolls).toHaveLength(2);
+    expect(res.poisoned).toBe(true);
+  });
+
+  it('frightened: no stepping closer to the source, disadvantage while it is in sight', () => {
+    const game = new Game(['##########', '#F......n#', '#........#', '##########'], { senses: false });
+    game.start();
+    const [f, n] = game.units;
+    setTurn(game, 0);
+    game.addCondition(f, 'frightened', { turns: 2, by: n, dc: 30 });
+    const tiles = game.destinations(f);
+    expect(tiles.length).toBeGreaterThan(0);
+    expect(tiles.every((t) => gridDistance(t, n) >= gridDistance(f, n))).toBe(true);
+    expect(game.attackMods(f, n, f.attacks[1]).dis).toContain('frightened');
+    game.endTurn(); // DC 30: no way out by saving
+    expect(game.has(f, 'frightened')).toBe(true);
+    n.alive = false; // the source is gone: the fear goes with it
+    expect(game.destinations(f).some((t) => t.x === 2)).toBe(true);
+  });
+
+  it('a frightened hero can shake it off with a WIS save at the end of the turn', () => {
+    const game = new Game(['##########', '#F......n#', '##########'], { senses: false, rng: fixed(0.99) });
+    game.start();
+    const [f, n] = game.units;
+    setTurn(game, 0);
+    game.addCondition(f, 'frightened', { turns: 2, by: n, dc: 13 });
+    game.endTurn();
+    expect(game.has(f, 'frightened')).toBe(false);
+  });
+
+  it('Dread frightens a hero that fails a WIS save; the wight uses it when it cannot reach melee', () => {
+    const game = new Game(['################', '#F..........w..#', '################'], { senses: false, rng: fixed(0.01) });
+    game.start();
+    const [f, w] = game.units;
+    setTurn(game, 1);
+    const step = nextMonsterStep(game, w, {});
+    expect(step).toEqual({ type: 'spell', id: 'dread', target: f });
+    const r = game.castSpell(w, 'dread', f);
+    expect(r.save.success).toBe(false);
+    expect(game.has(f, 'frightened')).toBe(true);
+    expect(game.spellProblem(w, 'dread', f)).toMatch(/already frightened|Action already used/);
+  });
+
+  it('the wight attacks twice, and its second attack is not at disadvantage', () => {
+    const game = new Game(['#####', '#Fw.#', '#####'], { senses: false, rng: fixed(0.5) });
+    game.start();
+    const [f, w] = game.units;
+    f.hp = 999;
+    setTurn(game, 1);
+    game.attack(w, f, w.attacks[0]);
+    expect(game.canAttack(w)).toBe(true);
+    expect(game.attack(w, f, w.attacks[0]).mods.dis).toEqual([]);
+  });
+});
+
+describe('mimics', () => {
+  const vaultish = {
+    rows: ['########', '#F.$..$#', '#.....g#', '########'],
+    loot: [[], ['potion']],
+    mimics: ['3,1'],
+  };
+
+  it('opening a mimic wakes it: it joins right after the opener and bites with advantage', () => {
+    const game = new Game(vaultish, { senses: false, rng: fixed(0.5) });
+    game.start();
+    const f = game.units.find((u) => u.code === 'F');
+    Object.assign(f, { x: 2, z: 1 });
+    setTurn(game, 0);
+    const r = game.openChest(f, 3, 1);
+    expect(r.mimic.name).toBe('Mimic');
+    expect(game.order[game.order.indexOf(f) + 1]).toBe(r.mimic);
+    expect(r.bite.mods.adv).toContain('ambush');
+    expect(game.grid.chests.has('3,1')).toBe(false);
+    expect(game.unitAt(3, 1)).toBe(r.mimic);
+  });
+
+  it('Keen Eyes spot a mimic nearby, so it gets no ambush', () => {
+    const game = new Game({ ...vaultish, rows: ['########', '#R.$..$#', '#.....g#', '########'] }, { senses: false });
+    const found = [];
+    game.on('mimicFound', (e) => found.push(e));
+    game.start();
+    expect(found).toHaveLength(1);
+    const r = game.units.find((u) => u.code === 'R');
+    Object.assign(r, { x: 2, z: 1 });
+    setTurn(game, 0);
+    expect(game.openChest(r, 3, 1).bite.mods.adv).not.toContain('ambush');
+  });
+
+  it('a cleared room leaves a sleeping mimic alone', () => {
+    const start = newCampaign();
+    const game = new Game(levelById('vault'), { party: start.party });
+    for (const u of game.units) if (u.team === 'monsters') u.alive = false;
+    const { state } = completeFight(start, 'vault', game);
+    expect(state.pack.sort()).toEqual(['cloakProtection', 'weaponPlus1']);
+  });
+});
+
+describe('act two', () => {
+  it('the sanctum leads on to the catacombs, after a long rest', () => {
+    const start = { ...newCampaign(), at: 'chapel', cleared: ['crypt', 'warren', 'chapel'] };
+    start.party.W.slots = { 1: 0, 2: 0 };
+    start.party.F.hp = 3;
+    const game = new Game(levelById('sanctum'), { party: start.party });
+    for (const u of game.units) if (u.team === 'monsters') u.alive = false;
+    const { state, report } = completeFight(start, 'sanctum', game);
+    expect(state.done).toBe(false);
+    expect(report.longRest).toBe(true);
+    expect(state.party.W.slots[1]).toBeGreaterThanOrEqual(4);
+    expect(state.party.W.slots[2]).toBeGreaterThanOrEqual(2);
+    expect(state.party.F.hp).toBeGreaterThan(3);
+    expect(state.party.F.hp).toBe(new Game(levelById('barrow'), { party: state.party }).units.find((u) => u.code === 'F').maxHp);
+    expect(choices(state)).toEqual(['catacombs']);
+  });
+
+  it('after the catacombs: the vault or the well, then the barrow, which ends the campaign', () => {
+    const base = { ...newCampaign(), cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs'], at: 'catacombs' };
+    expect(choices(base)).toEqual(['vault', 'well']);
+    expect(choices({ ...base, at: 'vault', cleared: [...base.cleared, 'vault'] })).toEqual(['barrow']);
+    const rested = takeRest(base, 'well');
+    expect(choices(rested)).toEqual(['barrow']);
+    const game = new Game(levelById('barrow'), { party: rested.party });
+    for (const u of game.units) if (u.team === 'monsters') u.alive = false;
+    expect(completeFight(rested, 'barrow', game).state.done).toBe(true);
+    expect(levelById('barrow').final).toBe(true);
+    expect(LEVELS.filter((l) => l.final).map((l) => l.id)).toEqual(['barrow']);
+  });
+
+  it('every campaign node has its level, and saves from before act two still load', () => {
+    for (const n of Object.values(NODES)) if (n.kind === 'fight') expect(levelById(n.level)).toBeTruthy();
+    const old = { ...newCampaign(), at: 'warren', cleared: ['crypt', 'warren'] };
+    expect(parseSave(serialize(old))).toEqual(old);
+    // a run that ended at the Sanctum before act two carries on, rested
+    const finished = { ...newCampaign(), at: 'sanctum', cleared: ['crypt', 'warren', 'chapel', 'sanctum'], done: true };
+    finished.party.F.hp = 2;
+    const loaded = parseSave(serialize(finished));
+    expect(loaded.done).toBe(false);
+    expect(loaded.party.F.hp).toBe(31);
+    expect(choices(loaded)).toEqual(['catacombs']);
+  });
+});
+
+describe('level data', () => {
+  for (const level of LEVELS) {
+    it(`${level.id}: well-formed, connected, and its options point at real things`, () => {
+      expect(level.rows).toHaveLength(12);
+      for (const row of level.rows) expect(row).toHaveLength(16);
+      const game = new Game(level);
+      const grid = game.grid;
+      const heroes = game.units.filter((u) => u.team === 'heroes');
+      expect(heroes.map((u) => u.code).sort()).toEqual(['C', 'F', 'R', 'W']);
+      expect(grid.stairs).toHaveLength(1);
+      expect(level.loot?.length ?? 0).toBe(grid.chests.size);
+      // Doors count as floor for walking; every monster, chest and the stairs can be reached.
+      const field = grid.distanceField([heroes[0]]);
+      const reach = (t) => field.has(`${t.x},${t.z}`) || [...grid.neighbors(t.x, t.z)].some(([x, z]) => field.has(`${x},${z}`));
+      for (const u of game.units) expect(reach(u), `${u.name} at ${u.x},${u.z}`).toBe(true);
+      for (const c of grid.chests.values()) expect(reach(c), `chest ${c.x},${c.z}`).toBe(true);
+      expect(reach(grid.stairs[0])).toBe(true);
+      const monsterAt = (k) => game.units.find((u) => u.team === 'monsters' && `${u.x},${u.z}` === k);
+      for (const k of level.asleep ?? []) expect(monsterAt(k), `asleep ${k}`).toBeTruthy();
+      for (const [k, route] of Object.entries(level.patrols ?? {})) {
+        expect(monsterAt(k), `patrol ${k}`).toBeTruthy();
+        for (const [x, z] of route) expect(field.has(`${x},${z}`), `waypoint ${x},${z}`).toBe(true);
+      }
+      for (const k of level.mimics ?? []) {
+        expect(grid.chests.has(k), `mimic ${k}`).toBe(true);
+        expect(grid.chests.get(k).loot).toEqual([]);
+      }
+    });
+  }
 });

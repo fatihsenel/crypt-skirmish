@@ -16,6 +16,11 @@ export const ITEMS = {
     desc: '+1 AC and +1 to saving throws.',
     apply: (u) => { u.acBonus += 1; u.saveBonus += 1; },
   },
+  cloakProtection: {
+    name: 'Cloak of Protection', kind: 'gear',
+    desc: '+1 AC and +1 to saving throws.',
+    apply: (u) => { u.acBonus += 1; u.saveBonus += 1; },
+  },
 };
 
 /** Equip a list of item ids on a unit (after levelling). */

@@ -5,6 +5,8 @@
 //              step away first, uses Nimble Escape to slip out of melee, and
 //              backs off after attacking ("shoot and scoot").
 //  caster      a skirmisher that first raises any corpse it can reach (Animate Dead).
+// Anything that knows Dread frightens the toughest melee hero it can see (a brute only
+// when it can't reach melee this turn).
 // Any monster that is Turned (Turn Undead) just flees.
 //
 // nextMonsterStep() returns one decision at a time so the controller can animate
@@ -108,6 +110,17 @@ function corpseToRaise(game, unit) {
 }
 
 /**
+ * A hero worth frightening with Dread right now, or null. Casters use it whenever they can;
+ * a brute only when it can't get into melee this turn anyway. The biggest bruiser goes first.
+ */
+function dreadTarget(game, unit) {
+  if (!unit.spells.includes('dread') || game.spellProblem(unit, 'dread')) return null;
+  if (!keepsDistance(unit) && (game.isAdjacentToEnemy(unit) || meleeReachable(game, unit))) return null;
+  const melee = (h) => (h.attacks[0].reach === 1 ? 100 : 0);
+  return game.spellTargets(unit, 'dread').sort((a, b) => melee(b) + b.maxHp - (melee(a) + a.maxHp))[0] ?? null;
+}
+
+/**
  * Where a patrolling monster walks this turn: up to PATROL_PACE tiles toward its next
  * waypoint (moving on to the following one when it gets there). Doesn't open doors.
  */
@@ -172,6 +185,9 @@ export function nextMonsterStep(game, unit, memo) {
 
   const corpse = corpseToRaise(game, unit);
   if (corpse) return { type: 'spell', id: 'animateDead', target: corpse };
+
+  const scared = !unit.actionUsed && dreadTarget(game, unit);
+  if (scared) return { type: 'spell', id: 'dread', target: scared };
 
   const plan = game.canAttack(unit) ? chooseAttack(game, unit) : null;
 

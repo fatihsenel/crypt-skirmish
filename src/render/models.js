@@ -15,6 +15,7 @@
 // animations in unitView.js keep working.
 
 import * as THREE from 'three';
+import { piece } from './dungeonKit.js';
 
 const { PI } = Math;
 const cache = new Map();
@@ -690,9 +691,72 @@ function necromancer() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Mimic: the dungeon kit's own chest (so it matches the props), with a mouthful of
+// teeth, a tongue and eyes inside. The lid is its jaw: `head` drives it, so the
+// quadruped `bite` lunge in unitView snaps it open.
+// ---------------------------------------------------------------------------
+function mimic() {
+  const root = new THREE.Group();
+  const body = pivot(root, 0, 0, 0);
+  const head = pivot(body, 0, 0, 0); // a dummy the bite animation turns; idle maps it to the lid
+  const armL = pivot(body, 0.2, 0.2, 0);
+  const armR = pivot(body, -0.2, 0.2, 0);
+  const tooth = mat(0xf2ead2, { roughness: 0.5 });
+  const flesh = mat(0x7a1a28, { roughness: 0.6 });
+  const eye = new THREE.MeshStandardMaterial({ color: 0xffd040, emissive: 0xffa000, emissiveIntensity: 1.6 });
+
+  let lid;
+  const kit = piece('chest');
+  const box = new THREE.Box3();
+  if (kit) {
+    kit.scale.setScalar(0.5);
+    kit.position.z = -0.175;
+    body.add(kit);
+    lid = kit.getObjectByName('chest_lid');
+    kit.traverse((o) => {
+      if (o.isMesh) o.material = o.material.clone(); // darkened below, others stay as they are
+      if (o.isMesh) o.material.color.multiplyScalar(0.8);
+    });
+    root.updateMatrixWorld(true);
+    box.setFromObject(kit);
+  } else {
+    add(body, new THREE.BoxGeometry(0.7, 0.36, 0.48), mat(0x6a3e1e), [0, 0.18, 0]);
+    lid = pivot(body, 0, 0.36, -0.24);
+    add(lid, new THREE.BoxGeometry(0.7, 0.12, 0.48), mat(0x6a3e1e), [0, 0.06, 0.24]);
+    box.set(new THREE.Vector3(-0.35, 0, -0.24), new THREE.Vector3(0.35, 0.36, 0.24));
+  }
+  // The mouth sits at the top of the box, under the lid: a row of teeth along the front lip.
+  const w = box.max.x - box.min.x;
+  const lip = Math.min(box.max.y, 0.42) - 0.02;
+  const front = box.max.z - 0.05;
+  for (let i = 0; i < 7; i++) {
+    const x = -w * 0.38 + (i / 6) * w * 0.76;
+    add(body, new THREE.ConeGeometry(0.03, 0.09, 5), tooth, [x, lip + 0.03, front], [0, 0, 0]);
+    add(body, new THREE.ConeGeometry(0.025, 0.07, 5), tooth, [x * 0.95, lip + 0.02, box.min.z + 0.08]);
+  }
+  const tongue = pivot(body, 0, lip - 0.02, 0);
+  add(tongue, new THREE.SphereGeometry(0.1, 12, 8), flesh, [0, 0, 0.12], [0, 0, 0], [1.2, 0.35, 2.2]);
+  for (const s of [-1, 1]) add(body, new THREE.SphereGeometry(0.035, 10, 8), eye, [s * 0.12, lip - 0.01, -0.05]);
+
+  const idle = (t, walking) => {
+    // The jaw hangs open a little, chewing; the bite lunge (head.rotation.x) throws it wide.
+    if (lid) lid.rotation.x = -(0.32 + Math.sin(t * 2.4) * 0.08) - head.rotation.x * 2 - (walking ? 0.25 : 0);
+    tongue.rotation.x = Math.sin(t * 3.1) * 0.25;
+    eye.emissiveIntensity = 1.3 + Math.sin(t * 4) * 0.4;
+  };
+
+  return {
+    root, body, head, armL, armR, legL: null, legR: null, rest: { armL: 0, armR: 0 },
+    height: 0.75, idle, bite: true, dieAxis: 'z',
+  };
+}
+
 const BUILDERS = {
   F: fighter, W: wizard, R: rogue, C: cleric,
   g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer,
+  // act two: ghouls and the wight fall back to the skeleton miniature if their .glb fails
+  u: skeleton, w: skeleton, m: mimic,
 };
 
 export function buildModel(unit) {

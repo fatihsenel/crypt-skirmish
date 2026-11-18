@@ -2,8 +2,11 @@
 //   '#' wall   '.' floor   '+' closed door   '^' hidden trap   '$' chest
 //   '>' stairs down   '%' corpse (a dead goblin, raisable by a necromancer)
 // Spawns: F fighter, W wizard, R rogue, C cleric;
-//         g goblin, s skeleton, o orc, r giant rat, b goblin boss, n necromancer.
+//         g goblin, s skeleton, o orc, r giant rat, b goblin boss, n necromancer,
+//         u ghoul, w wight. (Mimics hide in chests: see `mimics`.)
 // `loot` lists the contents of each chest in reading order (item ids from items.js).
+// `mimics` lists chest tiles ('x,z') that are really mimics; give those chests [] loot.
+// `final` marks the last room of the campaign; `outro` is its victory text.
 // `asleep` lists monsters asleep at the start, by tile ('x,z'); `patrols` maps a monster's
 // tile to the waypoints it walks between while it hasn't noticed the party.
 // The campaign map that links these levels lives in campaign.js.
@@ -78,7 +81,6 @@ export const LEVELS = [
   {
     id: 'sanctum',
     name: 'The Necromancer’s Sanctum',
-    final: true,
     intro: 'Morvath the necromancer waits among the dead. Anything that falls here may rise again.',
     rows: [
       '################',
@@ -96,6 +98,75 @@ export const LEVELS = [
     ],
     loot: [['potion']],
     patrols: { '12,2': [[8, 3]] },
+  },
+  // --- act two: below the sanctum ---------------------------------------------
+  {
+    id: 'catacombs',
+    name: 'The Catacombs',
+    intro: 'Below the sanctum run older tunnels. Something has been eating the dead down here, and it is still hungry.',
+    rows: [
+      '################',
+      '#F.R..#..u.....#',
+      '#.....+.....##.#',
+      '#W.C..#..s..##.#',
+      '#.....#.....^..#',
+      '#####+####+#####',
+      '#..#.....#.....#',
+      '#u.#..s..+..s..#',
+      '#..#.....#.....#',
+      '#..+..$..#.##..#',
+      '#..#..r..#..u.>#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+    asleep: ['1,7', '12,10'], // gorged ghouls, sleeping it off
+    patrols: { '9,1': [[13, 1], [13, 4]] },
+  },
+  {
+    id: 'vault',
+    name: 'The Sealed Vault',
+    intro: 'The old order kept its treasure here, behind doors the dead still guard. Not every chest is what it seems.',
+    rows: [
+      '################',
+      '#F.R..#.......$#',
+      '#.....#..s.....#',
+      '#W.C..+....##..#',
+      '#.....#....##.u#',
+      '##+####.......$#',
+      '#....#####+#####',
+      '#.u..#.........#',
+      '#..^.+...s.u...#',
+      '#....#.........#',
+      '#$...#.......>.#',
+      '################',
+    ],
+    loot: [['cloakProtection', 'potion'], [], ['potion', 'weaponPlus1']],
+    mimics: ['14,5'],
+    asleep: ['2,7'],
+    patrols: { '9,8': [[13, 9], [7, 9]] },
+  },
+  {
+    id: 'barrow',
+    name: 'The Wight’s Barrow',
+    final: true,
+    intro: 'Morvath served something older. In the deepest barrow, Varek the wight rises from his bier in rusted mail.',
+    outro: 'Varek crumbles to dust and the barrow falls silent. The crypt is cleansed at last.',
+    rows: [
+      '################',
+      '#F.R..#........#',
+      '#.....#..u..u..#',
+      '#W.C..+........#',
+      '#.....#..##.##.#',
+      '###+###..##.##.#',
+      '#.....#........#',
+      '#..^..+...w....#',
+      '#.....#..s...s.#',
+      '#.$...##.......#',
+      '#.....#...u..>.#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+    patrols: { '12,2': [[14, 6]] },
   },
 ];
 

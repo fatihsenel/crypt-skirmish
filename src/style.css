@@ -76,6 +76,12 @@ html, body {
 .tag.unaware { color: #a9a3b8; font-style: italic; }
 .tag.asleep { color: #8fa3c8; font-style: italic; }
 .tag.hidden { color: #b9a4e8; }
+/* conditions: on figure labels, the action bar and in the log */
+.tag.prone, .cond.prone { color: #e0a060; }
+.tag.poisoned, .cond.poisoned { color: #9ad45a; }
+.tag.frightened, .cond.frightened { color: #c79bff; }
+.passive-tag.cond { border-color: currentColor; }
+.float-text.cond { font-size: 15px; color: #d6c27a; }
 .float-text.heal { color: var(--heal); }
 .float-text.spell { color: var(--spell); font-size: 16px; }
 .float-text.warn { color: var(--monster); font-size: 15px; }
