@@ -92,6 +92,10 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **atmosphere**: walls in front of a figure turn see-through; hits spray blood (bone chips
   from the undead), fire bolts burst into embers, critical hits and Fireball shake the
   screen, and a natural 20 or 1 throws a tumbling d20 over the attacker
+- **music**, generated in the browser like the sound effects: a slow A-minor pad with stray
+  bell notes while you explore; drums, a bass ostinato and strings swell in once monsters
+  notice the party, with brass and a quicker pulse in the boss rooms, then fade back when
+  the room is quiet. The Music button (or N) turns it off; Sound (or M) mutes everything
 - **saves**: the run is saved to the browser after every room; the title screen offers
   Continue. Fights themselves are not saved: reloading mid-fight returns you to the camp
 - **house rules** (simplifications of the SRD): goblin arrows and rat bites poison
@@ -145,6 +149,7 @@ that is a clear step harder when the party skips the well's rest.
 | Esc | Cancel the selected attack or spell |
 | Right-drag / wheel | Pan / zoom |
 | Space / Enter | End turn |
+| M / N | Sound on/off / music on/off |
 
 ## Layout
 
@@ -180,6 +185,7 @@ src/
                    fire-bolt bursts and the tumbling d20
     tween.js       promise-based tweening
   audio/sfx.js     procedural Web Audio sound effects + dungeon ambience
+  audio/music.js   procedural music: explore, combat and boss layers that crossfade
   ui/hud.js        HTML overlay: initiative, action bar, combat log
   ui/camp.js       title screen and camp: map, party, pack, level-ups
   main.js          controller: input → game → animations → HUD; campaign flow and saving

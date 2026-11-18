@@ -22,13 +22,14 @@ export class Hud {
   /**
    * onChoose receives { kind: 'attack', attack } | { kind: 'spell', id } | { kind: 'action', id }
    */
-  constructor({ onEndTurn, onChoose, onRestart, onNext, onMap, onToggleSound }) {
+  constructor({ onEndTurn, onChoose, onRestart, onNext, onMap, onToggleSound, onToggleMusic }) {
     this.handlers = { onChoose };
     $('#end-turn').addEventListener('click', onEndTurn);
     $('#restart').addEventListener('click', onRestart);
     $('#next').addEventListener('click', onNext);
     $('#to-map').addEventListener('click', onMap);
     $('#sound').addEventListener('click', onToggleSound);
+    $('#music').addEventListener('click', onToggleMusic);
     $('#attacks').addEventListener('click', (ev) => this.onAbilityClick(ev));
     this.toastTimer = null;
   }
@@ -319,6 +320,12 @@ export class Hud {
     if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
     else if (kind === 'shove') this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
+  }
+
+  setMusic(on) {
+    const b = $('#music');
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('off', !on);
   }
 
   setSound(on) {

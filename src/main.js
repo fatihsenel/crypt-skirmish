@@ -24,6 +24,7 @@ import { Hud } from './ui/hud.js';
 import { Camp } from './ui/camp.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
+import { music } from './audio/music.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -66,6 +67,7 @@ const hud = new Hud({
     sfx.ui();
     showCamp(null);
   },
+  onToggleMusic: () => toggleMusic(),
   onToggleSound: () => toggleSound(),
 });
 
@@ -133,7 +135,10 @@ function leaveRoom() {
 const $banner = document.getElementById('banner');
 
 // Audio may only start after a user gesture.
-const unlockAudio = () => sfx.unlock();
+const unlockAudio = () => {
+  sfx.unlock();
+  music.start();
+};
 window.addEventListener('pointerdown', unlockAudio);
 window.addEventListener('keydown', unlockAudio);
 
@@ -143,6 +148,23 @@ function toggleSound() {
   hud.setSound(!sfx.muted);
 }
 hud.setSound(!sfx.muted);
+
+function toggleMusic() {
+  unlockAudio();
+  music.setEnabled(!music.enabled);
+  hud.setMusic(music.enabled);
+}
+hud.setMusic(music.enabled);
+
+/** What the music should be doing right now (polled; music.setMood ignores repeats). */
+function currentMood() {
+  if (!game || camp.open || game.over === 'defeat') return 'calm';
+  if (game.over) return 'explore';
+  const fighting = game.living('monsters').some((m) => !m.unaware);
+  if (!fighting) return 'explore';
+  return NODES[nodeId]?.boss ? 'boss' : 'combat';
+}
+setInterval(() => music.setMood(currentMood()), 400);
 
 let game;
 let board;
@@ -1166,6 +1188,7 @@ window.addEventListener('keydown', (ev) => {
     endHeroTurn();
   }
   if (ev.code === 'KeyM') toggleSound();
+  if (ev.code === 'KeyN') toggleMusic();
   if (ev.code === 'Escape') {
     selected = null;
     if (isHeroTurn() && !busy) refresh();

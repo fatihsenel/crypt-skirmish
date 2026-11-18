@@ -304,9 +304,13 @@ kbd {
   color: var(--muted);
 }
 
-#sound {
+#audio {
   position: absolute;
   top: 12px; right: 12px;
+  display: flex;
+  gap: 6px;
+}
+#sound, #music {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -315,7 +319,9 @@ kbd {
   border-color: var(--panel-edge);
   font-size: 12px;
 }
-#sound .cross { display: none; }
+#sound .cross, #music .cross { display: none; }
+#music.off { color: var(--muted); }
+#music.off .cross { display: inline; }
 #sound.off { color: var(--muted); }
 #sound.off .waves { display: none; }
 #sound.off .cross { display: inline; }
