@@ -4,11 +4,32 @@ import { signed } from '../game/dice.js';
 import { ACTIONS, SPELLS, PASSIVES, SHOVE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
+import { AbilityTip } from './abilityTip.js';
+import { isWeapon, isMelee } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const who = (u) => `<span class="${u.team}">${esc(u.name)}</span>`;
 const ordinal = (n) => ['', '1st', '2nd', '3rd'][n] ?? `${n}th`;
+const spellLevel = (s) => (s.level ? `${ordinal(s.level)}-level spell` : s.pool ? 'Paladin feature' : 'Cantrip');
+/** The numbers worth seeing at a glance on a spell's card. */
+function spellChips(s, u) {
+  const chips = [];
+  if (s.damage) chips.push(`${s.darts ? `${s.darts} × ` : ''}${s.damage} damage`);
+  if (s.heal) chips.push(`heal ${s.heal[0]}d${s.heal[1]} + WIS`);
+  if (s.pool) chips.push(`${u.layOnHands} HP in the pool`);
+  if (s.save) chips.push(`${s.save.toUpperCase()} save`);
+  if (s.range) chips.push(s.range === 1 ? 'touch' : s.targeting === 'cone' ? `${s.range * 5}-ft cone` : `range ${s.range * 5} ft`);
+  return chips;
+}
+/** The tooltip card's HTML. */
+function tipCard({ name, kind, chips = [], desc, notes = [], note, how, problem }) {
+  return `<div class="tip-head"><b>${esc(name)}</b>${kind ? `<small>${esc(kind)}</small>` : ''}</div>
+    ${chips.length ? `<div class="tip-chips">${chips.map((c) => `<span>${esc(c)}</span>`).join('')}</div>` : ''}
+    ${desc ? `<p>${esc(desc)}</p>` : ''}
+    ${[...notes, note].filter(Boolean).map((n) => `<p class="tip-note">${esc(n)}</p>`).join('')}
+    ${problem ? `<p class="tip-problem">${esc(problem)}</p>` : how ? `<p class="tip-how">${esc(how)}</p>` : ''}`;
+}
 const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus ? ` ${signed(roll.bonus)}` : ''}]</span>`;
 // (logAction builds every action's text, so this must cope with results that have no roll)
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
@@ -32,6 +53,8 @@ export class Hud {
     $('#sound').addEventListener('click', onToggleSound);
     $('#music').addEventListener('click', onToggleMusic);
     $('#attacks').addEventListener('click', (ev) => this.onAbilityClick(ev));
+    this.tips = new Map();
+    this.abilityTip = new AbilityTip($('#attacks'), (key) => this.tips.get(key) ?? null);
     // No hover on a touch screen: tapping a tag or a portrait shows its tooltip instead.
     for (const id of ['#who', '#initiative']) {
       $(id).addEventListener('click', (ev) => {
@@ -293,6 +316,8 @@ export class Hud {
         <div class="stats"><span>Somewhere in the dark…</span></div>`);
       $('#end-turn').disabled = true;
       this.setHtml($('#attacks'), '<span class="waiting">Something moves in the dark…</span>');
+      this.tips.clear();
+      this.abilityTip.hide();
       return;
     }
     const pip = (label, used) => `<span class="pip ${used ? 'used' : 'ready'}">${label}</span>`;
@@ -319,8 +344,10 @@ export class Hud {
     $('#end-turn').disabled = !mine || busy;
     // Rendered as a string and only written when it changes: hover refreshes call this
     // constantly, and replacing buttons mid-click would swallow the click.
+    if (!mine) this.tips.clear();
     this.setHtml($('#attacks'), mine ? this.abilityButtons(game, u, selected, busy)
       : game.over ? '' : `<span class="waiting">${esc(u.name)} ${u.unaware ? "hasn't noticed you yet…" : 'is acting…'}</span>`);
+    this.abilityTip.refresh();
     // On a phone the row scrolls sideways: keep the chosen attack or spell in view.
     const chosen = $('#attacks .selected');
     if (chosen) chosen.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -334,17 +361,24 @@ export class Hud {
 
   abilityButtons(game, u, selected, busy) {
     this.current = u;
-    const button = ({ kind, id, name, sub, title = '', disabled, active, cls = '' }) =>
-      `<button type="button" class="ability ${cls} ${active ? 'selected' : ''}" data-kind="${kind}" data-id="${id}"
-        title="${esc(title)}" ${disabled || busy ? 'disabled' : ''}><span>${esc(name)}</span><small>${sub}</small></button>`;
+    this.tips.clear();
+    const button = ({ kind, id, name, sub, tip, problem, disabled, active, cls = '' }) => {
+      const key = `${kind}:${id}`;
+      this.tips.set(key, tipCard({ name, ...tip, problem }));
+      const plain = [tip.desc, problem].filter(Boolean).join(' ');
+      return `<button type="button" class="ability ${cls} ${active ? 'selected' : ''}" data-kind="${kind}" data-id="${id}"
+        data-tip="${esc(key)}" aria-description="${esc(plain)}" ${disabled || busy ? 'disabled' : ''}><span>${esc(name)}</span><small>${sub}</small></button>`;
+    };
     const group = (label, buttons) =>
       `<div class="group"><span class="group-label">${label}</span><div class="buttons">${buttons.join('')}</div></div>`;
+    const attackWhy = game.canAttack(u) ? null : 'No attacks left this turn.';
 
     const atks = u.attacks.map((atk, i) => button({
       kind: 'attack', id: i, name: atk.name,
       sub: `${signed(game.toHitBonus(u, atk))} · ${atk.damage} · ${atk.reach * 5} ft`,
-      title: 'Select, then click an enemy (or just click an enemy to use the best weapon)',
-      disabled: !game.canAttack(u),
+      tip: this.attackTip(game, u, atk),
+      problem: attackWhy,
+      disabled: !!attackWhy,
       active: selected?.kind === 'attack' && selected.attack === atk,
     }));
     if (u.passives.includes('divineSmite')) {
@@ -353,17 +387,23 @@ export class Hud {
       atks.push(button({
         kind: 'smite', id: 'smite', name: u.smiteArmed ? 'Smite armed' : 'Divine Smite', cls: `spell ${u.smiteArmed ? 'armed' : ''}`,
         sub: u.smiteArmed ? 'next melee hit · click to cancel' : `+${Math.min(5, 1 + (slot ?? 1))}d8 · spends a slot`,
-        title: problem ? `${PASSIVES.divineSmite}\n(${problem})` : PASSIVES.divineSmite,
+        tip: {
+          kind: 'Paladin feature · free, no action',
+          chips: [`+${Math.min(5, 1 + (slot ?? 1))}d8 radiant`, 'melee hits'],
+          desc: PASSIVES.divineSmite.replace(/^Divine Smite: /, ''),
+          note: u.smiteArmed ? 'Armed: your next melee hit spends the slot. Press again to cancel.' : null,
+        },
+        problem: problem && `${problem}.`,
         disabled: !!problem,
         active: u.smiteArmed,
       }));
     }
-    const shoveWhy = game.canAttack(u) ? null : 'Action already used this turn';
     atks.push(button({
       kind: 'shove', id: 'shove', name: SHOVE.name, cls: 'act',
       sub: `${signed(game.shoveBonus(u))} · knock prone · 5 ft`,
-      title: shoveWhy ? `${SHOVE.desc}\n(${shoveWhy})` : SHOVE.desc,
-      disabled: !!shoveWhy,
+      tip: { kind: 'Takes one attack', chips: [`${signed(game.shoveBonus(u))} Athletics`, '5 ft'], desc: SHOVE.desc, how: this.howTo('an enemy') },
+      problem: attackWhy,
+      disabled: !!attackWhy,
       active: selected?.kind === 'shove',
     }));
 
@@ -372,14 +412,24 @@ export class Hud {
       if (s.time === 'reaction') {
         const ready = game.canShield(u);
         return button({ kind: 'none', id, name: s.name, sub: ready ? 'auto reaction' : 'unavailable',
-          title: s.desc, disabled: true, cls: `passive ${ready ? 'armed' : ''}` });
+          tip: { kind: `${spellLevel(s)} · reaction`, chips: ['+5 AC'], desc: s.desc,
+            note: ready ? 'Ready: it casts itself when a hit would land.' : null },
+          problem: ready ? null : 'No reaction or 1st-level slot left.',
+          disabled: true, cls: `passive ${ready ? 'armed' : ''}` });
       }
       const problem = game.spellProblem(u, id);
       return button({
         kind: 'spell', id, name: s.name, cls: 'spell',
         sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
-          : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus'          : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
-        title: problem ? `${s.desc}\n(${problem})` : s.desc,
+          : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus' : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
+        tip: {
+          kind: `${spellLevel(s)} · ${s.time === 'bonus' ? 'bonus action' : 'action'}`,
+          chips: spellChips(s, u),
+          desc: s.desc,
+          how: s.targeting === 'enemy' || s.targeting === 'cone' ? this.howTo(s.targeting === 'cone' ? 'where to aim' : 'an enemy')
+            : s.targeting === 'ally' ? this.howTo('an ally (or yourself)') : s.targeting === 'tile' ? this.howTo('a spot') : null,
+        },
+        problem: problem && `${problem}.`,
         disabled: !!problem,
         active: selected?.kind === 'spell' && selected.id === id,
       });
@@ -391,12 +441,50 @@ export class Hud {
       return button({
         kind: 'action', id, name: a.name, cls: a.time === 'bonus' ? 'bonus' : 'act',
         sub: (a.time === 'bonus' ? 'bonus' : 'action') + (id === 'potion' ? ` · ${u.potions} left` : ''),
-        title: problem ? `${a.desc}\n(${problem})` : a.desc,
+        tip: {
+          kind: `${a.time === 'bonus' ? 'Bonus action' : 'Action'}${a.feature ? ' · class feature' : ''}`,
+          chips: [id === 'potion' ? `${u.potions} left` : null, a.range ? `${a.range * 5} ft` : null].filter(Boolean),
+          desc: a.desc,
+        },
+        problem: problem && `${problem}.`,
         disabled: !!problem,
       });
     });
 
     return group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts);
+  }
+
+  /** How to use a targeted ability, for a mouse or a finger. */
+  howTo(what) {
+    return this.touch ? `Tap it, then tap ${what}.` : `Click it, then click ${what}.`;
+  }
+
+  /** The card for one of a unit's attacks: its numbers and the rules that touch it. */
+  attackTip(game, u, atk) {
+    const weapon = isWeapon(atk);
+    const melee = atk.reach === 1;
+    const bonus = game.damageBonus(u, atk);
+    const notes = [];
+    if (melee) notes.push('Advantage when an ally stands on the far side of the target (flanking).');
+    else notes.push('Disadvantage while an enemy is next to you.');
+    if (u.passives.includes('extraAttack') && weapon) notes.push('Extra Attack: the Attack action gives you two attacks.');
+    if (u.passives.includes('sneakAttack')) {
+      notes.push(`Sneak Attack: +${u.sneakDice ?? 2}d6 once a turn with advantage, or with an ally next to the target.${u.sneakUsed ? ' Used this turn.' : ''}`);
+    }
+    if (u.passives.includes('colossusSlayer') && weapon) notes.push(`Colossus Slayer: +1d8 once a turn on a foe that is already hurt.${u.colossusUsed ? ' Used this turn.' : ''}`);
+    if (u.smiteArmed && isMelee(atk)) notes.push('Divine Smite is armed: a hit spends a slot for extra radiant damage.');
+    if (atk.addMod === false) notes.push('A cantrip: no slot needed, and no ability bonus to damage.');
+    if (weapon && u.weaponBonus) notes.push(`Runed Weapon: +${u.weaponBonus} to hit and damage, included above.`);
+    return {
+      kind: weapon ? `${melee ? 'Melee' : 'Ranged'} weapon · ${atk.stat === 'str' ? 'Strength' : 'Dexterity'}`
+        : `Cantrip · ranged spell attack`,
+      chips: [`${signed(game.toHitBonus(u, atk))} to hit`, `${atk.damage}${bonus ? signed(bonus) : ''} damage`,
+        melee ? 'reach 5 ft' : `range ${atk.reach * 5} ft`],
+      desc: notes.shift(),
+      notes,
+      how: this.touch ? 'Tap it, then tap an enemy (or tap an enemy for your best weapon).'
+        : 'Click it, then click an enemy (or click an enemy for your best weapon).',
+    };
   }
 
   onAbilityClick(ev) {

@@ -316,6 +316,42 @@ button.ability.bonus { border-style: dashed; }
 button.ability.passive { border-style: dotted; }
 button.ability.passive.armed:disabled { opacity: 0.75; }
 button.ability.passive.armed small { color: var(--shield); }
+/* Disabled buttons still need hover for their tooltip: let the row see the pointer. */
+button.ability:disabled { pointer-events: none; }
+button.ability { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* --- the tooltip card over an ability button ------------------------------------- */
+#ability-tip {
+  position: absolute;
+  z-index: 26;
+  width: max-content;
+  max-width: min(300px, calc(100% - 16px));
+  padding: 10px 12px;
+  background: rgba(18, 14, 20, 0.97);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  font-size: 12.5px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+#ability-tip[hidden] { display: none; }
+#ability-tip .tip-head { display: flex; flex-direction: column; gap: 1px; margin-bottom: 6px; }
+#ability-tip .tip-head b { font: 600 14px var(--display); color: var(--gold); letter-spacing: 0.02em; }
+#ability-tip .tip-head small { color: var(--muted); font-size: 11px; }
+#ability-tip .tip-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+#ability-tip .tip-chips span {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+#ability-tip p { margin: 0 0 4px; }
+#ability-tip p:last-child { margin-bottom: 0; }
+#ability-tip .tip-note { color: var(--muted); }
+#ability-tip .tip-how { margin-top: 6px; color: var(--muted); font-style: italic; }
+#ability-tip .tip-problem { margin-top: 6px; color: var(--monster); }
 #end-turn { font-weight: 600; }
 kbd {
   font: 10px var(--body);

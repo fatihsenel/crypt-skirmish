@@ -272,6 +272,7 @@ On phones and tablets:
 | Tap the same spot again | Do it |
 | Drag / pinch | Pan / zoom |
 | Tap a tag or portrait | Show its tooltip |
+| Hold an attack, spell or action | Show what it does (with a mouse: hover it) |
 | Log button (top right) | Open or close the combat log; a gold dot means new lines. Below 900 px wide the log is hidden otherwise |
 
 ## Layout
@@ -321,6 +322,7 @@ src/
   ui/hud.js        HTML overlay: initiative, action bar, combat log
   ui/camp.js       title screen and camp: map, party, pack, level-ups
   ui/settings.js   the settings panel: volume sliders and monster-turn speed
+  ui/abilityTip.js the tooltip card over attacks, spells and actions (hover, or long-press)
   ui/tips.js       optional tips for new players, shown once each
   main.js          controller: input → game → animations → HUD; campaign flow and saving
 tests/rules.test.js, tests/replay.test.js
