@@ -622,6 +622,8 @@ b.loot { color: var(--gold); }
   background: rgba(10, 8, 12, 0.78); border: 1px solid #c9b07a33; border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
+#title .title-emblem { display: block; width: auto; height: clamp(84px, 16vh, 150px); margin: 0 auto 4px; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6)); }
+@media (max-height: 520px) { #title .title-emblem { height: 64px; } }
 #title h1 { margin: 0; font: 700 clamp(36px, 7vw, 64px) var(--display); color: var(--gold); letter-spacing: 0.04em; }
 #title .tagline { margin: 6px 0 26px; color: var(--ink); opacity: 0.85; }
 #title .difficulty { border: 0; margin: 14px 0 6px; padding: 0; }

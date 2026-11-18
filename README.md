@@ -372,6 +372,11 @@ you can swap the visuals (real models, different camera) without touching rules.
 
 ## Credits
 
+The logo (`public/logo.svg`) and its emblem (`public/emblem.svg`, the logo without its
+lettering, used on the loading and title screens and as the tab icon) were drawn for the
+game as SVG. The logo's lettering uses Cinzel from Google Fonts, so open it in a browser
+for the right typeface.
+
 The heroes, skeletons and Morvath are from the **KayKit Adventurers** and **KayKit Skeletons**
 character packs by Kay Lousberg (www.kaylousberg.com), CC0. Their license files are in
 `public/models`. The orc and the specters (Ultimate Monsters) and the giant rats and spiders (Animated

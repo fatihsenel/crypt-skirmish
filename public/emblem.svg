@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="150 64 340 440" width="340" height="440" role="img" aria-label="Crypt Skirmish emblem">
+  <title>Crypt Skirmish</title>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3d98c"/>
+      <stop offset="0.45" stop-color="#d9b45a"/>
+      <stop offset="1" stop-color="#8a6a2c"/>
+    </linearGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2330"/>
+      <stop offset="1" stop-color="#120e16"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.55" r="0.5">
+      <stop offset="0" stop-color="#7fd4c0" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#3a7f86" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#3a7f86" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4ecd8"/>
+      <stop offset="1" stop-color="#bfb196"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9aa3ad"/>
+      <stop offset="0.5" stop-color="#eef2f5"/>
+      <stop offset="1" stop-color="#7d8690"/>
+    </linearGradient>
+    <clipPath id="door">
+      <path d="M200 470 V250 Q200 150 320 120 Q440 150 440 250 V470 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- the crypt doorway: a gothic arch of stone, edged in gold -->
+  <g>
+    <path d="M168 490 V246 Q168 122 320 84 Q472 122 472 246 V490 Z" fill="url(#stone)" stroke="url(#gold)" stroke-width="8" stroke-linejoin="round"/>
+    <!-- keystone and the stone courses -->
+    <path d="M300 92 L340 92 L334 128 L306 128 Z" fill="#3a3140" stroke="url(#gold)" stroke-width="4" stroke-linejoin="round"/>
+    <g stroke="#4a3f52" stroke-width="3" fill="none" opacity="0.9">
+      <path d="M186 300 H200 M186 360 H200 M186 420 H200"/>
+      <path d="M440 300 H454 M440 360 H454 M440 420 H454"/>
+      <path d="M206 186 L218 196 M434 186 L422 196"/>
+    </g>
+    <!-- the dark inside, with a cold glow deep in it -->
+    <path d="M200 470 V250 Q200 150 320 120 Q440 150 440 250 V470 Z" fill="#07050a" stroke="#c9b07a66" stroke-width="3"/>
+    <g clip-path="url(#door)">
+      <ellipse cx="320" cy="330" rx="150" ry="170" fill="url(#glow)"/>
+      <!-- steps down into the dark -->
+      <g fill="#1d1722" stroke="#3a3140" stroke-width="2">
+        <path d="M200 470 H440 V452 H200 Z"/>
+        <path d="M220 452 H420 V438 H220 Z"/>
+        <path d="M240 438 H400 V426 H240 Z"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- crossed sword and staff behind the skull, their ends showing past it -->
+  <g transform="rotate(-40 320 318)">
+    <path d="M313 118 L320 92 L327 118 L327 412 L313 412 Z" fill="url(#steel)" stroke="#2a2a30" stroke-width="2"/>
+    <path d="M320 104 L320 408" stroke="#ffffff99" stroke-width="1.5"/>
+    <path d="M280 412 H360 Q366 412 366 418 Q366 424 360 424 H280 Q274 424 274 418 Q274 412 280 412 Z" fill="url(#gold)" stroke="#5a4320" stroke-width="2"/>
+    <rect x="313" y="424" width="14" height="46" rx="3" fill="#4a2e1c" stroke="#2a1a10" stroke-width="2"/>
+    <path d="M313 436 H327 M313 448 H327 M313 460 H327" stroke="#2a1a10" stroke-width="2"/>
+    <circle cx="320" cy="478" r="10" fill="url(#gold)" stroke="#5a4320" stroke-width="2"/>
+  </g>
+  <g transform="rotate(40 320 318)">
+    <rect x="314" y="138" width="12" height="344" rx="5" fill="#5a3a24" stroke="#2a1a10" stroke-width="2"/>
+    <path d="M314 210 H326 M314 410 H326" stroke="url(#gold)" stroke-width="5"/>
+    <path d="M306 146 Q296 116 320 96 Q344 116 334 146 Z" fill="none" stroke="url(#gold)" stroke-width="5" stroke-linejoin="round"/>
+    <circle cx="320" cy="122" r="30" fill="#7fd4c0" opacity="0.22"/>
+    <circle cx="320" cy="122" r="14" fill="#7fd4c0" stroke="#e8fff8" stroke-width="2"/>
+  </g>
+
+  <!-- the skull -->
+  <g>
+    <path d="M320 222 C268 222 238 258 238 302 C238 330 252 350 270 360 L272 386 Q272 396 282 396 L358 396 Q368 396 368 386 L370 360 C388 350 402 330 402 302 C402 258 372 222 320 222 Z"
+      fill="url(#bone)" stroke="#2a2018" stroke-width="5" stroke-linejoin="round"/>
+    <!-- eyes, with a faint ember in each -->
+    <path d="M262 306 C262 286 282 278 298 288 C308 296 304 320 288 326 C272 330 262 320 262 306 Z" fill="#120e16"/>
+    <path d="M378 306 C378 286 358 278 342 288 C332 296 336 320 352 326 C368 330 378 320 378 306 Z" fill="#120e16"/>
+    <circle cx="284" cy="306" r="5" fill="#7fd4c0"/>
+    <circle cx="356" cy="306" r="5" fill="#7fd4c0"/>
+    <!-- nose -->
+    <path d="M320 330 L308 352 Q320 358 332 352 Z" fill="#120e16"/>
+    <!-- teeth -->
+    <path d="M284 372 H356" stroke="#2a2018" stroke-width="3"/>
+    <g stroke="#2a2018" stroke-width="3">
+      <path d="M298 364 V394 M312 364 V396 M328 364 V396 M342 364 V394"/>
+    </g>
+    <!-- a crack across the brow -->
+    <path d="M330 226 L324 246 L334 258 L326 274" fill="none" stroke="#6b5d48" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+</svg>

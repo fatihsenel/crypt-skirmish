@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Crypt Skirmish</title>
+    <link rel="icon" type="image/svg+xml" href="/emblem.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -17,6 +18,7 @@
       }
       #boot.done { opacity: 0; pointer-events: none; }
       #boot .boot-card { width: min(320px, calc(100vw - 32px)); text-align: center; }
+      #boot .boot-emblem { display: block; width: 104px; height: auto; margin: 0 auto 10px; }
       #boot h1 {
         margin: 0 0 22px; font: 700 clamp(30px, 8vw, 48px) Cinzel, Georgia, serif;
         color: #d9b45a; letter-spacing: 0.04em;
@@ -33,6 +35,7 @@
   <body>
     <div id="boot" role="status" aria-live="polite">
       <div class="boot-card">
+        <img class="boot-emblem" src="/emblem.svg" alt="" width="340" height="440" />
         <h1>Crypt Skirmish</h1>
         <div class="boot-bar"><div class="boot-fill"></div></div>
         <p class="boot-status">Opening the crypt…</p>
@@ -136,6 +139,7 @@
 
       <div id="title" hidden>
         <div class="card">
+          <img class="title-emblem" src="/emblem.svg" alt="" width="340" height="440" />
           <h1>Crypt Skirmish</h1>
           <p class="tagline">Four heroes, one crypt, and something older than the necromancer at the bottom of it.</p>
           <fieldset id="title-difficulty" class="difficulty">
