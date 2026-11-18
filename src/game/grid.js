@@ -8,6 +8,12 @@ const DIRS = [
 
 export const key = (x, z) => `${x},${z}`;
 
+const PROPS = {
+  '&': { kind: 'barrel', cover: 'half' },
+  '=': { kind: 'crate', cover: 'half' },
+  '|': { kind: 'column', cover: 'full' },
+};
+
 // 5e grid distance: diagonals cost the same as straight moves.
 export const gridDistance = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
@@ -16,6 +22,8 @@ export class Grid {
    * @param {string[]} rows
    *   '#' wall, '.' floor, '+' closed door, '^' hidden trap, '$' chest, '>' stairs,
    *   '%' corpse (a dead goblin), letters = spawn points.
+   *   Props: '&' barrels, '=' crates (in the way, and half cover), '|' a column (in the way,
+   *   and it blocks sight like a wall).
    */
   constructor(rows) {
     this.height = rows.length;
@@ -27,6 +35,7 @@ export class Grid {
     this.traps = new Map();  // key -> {x, z, revealed, sprung}
     this.chests = new Map(); // key -> {x, z, opened, loot}
     this.stairs = [];
+    this.props = new Map();  // key -> {x, z, kind, cover: 'half' | 'full'}
     rows.forEach((row, z) => {
       if (row.length !== this.width) throw new Error(`Map row ${z} has wrong width`);
       this.walls[z] = [...row].map((ch, x) => {
@@ -36,6 +45,7 @@ export class Grid {
         else if (ch === '$') this.chests.set(key(x, z), { x, z, opened: false, loot: [] });
         else if (ch === '>') this.stairs.push({ x, z });
         else if (ch === '%') this.corpses.push({ code: 'g', x, z });
+        else if (PROPS[ch]) this.props.set(key(x, z), { x, z, ...PROPS[ch] });
         return ch === '#';
       });
     });
@@ -49,14 +59,19 @@ export class Grid {
     return !this.inBounds(x, z) || this.walls[z][x];
   }
 
-  /** Can't be walked onto: walls and chests. */
+  /** Can't be walked onto: walls, chests and props. */
   isSolid(x, z) {
-    return this.isWall(x, z) || this.chests.has(key(x, z));
+    return this.isWall(x, z) || this.chests.has(key(x, z)) || this.props.has(key(x, z));
   }
 
-  /** Blocks line of sight: walls and closed doors. */
+  /** A column: blocks sight like a wall. */
+  opaqueProp(x, z) {
+    return this.props.get(key(x, z))?.cover === 'full';
+  }
+
+  /** Blocks line of sight: walls, columns and closed doors. */
   blocksSight(x, z) {
-    if (this.isWall(x, z)) return true;
+    if (this.isWall(x, z) || this.opaqueProp(x, z)) return true;
     const d = this.doors.get(key(x, z));
     return !!d && !d.open;
   }
@@ -125,6 +140,12 @@ export class Grid {
    * `blocks` can stand in for blocksSight (the renderer uses the doors as drawn).
    */
   lineOfSight(x0, z0, x1, z1, blocks = (x, z) => this.blocksSight(x, z)) {
+    for (const [x, z] of this.lineBetween(x0, z0, x1, z1)) if (blocks(x, z)) return false;
+    return true;
+  }
+
+  /** The tiles strictly between two tiles along a Bresenham line. */
+  *lineBetween(x0, z0, x1, z1) {
     let dx = Math.abs(x1 - x0);
     let dz = -Math.abs(z1 - z0);
     const sx = x0 < x1 ? 1 : -1;
@@ -137,9 +158,8 @@ export class Grid {
       if (e2 >= dz) { err += dz; x += sx; }
       if (e2 <= dx) { err += dx; z += sz; }
       if (x === x1 && z === z1) break;
-      if (blocks(x, z)) return false;
+      yield [x, z];
     }
-    return true;
   }
 
   /**

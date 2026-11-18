@@ -189,6 +189,7 @@ html, body {
 #log-list .sneak { color: var(--crit); }
 #log-list .level { font: 700 13px var(--display); color: var(--gold); }
 #log-list .adv { color: var(--hp-high); font-size: 11px; }
+#log-list .cover { color: #c9b07a; font-size: 11px; }
 #log-list .dis { color: var(--monster); font-size: 11px; }
 
 #actionbar {

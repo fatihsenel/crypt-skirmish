@@ -67,7 +67,7 @@ export class Hud {
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '');
     this.log(
       `${tag}${who(r.attacker)} → ${who(r.target)} · ${esc(r.attack.name)}${why}<br> ` +
-        `<span class="dice">${d20} ${signed(r.toHit)} = ${r.total}</span> vs AC ${r.ac}. ${outcome}${dmg}${sneak}`,
+        `<span class="dice">${d20} ${signed(r.toHit)} = ${r.total}</span> vs AC ${r.ac}${r.cover ? ' <span class="cover">(half cover +2)</span>' : ''}. ${outcome}${dmg}${sneak}`,
     );
   }
 

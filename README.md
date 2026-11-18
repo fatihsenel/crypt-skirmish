@@ -39,6 +39,11 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   - poisoned and frightened always last through the victim's next turn. Tags show on the figure
 - the dungeon: **doors** that block sight until opened, hidden **spike traps** (DEX save,
   2d6), **chests** with potions of healing, and **stairs** to the next level
+- **room dressing**: barrels and crates are in the way and give **half cover**: +2 AC
+  against an attack that crosses one, unless it stands right next to the attacker (you lean
+  over your own barricade). The log marks it. Columns block movement and sight like walls.
+  Goblin archers prefer targets out in the open and like to end their move behind a barrel.
+  Some crates carry a lit candle
 - **a campaign**: a dungeon map with a fork. After the Crypt Door, pick the Goblin Warren or
   the Flooded Ossuary; then either rest at the Forgotten Chapel (long rest) or clear the
   other room too (more XP and loot, but no rest) before the Necromancer's Sanctum
@@ -129,21 +134,22 @@ src/
     abilities.js   action and spell definitions, cone geometry
     campaign.js    the dungeon map, XP and levelling, the pack, rests, save data (pure state)
     maps.js        the rooms as ASCII maps: '#' wall, '+' door, '^' trap,
-                   '$' chest, '>' stairs, '%' corpse, letters = spawns
+                   '$' chest, '>' stairs, '%' corpse, '&' barrel, '=' crate,
+                   '|' column, letters = spawns
     combat.js      Game: initiative, turns, move (+ opportunity attacks, doors, traps),
                    attack, advantage, sneak attack, actions, spells & slots, chests,
                    party carry-over between levels, events
     ai.js          monster brains (brute / skirmisher / caster), one step at a time
   render/          three.js only
     stage.js       renderer, isometric orthographic camera, lights, loop, screen shake
-    board.js       dungeon meshes, torches, doors, chests, traps, stairs, banners,
+    board.js       dungeon meshes, torches, doors, chests, traps, stairs, banners, props,
                    highlight layers, fog of war (per-tile dimming) and wall fading
     dungeonKit.js  loads the dungeon tiles (public/models/dungeon); walls are built from
                    wall segments between neighbouring wall tiles, with pillars at corners
-    gltfModels.js  loads the .glb heroes and undead (public/models), picks their weapons,
+    gltfModels.js  loads the .glb heroes, undead, orc and rats (public/models), picks weapons,
                    plays their animation clips (idle, walk, attack, cast, hit, death, rise)
-    models.js      rigged procedural miniatures (fighter, wizard, rogue, cleric, goblin,
-                   goblin boss, skeleton, orc, giant rat, necromancer, mimic)
+    models.js      rigged procedural miniatures: goblins, Grukk and the mimic, plus
+                   fallbacks for every other unit if its .glb fails to load
     unitView.js    base + label, idle/walk/swing/cast/teleport/death animations
     effects.js     spell effects: missiles, fire cone, mist, shield dome, healing,
                    sacred flame, turn undead, raise dead, fireball; hit particles,
@@ -172,8 +178,9 @@ you can swap the visuals (real models, different camera) without touching rules.
    monsters can inflict it through an attack `rider` or a spell's `condition`.
 3. **More rooms**: add a map to `LEVELS` in `maps.js` and a node in `NODES` in `campaign.js`
    (its column, row and `next` links); the camp map draws it.
-4. **More .glb models**: goblins, orcs and rats are still procedural. Add a CC0 pack's file
-   to `public/models` and an entry in `SPECS` in `gltfModels.js` (clip names per action).
+4. **A goblin model**: goblins and Grukk are still procedural (the CC0 goblins found were
+   voxel-styled and clashed). Add a `.glb` to `public/models` and an entry in `SPECS` in
+   `gltfModels.js` (clip names per action; a `Armature|Clip` prefix is stripped).
 5. **Searching monsters**: alert monsters that lose track of a hidden hero could walk
    to where they last saw them (`patrolStep` in `ai.js` already walks toward a tile).
 
@@ -181,8 +188,11 @@ you can swap the visuals (real models, different camera) without touching rules.
 
 The heroes, skeletons and Morvath are from the **KayKit Adventurers** and **KayKit Skeletons**
 character packs by Kay Lousberg (www.kaylousberg.com), CC0. Their license files are in
-`public/models`. If a model fails to load, that unit falls back to its procedural figure.
-The floors, walls, torches, chests, spike traps and banners are from **KayKit Dungeon
+`public/models`. The orc (Ultimate Monsters) and the giant rats (Animated Enemies) are by
+Quaternius (quaternius.com), CC0, via Poly Pizza (`public/models/monsters`). If a model
+fails to load, that unit falls back to its procedural figure.
+The floors, walls, torches, chests, spike traps, banners, barrels, crates, candles and
+columns are from **KayKit Dungeon
 Remastered** by the same author, CC0 (`public/models/dungeon`); without them the board
 falls back to plain boxes.
 

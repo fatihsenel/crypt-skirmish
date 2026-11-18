@@ -190,7 +190,7 @@ function updateVision(force = false) {
   if (sig === visionSig && !force) return;
   const first = !visionSig;
   visionSig = sig;
-  const blocks = (x, z) => grid.isWall(x, z) || (grid.doors.has(key(x, z)) && !board.doors.get(key(x, z)).opened);
+  const blocks = (x, z) => grid.isWall(x, z) || grid.opaqueProp(x, z) || (grid.doors.has(key(x, z)) && !board.doors.get(key(x, z)).opened);
   visible = grid.visibleFrom(eyes, blocks);
   board.setVision(visible, { snap: first });
 }

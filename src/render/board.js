@@ -160,6 +160,8 @@ export class Board {
 
     this.doors = new Map();
     for (const d of grid.doors.values()) this.doors.set(key(d.x, d.z), { ...this.addDoor(d), opened: d.open });
+    this.candles = [];
+    for (const p of grid.props.values()) this.addProp(p);
     this.chests = new Map();
     this.pickables = []; // props the mouse can click (chests), tagged with userData.tile
     for (const c of grid.chests.values()) this.chests.set(key(c.x, c.z), this.addChest(c));
@@ -171,6 +173,9 @@ export class Board {
       if (this.fadeSources) this.tickFade(dt);
       for (const { light, seed, cell } of this.torches) {
         light.intensity = (5.5 + Math.sin(t * 9 + seed) * 0.6 + Math.sin(t * 23 + seed * 2) * 0.4) * cell.f;
+      }
+      for (const { light, seed, cell } of this.candles) {
+        light.intensity = (1.1 + Math.sin(t * 11 + seed) * 0.15) * cell.f;
       }
       if (this.stairs?.lit) this.stairs.light.intensity = 3 + Math.sin(t * 3) * 0.8;
     };
@@ -282,6 +287,56 @@ export class Board {
         m.material.opacity = w.opacity;
         m.castShadow = !see;
       }
+    }
+  }
+
+  // --- props ----------------------------------------------------------------------
+  /**
+   * Barrels and crates (low, half cover) and columns (full height, fade like walls). A few
+   * crates carry a lit candle. Plain boxes stand in when the kit didn't load.
+   */
+  addProp({ x, z, kind }) {
+    const parts = [];
+    const turn = hash(x, z, 5) * Math.PI * 2;
+    const kitPiece = (name, scale, dx = 0, dz = 0, y = 0) => {
+      const p = this.kit ? piece(name) : null;
+      if (!p) return null;
+      p.scale.setScalar(scale);
+      p.position.set(x + dx, y, z + dz);
+      p.rotation.y = turn + dx * 3;
+      parts.push(p);
+      return p;
+    };
+    const box = (w, h, color) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat(color));
+      m.position.set(x, h / 2, z);
+      m.castShadow = m.receiveShadow = true;
+      parts.push(m);
+    };
+    if (kind === 'barrel') {
+      if (!kitPiece('barrel_small', 0.5, -0.12, -0.1)) box(0.5, 0.5, 0x6b4a2c);
+      else if (hash(x, z, 6) > 0.4) kitPiece('barrel_small', 0.36, 0.24, 0.2);
+    } else if (kind === 'crate') {
+      if (!kitPiece('box_small', 0.55)) box(0.55, 0.55, 0x7a5a34);
+      else if (hash(x, z, 7) > 0.55) kitPiece('box_small', 0.32, 0.04, -0.02, 0.55);
+      else if (hash(x, z, 7) > 0.3 && this.candles.length < 6) {
+        kitPiece('candle_lit', 0.3, 0.1, 0.08, 0.55);
+        const light = new THREE.PointLight(0xffb060, 1, 2.6, 2);
+        light.position.set(x + 0.1, 0.95, z + 0.08);
+        this.group.add(light);
+        this.candles.push({ light, seed: hash(x, z, 8) * 10, cell: null });
+      }
+    } else {
+      if (!kitPiece('column', 0)) box(0.5, KIT_WALL, 0x6f6862);
+      else parts[0].scale.set(0.62, 0.72, 0.62);
+    }
+    this.group.add(...parts);
+    const cell = this.addToCell(x, z, ...parts);
+    for (const c of this.candles) c.cell ??= cell;
+    if (kind === 'column') {
+      const meshes = [];
+      for (const p of parts) p.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      this.walls.push({ x, z, meshes, opacity: 1 });
     }
   }
 

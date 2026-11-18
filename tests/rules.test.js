@@ -1205,3 +1205,53 @@ describe('level data', () => {
     });
   }
 });
+
+describe('room dressing', () => {
+  it('barrels, crates and columns are in the way; only columns block sight', () => {
+    const grid = new Grid(['#######', '#.&=|.#', '#######']);
+    expect([...grid.props.values()].map((p) => p.kind)).toEqual(['barrel', 'crate', 'column']);
+    for (const x of [2, 3, 4]) expect(grid.isSolid(x, 1)).toBe(true);
+    expect(grid.lineOfSight(1, 1, 4, 1)).toBe(true); // over the barrel and the crate
+    expect(grid.lineOfSight(1, 1, 5, 1)).toBe(false); // the column is in the way
+  });
+
+  it('a crate between archer and target is half cover: +2 AC', () => {
+    const game = new Game(['##########', '#R....=g.#', '##########'], { senses: false, rng: fixed(0.5) });
+    game.start();
+    const [r, g] = game.units;
+    setTurn(game, 0);
+    expect(game.coverBonus(r, g)).toBe(2);
+    const shot = game.attack(r, g, r.attacks[1]);
+    expect(shot.cover).toBe(2);
+    expect(shot.ac).toBe(g.ac + 2);
+  });
+
+  it('your own barricade right next to you gives the target no cover', () => {
+    const game = new Game(['##########', '#R=....g.#', '##########'], { senses: false });
+    game.start();
+    const [r, g] = game.units;
+    expect(game.coverBonus(r, g)).toBe(0);
+    // ...but it covers you from them
+    expect(game.coverBonus(g, r)).toBe(2);
+  });
+
+  it('a column blocks the shot entirely', () => {
+    const game = new Game(['##########', '#R...|.g.#', '##########'], { senses: false });
+    game.start();
+    const [r, g] = game.units;
+    setTurn(game, 0);
+    expect(game.attackProblem(r, g, r.attacks[1])).toMatch(/sight/);
+  });
+
+  it('archers prefer a target out in the open', () => {
+    const game = new Game(['##########', '#F..=...g#', '#........#', '#R.......#', '##########'], { senses: false });
+    game.start();
+    const f = game.units.find((u) => u.code === 'F');
+    const r = game.units.find((u) => u.code === 'R');
+    const g = game.units.find((u) => u.code === 'g');
+    Object.assign(f, { hp: 20, maxHp: 20 });
+    Object.assign(r, { hp: 20, maxHp: 20 });
+    expect(game.coverBonus(g, f)).toBe(2);
+    expect(chooseAttack(game, g).target).toBe(r);
+  });
+});

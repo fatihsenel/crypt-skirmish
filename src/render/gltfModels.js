@@ -1,7 +1,8 @@
-// Rigged .glb characters (KayKit packs by Kay Lousberg, CC0) for the heroes and the undead.
+// Rigged .glb characters: KayKit packs by Kay Lousberg (CC0) for the heroes and the undead,
+// Quaternius models (CC0) for the orc and the giant rats.
 // Each model ships every weapon as a mesh on the hand bones and ~80 animation clips; we
 // keep the weapons a unit uses and drive the clips through an AnimationMixer.
-// Anything not covered here (goblins, orcs, rats) keeps its procedural model.
+// A model that fails to load falls back to the unit's procedural figure.
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -13,6 +14,11 @@ const BASE = `${import.meta.env.BASE_URL}models/`;
  * Per unit: which file, which built-in meshes to show (every other weapon/prop is hidden),
  * procedural weapons for the unarmed skeletons, figure height, and the clips used.
  */
+const QUATERNIUS = {
+  idle: 'Idle', walk: 'Walk', melee: 'Attack', arrow: 'Attack', javelin: 'Attack',
+  hit: 'HitRecieve', die: 'Death', dead: 'Death',
+};
+
 const SPECS = {
   F: {
     file: 'Knight', height: 1.35,
@@ -59,6 +65,10 @@ const SPECS = {
     file: 'Skeleton_Warrior', height: 1.5, blade: true, tint: 0x8fa0d0,
     clips: { melee: '1H_Melee_Attack_Slice_Diagonal', walk: 'Walking_D_Skeletons' },
   },
+  // The orc and the rats: Quaternius (CC0), one swing clip for every attack. Goblins keep
+  // their procedural figures (the CC0 goblins on offer are voxel-styled and clash).
+  o: { file: 'monsters/Orc', height: 1.45, clips: { ...QUATERNIUS, melee: 'Weapon', javelin: 'Weapon', arrow: 'Weapon', hit: 'HitReact' } },
+  r: { file: 'monsters/Rat', height: 0.5, quadruped: true, clips: { ...QUATERNIUS, melee: 'Rat_Attack', idle: 'Rat_Idle', walk: 'Rat_Walk', die: 'Rat_Death', dead: 'Rat_Death' } },
 };
 
 const DEFAULT_CLIPS = {
@@ -173,14 +183,15 @@ export function buildGltfModel(unit) {
   const root = new THREE.Group();
   root.add(scene);
   const rig = new GltfRig(scene, src.animations, { ...DEFAULT_CLIPS, ...spec.clips }, { ranged, melee });
-  return { root, height: spec.height, gltf: rig, flare };
+  return { root, height: spec.height, gltf: rig, flare, dieAxis: spec.quadruped ? 'z' : undefined };
 }
 
 /** Plays clips on one figure: a looping base (idle / walk) and one-shot actions on top. */
 export class GltfRig {
   constructor(scene, animations, names, weapons) {
     this.mixer = new THREE.AnimationMixer(scene);
-    this.clips = new Map(animations.map((c) => [c.name, c]));
+    // Quaternius clips carry their armature as a prefix ("RatArmature|Rat_Walk").
+    this.clips = new Map(animations.map((c) => [c.name.split('|').pop(), c]));
     this.names = names;
     this.weapons = weapons;
     this.base = null;     // current looping action

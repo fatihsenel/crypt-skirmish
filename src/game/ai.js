@@ -38,6 +38,7 @@ export function chooseAttack(game, unit, at = unit) {
       if (target.hp <= 4) score += 8; // likely kill
       if (mods.mode === 'adv') score += 4;
       if (mods.mode === 'dis') score -= 25;
+      score -= game.coverBonus(self, target) * 5; // a barrel in the way
       if (!best || score > best.score) best = { target, attack, mods, score };
     }
   }
@@ -87,6 +88,8 @@ export function chooseMove(game, unit, goal = game.canAttack(unit) ? 'attack' : 
       // Skirmisher after attacking: get some distance, ideally 3+ tiles.
       score += Math.max(0, 4 - dist) * 20;
     }
+    // Skirmishers like to end up with a barrel or crate between them and the heroes.
+    if (skirmisher && foes.some((f) => game.coverBonus(f, node))) score -= 12;
     if (score < bestScore) {
       bestScore = score;
       best = node;

@@ -11,7 +11,7 @@ const FILES = [
   'floor_tile_small', 'floor_tile_small_broken_A', 'floor_tile_small_broken_B',
   'floor_tile_small_weeds_A',
   'wall_half', 'pillar', 'torch_mounted', 'chest', 'chest_gold', 'floor_tile_big_spikes',
-  'banner_red',
+  'banner_red', 'barrel_small', 'box_small', 'column', 'candle_lit',
 ];
 
 const SHADE = { floor: 0.55, wall: 0.78, pillar: 0.78 };

@@ -180,6 +180,18 @@ export class Game {
     return unit.ac + (unit.acBonus ?? 0) + (unit.shielded ? 5 : 0);
   }
 
+  /**
+   * Half cover: +2 AC when a barrel or crate stands between attacker and target. One right
+   * next to the attacker doesn't count (you lean over your own barricade).
+   */
+  coverBonus(attacker, target) {
+    for (const [x, z] of this.grid.lineBetween(attacker.x, attacker.z, target.x, target.z)) {
+      const p = this.grid.props.get(key(x, z));
+      if (p?.cover === 'half' && gridDistance(attacker, p) > 1) return 2;
+    }
+    return 0;
+  }
+
   /** Roll a saving throw: d20 + ability modifier + item bonuses. */
   save(unit, stat, dc) {
     const d20 = rollDice(1, 20, this.rng).total;
@@ -755,12 +767,14 @@ export class Game {
     const total = d20 + toHit;
     const crit = d20 === 20;
     const fumble = d20 === 1;
-    let hit = crit || (!fumble && total >= this.acOf(target));
+    const cover = this.coverBonus(attacker, target);
+    const ac = this.acOf(target) + cover;
+    let hit = crit || (!fumble && total >= ac);
 
     // Shield: a reaction that turns a would-be hit into a miss.
     let shielded = false;
     let shieldSlot = null;
-    if (hit && !crit && this.canShield(target) && total < this.acOf(target) + 5) {
+    if (hit && !crit && this.canShield(target) && total < ac + 5) {
       shieldSlot = this.castShield(target);
       shielded = true;
       hit = false;
@@ -789,7 +803,7 @@ export class Game {
 
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity,
-      d20, rolls, mods, toHit, total, ac: this.acOf(target),
+      d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
       hit, crit, fumble, shielded, damage, damageRoll, sneak, uncanny, rider: null,
     };
     this.emit('attack', result);
