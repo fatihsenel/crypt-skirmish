@@ -1,8 +1,10 @@
-Orc.glb and Rat.glb by Quaternius (https://quaternius.com),
+Orc.glb, Rat.glb, Spider.glb and Ghost.glb by Quaternius (https://quaternius.com),
 downloaded from Poly Pizza (https://poly.pizza/u/Quaternius).
 
   Orc     - Ultimate Monsters    https://poly.pizza/m/5vO2YJsPEf
   Rat     - Animated Enemies     https://poly.pizza/m/iltq5bVNaV
+  Spider  - Animated Enemies     https://poly.pizza/m/yRYJiAJyiM
+  Ghost   - Ultimate Monsters    https://poly.pizza/m/Iip30bDHmu
 
 License: CC0 1.0 Universal (Public Domain Dedication)
 https://creativecommons.org/publicdomain/zero/1.0/

@@ -339,9 +339,8 @@ you can swap the visuals (real models, different camera) without touching rules.
    `damage: null` deals none, and `recharge: 5` makes an attack Recharge 5–6.
 3. **More rooms**: add a map to `LEVELS` in `maps.js` and a node in `NODES` in `campaign.js`
    (its column, row and `next` links); the camp map draws it. Act three is the latest
-   example. `final: true` marks the last room. A real spider or ghost model would
-   replace act three's stand-ins: a dyed rat and see-through skeletons (`ghost` in
-   `modelSpecs.js` sets their opacity).
+   example. `final: true` marks the last room. Its spiders and specters use Quaternius
+   models (`ghost` in `modelSpecs.js` sets a model's opacity).
 4. **A real goblin model**: goblins and Grukk reuse tinted KayKit adventurers (the goblins
    with procedural ears on the head bone). A dedicated rigged goblin would only need a `.glb`
    in `public/models` and its entry in `SPECS` in `modelSpecs.js` (clip names per action; a
@@ -358,8 +357,8 @@ you can swap the visuals (real models, different camera) without touching rules.
 
 The heroes, skeletons and Morvath are from the **KayKit Adventurers** and **KayKit Skeletons**
 character packs by Kay Lousberg (www.kaylousberg.com), CC0. Their license files are in
-`public/models`. The orc (Ultimate Monsters) and the giant rats (Animated Enemies) are by
-Quaternius (quaternius.com), CC0, via Poly Pizza (`public/models/monsters`). If a model
+`public/models`. The orc and the specters (Ultimate Monsters) and the giant rats and spiders (Animated
+Enemies) are by Quaternius (quaternius.com), CC0, via Poly Pizza (`public/models/monsters`). If a model
 fails to load, that unit falls back to its procedural figure.
 The floors, walls, torches, chests, spike traps, banners, barrels, crates, candles and
 columns are from **KayKit Dungeon

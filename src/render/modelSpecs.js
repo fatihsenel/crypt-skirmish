@@ -96,13 +96,17 @@ export const SPECS = {
   // The orc and the rats: Quaternius (CC0), one swing clip for every attack.
   o: { file: 'monsters/Orc', height: 1.45, clips: { ...QUATERNIUS, melee: 'Weapon', javelin: 'Weapon', arrow: 'Weapon', hit: 'HitReact' } },
   r: { file: 'monsters/Rat', height: 0.5, quadruped: true, clips: { ...QUATERNIUS, melee: 'Rat_Attack', idle: 'Rat_Idle', walk: 'Rat_Walk', die: 'Rat_Death', dead: 'Rat_Death' } },
-  // Act three. No spider in the packs: a bigger rat rig, dyed near-black and purple.
-  k: { file: 'monsters/Rat', height: 0.62, quadruped: true, tint: 0x4a3f58, clips: { ...QUATERNIUS, melee: 'Rat_Attack', idle: 'Rat_Idle', walk: 'Rat_Walk', die: 'Rat_Death', dead: 'Rat_Death' } },
-  // Specters and the banshee: skeleton rigs made pale and see-through (`ghost` = opacity).
+  // Act three: Quaternius's spider (Animated Enemies, like the rats) for the giant spiders,
+  // dyed a little darker, and his ghost (Ultimate Monsters, like the orc) for the specters,
+  // pale blue and half see-through (`ghost` = opacity). Neither has a hit clip: they flinch.
+  // (`height` fits the model's height, and a spider is mostly legs: this keeps it to its tile.)
+  k: { file: 'monsters/Spider', height: 0.45, quadruped: true, tint: 0x8a7a9a, clips: { ...QUATERNIUS, melee: 'Spider_Attack', idle: 'Spider_Idle', walk: 'Spider_Walk', die: 'Spider_Death', dead: 'Spider_Death' } },
   e: {
-    file: 'Skeleton_Minion', height: 1.25, tint: 0xc8dcff, ghost: 0.5,
-    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
+    file: 'monsters/Ghost', height: 1.15, tint: 0xd4e2ff, ghost: 0.7,
+    clips: { ...QUATERNIUS, idle: 'Flying_Idle', walk: 'Fast_Flying', melee: 'Punch', arrow: 'Punch', javelin: 'Punch', hit: 'HitReact', die: 'Death', dead: 'Death' },
   },
+  // Ysolde, the banshee queen: the skeleton mage, pale and see-through, so she stands apart
+  // from her ghosts.
   q: {
     file: 'Skeleton_Mage', height: 1.55, tint: 0xe8f0ff, ghost: 0.6,
     clips: { melee: '1H_Melee_Attack_Stab', walk: 'Walking_D_Skeletons' },
