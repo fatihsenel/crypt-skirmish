@@ -1700,6 +1700,131 @@ describe('the paladin', () => {
   });
 });
 
+describe('the ranger', () => {
+  const rangerParty = (level = 3) => {
+    const c = newCampaign('normal', {}, { R: 'A' });
+    if (level > 3) {
+      const done = completeFight(c, 'crypt', { partyState: () => ({}), stats: {}, round: 0, found: [], grid: { chests: new Map() }, xpEarned: () => ({ 4: 450, 5: 900, 6: 2000 })[level] });
+      return done.state.party;
+    }
+    return c.party;
+  };
+  const arena = (rows, level, rng = fixed(0.5)) => {
+    const game = new Game(rows, { party: rangerParty(level), senses: false, rng });
+    game.start();
+    return game;
+  };
+
+  it('takes the Rogue slot: a Ranger template, keyed as R, that still spots traps', () => {
+    const c = newCampaign('normal', { R: 'Ash' }, { R: 'A' });
+    expect(c.party.R).toMatchObject({ cls: 'A', hp: 28, slots: { 1: 3 }, name: 'Ash' });
+    expect(newCampaign().party.R.cls).toBeUndefined(); // the Rogue by default
+    expect(newCampaign('normal', {}, { F: 'A' }).party.F.cls).toBeUndefined(); // not a choice there
+    const game = arena(['######', '#Rg..#', '######']);
+    const r = game.units.find((u) => u.team === 'heroes');
+    expect([r.cls, r.code, r.slot, r.name, game.acOf(r)]).toEqual(['Ranger', 'A', 'R', 'Wren', 15]);
+    expect(r.passives).toContain('trapSense');
+    expect(Object.keys(game.partyState())).toEqual(['R']);
+  });
+
+  it('Archery adds 2 to hit with the bow, not the sword', () => {
+    const game = arena(['######', '#Rg..#', '######']);
+    const r = game.units.find((u) => u.code === 'A');
+    expect(game.toHitBonus(r, r.attacks[1])).toBe(3 + 2 + 2);
+    expect(game.toHitBonus(r, r.attacks[0])).toBe(3 + 2);
+  });
+
+  it('Hunter’s Mark: +1d6 on weapon hits on the marked foe, moves free once it drops', () => {
+    const game = arena(['#########', '#R...g.g#', '#########']);
+    const [r, g1, g2] = game.units;
+    setTurn(game, 0);
+    g1.hp = g1.maxHp = 999;
+    g2.hp = g2.maxHp = 999;
+    const cast = game.castSpell(r, 'huntersMark', g1);
+    expect(cast).toMatchObject({ ok: true, slot: 1, again: false });
+    expect([r.slots[1], r.bonusUsed, r.mark]).toEqual([2, true, { id: g1.id, slot: 1 }]);
+    const hit = game.attack(r, g1, r.attacks[1]);
+    expect(hit.hit).toBe(true);
+    expect(hit.mark.total).toBe(4); // 1d6 at the middle roll
+    expect(hit.damage).toBe(hit.damageRoll.total + 3 + 4);
+
+    setTurn(game, 0);
+    const other = game.attack(r, g2, r.attacks[1]);
+    expect(other.mark).toBeNull(); // only the marked foe
+    r.bonusUsed = false;
+    expect(game.spellProblem(r, 'huntersMark', g1)).toBe('Goblin 1 is already marked');
+    // Moving it while the foe stands costs a new slot; once it falls, it is free.
+    game.applyDamage(g1, 9999, r);
+    r.slots = { 1: 0 };
+    expect(game.spellProblem(r, 'huntersMark', g2)).toBeNull();
+    const moved = game.castSpell(r, 'huntersMark', g2);
+    expect(moved).toMatchObject({ ok: true, slot: 0, again: true, from: g1 });
+    expect(r.mark).toEqual({ id: g2.id, slot: 1 });
+    r.bonusUsed = false;
+    game.applyDamage(r, 999, g2);
+    expect(r.mark).toBeNull(); // a fallen ranger's mark ends
+  });
+
+  it('Hunter’s Mark: moving it off a living foe costs a slot; the tags follow, and end with the ranger', () => {
+    const game = arena(['#########', '#R...g.g#', '#########']);
+    const [r, g1, g2] = game.units;
+    setTurn(game, 0);
+    game.castSpell(r, 'huntersMark', g1);
+    r.bonusUsed = false;
+    const moved = game.castSpell(r, 'huntersMark', g2);
+    expect(moved).toMatchObject({ ok: true, slot: 1, again: false, from: null, unmarked: g1 });
+    expect([r.slots[1], g1.marked, g2.marked]).toEqual([1, false, true]);
+    const deaths = [];
+    game.on('death', (e) => deaths.push(e));
+    game.applyDamage(r, 999, g2);
+    expect([g2.marked, deaths[0].unmarked]).toEqual([false, g2]);
+  });
+
+  it('Colossus Slayer: +1d8 once per turn, only on a foe that is already hurt', () => {
+    const game = arena(['########', '#R...g.#', '########']);
+    const [r, g] = game.units;
+    setTurn(game, 0);
+    g.hp = g.maxHp = 999;
+    expect(game.attack(r, g, r.attacks[1]).colossus).toBeNull(); // unhurt when the arrow lands
+    r.actionUsed = false;
+    const second = game.attack(r, g, r.attacks[1]);
+    expect(second.colossus.total).toBe(5); // 1d8 at the middle roll
+    r.actionUsed = false;
+    expect(game.attack(r, g, r.attacks[1]).colossus).toBeNull(); // once per turn
+    setTurn(game, 0);
+    expect(game.attack(r, g, r.attacks[1]).colossus.total).toBe(5);
+  });
+
+  it('levels 3 to 6: Extra Attack and 2nd-level slots at 5, Escape the Horde at 6', () => {
+    const party = rangerParty(6);
+    expect(party.R).toMatchObject({ cls: 'A', level: 6 });
+    const game = new Game(['######', '#Rg..#', '######'], { party, senses: false, rng: fixed(0.5) });
+    const [r, g] = game.units;
+    expect([r.maxHp, game.acOf(r), r.extraAttack, r.slotMax, r.stats.dex]).toEqual([52, 16, 2, { 1: 4, 2: 2 }, 18]);
+    expect(game.attackMods(g, r, g.attacks[0], { opportunity: true }).dis).toContain('escape the horde');
+    expect(game.attackMods(g, r, g.attacks[0]).dis).not.toContain('escape the horde');
+  });
+
+  it('carries its class through the campaign and the save', () => {
+    const c = newCampaign('normal', {}, { R: 'A' });
+    const game = new Game(['######', '#Rg..#', '######'], { party: c.party, senses: false, rng: () => 0.999 });
+    game.start();
+    const [r, g] = game.units;
+    setTurn(game, 0);
+    game.castSpell(r, 'huntersMark', g);
+    game.attack(r, g, r.attacks[0]);
+    const { state, report } = completeFight({ ...c, xp: 440 }, 'crypt', game);
+    expect(state.party.R).toMatchObject({ cls: 'A', level: 4, slots: { 1: 2 } }); // a short rest keeps slots spent
+    expect(state.stats.heroes.R.kills).toBe(1);
+    expect(report.levelUps.find((l) => l.code === 'R')).toMatchObject({ name: 'Wren', note: 'Dexterity 18: +1 to hit, damage and AC' });
+    expect(runSummary(state).heroes.find((h) => h.code === 'R').cls).toBe('Ranger');
+    expect(parseSave(serialize(state)).party.R.cls).toBe('A');
+    const bad = JSON.parse(serialize(state));
+    bad.party.W.cls = 'A';
+    expect(parseSave(JSON.stringify(bad)).party.W.cls).toBeUndefined();
+  });
+});
+
 describe('level-5 spell choices', () => {
   const at5 = (classes = {}) => {
     const party = newCampaign('normal', {}, classes).party;

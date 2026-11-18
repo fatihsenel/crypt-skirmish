@@ -1,7 +1,8 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
 //   node scripts/sim.js [runs] [act2]
-// Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot).
+// Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
+// RANGER=1 (a Ranger in the Rogue's).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
 // way the campaign does (short rests between fights, a long rest at the well).
 
@@ -13,7 +14,7 @@ import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES, DIFF
 import { ITEMS } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 
-const CLASSES = process.env.PALADIN ? { F: 'P' } : {};
+const CLASSES = { ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }) };
 const freshCampaign = () => newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES);
 
 /** A rested party at `level`. */
@@ -117,6 +118,7 @@ function heroOpening(game, u) {
   }
   if (u.code === 'F' && u.hp < u.maxHp / 2 && !game.actionProblem(u, 'secondWind')) game.doAction(u, 'secondWind');
   if (u.code === 'P') paladinOpening(game, u, heroes);
+  if (u.code === 'A') rangerOpening(game, u, hurt);
   if (!u.actionUsed && u.hp < u.maxHp * 0.35 && u.potions > 0 && !game.actionProblem(u, 'potion')) game.doAction(u, 'potion');
 }
 
@@ -136,7 +138,21 @@ function paladinOpening(game, u, heroes) {
   if (!u.smiteArmed && slots > 0 && (worthy || slots >= 3)) game.toggleSmite(u);
 }
 
-const gridDistanceTo = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+/**
+ * Hunter's Mark on the toughest foe in sight (moved for free once it drops), and Cure
+ * Wounds on a hero in real trouble next to the ranger while slots remain.
+ */
+function rangerOpening(game, u, hurt) {
+  const foes = game.spellTargets(u, 'huntersMark').filter((e) => !e.unaware);
+  const markedAlive = u.mark && game.units.find((e) => e.id === u.mark.id)?.alive;
+  if (!markedAlive && foes.length && (game.freeRecast(u, 'huntersMark') || foes.length >= 2 || foes.some((e) => (e.cr ?? 0) >= 1))) {
+    game.castSpell(u, 'huntersMark', foes.sort((a, b) => b.hp - a.hp)[0]);
+  }
+  const low = hurt.find((h) => h.hp < h.maxHp * 0.3 && !game.spellProblem(u, 'cureWounds', h));
+  if (low) game.castSpell(u, 'cureWounds', low);
+}
+
+const gridDistanceTo =(a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 function playTurn(game, u) {
   if (u.team === 'heroes') heroOpening(game, u);

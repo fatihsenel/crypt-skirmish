@@ -29,6 +29,14 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   neighbour or yourself from a pool of 5 HP per level that only a long rest refills, and
   **Shield of Faith** (bonus action, 60 ft) gives one ally +2 AC for the fight, until it moves
   to someone else or the paladin falls
+- **Ranger** (optional: picked on the title screen in place of the Rogue, as Wren in dark
+  leather with a crossbow; the rules call it a longbow, as the model pack has no bow): 28 HP,
+  AC 15, a 120-ft longbow with the **Archery** style (+2 to hit with ranged weapons), three
+  1st-level slots and the Rogue's Keen Eyes for traps and mimics. **Hunter's Mark** (bonus
+  action, 90 ft) adds 1d6 to every weapon hit on one foe for the fight (marking wakes it if
+  it was asleep or unaware); when that foe drops, moving the mark is a bonus action with no
+  slot. The Ranger hides as an action, trained in Stealth but not an expert. **Colossus Slayer** adds 1d8 once per turn
+  to a weapon hit on a foe that is already hurt. **Cure Wounds** heals by touch with WIS
 - monsters: goblins (skirmishers), skeletons (brutes, undead), an **orc** that charges
   (Aggressive), **giant rats** with Pack Tactics, **Grukk the goblin boss** (two attacks, the
   second at disadvantage) and **Morvath the necromancer**, who raises corpses with
@@ -76,14 +84,16 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   at 5, Brannoc gets **Extra Attack** (the Paladin also two 2nd-level slots), Ilsa
   **Fireball** (20-ft radius, hits allies too) and **Lightning Bolt** (a 100-ft line, 5 ft
   wide, 8d6 lightning with a DEX save for half; walls stop it, and it hits allies in the
-  line too), Wren Sneak Attack 3d6 and **Uncanny Dodge**, Maela **Mass Healing Word**,
+  line too), Wren Sneak Attack 3d6 and **Uncanny Dodge** (the Ranger Extra Attack, a fourth
+  1st-level slot and two 2nd-level ones), Maela **Mass Healing Word**,
   **Spiritual Weapon** (bonus action: a floating spectral mace appears beside a foe within
   60 ft and makes a melee spell attack for 1d8 + WIS force; for the rest of the fight it
   strikes again as a bonus action, with no slot, at any foe within 25 ft of it, and it fades
   if Maela falls) and **Destroy Undead**, plus 3rd-level slots for both casters. Level 6 comes after the
   Catacombs: Brannoc Strength 20 (the Paladin **Aura of Protection**: allies within 10 ft add
   the paladin's CHA modifier, +3, to saving throws), Ilsa **Sculpt Spells** (her Fireball, Lightning Bolt and
-  Burning Hands spare the party), Wren Sneak Attack 4d6, Maela Turn Undead twice per fight and
+  Burning Hands spare the party), Wren Sneak Attack 4d6 (the Ranger **Escape the Horde**:
+  opportunity attacks against you have disadvantage, which in the SRD comes at level 7), Maela Turn Undead twice per fight and
   **Blessed Healer** (healing someone else with a slot heals her for 2 + the slot level),
   and a third 3rd-level slot for both casters
 - **difficulty**, picked on the title screen for a new run: **Story** (monsters have ¾ HP
@@ -92,11 +102,12 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
 - **hero names and class**: "Name your heroes, pick a class" on the title screen renames
   Brannoc, Ilsa, Wren and Maela for a new run (letters, numbers, spaces, apostrophes and
   hyphens, up to 14 characters; a blank field keeps the default), and its Fighter / Paladin
-  switch picks the first hero's class. The choice is kept in the save; older saves load as a Fighter
+  and Rogue / Ranger switches pick those heroes' classes. The choice is kept in the save;
+  older saves load as a Fighter and a Rogue
 - **magic items** from chests (Runed Weapon +1, Ring of Protection, Cloak of Protection) go into the pack and
   are handed out at camp
 - **turn order**: each initiative chip carries a small portrait on the unit's own colour: a
-  class icon for the heroes (sword, crested shield, wizard's hat, hood, sun) and a silhouette
+  class icon for the heroes (sword, crested shield, wizard's hat, hood, bow, sun) and a silhouette
   for each monster (goblin, crowned boss, orc, rat, skull, hooded necromancer, ghoul claws,
   the ghast's reeking claws, the wight's crowned skull, a toothy chest), with the
   initiative number on a badge
@@ -104,7 +115,7 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   drawn; monsters out of sight are hidden (their initiative chips show a `?` and read `???` until spotted)
   and their turns pass quickly while "something moves in the dark"
 - **monster senses**: monsters start unaware. They notice a hero they can see within 8
-  tiles (3 for Wren, a *skulker*), hear fighting within 5 tiles of walking distance (a closed
+  tiles (3 for Wren the Rogue, a *skulker*; not the Ranger), hear fighting within 5 tiles of walking distance (a closed
   door counts as 2 more; 3rd-level spells carry to 8), and a monster that spots you or gets hurt shouts to unaware
   allies within 4 tiles that can see it (a roused ally doesn't pass the alarm on). Unaware
   monsters make no opportunity attacks and are attacked with advantage (so Sneak Attack
@@ -167,7 +178,8 @@ Every push to `main` runs the tests, builds, and deploys to GitHub Pages
 
 Open `http://localhost:5173/?level=4` to jump straight into a room (1 Crypt, 2 Warren,
 3 Ossuary, 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder) with a fresh level-3 party (add `&difficulty=hard` or `story` to try those, `&party=5` for
-heroes of another level from 3 to 6, and `&paladin` for a Paladin instead of the Fighter);
+heroes of another level from 3 to 6, `&paladin` for a Paladin instead of the Fighter and
+`&ranger` for a Ranger instead of the Rogue);
 this doesn't touch the save.
 In the browser console, `__debug.autoplay()` lets the monster AI play the heroes too, and
 `__debug.win()` / `__debug.lose()` end the current fight on the spot.
@@ -180,7 +192,9 @@ Missile the weakest foe, drink potions when low, sometimes loot chests mid-fight
 otherwise use the monster AI's tactics. Gear found goes to whoever suits it.
 `npm run sim -- 300` plays 300 campaigns down each route; `npm run sim -- 300 act2` replays
 act two only, from a pool of real end-of-act-one parties (faster when tuning). Set `SEED=n`
-to change the dice and `DIFFICULTY=story|hard` to play another difficulty. Act two was tuned against act one's numbers from the same simulator:
+to change the dice and `DIFFICULTY=story|hard` to play another difficulty; `PALADIN=1` and
+`RANGER=1` swap those classes in (the Ranger keeps its mark on the toughest foe and Cure
+Wounds a badly hurt neighbour). Act two was tuned against act one's numbers from the same simulator:
 roughly 80% of the party's HP left after the Catacombs, 65% after the Vault, and a Barrow
 that is a clear step harder when the party skips the well's rest. The Larder is the greedy
 option: on Normal it's won almost always after the well, but taking it after the Vault (no
@@ -293,7 +307,9 @@ you can swap the visuals (real models, different camera) without touching rules.
 5. **More classes**: `CLASS_CHOICES` in `units.js` lists which classes can fill each hero
    slot. A new one needs a stat block and a `PROGRESSION` table there, a model spec in
    `modelSpecs.js` (and a builder in `models.js`), and a simulator policy in `scripts/sim.js`
-   if it has abilities the monster AI wouldn't use. A Ranger for Wren's slot would be next.
+   if it has abilities the monster AI wouldn't use. The Ranger is the latest example; a
+   Warlock or Sorcerer for Ilsa's slot, or a Druid for Maela's, would be next. A spec's
+   `recolor` dyes a shared model's green cloth another hue, as the Ranger's brown leather does.
 
 ## Credits
 

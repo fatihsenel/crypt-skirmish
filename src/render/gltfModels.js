@@ -68,6 +68,43 @@ function addEars(scene, { mesh, color }) {
   }
 }
 
+const recolored = new Map(); // atlas uuid + recipe -> texture
+
+/**
+ * The model's texture atlas with its green cloth turned another hue (a colour multiply can
+ * only darken green). Pixels whose hue is green get `hue` (degrees), their saturation and
+ * lightness scaled by `sat` and `light`; skin, leather and steel are left alone.
+ */
+function recolorMap(map, { hue, sat = 1, light = 1 }) {
+  const key = `${map.uuid}:${hue}:${sat}:${light}`;
+  if (recolored.has(key)) return recolored.get(key);
+  const { width: w, height: h } = map.image;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(map.image, 0, 0);
+  const img = ctx.getImageData(0, 0, w, h);
+  const c = new THREE.Color();
+  const hsl = {};
+  for (let i = 0; i < img.data.length; i += 4) {
+    const d = img.data;
+    c.setRGB(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
+    c.getHSL(hsl);
+    if (hsl.h < 70 / 360 || hsl.h > 170 / 360 || hsl.s < 0.15) continue;
+    c.setHSL(hue / 360, Math.min(1, hsl.s * sat), Math.min(1, hsl.l * light));
+    d[i] = c.r * 255;
+    d[i + 1] = c.g * 255;
+    d[i + 2] = c.b * 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = map.clone();
+  tex.source = new THREE.Source(canvas);
+  tex.needsUpdate = true;
+  recolored.set(key, tex);
+  return tex;
+}
+
 function necroStaff() {
   const g = new THREE.Group();
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 2.2, 7),
@@ -108,10 +145,9 @@ export function buildGltfModel(unit) {
       } else if (o.visible) melee.push(o);
     }
     if (spec.hide?.includes(o.name)) o.visible = false;
-    if (spec.tint) {
-      o.material = o.material.clone();
-      o.material.color.multiply(new THREE.Color(spec.tint));
-    }
+    if (spec.tint || spec.recolor) o.material = o.material.clone();
+    if (spec.tint) o.material.color.multiply(new THREE.Color(spec.tint));
+    if (spec.recolor && o.material.map) o.material.map = recolorMap(o.material.map, spec.recolor);
   });
 
   let flare = null;

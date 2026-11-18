@@ -61,6 +61,23 @@ export const TEMPLATES = {
       { name: 'Shortbow', stat: 'dex', damage: '1d6', reach: 16, projectile: 'arrow' },
     ],
   },
+  // The Ranger (a Hunter) can take the Rogue's place: a longbow, Hunter's Mark and the
+  // ranger's own healing. Keeps the Rogue's eye for traps so the slot still finds them.
+  A: {
+    name: 'Wren', cls: 'Ranger', team: 'heroes', color: 0x9a7a4a,
+    hp: 28, ac: 15, speed: 6, prof: 2, level: 3, // studded leather
+    stealth: 'trained',
+    ai: 'skirmisher', // when the AI plays it (autoplay, the simulator): keep away and shoot
+    castStat: 'wis',
+    spells: ['huntersMark', 'cureWounds'],
+    slots: { 1: 3 },
+    passives: ['archery', 'colossusSlayer', 'trapSense'],
+    stats: { str: 12, dex: 16, con: 14, int: 10, wis: 14, cha: 8 },
+    attacks: [
+      { name: 'Shortsword', stat: 'dex', damage: '1d6', reach: 1 },
+      { name: 'Longbow', stat: 'dex', damage: '1d8', reach: 24, projectile: 'arrow' },
+    ],
+  },
   C: {
     name: 'Maela', cls: 'Cleric', team: 'heroes', color: 0xd8c36a,
     hp: 24, ac: 18, speed: 6, prof: 2, level: 3, // chain mail + shield
@@ -207,7 +224,7 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     ...structuredClone(t),
     id: nextId++,
     code,
-    slot: code,         // the party slot a hero fills (a Paladin plays in the Fighter's 'F')
+    slot: code,         // the party slot a hero fills (a Paladin plays in the Fighter's 'F', a Ranger in the Rogue's 'R')
     name: total > 1 ? `${t.name} ${number}` : t.name,
     variant: number, // lets the renderer vary look between copies
     maxHp: t.hp,
@@ -243,6 +260,8 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     smiteArmed: false,  // Divine Smite on the next melee hit
     faithFrom: null,    // the paladin whose Shield of Faith is on it (+2 AC)
     spiritWeapon: null, // a cleric's Spiritual Weapon: { x, z, slot } once cast this fight
+    mark: null,         // a ranger's Hunter's Mark: { id, slot } of the marked foe
+    colossusUsed: false, // Colossus Slayer, once per turn
     conditions: {},     // prone / poisoned / frightened (combat.js)
   };
 }
@@ -278,6 +297,14 @@ export const PROGRESSION = {
     4: { hp: 6, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
     5: { hp: 6, prof: 3, sneakDice: 3, passives: ['uncannyDodge'], note: 'Sneak Attack 3d6 and Uncanny Dodge' },
     6: { hp: 6, sneakDice: 4, note: 'Sneak Attack 4d6' },
+  },
+  A: {
+    4: { hp: 8, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
+    5: {
+      hp: 8, prof: 3, extraAttack: 2, slots: { 1: 4, 2: 2 }, passives: ['extraAttack'],
+      note: 'Extra Attack, a fourth 1st-level slot and two 2nd-level ones',
+    },
+    6: { hp: 8, passives: ['escapeTheHorde'], note: 'Escape the Horde: opportunity attacks against you have disadvantage' },
   },
   C: {
     4: { hp: 7, stats: { wis: 2 }, slots: { 2: 3 }, note: 'Wisdom 18, a third 2nd-level slot' },
@@ -318,7 +345,7 @@ export function applyLevel(unit, level) {
 }
 
 /** Classes that can fill each hero slot: the first is the default. */
-export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W'], R: ['R'], C: ['C'] };
+export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W'], R: ['R', 'A'], C: ['C'] };
 
 /** The class (template code) a party record plays in a slot. */
 export const classOf = (slot, rec) => (CLASS_CHOICES[slot]?.includes(rec?.cls) ? rec.cls : slot);

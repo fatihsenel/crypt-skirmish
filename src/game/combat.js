@@ -187,7 +187,8 @@ export class Game {
   }
 
   toHitBonus(unit, attack) {
-    return abilityMod(unit.stats[attack.stat]) + unit.prof + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0);
+    const archery = unit.passives?.includes('archery') && isWeapon(attack) && !isMelee(attack) ? 2 : 0;
+    return abilityMod(unit.stats[attack.stat]) + unit.prof + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + archery;
   }
 
   /** Flat damage bonus added to an attack's dice. */
@@ -485,6 +486,7 @@ export class Game {
       shielded: false,
       attacksLeft: 0,
       sneakUsed: false,
+      colossusUsed: false,
       interacted: false,
     });
     this.standUp(u);
@@ -546,7 +548,13 @@ export class Game {
       target.alive = false;
       for (const u of this.units) if (u.faithFrom === target.id) u.faithFrom = null; // Shield of Faith drops
       target.spiritWeapon = null; // and a fallen cleric's spectral weapon fades
-      this.emit('death', { unit: target, source });
+      let unmarked = null;
+      if (target.mark) { // a fallen ranger's Hunter's Mark ends
+        unmarked = this.units.find((u) => u.id === target.mark.id) ?? null;
+        if (unmarked) unmarked.marked = false;
+        target.mark = null;
+      }
+      this.emit('death', { unit: target, source, unmarked });
       this.checkEnd();
     }
   }
@@ -837,6 +845,7 @@ export class Game {
     if (fear && this.inSight(attacker, fear, 99)) dis.push('frightened');
     if (attack.reach === 1 && this.isFlanking(attacker, target)) adv.push('flanking');
     if (attacker.passives.includes('packTactics') && this.allyNextTo(attacker, target)) adv.push('pack tactics');
+    if (opportunity && target.passives.includes('escapeTheHorde')) dis.push('escape the horde');
     if (target.turned) adv.push('target is fleeing');
     if (target.asleep) adv.push('asleep');
     else if (target.unaware) adv.push('unaware');
@@ -925,6 +934,8 @@ export class Game {
     let damageRoll = null;
     let sneak = null;
     let smite = null;
+    let mark = null;
+    let colossus = null;
     if (hit) {
       damageRoll = rollExpr(attack.damage, { crit, rng: this.rng });
       damage = Math.max(1, damageRoll.total + this.damageBonus(attacker, attack));
@@ -936,6 +947,16 @@ export class Game {
       if (attacker.smiteArmed && isMelee(attack) && this.hasSlot(attacker, 1)) {
         smite = this.smite(attacker, target, crit);
         damage += smite.total;
+      }
+      if (isWeapon(attack) && attacker.mark?.id === target.id) {
+        mark = rollExpr(SPELLS.huntersMark.damage, { crit, rng: this.rng });
+        damage += mark.total;
+      }
+      // Colossus Slayer looks at the foe as the arrow lands, before this hit's damage.
+      if (isWeapon(attack) && attacker.passives.includes('colossusSlayer') && !attacker.colossusUsed && target.hp < target.maxHp) {
+        attacker.colossusUsed = true;
+        colossus = rollExpr('1d8', { crit, rng: this.rng });
+        damage += colossus.total;
       }
     }
 
@@ -950,7 +971,7 @@ export class Game {
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
-      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, uncanny, rider: null,
+      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, uncanny, rider: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -1217,8 +1238,9 @@ export class Game {
     if (caster.turned) return 'Turned: can only flee';
     if (s.time === 'action' && caster.actionUsed) return 'Action already used this turn';
     if (s.time === 'bonus' && caster.bonusUsed) return 'Bonus action already used this turn';
-    const again = id === 'spiritualWeapon' && caster.spiritWeapon; // strikes again for free
-    if (!again && !this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
+    const free = this.freeRecast(caster, id);
+    const again = id === 'spiritualWeapon' && free; // strikes again for free
+    if (!free && !this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
     if (s.pool && !(caster.layOnHands > 0)) return 'Your healing pool is spent';
     if (s.targeting === 'self') {
       if (id === 'massHealingWord' && !this.massHealTargets(caster).length) return 'No one nearby is hurt';
@@ -1236,6 +1258,7 @@ export class Game {
           if (gridDistance(caster.spiritWeapon, target) > s.reach) return `Too far from the spectral weapon (${s.reach * 5} ft)`;
         } else if (!inRange(target)) return `Out of range or not in sight (${s.range * 5} ft)`;
         if (s.condition && this.has(target, s.condition)) return `${target.name} is already ${s.condition}`;
+        if (id === 'huntersMark' && caster.mark?.id === target.id) return `${target.name} is already marked`;
         break;
       case 'ally':
         if (!target.alive || target.team !== caster.team) return 'Choose an ally (or yourself)';
@@ -1294,14 +1317,25 @@ export class Game {
     return this.heal(caster, 2 + slot) || null;
   }
 
+  /**
+   * A spell that costs no slot this time: Spiritual Weapon striking again, or Hunter's Mark
+   * moving on once its foe has dropped.
+   */
+  freeRecast(caster, id) {
+    if (id === 'spiritualWeapon') return !!caster.spiritWeapon;
+    if (id === 'huntersMark') return !!caster.mark && !this.units.find((u) => u.id === caster.mark.id)?.alive;
+    return false;
+  }
+
   castSpell(caster, id, target) {
     const problem = this.spellProblem(caster, id, target);
     if (problem) return { ok: false, reason: problem };
     const spell = SPELLS[id];
     if (spell.time === 'action') caster.actionUsed = true;
     else caster.bonusUsed = true;
-    const again = id === 'spiritualWeapon' && !!caster.spiritWeapon;
-    const slot = again ? caster.spiritWeapon.slot : this.spendSlot(caster, spell.level);
+    const again = this.freeRecast(caster, id);
+    const slot = !again ? this.spendSlot(caster, spell.level)
+      : id === 'spiritualWeapon' ? caster.spiritWeapon.slot : caster.mark.slot;
     const upcast = Math.max(0, slot - spell.level);
     this.reveal(caster, 'spell');
     const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot };
@@ -1422,6 +1456,18 @@ export class Game {
         for (const u of this.units) if (u.faithFrom === caster.id) u.faithFrom = null;
         target.faithFrom = caster.id;
         result.target = target;
+        this.emit('spell', result);
+        break;
+      }
+      case 'huntersMark': {
+        result.target = target;
+        result.again = again;
+        const old = caster.mark && this.units.find((u) => u.id === caster.mark.id);
+        result.from = again ? old : null;
+        result.unmarked = old || null; // whose tag to clear
+        if (old) old.marked = false; // for the status tags; caster.mark is what the rules read
+        target.marked = true;
+        caster.mark = { id: target.id, slot };
         this.emit('spell', result);
         break;
       }

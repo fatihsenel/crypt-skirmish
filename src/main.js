@@ -416,8 +416,9 @@ function startFight(resume) {
     else hud.logSpell(r);
   });
   game.on('action', (r) => { if (!unseen(r.unit)) hud.logAction(r); });
-  game.on('death', ({ unit }) => {
+  game.on('death', ({ unit, unmarked }) => {
     clearSpiritWeapon(unit.id); // a fallen cleric's weapon fades
+    if (unmarked) view(unmarked)?.updateStatus(); // and a fallen ranger's mark
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
     else hud.log(`<span class="${unit.team}">${unit.name}</span> falls.`, 'death');
   });
@@ -701,6 +702,8 @@ function spellPreview(u, id, t) {
       const cost = u.spiritWeapon ? 'no slot' : `a ${u.slots[2] ? '2nd' : '3rd'}-level slot`;
       return `Spiritual Weapon → ${t.name}: ${signed(u.prof + mod)} vs AC ${game.acOf(t)}, 1d8${signed(mod)} force · ${cost}`;
     }
+    case 'huntersMark':
+      return `Hunter’s Mark → ${t.name}: +1d6 on your weapon hits against it · ${game.freeRecast(u, id) ? 'no slot' : 'a 1st-level slot'}`;
     case 'sacredFlame':
       return `Sacred Flame → ${t.name}: ${s.damage} radiant, DEX save DC ${game.spellDC(u)} negates (their DEX ${signed(abilityMod(t.stats.dex))})`;
     case 'cureWounds':
@@ -852,6 +855,8 @@ async function animateAttack(r, at = r.target) {
         radiantFx(stage.scene, pos);
         floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Divine Smite!', 'spell');
       }
+      const hunter = [r.mark && 'Hunter’s Mark', r.colossus && 'Colossus Slayer'].filter(Boolean).join(' · ');
+      if (hunter) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, hunter, 'spell');
       floatText(stage.scene, pos, r.crit ? `CRIT −${r.damage}` : `−${r.damage}`, r.crit ? 'crit' : 'dmg');
       tv.updateHp();
       if (r.rider && target.alive) {
@@ -1173,6 +1178,15 @@ async function playSpell(r) {
         floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
         view(r.target).updateHp();
         await healFx(stage.scene, r.target);
+      });
+      break;
+    case 'huntersMark':
+      if (r.unmarked) view(r.unmarked)?.updateStatus();
+      await cv.cast(r.target, async () => {
+        sfx.bow();
+        floatText(stage.scene, r.target, 'Marked', 'spell');
+        view(r.target).updateStatus();
+        await radiantFx(stage.scene, r.target);
       });
       break;
     case 'shieldOfFaith':
@@ -1519,7 +1533,7 @@ function testParty(state, level) {
 }
 
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets
-// the heroes' level and &paladin swaps the Fighter for a Paladin.
+// the heroes' level, &paladin swaps the Fighter for a Paladin and &ranger the Rogue for a Ranger.
 // The title waits only for the dungeon tiles (~1 MB); the .glb figures (~7 MB) keep
 // loading behind it, and a fight started before they're here waits for them. Any that
 // fail fall back to the built-in miniatures.
@@ -1548,7 +1562,7 @@ preloadDungeon(bootProgress).then(() => {
     saving = false;
     const q = new URLSearchParams(location.search);
     const d = q.get('difficulty'); // e.g. &difficulty=hard
-    campaign = testParty(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, q.has('paladin') ? { F: 'P' } : {}), Number(q.get('party')));
+    campaign = testParty(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('ranger') && { R: 'A' }) }), Number(q.get('party')));
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
   } else {

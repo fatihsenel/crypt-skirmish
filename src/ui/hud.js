@@ -94,6 +94,8 @@ export class Hud {
     const tag = r.opportunity ? '<b class="opp">Opportunity attack!</b><br>' : '';
     const sneak = (r.sneak ? ` incl. <b class="sneak">Sneak Attack +${r.sneak.total}</b> ${dice(r.sneak)}` : '')
       + (r.smite ? ` incl. <b class="spell">Divine Smite +${r.smite.total} radiant</b> ${dice(r.smite.roll)}${r.target.undead ? ' (undead +1d8)' : ''} <span class="dice">${ordinal(r.smite.slot)}-level slot</span>` : '')
+      + (r.mark ? ` incl. <b class="spell">Hunter’s Mark +${r.mark.total}</b> ${dice(r.mark)}` : '')
+      + (r.colossus ? ` incl. <b class="sneak">Colossus Slayer +${r.colossus.total}</b> ${dice(r.colossus)}` : '')
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '');
     this.log(
       `${tag}${who(r.attacker)} → ${who(r.target)} · ${esc(r.attack.name)}${why}<br> ` +
@@ -193,6 +195,10 @@ export class Hud {
     } else if (r.id === 'layOnHands') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} lays hands on ${self}: <b class="heal">+${r.healed} HP</b> <span class="dice">${r.left} left in the pool</span>.`);
+    } else if (r.id === 'huntersMark') {
+      this.log(r.again
+        ? `${who(r.caster)} moves ${name} from the fallen ${who(r.from)} to ${who(r.target)}. <span class="dice">bonus action, no slot</span>`
+        : `${who(r.caster)} casts ${name} on ${who(r.target)}: <b>+1d6</b> on every weapon hit against it. ${slot}`);
     } else if (r.id === 'shieldOfFaith') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} casts ${name} on ${self}: <b>AC +2</b> for the rest of the fight. ${slot}`);
@@ -299,7 +305,7 @@ export class Hud {
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span title="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
       </div>
-      ${u.passives.length || u.items?.length || conds.length ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" title="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${conds.map((c) =>
+      ${u.passives.length || u.items?.length || conds.length || u.marked ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" title="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.marked ? `<span class="passive-tag cond" title="${esc(SPELLS.huntersMark.desc)}">Hunter’s Mark</span>` : ''}${conds.map((c) =>
         `<span class="passive-tag cond ${c}" title="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
         `<span class="passive-tag" title="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
         `<span class="passive-tag item" title="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
@@ -370,6 +376,7 @@ export class Hud {
         kind: 'spell', id, name: s.name, cls: 'spell',
         sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
           : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus'
+          : id === 'huntersMark' && game.freeRecast(u, id) ? 'move it, no slot · bonus'
           : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
         title: problem ? `${s.desc}\n(${problem})` : s.desc,
         disabled: !!problem,

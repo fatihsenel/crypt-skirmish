@@ -78,6 +78,7 @@ html, body {
 .tag.unaware { color: #a9a3b8; font-style: italic; }
 .tag.asleep { color: #8fa3c8; font-style: italic; }
 .tag.hidden { color: #b9a4e8; }
+.tag.marked { color: #e8c070; }
 /* conditions: on figure labels, the action bar and in the log */
 .tag.prone, .cond.prone { color: #e0a060; }
 .tag.poisoned, .cond.poisoned { color: #9ad45a; }

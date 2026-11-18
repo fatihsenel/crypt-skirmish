@@ -34,6 +34,16 @@ export const SPECS = {
     ranged: ['1H_Crossbow'], // swapped in for a shot
     clips: { melee: 'Dualwield_Melee_Attack_Stab', arrow: '1H_Ranged_Shoot' },
   },
+  // The Ranger: the hooded rogue with its green cloth dyed a weathered brown (so it reads as
+  // neither Wren nor a goblin), blade in hand and the big crossbow swapped in to shoot (the
+  // pack has no bow; the rules call it a longbow).
+  A: {
+    file: 'Rogue_Hooded', height: 1.3,
+    show: ['Knife'],
+    ranged: ['2H_Crossbow'],
+    recolor: { hue: 30, sat: 0.55, light: 0.75 },
+    clips: { melee: '1H_Melee_Attack_Stab', arrow: '1H_Ranged_Shoot' },
+  },
   C: {
     file: 'Barbarian', height: 1.35,
     show: ['1H_Axe', 'Barbarian_Round_Shield'],

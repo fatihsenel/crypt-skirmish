@@ -206,6 +206,7 @@ export class UnitView {
       u.conditions?.prone && ['prone', 'Prone'],
       u.conditions?.poisoned && ['poisoned', 'Poisoned'],
       u.conditions?.frightened && ['frightened', 'Frightened'],
+      u.marked && u.alive && ['marked', 'Marked'],
       // A hero's own Stealth roll is theirs to see; a goblin's isn't.
       u.hidden && ['hidden', u.team === 'heroes' ? `Hidden · ${u.hidden}` : 'Hidden'],
       u.asleep ? ['asleep', 'Asleep'] : u.patrol && u.unaware ? ['unaware', 'Patrolling'] : u.unaware && ['unaware', 'Unaware'],

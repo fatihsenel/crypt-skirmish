@@ -26,6 +26,12 @@ const ICONS = {
   R: svg(`<path stroke="none" d="M12 2c-4.4 0-7 3.6-7 8.2 0 3.4 1.2 6.4 3 8.3L6 22h12l-2-3.5c1.8-1.9 3-4.9 3-8.3C19 5.6 16.4 2 12 2z"/>
     <path fill="var(--icon-hole)" stroke="none" d="M12 7c-2.4 0-4 1.9-4 4.6 0 2.4 1.6 4.4 4 4.4s4-2 4-4.4C16 8.9 14.4 7 12 7z"/>
     <path stroke="none" d="M9.3 11.4h2.2v1.1H9.3zm3.2 0h2.2v1.1h-2.2z"/>`),
+  // A drawn bow with an arrow on the string.
+  A: svg(`<path fill="none" stroke-width="2.2" d="M6 2.5c7.5 2.2 11.5 7.4 11.5 9.5S13.5 19.3 6 21.5"/>
+    <path fill="none" stroke-width="1" d="M6 2.5v19"/>
+    <path fill="none" stroke-width="1.8" d="M3 12h16"/>
+    <path stroke="none" d="M22.5 12 18 9.4v5.2z"/>
+    <path stroke="none" d="M3 12 1.2 9.6h2.6L5.4 12l-1.6 2.4H1.2z"/>`),
   C: svg(`<circle stroke="none" cx="12" cy="12" r="4.2"/>
     <g stroke-width="1.9" fill="none">
       <path d="M12 2.2v3.2M12 18.6v3.2M2.2 12h3.2M18.6 12h3.2M5.1 5.1l2.2 2.2M16.7 16.7l2.2 2.2M5.1 18.9l2.2-2.2M16.7 7.3l2.2-2.2"/>
