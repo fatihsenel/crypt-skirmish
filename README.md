@@ -86,8 +86,8 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   (giant spiders that web and poison, and rats), then a fork between the **Haunted Gallery**
   (specters, whose Life Drain touch frightens, and skeletons, guarding a Cloak of Protection
   and a Runed Weapon) and a rest at the **Silent Shrine**, and finally the **Weeping Throne**,
-  where **Ysolde the banshee** (100 HP, two frightening touches, Dread) waits with her
-  specters and spiders. Specters and the banshee are undead, so Turn Undead works on them.
+  where **Ysolde the banshee** (130 HP, two frightening touches, Dread) waits with her
+  specters. Specters and the banshee are undead, so Turn Undead works on them.
   A run that already finished at the Barrow carries on into act three, rested
 - between rooms the party keeps HP, spell slots and potions, takes a short rest (regain half
   the missing HP; the fallen get back up) and shares **XP**. A lost fight can be retried as
@@ -215,8 +215,10 @@ roughly 80% of the party's HP left after the Catacombs, 65% after the Vault, and
 that is a clear step harder when the party skips the well's rest. The Larder is the greedy
 option: on Normal it's won almost always after the well, but taking it after the Vault (no
 rest at all) drops the Barrow to roughly two wins in three. Act three follows the same
-shape: the Nest is the warm-up, and the Throne is won about 96% of the time after the
-shrine's rest but about 83% after the Gallery (Hard: 97% and 47%).
+shape: the Nest and Gallery are warm-ups, and the Throne is won about 98% of the time after
+the shrine's rest but about 80% after the Gallery (Hard: 94% and 60%), matching act two. The
+Throne leans on Ysolde herself rather than her escort: with spiders beside the specters, a
+party worn down by the Gallery was overrun while a rested one won almost every time.
 
 ## Controls
 

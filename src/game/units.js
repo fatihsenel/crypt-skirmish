@@ -241,10 +241,12 @@ export const TEMPLATES = {
     ],
   },
   // The last boss: a banshee (SRD Corrupting Touch and Horrifying Visage, as Dread), made
-  // tougher and given a second touch to stand up to a level 6 party. No Wail.
+  // tougher and given a second touch to stand up to a level 6 party. No Wail. The touch
+  // aims with her Charisma: at +5 (Dex) she missed armoured heroes so often that a rested
+  // party beat her 99% of the time; she now carries the fight instead of her escort.
   q: {
     name: 'Ysolde', cls: 'Banshee', team: 'monsters', color: 0xd8e4f0,
-    hp: 100, ac: 13, speed: 8, prof: 3, xp: 1100, cr: 4,
+    hp: 130, ac: 14, speed: 8, prof: 3, xp: 1100, cr: 4,
     multiattack: 2,
     ai: 'brute',
     undead: true,
@@ -253,7 +255,7 @@ export const TEMPLATES = {
     slots: { 1: 3 },
     stats: { str: 1, dex: 14, con: 10, int: 12, wis: 11, cha: 17 },
     attacks: [
-      { name: 'Corrupting Touch', stat: 'dex', damage: '3d6', reach: 1, addMod: false, rider: { save: 'wis', dc: 13, condition: 'frightened', turns: 2 } },
+      { name: 'Corrupting Touch', stat: 'cha', damage: '4d6', reach: 1, addMod: false, rider: { save: 'wis', dc: 13, condition: 'frightened', turns: 2 } },
     ],
   },
 };
