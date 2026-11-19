@@ -1,0 +1,65 @@
+# Crypt Skirmish
+
+Turn-based isometric dungeon tactics with SRD 5e-style rules, built with Vite, three.js and
+Vitest. It deploys to GitHub Pages at https://fatihsenel.github.io/crypt-skirmish/ on every
+push to `main`. README.md describes the game for players; this file is for working on it.
+
+## Commands
+
+```bash
+npm run dev            # dev server, use http://localhost:5173
+npm test               # Vitest, run before every commit
+npm run sim -- 300     # headless balance check, run after changing monsters, spells or rooms
+npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
+```
+
+The `dnd-dev` entry in `.claude/launch.json` uses port 5179. Don't use it: run the dev
+server on 5173.
+
+## Architecture
+
+- **`src/game/` is pure rules:** no three.js, no DOM. It is unit-tested in `tests/` and run
+  headlessly by `scripts/sim.js`. Keep it that way.
+- The rules engine (`Game` in `combat.js`) resolves everything instantly and emits events
+  (`attack`, `move`, `spell`, `death`, …). `move()` returns steps. `src/main.js` turns them
+  into animations, HUD updates and sound.
+- **Randomness in rules goes through `this.rng`** (or a passed-in `rng`), never
+  `Math.random`. Fights are saved as a seed plus the heroes' commands and replayed on load
+  (`replay.js`). Anything that changes the dice order makes old saves fall back to camp.
+- `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
+  they follow the monster-turn speed setting (`playback.rate`).
+- `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
+- Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
+  `threats`, `tips`, `history`, `achievements`, `daily`, …).
+
+## Adding content
+
+- **Monster:** stat block in `game/units.js`, model in `render/modelSpecs.js` (or a
+  procedural builder in `render/models.js`), an icon in `ui/icons.js`.
+- **Condition:** add it to `CONDITIONS` in `combat.js` and a line in `attackMods`. Monsters
+  apply it through an attack `rider` or a spell's `condition`.
+- **Room:** a map in `LEVELS` (`game/maps.js`) and a node in `NODES` (`game/campaign.js`).
+- **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
+  `scripts/sim.js` if the AI wouldn't use its abilities.
+- Rules that differ from the SRD go in the README's House rules section.
+
+## Testing in the browser
+
+- `?level=N` jumps into a room with a fresh party and never touches the save. Add
+  `&party=5`, `&difficulty=hard|story`, `&paladin`, `&ranger`.
+- `window.__debug` in the console: `command({type:'move', x, z})`,
+  `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
+  `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `threats()`.
+- Back up the `crypt-skirmish:*` localStorage keys before a scripted test and restore them
+  afterwards. The browser pane is the user's real profile.
+- Check phones too: 375×812 and 812×375. Touch shows its own controls (tap to preview, tap
+  again to act).
+
+## Conventions
+
+- Commit and push only when asked. Commit messages are a short imperative summary, like
+  "Add an enemy reach overlay".
+- Keep the README up to date when a feature, control or file changes, in the same short
+  style.
+- Model packs are CC0 (KayKit, Quaternius). Use only SRD 5.1 names, no Wizards of the Coast
+  trademarks.
