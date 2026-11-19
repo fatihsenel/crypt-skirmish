@@ -27,12 +27,13 @@ server on 5173.
   `Math.random`. Fights are saved as a seed plus the heroes' commands and replayed on load
   (`replay.js`). Anything that changes the dice order makes old saves fall back to camp.
   The end banner's Watch replay plays the same record back (`startReplay` in `main.js`), and
-  Past runs keep each run's last one (`history.js`).
+  Past runs keep each run's last one (`history.js`). `#watch=` links carry the same record
+  (`fightLink.js`) and are replayed headlessly first, so a rules change refuses old links.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`).
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `bestiary`, `bestiary-read`, `slain`, `hurt`, `last-fight`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `bestiary`, `bestiary-read`, `slain`, `hurt`, `last-fight`, `won-run`, …).
 
 ## Adding content
 
@@ -48,8 +49,9 @@ server on 5173.
 ## Testing in the browser
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
-  `&party=5`, `&difficulty=hard|story`, `&paladin`, `&ranger`, `&warlock`.
+  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+), `&paladin`, `&ranger`, `&warlock`.
 - `?victory` shows the won-campaign screen for a sample run (Copy result, Save image).
+- `#watch=…` (from Copy replay link) opens a fight's replay.
 - `window.__debug` in the console: `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
   `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `threats()`.

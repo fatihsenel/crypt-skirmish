@@ -23,6 +23,22 @@ export const DIFFICULTIES = {
   hard: { name: 'Hard', hp: 1.2, bonus: 1, thin: true, desc: 'Tougher monsters that hit harder. Every choice counts.' },
 };
 
+/** Each New Game+ tier adds this much monster HP (a share of the difficulty's) and +1 to hit and damage. */
+export const TIER_HP = 0.15;
+
+/** The `{ hp, bonus, thin }` the rules take for a run's difficulty at a New Game+ tier. */
+export function runDifficulty(difficulty, tier = 0) {
+  const base = DIFFICULTIES[difficulty] ?? DIFFICULTIES.normal;
+  if (!tier) return base;
+  return { ...base, hp: base.hp * (1 + TIER_HP * tier), bonus: base.bonus + tier };
+}
+
+/** "Hard", or "Hard NG+2" for a New Game+ run. */
+export function difficultyLabel(difficulty, tier = 0) {
+  const name = (DIFFICULTIES[difficulty] ?? DIFFICULTIES.normal).name;
+  return tier > 0 ? `${name} NG+${tier}` : name;
+}
+
 /**
  * The dungeon map. Columns go deeper; `next` lists where you can go from here. An entry
  * may be { to, ifAll: [...] }: only offered once all those rooms are cleared.
@@ -156,8 +172,8 @@ export function heroUnit(code, rec) {
   return u;
 }
 
-/** The fresh-from-a-long-rest version of a slot's hero at `level`. */
-const restedHero = (code, rec, level = rec.level) => heroUnit(code, { cls: rec.cls, level });
+/** The fresh-from-a-long-rest version of a slot's hero at `level`, with their items (an Amulet of Health adds HP). */
+const restedHero = (code, rec, level = rec.level) => heroUnit(code, { cls: rec.cls, level, items: rec.items ?? [] });
 
 /** A hero's display name: the one typed on the title screen, or the class's default. */
 export const heroName = (code, rec) => rec.name ?? TEMPLATES[classOf(code, rec)].name;
@@ -214,7 +230,7 @@ export function runSummary(state) {
     if (top > 0) for (const h of heroes) if (h[f] === top) h.best.push(f);
   }
   return {
-    difficulty: DIFFICULTIES[state.difficulty]?.name ?? 'Normal',
+    difficulty: difficultyLabel(state.difficulty, state.tier),
     xp: state.xp,
     level: Math.max(...heroes.map((h) => h.level)),
     won: stats.won,
@@ -240,7 +256,40 @@ export function newCampaign(difficulty = 'normal', names = {}, classes = {}) {
     const name = cleanName(names[code]);
     if (name) party[code].name = name;
   }
-  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false, difficulty, stats: blankStats() };
+  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false, difficulty, tier: 0, stats: blankStats() };
+}
+
+/** The items each hero may carry into New Game+: what they have equipped, if a fresh hero of their class can use it. */
+export function heirloomChoices(won) {
+  const out = {};
+  for (const code of HERO_CODES) {
+    const rec = won.party[code];
+    const fresh = newCampaign(won.difficulty, {}, { [code]: rec.cls });
+    out[code] = (rec.items ?? []).filter((id) => ITEMS[id] && !equipProblem({ ...fresh, pack: [id] }, 0, code));
+  }
+  return out;
+}
+
+/**
+ * A New Game+ run after `won`: level 1, the same names, classes and difficulty, one tier up,
+ * and each hero carrying the item `keep[code]` names (if it is one they may keep).
+ */
+export function newGamePlus(won, keep = {}) {
+  const names = {};
+  const classes = {};
+  for (const code of HERO_CODES) {
+    if (won.party[code].name) names[code] = won.party[code].name;
+    if (won.party[code].cls) classes[code] = won.party[code].cls;
+  }
+  let state = { ...newCampaign(won.difficulty, names, classes), tier: (won.tier ?? 0) + 1 };
+  const allowed = heirloomChoices(won);
+  for (const code of HERO_CODES) {
+    const id = keep[code];
+    if (!id || !allowed[code].includes(id)) continue;
+    state = equip({ ...state, pack: [id] }, 0, code);
+    state.party[code].hp = heroUnit(code, state.party[code]).maxHp;
+  }
+  return { ...state, pack: [] };
 }
 
 /** Rooms the party can enter next. */
@@ -447,6 +496,12 @@ function validFight(f) {
     && Array.isArray(f.seen) && f.seen.every(Number.isInteger);
 }
 
+/** A won run kept for New Game+ (see main.js), or null if it isn't a finished run. */
+export function parseWonRun(text) {
+  const s = typeof text === 'string' ? parseSave(text) : null;
+  return s?.done ? s : null;
+}
+
 /** Parse save data. Returns null for anything missing, corrupt or from another version. */
 export function parseSave(text) {
   try {
@@ -457,6 +512,7 @@ export function parseSave(text) {
     if (!Array.isArray(s.pack) || !s.pack.every((i) => ITEMS[i])) return null;
     if (typeof s.xp !== 'number') return null;
     if (!DIFFICULTIES[s.difficulty]) s.difficulty = 'normal'; // saves from before difficulties
+    if (!Number.isInteger(s.tier) || s.tier < 0) s.tier = 0; // saves from before New Game+
     s.stats = validStats(s.stats); // saves from before the run tally start a fresh one
     for (const code of HERO_CODES) {
       const r = s.party?.[code];

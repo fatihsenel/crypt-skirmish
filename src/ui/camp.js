@@ -4,7 +4,7 @@
 import { Bestiary } from './bestiary.js';
 import { Overlay } from './overlay.js';
 import {
-  NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES,
+  NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
   cleanName,
 } from '../game/campaign.js';
 import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
@@ -43,8 +43,8 @@ const CLASS_BLURB = {
 };
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWatch }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWatch };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWatch, onShareFight, onNewGamePlus }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWatch, onShareFight, onNewGamePlus };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -57,6 +57,7 @@ export class Camp {
     $('#title').addEventListener('click', (ev) => {
       const b = ev.target.closest('button');
       if (b?.id === 'title-continue') this.h.onContinue();
+      if (b?.id === 'title-ngplus') this.h.onNewGamePlus(b);
       if (b?.id === 'title-daily-play') this.h.onDaily();
       if (b?.id === 'title-new') this.titleStep('setup');
       if (b?.id === 'setup-back') this.titleStep('main');
@@ -67,6 +68,12 @@ export class Camp {
     });
     this.runsPanel = new Overlay($('#title-history'));
     $('#title-history').addEventListener('click', (ev) => {
+      const link = ev.target.closest('button[data-link]');
+      if (link) {
+        const run = this.runs?.[Number(link.dataset.link)];
+        if (run?.fight) this.h.onShareFight(run.fight, link);
+        return;
+      }
       const b = ev.target.closest('button[data-watch]');
       if (!b) return;
       const run = this.runs?.[Number(b.dataset.watch)];
@@ -138,17 +145,20 @@ export class Camp {
     document.querySelector(`#title-names input[data-code="${slot}"]`).placeholder = TEMPLATES[cls].name;
   }
 
-  showTitle(save) {
+  /** `won`: a won run kept for New Game+ (offered until a new campaign starts). */
+  showTitle(save, won = null) {
     this.difficulty ??= save?.difficulty ?? 'normal';
     this.renderDifficulty();
     this.renderNames();
     $('#camp').hidden = true;
     $('#title').hidden = false;
     $('#title-continue').hidden = !save;
+    $('#title-ngplus').hidden = !won;
+    $('#title-ngplus').textContent = won ? `New Game+ (${difficultyLabel(won.difficulty, (won.tier ?? 0) + 1)})` : 'New Game+';
     $('#title-tips').checked = tips.on;
     tips.hide();
     $('#title-save').textContent = save
-      ? `Saved run (${DIFFICULTIES[save.difficulty].name}): party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
+      ? `Saved run (${difficultyLabel(save.difficulty, save.tier)}): party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
         + (save.fight ? `. Mid-fight in ${nodeName(save.fight.node)}.` : '')
       : '';
     $('#setup-warn').hidden = !save;
@@ -213,7 +223,8 @@ export class Camp {
         + (r.mvp ? ` · most damage: ${esc(r.mvp.name)} (${r.mvp.damage})` : '') + `</div>
         <div class="run-party">${party}</div>`
         + (r.fight && NODES[r.fight.node] ? `<button type="button" class="watch-run" data-watch="${i}">Watch the last fight: ${esc(nodeName(r.fight.node))}`
-          + ` <small>${r.fight.result === 'victory' ? 'won' : 'lost'}</small></button>` : '')
+          + ` <small>${r.fight.result === 'victory' ? 'won' : 'lost'}</small></button>`
+          + (r.fight.check ? ` <button type="button" class="watch-run quiet" data-link="${i}">Copy link</button>` : '') : '')
         + `</li>`;
     }).join('');
   }
@@ -255,7 +266,7 @@ export class Camp {
     const bar = `<div class="xp" title="Party XP">
       <span>Party level <b>${lvl}</b></span>
       <span class="xpbar"><i style="width:${pct}%"></i></span>
-      <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · ${esc(DIFFICULTIES[state.difficulty ?? 'normal'].name)}</span>
+      <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · ${esc(difficultyLabel(state.difficulty ?? 'normal', state.tier))}</span>
     </div>`;
     let news = '';
     if (report?.rest) {

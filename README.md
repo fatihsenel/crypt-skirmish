@@ -95,7 +95,9 @@ It runs on desktop and on phones.
   call, who fell and how many potions were drunk.
 - **Watch replay:** after any fight you played yourself, the end screen can play it again from
   the start, move by move with the same dice. Pause, step to the next turn, speed it up to 4×,
-  or exit back to the end screen (keys: Space, →, + and −, Esc).
+  or exit back to the end screen (keys: Space, →, + and −, Esc). Copy replay link puts the
+  whole fight in a link (on a phone, the share sheet): whoever opens it watches the same fight,
+  with nothing sent to a server. A link from before a rules change says it can't be shown.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
@@ -103,6 +105,10 @@ It runs on desktop and on phones.
 - Beating Nekhet shows a tally of the run and each hero's stats. Save image downloads it as a
   picture with the party's gear and the way down (on a phone, the share sheet). A run that ended at Ysolde
   before act four existed carries on into it.
+- **New Game+:** after beating Nekhet, go back down with the same heroes from the first room.
+  Each one keeps a magic item of your choice from the run. Every win adds a tier (Hard NG+1,
+  NG+2, …): monsters get 15% more hit points and +1 to hit and damage per tier. The title
+  screen offers it too, until you start a new campaign.
 
 ## Modes and extras
 
@@ -116,7 +122,7 @@ It runs on desktop and on phones.
   until you look. Open it from the title screen or camp. It also keeps how much damage each
   kind has dealt your heroes and how many it dropped, with the three deadliest at the top.
 - **Past runs:** your last 20 runs, from the title screen. Each keeps its last fight to watch
-  again.
+  again or copy as a link.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
 
@@ -193,6 +199,8 @@ A few things differ from the SRD to keep the game simple:
 - Hex has no ability-check part and lasts the whole fight, with no concentration.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
+- New Game+ is not from the SRD: each tier adds 15% to monster hit points (on top of the
+  difficulty's) and +1 to their weapon attack and damage rolls.
 
 ## For developers
 
@@ -212,7 +220,7 @@ Every push to `main` runs the tests, builds and deploys to GitHub Pages
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
-12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&paladin`, `&ranger` or `&warlock`.
+12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`.
 This doesn't touch the save.
 
 **See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,
@@ -231,7 +239,7 @@ to try Copy result and Save image (on a phone, the share sheet). Nothing is save
 - `npm run sim -- 300 full` plays whole runs, first room to the Tomb, and says where they end.
 - Runs are split over one worker thread per core; `JOBS=1` plays them on one thread (the same
   numbers as before threads, for a given `SEED`).
-- `SEED=n`, `DIFFICULTY=story|hard`, `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
+- `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
@@ -250,13 +258,14 @@ src/
     units.js         stat blocks, XP values and level-ups
     items.js         magic items
     abilities.js     actions and spells
-    campaign.js      the dungeon map, XP, the pack, rests, save data
+    campaign.js      the dungeon map, XP, the pack, rests, New Game+, save data
     maps.js          the rooms as ASCII maps
     combat.js        Game: turns, movement, attacks, spells, events
     ai.js            monster brains
     replay.js        fight saves: commands replayed from a seed
     recap.js         a fight told back: who fell to what and a tip, or who led a win
     history.js       past runs and the last fight of each
+    fightLink.js     a fight as a #watch= link, checked by replaying it
     achievements.js  achievements and their checks
     bestiary.js      which monsters you've met and slain, and what they did to you
     daily.js         the daily crypt
@@ -277,12 +286,13 @@ src/
     hud.js           initiative, action bar, combat log
     runCard.js       the won campaign drawn as a picture to save
     camp.js          title screen and camp
+    heirlooms.js     New Game+: the item each hero keeps
     settings.js      the settings panel
     abilityTip.js    tooltip cards for attacks, spells and actions
     unitTip.js       the character card over figures and portraits
     unitCard.js      the character card's text
     bestiary.js      the bestiary screen and its lore
-    overlay.js       panels over the screen (bestiary, past runs, achievements)
+    overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
   main.js            controller: input → game → animations → HUD

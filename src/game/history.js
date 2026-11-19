@@ -13,7 +13,7 @@ export const LAST_FIGHT_KEY = 'crypt-skirmish:last-fight';
 export const MAX_FIGHT_SIZE = 60000;
 
 /**
- * A fight record as it can be watched again: { node, seed, party, difficulty, log, result },
+ * A fight record as it can be watched again: { node, seed, party, difficulty, tier?, log, result },
  * or null when something is missing or it's too big to keep.
  */
 export function watchable(fight) {
@@ -22,6 +22,8 @@ export function watchable(fight) {
   if (typeof node !== 'string' || !Number.isInteger(seed) || !party || typeof party !== 'object'
     || typeof difficulty !== 'string' || !Array.isArray(log) || !['victory', 'defeat'].includes(result)) return null;
   const kept = { node, seed, party, difficulty, log, result };
+  if (Number.isInteger(fight.tier) && fight.tier > 0) kept.tier = fight.tier; // New Game+ (none means 0)
+  if (typeof fight.check === 'string') kept.check = fight.check; // its end, for a link (fightLink.js)
   return JSON.stringify(kept).length <= MAX_FIGHT_SIZE ? kept : null;
 }
 

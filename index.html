@@ -212,6 +212,8 @@
             <button id="share" type="button" hidden>Copy result</button>
             <button id="save-card" type="button" hidden>Save image</button>
             <button id="watch" type="button" hidden>Watch replay</button>
+            <button id="copy-link" type="button" hidden>Copy replay link</button>
+            <button id="ngplus" type="button" hidden>New Game+</button>
           </div>
         </div>
       </div>
@@ -224,6 +226,7 @@
           <div id="title-main">
             <div class="title-buttons">
               <button id="title-continue" type="button" class="primary" hidden>Continue</button>
+              <button id="title-ngplus" type="button" hidden>New Game+</button>
               <button id="title-new" type="button">New campaign</button>
             </div>
             <p id="title-save" class="muted"></p>
@@ -261,6 +264,18 @@
           </section>
         </div>
       </div>
+
+      <section id="heirlooms" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="heirlooms-head">
+        <form class="overlay-card narrow">
+          <header class="camp-head">
+            <h2 id="heirlooms-head">New Game+</h2>
+            <button type="button" class="quiet" data-close>Cancel</button>
+          </header>
+          <p id="heirlooms-intro"></p>
+          <ul id="heirlooms-list"></ul>
+          <div class="heirlooms-foot"><button id="heirlooms-go" type="submit">Go back down</button></div>
+        </form>
+      </section>
 
       <section id="title-history" class="overlay" hidden role="dialog" aria-modal="true" aria-labelledby="history-head">
         <div class="overlay-card narrow">

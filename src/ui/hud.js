@@ -690,13 +690,16 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null, win = null, replay = false }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null, win = null, replay = false, ngplus = false }) {
     this.renderSummary(summary);
     this.renderRecap(recap, win);
     this.cardSummary = summary;
     $('#save-card').hidden = !summary;
     $('#save-card').textContent = 'Save image';
     $('#watch').hidden = !replay;
+    $('#copy-link').hidden = !replay;
+    $('#copy-link').textContent = 'Copy replay link';
+    $('#ngplus').hidden = !ngplus;
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';
@@ -792,8 +795,8 @@ export class Hud {
     el.classList.toggle('won', !!win);
     if (win) {
       const lines = [['recap-best', win.best], ['recap-closest', win.closest], ['recap-fell', win.fell], ['recap-potions', win.potions]].filter(([, l]) => l);
-      el.hidden = false;
-      el.innerHTML = `<h2>How it went</h2>${lines.map(([cls, l]) => `<p class="${cls}">${esc(l)}</p>`).join('')}`;
+      el.hidden = !win.best && !win.closest && !win.fell; // potions alone aren't a story
+      el.innerHTML = el.hidden ? '' : `<h2>How it went</h2>${lines.map(([cls, l]) => `<p class="${cls}">${esc(l)}</p>`).join('')}`;
       return;
     }
     const lines = recap ? [['recap-worst', recap.worst], ['recap-left', recap.left]].filter(([, l]) => l) : [];

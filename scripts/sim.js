@@ -11,7 +11,7 @@ import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
 import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
-import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
+import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, DIFFICULTIES, runDifficulty } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -198,9 +198,12 @@ function playTurn(game, u) {
   }
 }
 
+/** TIER=N plays every fight at New Game+ tier N (0 by default). */
+const TIER = Math.max(0, Math.floor(Number(process.env.TIER) || 0));
+
 /** One fight. Returns { won, rounds, downed, state }. */
 export function fight(levelId, campaign, rng) {
-  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: DIFFICULTIES[campaign.difficulty] });
+  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER) });
   game.start();
   let turns = 0;
   while (!game.over && turns++ < 600) {
@@ -410,7 +413,7 @@ const rates = (whole) => Object.fromEntries(Object.entries(whole).map(([k, [won,
 const levelsOf = (list) => [...new Set(list.map((r) => r.level))].join('/');
 
 function print(mode, data, runs, seed, jobs) {
-  const how = `seed ${seed}${jobs > 1 ? `, ${jobs} threads` : ''}`;
+  const how = `seed ${seed}${TIER ? `, NG+${TIER}` : ''}${jobs > 1 ? `, ${jobs} threads` : ''}`;
   if (mode === 'full') {
     const [won, total] = data.whole.all;
     console.log(`Whole campaigns, ${total} runs (${process.env.DIFFICULTY ?? 'normal'}, ${how})`);

@@ -50,6 +50,9 @@ describe('a run’s last fight', () => {
 
   it('keeps only a complete record, without extra fields', () => {
     expect(watchable(fight({ extra: 1 }))).toEqual(fight());
+    expect(watchable(fight({ tier: 2 }))).toEqual(fight({ tier: 2 }));
+    expect(watchable(fight({ tier: 0 }))).toEqual(fight());
+    expect(watchable(fight({ tier: 1.5 }))).toEqual(fight());
     expect(watchable(fight({ seed: 'x' }))).toBeNull();
     expect(watchable(fight({ result: 'draw' }))).toBeNull();
     expect(watchable(fight({ log: null }))).toBeNull();

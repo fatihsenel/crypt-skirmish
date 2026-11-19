@@ -8,8 +8,9 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
-  recordDefeat, runSummary, runShareText, heroUnit, choices, START_NODE,
+  recordDefeat, runSummary, runShareText, heroUnit, choices, START_NODE, runDifficulty, newGamePlus, parseWonRun,
 } from './game/campaign.js';
+import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed, unitRef, targetRef } from './game/replay.js';
 import { key, pathFrom, gridDistance } from './game/grid.js';
 import { signed, abilityMod, seeded } from './game/dice.js';
@@ -37,6 +38,7 @@ import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
 import { recordRun, loadHistory, saveLastFight, clearLastFight } from './game/history.js';
+import { encodeFight, decodeFight, replaysTrue, fightUrl, WATCH_PREFIX, MAX_LINK_CODE } from './game/fightLink.js';
 import { unlock } from './game/achievements.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText } from './game/daily.js';
 
@@ -58,6 +60,18 @@ function writeSave(state) {
   if (!saving) return;
   try { localStorage.setItem(SAVE_KEY, serialize(state)); } catch { /* not saved */ }
 }
+/** The last won campaign, kept so New Game+ can start from it until a new campaign does. */
+const WON_KEY = 'crypt-skirmish:won-run';
+const loadWonRun = () => {
+  try { return parseWonRun(localStorage.getItem(WON_KEY)); } catch { return null; }
+};
+function setWonRun(state) {
+  try {
+    if (state) localStorage.setItem(WON_KEY, serialize(state));
+    else localStorage.removeItem(WON_KEY);
+  } catch { /* not kept */ }
+}
+
 function clearSave() {
   if (!saving) return;
   try { localStorage.removeItem(SAVE_KEY); } catch { /* nothing to clear */ }
@@ -145,6 +159,11 @@ const camp = new Camp({
   onNewCampaign: (difficulty, names, classes) => startCampaign(difficulty, names, classes),
   onDaily: () => startDaily(),
   onWatch: (f) => watchFromTitle(f),
+  onShareFight: (f, button) => copyFightLink(f, button),
+  onNewGamePlus: (button) => {
+    const won = loadWonRun();
+    if (won) heirlooms.open(won, button);
+  },
   onContinue: () => {
     sfx.ui();
     saving = true;
@@ -170,10 +189,23 @@ function startCampaign(difficulty, names, classes) {
   const old = loadSave();
   if (old && !old.done) recordRun(old, 'abandoned');
   clearLastFight(); // whatever it was, it isn't this run's
+  setWonRun(null); // a new campaign closes the way to New Game+
   campaign = newCampaign(difficulty, names, classes);
   writeSave(campaign);
   showCamp(null);
 }
+
+/** New Game+ after the won campaign: the same heroes, one kept item each, one tier deeper. */
+const heirlooms = new Heirlooms((won, keep) => {
+  sfx.ui();
+  saving = true;
+  daily = null;
+  clearLastFight();
+  setWonRun(null);
+  campaign = newGamePlus(won, keep);
+  writeSave(campaign);
+  showCamp(null);
+});
 
 /** Today's daily crypt: its room and party, apart from the campaign (nothing is saved). */
 function startDaily() {
@@ -206,7 +238,7 @@ function backToTitle() {
   campaign = null;
   hud.reset();
   showBackdrop();
-  camp.showTitle(loadSave());
+  camp.showTitle(loadSave(), loadWonRun());
 }
 
 function showCamp(report) {
@@ -485,9 +517,10 @@ function startFight(resume, watch = null) {
   const seed = watch?.seed ?? resume?.seed ?? daily?.seed ?? newSeed();
   const party = watch?.party ?? campaign.party;
   const difficulty = watch?.difficulty ?? campaign.difficulty;
-  game = new Game(level, { party, difficulty: DIFFICULTIES[difficulty], rng: seeded(seed) });
+  const tier = (watch ? watch.tier : campaign.tier) ?? 0; // New Game+
+  game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed) });
   fight = daily || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
-  if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, log: resume ? [...resume.log] : [] };
+  if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), log: resume ? [...resume.log] : [] };
   feats = { maxHit: 0, sneaks: 0 };
   game.on('attack', (r) => {
     if (r.attacker.team !== 'heroes' || !r.hit) return;
@@ -1798,7 +1831,8 @@ async function checkGameOver() {
     return true;
   }
   recordBlows(game.blows); // the bestiary's deadliest foes
-  if (saving && record) saveLastFight({ ...record, log: [...record.log], result: game.over }); // kept with the run when it ends
+  if (record) Object.assign(record, { result: game.over, check: fightCheck(game) }); // how it ended, for a link
+  if (saving && record) saveLastFight({ ...record, log: [...record.log] }); // kept with the run when it ends
   hud.renderActionBar(game, { selected: null, busy: false });
   const level = levelById(NODES[nodeId].level);
   const final = !!level.final;
@@ -1819,6 +1853,7 @@ async function checkGameOver() {
         awards.push(...unlock('run', { state: campaign }));
       }
       clearSave();
+      if (saving) setWonRun(campaign); // for New Game+, even after a reload
       summary = runSummary(campaign);
       if (saving) share = runShareText(summary);
     }
@@ -1844,6 +1879,7 @@ async function checkGameOver() {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
     summary, awards, daily: dailyResult, share, replay: !!record, recap: game.over === 'defeat' ? fightRecap(game) : null,
     win: game.over === 'victory' && !summary ? winRecap(game) : null,
+    ngplus: !!summary && saving && !!campaign?.done,
   });
   return true;
 }
@@ -1893,10 +1929,10 @@ const replayRate = () => (replay ? REPLAY_SPEEDS[replay.speed] : 1);
  * Replay a fight from its record (seed and the commands given, see replay.js): the one that
  * just ended, from the end banner, or a past run's last fight, from the title (`fromTitle`).
  */
-function startReplay(rec = record, { fromTitle = false } = {}) {
+function startReplay(rec = record, { fromTitle = false, link = false } = {}) {
   if (!rec || replay || (!fromTitle && !game?.over)) return;
   sfx.ui();
-  replay = { log: rec.log, at: 0, finished: fromTitle ? null : game, fight, fromTitle, paused: false, speed: 0, stepTurn: false, wake: null };
+  replay = { log: rec.log, at: 0, finished: fromTitle ? null : game, fight, fromTitle, link, paused: false, speed: 0, stepTurn: false, wake: null };
   $banner.hidden = true;
   tips.hide(); // nothing to do while watching
   document.body.classList.add('replaying');
@@ -1905,7 +1941,7 @@ function startReplay(rec = record, { fromTitle = false } = {}) {
 }
 
 /** Past runs → Watch the last fight: the room's figures first, then the replay; Exit goes back to the title. */
-function watchFromTitle(rec) {
+function watchFromTitle(rec, { link = false } = {}) {
   if (replay || !NODES[rec.node]) return;
   camp.hide();
   nodeId = rec.node;
@@ -1915,9 +1951,57 @@ function watchFromTitle(rec) {
   loadModels(files).then(() => {
     if (ticket !== fightTicket) return;
     $loading.hidden = true;
-    startReplay(rec, { fromTitle: true });
+    startReplay(rec, { fromTitle: true, link });
   });
 }
+
+/**
+ * A link that replays `f` for anyone who opens it: the share sheet on a phone, else the
+ * clipboard. `button` says Copied for a moment.
+ */
+async function copyFightLink(f, button) {
+  if (!f?.check) return;
+  sfx.ui();
+  const label = button.textContent;
+  try {
+    const code = await encodeFight(f);
+    if (code.length > MAX_LINK_CODE) {
+      hud.toast('This fight is too long to fit in a link.');
+      return;
+    }
+    const url = fightUrl(location.href, code);
+    if (touching && navigator.share) {
+      await navigator.share({ url, title: 'Crypt Skirmish replay' });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    button.textContent = 'Copied';
+    setTimeout(() => { button.textContent = label; }, 2000);
+  } catch (err) {
+    if (err?.name !== 'AbortError') hud.toast('Couldn’t copy the link here.');
+  }
+}
+
+/** Opened from a #watch= link: check the fight still plays out the same, then show it. */
+async function watchLink(code) {
+  const f = await decodeFight(code);
+  if (!f || !replaysTrue(f)) {
+    clearWatchHash();
+    hud.toast(f ? 'This replay was made with another version of the game, so it can’t be shown.' : 'This replay link is broken.');
+    return;
+  }
+  watchFromTitle(f, { link: true });
+}
+
+// A link pasted into a tab that already has the game open.
+window.addEventListener('hashchange', () => {
+  if (!location.hash.startsWith(WATCH_PREFIX) || replay || game) return; // only from the title or camp
+  watchLink(location.hash.slice(WATCH_PREFIX.length));
+});
+
+const clearWatchHash = () => {
+  if (location.hash.startsWith(WATCH_PREFIX)) history.replaceState(null, '', location.pathname + location.search);
+};
 
 /** Back to the end banner, with the real fight as it ended. */
 function endReplay() {
@@ -1932,6 +2016,7 @@ function endReplay() {
   busy = false;
   document.body.classList.remove('replaying');
   $replayBar.hidden = true;
+  if (r.link) clearWatchHash(); // done with the link: a reload shows the title
   if (r.fromTitle) return backToTitle();
   hud.renderInitiative(game);
   syncStatus();
@@ -1968,6 +2053,8 @@ function replayPlay(stepTurn = false) {
 }
 
 document.getElementById('watch').addEventListener('click', () => startReplay());
+document.getElementById('ngplus').addEventListener('click', (ev) => campaign?.done && heirlooms.open(campaign, ev.currentTarget));
+document.getElementById('copy-link').addEventListener('click', (ev) => copyFightLink(record, ev.currentTarget));
 document.getElementById('replay-pause').addEventListener('click', () => replayPlay());
 document.getElementById('replay-step').addEventListener('click', () => replayPlay(true));
 document.getElementById('replay-speed').addEventListener('click', () => {
@@ -2432,6 +2519,7 @@ preloadDungeon(bootProgress).then(() => {
     const q = new URLSearchParams(location.search);
     const d = q.get('difficulty'); // e.g. &difficulty=hard
     campaign = testParty(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('warlock') && { W: 'K' }), ...(q.has('ranger') && { R: 'A' }) }), Number(q.get('party')));
+    campaign.tier = Math.max(0, Math.min(99, Math.floor(Number(q.get('tier')) || 0))); // &tier=2: New Game+
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
     loadModels(roomFiles(nodeId, campaign.party)).then(() => loadModels(allFiles())); // this room first
@@ -2439,7 +2527,8 @@ preloadDungeon(bootProgress).then(() => {
     showSampleVictory();
   } else {
     const save = loadSave();
-    camp.showTitle(save);
+    camp.showTitle(save, loadWonRun());
+    if (location.hash.startsWith(WATCH_PREFIX)) watchLink(location.hash.slice(WATCH_PREFIX.length));
     // While the title is up: the figures for the room the player is most likely to enter
     // next (the saved fight, the rooms open from the saved camp, or the first room), then
     // every other model.
