@@ -235,16 +235,6 @@ Models load room by room, so a fight only waits for its own figures. They are tr
 clips the game uses and meshopt-compressed (about 1.1 MB of characters). To add a clip, bring
 back the original file from git history, then trim and compress again.
 
-### Good next steps
-
-1. **More monsters:** a stat block in `units.js` and a model in `modelSpecs.js` or
-   `models.js`.
-2. **More conditions:** add one to `CONDITIONS` in `combat.js` and a line in `attackMods`.
-3. **More rooms:** a map in `LEVELS` (`maps.js`) and a node in `NODES` (`campaign.js`).
-4. **A real goblin model:** goblins currently reuse tinted adventurer models.
-5. **More classes:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, plus a model spec and a
-   simulator policy. A Warlock, Sorcerer or Druid would be next.
-
 ## Credits
 
 - **Characters:** KayKit Adventurers and KayKit Skeletons by Kay Lousberg
