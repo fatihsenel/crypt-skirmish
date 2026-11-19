@@ -7,6 +7,7 @@ import { levelById } from './maps.js';
 
 export const BESTIARY_KEY = 'crypt-skirmish:bestiary';
 export const SLAIN_KEY = 'crypt-skirmish:slain';
+export const READ_KEY = 'crypt-skirmish:bestiary-read';
 
 /** Every monster kind, in the order the crypt introduces them. */
 export const MONSTERS = Object.keys(TEMPLATES).filter((code) => TEMPLATES[code].team === 'monsters');
@@ -113,4 +114,27 @@ export function metBefore({ cleared = [], at = null, reached = [], daily = [] } 
   }
   const codes = new Set([...rooms].flatMap(roomMonsters));
   return MONSTERS.filter((c) => codes.has(c));
+}
+
+/** Monsters slain in all, every kind together. */
+export const slainTotal = (counts = loadSlain()) => Object.values(counts).reduce((n, c) => n + c, 0);
+
+/** Kinds met since the bestiary was last opened. */
+export function unread() {
+  let read = [];
+  try {
+    read = parseBestiary(localStorage.getItem(READ_KEY));
+  } catch {
+    /* storage unavailable: everything counts as new */
+  }
+  return loadBestiary().filter((c) => !read.includes(c));
+}
+
+/** The bestiary was opened: everything met so far has been seen there. */
+export function markRead() {
+  try {
+    localStorage.setItem(READ_KEY, JSON.stringify(loadBestiary()));
+  } catch {
+    /* storage unavailable */
+  }
 }

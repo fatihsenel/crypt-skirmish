@@ -1,7 +1,8 @@
 // Achievements: goals that last across runs, kept in the browser. Each is checked when a room
 // is won (`room`: the fight that just ended, its node, and `feats` main.js tallied from the
 // fight's attacks), when a campaign is won (`run`: the finished campaign), or when the daily
-// crypt is won (`daily`: the daily win streak, today included), and unlocks once.
+// crypt is won (`daily`: the daily win streak, today included), and unlocks once. A room's
+// check also gets the bestiary: `met` (kinds met) and `slain` (monsters slain, all runs).
 // Pure checks here; main.js stores and shows them.
 
 import { NODES, HERO_CODES } from './campaign.js';
@@ -78,6 +79,14 @@ export const ACHIEVEMENTS = [
   {
     id: 'act-three', name: 'The weeping queen', desc: 'Clear the Throne, the end of act three.',
     on: 'room', test: ({ node, daily }) => !daily && node === 'throne',
+  },
+  {
+    id: 'scholar', name: 'Scholar of the crypt', desc: 'Meet all 17 kinds of monster in the bestiary.',
+    on: 'room', test: ({ met }) => (met ?? 0) >= 17,
+  },
+  {
+    id: 'exterminator', name: 'Exterminator', desc: 'Slay 100 monsters, counted across runs.',
+    on: 'room', test: ({ slain }) => (slain ?? 0) >= 100,
   },
   {
     id: 'warded', name: 'Not today', desc: 'Have Death Ward keep a hero on their feet.',

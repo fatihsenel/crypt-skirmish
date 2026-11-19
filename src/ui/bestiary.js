@@ -2,7 +2,7 @@
 // line of lore; the rest stay ??? until met. Opened from the title screen and from camp.
 
 import { createUnit } from '../game/units.js';
-import { MONSTERS, loadBestiary, loadSlain } from '../game/bestiary.js';
+import { MONSTERS, loadBestiary, loadSlain, unread, markRead } from '../game/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { unitIcon, unknownIcon } from './icons.js';
 
@@ -42,15 +42,22 @@ export class Bestiary {
     }, true);
   }
 
-  /** "Bestiary (met/all)", for the buttons that open it. */
-  static label() {
-    return `Bestiary (${loadBestiary().length}/${MONSTERS.length})`;
+  /** A button that opens it: "Bestiary (met/all)", with a dot while new entries wait. */
+  static label(button) {
+    const fresh = unread().length;
+    button.textContent = `Bestiary (${loadBestiary().length}/${MONSTERS.length})`;
+    button.classList.toggle('has-new', fresh > 0);
+    if (fresh) button.setAttribute('aria-label', `${button.textContent}, ${fresh} new`);
+    else button.removeAttribute('aria-label');
   }
 
   open(opener) {
     this.opener = opener;
     const met = loadBestiary();
     const slain = loadSlain();
+    const fresh = unread();
+    markRead();
+    for (const b of document.querySelectorAll('.bestiary-open')) Bestiary.label(b);
     $('#bestiary-count').textContent = met.length === MONSTERS.length
       ? 'Every creature of the crypt, met and survived.'
       : `${met.length} of ${MONSTERS.length} met. The rest wait deeper down.`;
@@ -61,7 +68,8 @@ export class Bestiary {
       }
       const u = createUnit(code, 0, 0);
       const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
-      return `<li class="beast"><span class="pic" style="--c:${color}">${unitIcon(u)}</span>
+      const isNew = fresh.includes(code) ? '<span class="new-tag">New</span>' : '';
+      return `<li class="beast"><span class="pic" style="--c:${color}">${unitIcon(u)}</span>${isNew}
         <div class="tipcard">${unitCard(OUT_OF_FIGHT, u)}<p class="lore">${esc(LORE[code] ?? '')}</p>
         <p class="slain">${slain[code] ? `Slain: ${slain[code]}` : 'None slain yet'}</p></div></li>`;
     }).join('');

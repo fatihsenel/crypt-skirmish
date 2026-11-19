@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { MONSTERS, BESTIARY_KEY, parseBestiary, loadBestiary, meet, parseSlain, loadSlain, slay, roomMonsters, onEveryPath, metBefore } from '../src/game/bestiary.js';
+import { MONSTERS, BESTIARY_KEY, parseBestiary, loadBestiary, meet, parseSlain, loadSlain, slay, slainTotal, unread, markRead, roomMonsters, onEveryPath, metBefore } from '../src/game/bestiary.js';
 import { LORE } from '../src/ui/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from '../src/ui/unitCard.js';
 import { createUnit } from '../src/game/units.js';
@@ -71,6 +71,20 @@ describe('the tally of monsters slain', () => {
     globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) };
   });
   afterEach(() => { delete globalThis.localStorage; });
+
+  it('adds up every kind slain', () => {
+    expect(slainTotal({})).toBe(0);
+    expect(slainTotal({ g: 2, l: 1 })).toBe(3);
+  });
+
+  it('marks kinds met since the bestiary was last opened as new', () => {
+    meet(['g', 's']);
+    expect(unread()).toEqual(['g', 's']);
+    markRead();
+    expect(unread()).toEqual([]);
+    meet(['l']);
+    expect(unread()).toEqual(['l']);
+  });
 
   it('counts each kind and ignores heroes and junk', () => {
     slay('g'); slay('g'); slay('l'); slay('F');

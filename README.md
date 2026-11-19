@@ -95,9 +95,10 @@ It runs on desktop and on phones.
 
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
-- **Achievements:** 23 goals that carry across runs.
+- **Achievements:** 25 goals that carry across runs.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
-  many you've slain. A note says when a new one joins. Open it from the title screen or camp.
+  many you've slain. A note says when a new one joins, and a gold dot on its button waits
+  until you look. Open it from the title screen or camp.
 - **Past runs:** the title screen lists your last 20 runs.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.

@@ -132,7 +132,7 @@ export class Camp {
     $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
     this.renderHistory(loadHistory());
     this.renderAwards(loadAchievements());
-    $('#title-bestiary').textContent = Bestiary.label();
+    Bestiary.label($('#title-bestiary'));
     this.renderDaily();
   }
 
@@ -215,7 +215,7 @@ export class Camp {
     $('#camp-party').innerHTML = this.partyHtml(state);
     $('#camp-pack').innerHTML = this.packHtml(state);
     $('#camp-new').textContent = 'Abandon run';
-    $('#camp-bestiary').textContent = Bestiary.label();
+    Bestiary.label($('#camp-bestiary'));
   }
 
   reportHtml(state, report) {

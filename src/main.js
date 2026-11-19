@@ -26,7 +26,7 @@ import { wait, playback } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Camp } from './ui/camp.js';
 import { Bestiary } from './ui/bestiary.js';
-import { meet, metBefore, slay } from './game/bestiary.js';
+import { meet, metBefore, slay, loadBestiary, slainTotal } from './game/bestiary.js';
 import { TEMPLATES } from './game/units.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
@@ -1751,7 +1751,7 @@ async function checkGameOver() {
   let awards = []; // achievements unlocked by this fight (none on test runs)
   if (game.over === 'victory') {
     sfx.victory();
-    if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily });
+    if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily, met: loadBestiary().length, slain: slainTotal() });
     if (!final) {
       board.lightStairs();
       setTimeout(() => sfx.stairs(), 900);
