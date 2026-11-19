@@ -1926,7 +1926,36 @@ window.addEventListener('pointerdown', (ev) => {
 }, { capture: true });
 stage.dom.addEventListener('pointerdown', (ev) => {
   downAt = { x: ev.clientX, y: ev.clientY };
+  startPress(ev);
 });
+
+// On a touch screen a long press on a figure shows its character card (a tap previews and
+// acts, as before). The press that showed the card isn't a tap.
+const LONG_PRESS = 450;
+let press = null;
+let pressShown = false;
+function startPress(ev) {
+  cancelPress();
+  pressShown = false;
+  if (ev.pointerType === 'mouse' || !game || game.over) return;
+  const t = tileFromEvent(ev);
+  const who = t && visibleUnitAt(t.x, t.z);
+  if (!who) return;
+  press = { x: ev.clientX, y: ev.clientY, timer: setTimeout(() => {
+    press = null;
+    pressShown = true;
+    hud.showUnitCard(game, who, figureRect(who));
+  }, LONG_PRESS) };
+}
+function cancelPress() {
+  if (press) clearTimeout(press.timer);
+  press = null;
+}
+stage.dom.addEventListener('pointermove', (ev) => {
+  if (press && Math.hypot(ev.clientX - press.x, ev.clientY - press.y) > 10) cancelPress();
+});
+for (const type of ['pointerup', 'pointercancel']) stage.dom.addEventListener(type, cancelPress);
+stage.dom.addEventListener('contextmenu', (ev) => ev.pointerType !== 'mouse' && touching && ev.preventDefault());
 
 /** Where a figure stands on screen: from the top of its label down to its tile. */
 function figureRect(u) {
@@ -1962,6 +1991,7 @@ for (const type of ['pointerdown', 'wheel']) {
 }
 
 stage.dom.addEventListener('click', (ev) => {
+  if (pressShown) return void (pressShown = false); // the long press that showed a card
   if (!isHeroTurn() || busy) return;
   if (downAt && Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y) > 10) return; // a drag
   const t = tileFromEvent(ev);

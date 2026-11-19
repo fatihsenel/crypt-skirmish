@@ -152,6 +152,44 @@ describe('saving a fight mid-battle', () => {
     expect(back.rng()).toBe(live.rng());
   });
 
+  // Act three: the spiders' webs (a recharging attack that restrains) and Ysolde's frightening
+  // touch and Dread. Each test finds a seed where a hero gets the condition, saves there and
+  // a few commands later, and rebuilds both.
+  for (const [room, level, condition] of [['nest', 6, 'restrained'], ['throne', 6, 'frightened']]) {
+    it(`replays ${levelById(room).name} through a hero being ${condition}`, () => {
+      const party = dailyCampaign({ level, classes: {} }).party;
+      const make = (seed) => new Game(levelById(room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(seed) });
+      const units = (game) => game.units.map((u) => [u.name, u.hp, u.x, u.z, u.alive, Object.keys(u.conditions).sort().join(), Object.keys(u.spent ?? {}).join()]);
+      let found = null;
+      for (let seed = 1; seed <= 30 && !found; seed++) {
+        const live = make(seed);
+        live.start();
+        untilHero(live);
+        const log = [];
+        let at = null;
+        for (let n = 0; n < 80 && !live.over && !(at && log.length >= at.length + 5); n++) {
+          play(live, 1, log);
+          if (!at && live.units.some((u) => u.team === 'heroes' && u.conditions[condition])) {
+            at = { length: log.length, units: units(live), check: fightCheck(live) };
+          }
+        }
+        if (at) found = { seed, live, log, at };
+      }
+      expect(found).toBeTruthy();
+      const { seed, live, log, at } = found;
+
+      const mid = make(seed);
+      expect(replayFight(mid, log.slice(0, at.length)).ok).toBe(true);
+      expect(units(mid)).toEqual(at.units);
+      expect(fightCheck(mid)).toBe(at.check);
+
+      const back = make(seed);
+      expect(replayFight(back, log).ok).toBe(true);
+      expect(units(back)).toEqual(units(live));
+      expect(back.rng()).toBe(live.rng());
+    });
+  }
+
   it('reports the fingerprint right after the last command', () => {
     const live = fresh(LEVELS[0], 3);
     live.start();

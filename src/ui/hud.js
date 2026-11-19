@@ -127,6 +127,12 @@ export class Hud {
     this.unitTip.hover(`fig:${u.id}`, () => this.unitCard(game, u), rect, 'beside');
   }
 
+  /** The card for a figure, at once (a long press on a touch screen). */
+  showUnitCard(game, u, rect) {
+    this.unitTip.key = `fig:${u.id}`;
+    this.unitTip.show(() => this.unitCard(game, u), rect, 'beside');
+  }
+
   unknownCard() {
     return `<div class="tip-head"><b>???</b><small>Not seen yet</small></div><p class="tip-note">Something waits in the dark. You'll learn what it is when you see it.</p>`;
   }

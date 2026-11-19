@@ -8,9 +8,10 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 
 | | |
 | --- | --- |
-| ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![The camp after the Sunken Halls: the party reaches level 8, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) |
-| ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> |
+| ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
+| ![The camp after the Sunken Halls: the party reaches level 8, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
+| <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
 
 A party of four fights its way down a crypt on a 5-ft grid, room by room, across four acts.
 It runs on desktop and on phones.
@@ -106,7 +107,7 @@ It runs on desktop and on phones.
   melee and amber means ranged.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does.
 - **Turn order:** portraits along the top, each with its initiative number.
-- **Character cards:** hover a figure or a portrait (tap a portrait on a phone) for its HP, AC,
+- **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, and the dice options.
 
@@ -140,7 +141,7 @@ Everything is generated in the browser, with no recordings:
 | Tap the same spot again | Do it |
 | Drag / pinch | Pan / zoom |
 | Hold a button, or tap a tag | Show its tooltip |
-| Tap a portrait | Show the character card (tap again to close) |
+| Tap a portrait or hold a figure | Show the character card |
 | Log button (top right) | Open the combat log |
 
 ## House rules

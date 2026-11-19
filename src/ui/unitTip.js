@@ -68,6 +68,13 @@ export class UnitTip {
       left = r.right + 14;
       if (left + tip.width > app.right - pad) left = r.left - 14 - tip.width;
       top = r.top + r.height / 2 - tip.height / 2;
+      if (left < app.left + pad) {
+        // No room either side (a phone): above the figure, or below it if that fits better.
+        left = r.left + r.width / 2 - tip.width / 2;
+        const bar = document.getElementById('initiative')?.getBoundingClientRect();
+        const ceiling = Math.max(app.top + pad, (bar?.bottom ?? 0) + pad);
+        top = r.top - 10 - tip.height >= ceiling ? r.top - 10 - tip.height : r.bottom + 10;
+      }
     }
     left = Math.min(Math.max(left, app.left + pad), app.right - pad - tip.width);
     // Beside a figure, stay between the turn-order bar and the action bar when it fits.
