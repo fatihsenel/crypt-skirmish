@@ -36,8 +36,8 @@ export const ITEMS = {
   },
   gauntletsOgre: {
     name: 'Gauntlets of Ogre Power', kind: 'gear',
-    desc: 'Strength becomes 19: harder hits and better aim with Strength weapons.',
-    apply: (u) => { u.stats.str = Math.max(u.stats.str, 19); },
+    desc: 'Strength becomes 19, and +1 damage with Strength weapons.',
+    apply: (u) => { u.stats.str = Math.max(u.stats.str, 19); u.strDamage = (u.strDamage ?? 0) + 1; },
   },
   amuletHealth: {
     name: 'Amulet of Health', kind: 'gear',

@@ -30,6 +30,20 @@ describe('magic items', () => {
     expect(heroUnit('F', state.party.F).stats.str).toBe(19);
   });
 
+  it('adds +1 damage with Strength weapons even at Strength 20', () => {
+    const state = withPack('gauntletsOgre');
+    state.party.F.level = 6; // Strength 20 by now
+    const plain = heroUnit('F', state.party.F);
+    const worn = heroUnit('F', equip(state, 0, 'F').party.F);
+    expect(worn.stats.str).toBe(20);
+    const game = new Game(LEVELS[0], { rng: seeded(1) });
+    const sword = plain.attacks.find((a) => a.stat === 'str');
+    expect(game.damageBonus(worn, sword)).toBe(game.damageBonus(plain, sword) + 1);
+    expect(game.toHitBonus(worn, sword)).toBe(game.toHitBonus(plain, sword));
+    const [, hitA, hitB, dmgA, dmgB] = equipPreview(state, 0, 'F')[0].match(/hit \+(\d+) → \+(\d+), damage \+(\d+) → \+(\d+)/);
+    expect([hitA, Number(dmgB) - Number(dmgA)]).toEqual([hitB, 1]);
+  });
+
   it('adds hit points with an Amulet of Health, and takes them back', () => {
     const state = withPack('amuletHealth');
     state.party.W.hp = 15; // 5 below the Wizard's 20

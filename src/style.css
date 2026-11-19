@@ -623,6 +623,20 @@ kbd {
 #banner h1 { margin: 0 0 6px; font: 700 40px var(--display); color: var(--gold); }
 #banner[data-result='defeat'] h1 { color: var(--monster); }
 #banner p { margin: 0 0 18px; color: var(--muted); max-width: 420px; }
+#banner-recap[hidden] { display: none; }
+#banner-recap {
+  margin: -6px auto 18px; padding: 10px 14px; max-width: 420px; text-align: left; font-size: 13px; color: #d8cfc0;
+  border: 1px solid #b0484855; border-radius: 8px; background: #b0484814;
+}
+#banner-recap h2 { margin: 0 0 6px; font: 600 13px var(--display); letter-spacing: 0.06em; color: var(--muted); }
+#banner-recap ol { margin: 0 0 6px; padding-left: 18px; }
+#banner-recap li { margin: 2px 0; }
+#banner-recap p { margin: 2px 0 0; color: #d8cfc0; max-width: none; }
+@media (max-height: 520px) {
+  #banner-recap { margin-bottom: 10px; padding: 6px 10px; font-size: 12px; }
+  #banner-recap h2 { display: none; }
+  #banner-recap li, #banner-recap p { margin: 1px 0; }
+}
 #banner .banner-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 
 /* the run's ending */

@@ -629,6 +629,7 @@ export class Hud {
     if (u.extraAttackWith === atk.name) notes.push('Two beams: the Attack action fires it twice, at one foe or two.');
     if (u.mark?.spell === 'hex') notes.push('Hex: +1d6 necrotic on every hit against the cursed foe.');
     if (weapon && u.weaponBonus) notes.push(`Runed Weapon: +${u.weaponBonus} to hit and damage, included above.`);
+    if (weapon && u.strDamage && atk.stat === 'str') notes.push('Gauntlets of Ogre Power: +1 damage, included above.');
     return {
       kind: weapon ? `${melee ? 'Melee' : 'Ranged'} weapon · ${atk.stat === 'str' ? 'Strength' : 'Dexterity'}`
         : `Cantrip · ranged spell attack`,
@@ -687,8 +688,9 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null }) {
     this.renderSummary(summary);
+    this.renderRecap(recap);
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';
@@ -758,6 +760,16 @@ export class Hud {
   }
 
   /** Achievements this fight unlocked, as gold chips under the banner text. */
+  /** A lost fight in a few lines (see game/recap.js): how each hero fell, then the foes. */
+  renderRecap(recap) {
+    const el = $('#banner-recap');
+    const lines = recap ? [recap.worst, recap.left].filter(Boolean) : [];
+    el.hidden = !recap || (!recap.falls.length && !lines.length);
+    el.innerHTML = el.hidden ? '' : `<h2>How it went</h2>`
+      + (recap.falls.length ? `<ol>${recap.falls.map((f) => `<li>${esc(f)}</li>`).join('')}</ol>` : '')
+      + lines.map((l) => `<p>${esc(l)}</p>`).join('');
+  }
+
   renderAwards(awards) {
     const el = $('#banner-awards');
     el.hidden = awards.length === 0;

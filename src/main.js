@@ -24,6 +24,7 @@ import { preloadDungeon } from './render/dungeonKit.js';
 import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon } from './render/effects.js';
 import { wait, playback } from './render/tween.js';
 import { Hud } from './ui/hud.js';
+import { fightRecap } from './game/recap.js';
 import { Camp } from './ui/camp.js';
 import { Bestiary } from './ui/bestiary.js';
 import { meet, metBefore, slay, loadBestiary, slainTotal } from './game/bestiary.js';
@@ -1791,7 +1792,7 @@ async function checkGameOver() {
   }
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary, awards, daily: dailyResult, share,
+    summary, awards, daily: dailyResult, share, recap: game.over === 'defeat' ? fightRecap(game) : null,
   });
   return true;
 }

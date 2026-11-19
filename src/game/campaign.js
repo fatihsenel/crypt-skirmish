@@ -387,8 +387,8 @@ export function equipPreview(state, i, code) {
   if (ac(after) !== ac(before)) lines.push(`AC ${ac(before)} → ${ac(after)}`);
   if (after.maxHp !== before.maxHp) lines.push(`Max HP ${before.maxHp} → ${after.maxHp}`);
   const weapon = (u, a) => {
-    const dmg = abilityMod(u.stats[a.stat]) + u.weaponBonus;
-    return { hit: dmg + u.prof, dmg };
+    const hit = abilityMod(u.stats[a.stat]) + u.weaponBonus;
+    return { hit: hit + u.prof, dmg: hit + (a.stat === 'str' ? u.strDamage ?? 0 : 0) };
   };
   for (const a of before.attacks.filter((at) => at.stat === 'str' || at.stat === 'dex')) {
     const b = weapon(before, a);

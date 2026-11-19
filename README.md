@@ -89,7 +89,8 @@ It runs on desktop and on phones.
   (only for a hero in no armor), Gauntlets of Ogre Power, an Amulet of Health and a Periapt of
   Proof against Poison. Each hero's button in the pack shows what the item would change for
   them, such as "AC 15 → 17" or "Max HP 35 → 53".
-- A lost fight can be retried or skipped by taking another route.
+- A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
+  each hero fell, which foe hit hardest and who was still standing.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
@@ -177,6 +178,8 @@ A few things differ from the SRD to keep the game simple:
   it raises no specters. Nekhet has no legendary actions or cleric spells. Instead, once a fight at half HP, two
   skeletons rise for him and heroes within 10 ft make a WIS save or are frightened.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
+- Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
+  hero whose Strength is already 19 or more.
 - Hex has no ability-check part and lasts the whole fight, with no concentration.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
@@ -221,7 +224,7 @@ Each act's boss is won almost every time by a rested party and noticeably less o
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
 Armory. On Hard the Throne drops to about 95% and 60%, and the Tomb to about 80% and 35%.
-A whole run (1,500 simulated) wins about 97% of the time on Story, 70% on Normal and 31% on
+A whole run (1,500 simulated) wins about 97% of the time on Story, 72% on Normal and 32% on
 Hard (monsters get +20% HP and +1 to hit and damage). On both the Tomb ends the most runs. Samples of 300 runs swing by about 5 points either way.
 
 ### Layout
@@ -239,6 +242,7 @@ src/
     combat.js        Game: turns, movement, attacks, spells, events
     ai.js            monster brains
     replay.js        fight saves: commands replayed from a seed
+    recap.js         a lost fight told back: who fell to what
     history.js       past runs
     achievements.js  achievements and their checks
     bestiary.js      which monsters you've met and slain

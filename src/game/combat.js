@@ -139,6 +139,8 @@ export class Game {
     this.found = [];  // non-potion loot taken from chests, for the party's pack
     this.ice = []; // Ice Storm ground: { by, turns, tiles } (see addIce)
     this.stats = {};  // per hero slot: { damage, kills, crits, healing, downed } (for the run's ending)
+    this.blows = [];  // every hit a hero took: { round, to, by, byId, kind, how, damage, down } (for a lost fight's recap)
+    this.cause = null; // what is dealing damage right now: an attack's or spell's name, or 'a trap'
   }
 
   /** The tally for a hero, or null for monsters. */
@@ -216,7 +218,8 @@ export class Game {
   damageBonus(unit, attack) {
     if (attack.addMod === false) return 0;
     const dueling = unit.passives?.includes('dueling') && isMelee(attack) ? 2 : 0;
-    return abilityMod(unit.stats[attack.stat]) + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + dueling;
+    const ogre = attack.stat === 'str' ? unit.strDamage ?? 0 : 0; // Gauntlets of Ogre Power
+    return abilityMod(unit.stats[attack.stat]) + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + dueling + ogre;
   }
 
   acOf(unit) {
@@ -605,6 +608,12 @@ export class Game {
     }
     const t = target.team === 'monsters' ? this.tally(source) : null;
     if (t) t.damage += before - target.hp; // only what landed, not overkill
+    if (target.team === 'heroes' && before > target.hp) {
+      this.blows.push({
+        round: this.round, to: target.name, by: source?.name ?? null, byId: source?.id ?? null, kind: source?.cls ?? null, how: this.cause,
+        damage: before - target.hp, down: target.hp <= 0 && target.alive,
+      });
+    }
     if (target.hp <= 0 && target.alive) {
       if (t) t.kills++;
       const down = this.tally(target);
@@ -941,6 +950,7 @@ export class Game {
     // Spikes through the boots: fail the save and you go down as well.
     const result = { trap, unit, d20, total, dc: TRAP_DC, success, roll, damage, prone: false };
     this.emit('trap', result);
+    this.cause = 'a trap';
     this.applyDamage(unit, damage, null);
     if (!success && unit.alive) {
       result.prone = true;
@@ -1277,6 +1287,7 @@ export class Game {
       this.emit('spell', { ok: true, kind: 'spell', id: 'shield', spell: SPELLS.shield, caster: target, slot: shieldSlot });
     }
     if (hit) {
+      this.cause = attack.name;
       if (damage) this.applyDamage(target, damage, attacker);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
@@ -1676,6 +1687,7 @@ export class Game {
     const problem = this.spellProblem(caster, id, target);
     if (problem) return { ok: false, reason: problem };
     const spell = SPELLS[id];
+    this.cause = spell.name;
     if (spell.time === 'action') caster.actionUsed = true;
     else caster.bonusUsed = true;
     const again = this.freeRecast(caster, id);
