@@ -5,6 +5,7 @@ import { ACTIONS, SPELLS, PASSIVES, SHOVE, CONDITION_INFO } from '../game/abilit
 import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { AbilityTip } from './abilityTip.js';
+import { UnitTip } from './unitTip.js';
 import { isWeapon, isMelee } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -42,6 +43,19 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
+const CR = { 0.125: '1/8', 0.25: '1/4', 0.5: '1/2' };
+const cap = (s) => s[0].toUpperCase() + s.slice(1);
+/** One attack on a character card: to hit, damage, reach and what a hit does. */
+function attackLine(game, u, a) {
+  const bonus = game.damageBonus(u, a);
+  const dmg = a.damage ? `${a.damage}${bonus ? ` ${signed(bonus).replace(/^([+-])/, '$1 ')}` : ''}` : 'no damage';
+  const reach = a.reach > 1 ? `range ${a.reach * 5} ft` : 'melee';
+  const r = a.rider;
+  const rider = !r ? '' : r.save ? ` · ${r.save.toUpperCase()} DC ${r.dc} or ${r.condition}` : ` · ${r.condition} on a hit`;
+  const recharge = a.recharge ? ` · recharge ${a.recharge}–6${u.spent?.[a.name] ? ', spent' : ''}` : '';
+  return `<li><b>${esc(a.name)}</b> ${signed(game.toHitBonus(u, a))} · ${esc(dmg)} · ${reach}${esc(rider)}${recharge}</li>`;
+}
+
 const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', rotting: 'is wracked by mummy rot!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
@@ -62,18 +76,102 @@ export class Hud {
     $('#attacks').addEventListener('click', (ev) => this.onAbilityClick(ev));
     this.tips = new Map();
     this.abilityTip = new AbilityTip($('#attacks'), (key) => this.tips.get(key) ?? null);
-    // No hover on a touch screen: tapping a tag or a portrait shows its tooltip instead.
-    for (const id of ['#who', '#initiative']) {
-      $(id).addEventListener('click', (ev) => {
-        const tip = ev.target.closest('[title]');
-        if (this.touch && tip) this.toast(tip.title);
-      });
-    }
+    this.unitTip = new UnitTip();
+    // No hover on a touch screen: tapping a tag shows its tooltip, a portrait its card.
+    $('#who').addEventListener('click', (ev) => {
+      const tip = ev.target.closest('[title]');
+      if (this.touch && tip) this.toast(tip.title);
+    });
+    const chipOf = (ev) => ev.target.closest('#initiative .chip');
+    $('#initiative').addEventListener('pointerover', (ev) => {
+      if (ev.pointerType !== 'mouse') return;
+      const chip = chipOf(ev);
+      if (chip) this.showUnitTip(chip, 'below', true);
+    });
+    $('#initiative').addEventListener('pointerleave', (ev) => ev.pointerType === 'mouse' && this.unitTip.hide());
+    $('#initiative').addEventListener('scroll', () => this.unitTip.hide(), { passive: true });
+    $('#initiative').addEventListener('click', (ev) => {
+      const chip = chipOf(ev);
+      if (!this.touch || !chip) return;
+      if (this.unitTip.key === this.tipKey(chip)) return this.unitTip.hide(); // tap again to close
+      this.showUnitTip(chip, 'below', false);
+    });
+    document.addEventListener('pointerdown', (ev) => {
+      if (ev.pointerType !== 'mouse' && !this.unitTip.el.hidden && !$('#initiative').contains(ev.target)) this.unitTip.hide();
+    });
     $('#log-toggle').addEventListener('click', () => this.toggleLog());
     $('#log-close').addEventListener('click', () => this.toggleLog(false));
     this.toastTimer = null;
     this.touch = false;
     this.logOpen = false;
+  }
+
+  tipKey(chip) {
+    return `chip:${chip.dataset.unit ?? 'unknown'}`;
+  }
+
+  /** The card for a turn-order portrait (`chip`). */
+  showUnitTip(chip, side, hover) {
+    const u = this.game?.units.find((x) => x.id === Number(chip.dataset.unit));
+    const html = () => (u ? this.unitCard(this.game, u) : this.unknownCard());
+    if (hover) this.unitTip.hover(this.tipKey(chip), html, () => chip.getBoundingClientRect(), side);
+    else {
+      this.unitTip.key = this.tipKey(chip);
+      this.unitTip.show(html, chip.getBoundingClientRect(), side);
+    }
+  }
+
+  /** The card for a figure on the board under the mouse (`rect`: where it stands), or none. */
+  hoverUnit(game, u, rect) {
+    if (!u) return this.unitTip.key?.startsWith('fig:') && this.unitTip.hide();
+    this.unitTip.hover(`fig:${u.id}`, () => this.unitCard(game, u), rect, 'beside');
+  }
+
+  unknownCard() {
+    return `<div class="tip-head"><b>???</b><small>Not seen yet</small></div><p class="tip-note">Something waits in the dark. You'll learn what it is when you see it.</p>`;
+  }
+
+  /** A character's card: what it is, how tough it is, what it hits with and what ails it. */
+  unitCard(game, u) {
+    if (this.unknown?.(u)) return this.unknownCard();
+    const kind = u.team === 'heroes' ? `${u.cls} · Level ${u.level}`
+      : `${u.cls}${u.cr !== undefined ? ` · CR ${CR[u.cr] ?? u.cr}` : ''}${u.undead ? ' · Undead' : ''}`;
+    const chips = u.alive ? [
+      `HP ${u.hp}/${u.maxHp}${u.tempHp > 0 ? ` +${u.tempHp}` : ''}`,
+      `AC ${game.acOf(u)}`,
+      `Speed ${u.speed * 5} ft`,
+      ...(game.order?.includes(u) ? [`Initiative ${u.initiative}`] : []),
+    ] : [];
+    const status = [
+      !u.alive && (u.corpse ? 'Long dead.' : 'Fallen.'),
+      u.alive && u.asleep && 'Asleep. It wakes if it notices you or takes damage.',
+      u.alive && !u.asleep && u.unaware && u.team === 'monsters' && 'Hasn’t noticed you yet.',
+      u.alive && u.hidden && 'Hidden.',
+      u.alive && u.turned > 0 && 'Turned: fleeing from the holy symbol.',
+    ].filter(Boolean);
+    const attacks = u.alive ? u.attacks.filter((a) => u.team === 'monsters' || a.damage) : [];
+    const conds = Object.keys(u.conditions ?? {});
+    const traits = [
+      u.multiattack > 1 && `Attacks ${u.multiattack === 2 ? 'twice' : `${u.multiattack} times`} a turn.`,
+      u.team === 'monsters' && u.spells?.length && `Casts ${u.spells.map((id) => SPELLS[id]?.name ?? id).join(', ')} (DC ${game.spellDC(u)}).`,
+      u.flies && 'Flies: icy ground doesn’t slow it.',
+      u.stench && `Stench: a hero starting a turn next to it makes a CON save (DC ${u.stench.dc}) or is poisoned.`,
+      u.rises && !u.roused && 'At half HP his fallen house rises to fight again.',
+    ].filter(Boolean);
+    const tags = [
+      ...(u.team === 'heroes' ? u.passives.map((p) => PASSIVES[p].split(':')[0]) : []),
+      ...(u.items ?? []).map((i) => ITEMS[i].name),
+    ];
+    return `<div class="tip-head"><b class="${u.team}">${esc(u.name)}</b><small>${esc(kind)}</small></div>
+      ${chips.length ? `<div class="tip-chips">${chips.map((c) => `<span>${esc(c)}</span>`).join('')}</div>` : ''}
+      ${status.map((t) => `<p class="tip-note">${esc(t)}</p>`).join('')}
+      ${conds.length || u.marked ? `<ul class="tip-list tip-conds">${u.marked ? `<li><b>${esc(SPELLS[markOf(u)].name)}</b> <span>${esc(SPELLS[markOf(u)].desc)}</span></li>` : ''}${conds.map((c) => {
+        const [name, ...rest] = (CONDITION_INFO[c] ?? cap(c)).split(': ');
+        return `<li class="cond ${c}"><b>${esc(name)}</b> <span>${esc(rest.join(': '))}</span></li>`;
+      }).join('')}</ul>` : ''}
+      ${attacks.length ? `<ul class="tip-list">${attacks.map((a) => attackLine(game, u, a)).join('')}</ul>` : ''}
+      ${traits.map((t) => `<p>${esc(t)}</p>`).join('')}
+      ${tags.length ? `<p class="tip-note">${esc(tags.join(' · '))}</p>` : ''}`;
   }
 
   /** The combat log as a panel of its own, for screens too narrow to keep it beside the board. */
@@ -353,17 +451,19 @@ export class Hud {
   }
 
   renderInitiative(game) {
+    this.game = game;
+    this.unitTip.refresh();
     $('#initiative').innerHTML = game.order
       .map((u) => {
         const cls = ['chip', u.team, u === game.current ? 'current' : '', u.alive ? '' : 'dead'].join(' ');
         const pct = Math.max(0, (u.hp / u.maxHp) * 100);
         if (this.unknown?.(u)) {
-          return `<div class="${cls} unknown" title="Something you haven't seen yet">
+          return `<div class="${cls} unknown" aria-label="Something you haven't seen yet">
             <span class="pic">${unknownIcon()}<b class="init">?</b></span><span class="nm">???</span><span class="mini"><i style="width:100%"></i></span>
           </div>`;
         }
         const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
-        return `<div class="${cls}" data-unit="${u.id}" title="${esc(u.name)} (${esc(u.cls)}) · initiative ${u.initiative}">
+        return `<div class="${cls}" data-unit="${u.id}" aria-label="${esc(u.name)} (${esc(u.cls)}) · initiative ${u.initiative}">
           <span class="pic" style="--c:${color}">${unitIcon(u)}<b class="init">${u.initiative}</b></span>
           <span class="nm">${esc(u.name)}</span>
           <span class="mini"><i style="width:${pct}%"></i></span>

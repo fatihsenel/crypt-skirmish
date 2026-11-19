@@ -106,6 +106,8 @@ It runs on desktop and on phones.
   melee and amber means ranged.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does.
 - **Turn order:** portraits along the top, each with its initiative number.
+- **Character cards:** hover a figure or a portrait (tap a portrait on a phone) for its HP, AC,
+  speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, and the dice options.
 
 ## Sound
@@ -137,7 +139,8 @@ Everything is generated in the browser, with no recordings:
 | Tap a tile, enemy or chest | Preview what would happen |
 | Tap the same spot again | Do it |
 | Drag / pinch | Pan / zoom |
-| Hold a button, or tap a tag or portrait | Show its tooltip |
+| Hold a button, or tap a tag | Show its tooltip |
+| Tap a portrait | Show the character card (tap again to close) |
 | Log button (top right) | Open the combat log |
 
 ## House rules
@@ -239,7 +242,8 @@ src/
     hud.js           initiative, action bar, combat log
     camp.js          title screen and camp
     settings.js      the settings panel
-    abilityTip.js    tooltip cards
+    abilityTip.js    tooltip cards for attacks, spells and actions
+    unitTip.js       the character card over figures and portraits
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
   main.js            controller: input → game → animations → HUD

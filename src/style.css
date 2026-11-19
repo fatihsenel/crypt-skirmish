@@ -345,7 +345,7 @@ button.ability:disabled { pointer-events: none; }
 button.ability { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
 
 /* --- the tooltip card over an ability button ------------------------------------- */
-#ability-tip {
+.tipcard {
   position: absolute;
   z-index: 26;
   width: max-content;
@@ -359,23 +359,34 @@ button.ability { -webkit-touch-callout: none; -webkit-user-select: none; user-se
   line-height: 1.45;
   pointer-events: none;
 }
-#ability-tip[hidden] { display: none; }
-#ability-tip .tip-head { display: flex; flex-direction: column; gap: 1px; margin-bottom: 6px; }
-#ability-tip .tip-head b { font: 600 14px var(--display); color: var(--gold); letter-spacing: 0.02em; }
-#ability-tip .tip-head small { color: var(--muted); font-size: 11px; }
-#ability-tip .tip-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
-#ability-tip .tip-chips span {
+.tipcard[hidden] { display: none; }
+.tipcard .tip-head { display: flex; flex-direction: column; gap: 1px; margin-bottom: 6px; }
+.tipcard .tip-head b { font: 600 14px var(--display); color: var(--gold); letter-spacing: 0.02em; }
+.tipcard .tip-head small { color: var(--muted); font-size: 11px; }
+.tipcard .tip-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.tipcard .tip-chips span {
   padding: 1px 7px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.07);
   font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
-#ability-tip p { margin: 0 0 4px; }
-#ability-tip p:last-child { margin-bottom: 0; }
-#ability-tip .tip-note { color: var(--muted); }
-#ability-tip .tip-how { margin-top: 6px; color: var(--muted); font-style: italic; }
-#ability-tip .tip-problem { margin-top: 6px; color: var(--monster); }
+.tipcard p { margin: 0 0 4px; }
+.tipcard p:last-child { margin-bottom: 0; }
+.tipcard .tip-note { color: var(--muted); }
+.tipcard .tip-how { margin-top: 6px; color: var(--muted); font-style: italic; }
+.tipcard .tip-problem { margin-top: 6px; color: var(--monster); }
+/* the character card: a figure's or portrait's stats, attacks and conditions */
+#unit-tip { max-width: min(320px, calc(100% - 16px)); z-index: 27; }
+#unit-tip .tip-head b.heroes { color: var(--hero); }
+#unit-tip .tip-head b.monsters { color: var(--monster); }
+.tipcard .tip-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.tipcard .tip-list li { padding-left: 8px; border-left: 2px solid rgba(255, 255, 255, 0.12); font-variant-numeric: tabular-nums; }
+.tipcard .tip-list b { color: var(--ink); font-weight: 600; }
+.tipcard .tip-conds li { border-left-color: currentColor; }
+.tipcard .tip-conds li:not(.cond) { color: var(--gold); }
+.tipcard .tip-conds li b { color: inherit; }
+.tipcard .tip-conds li span { color: var(--muted); }
 #end-turn { font-weight: 600; }
 kbd {
   font: 10px var(--body);

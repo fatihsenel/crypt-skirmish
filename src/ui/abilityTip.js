@@ -16,6 +16,7 @@ export class AbilityTip {
     this.content = content;
     this.el = document.createElement('div');
     this.el.id = 'ability-tip';
+    this.el.className = 'tipcard';
     this.el.setAttribute('role', 'tooltip');
     this.el.hidden = true;
     document.getElementById('app').append(this.el);

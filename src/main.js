@@ -1928,19 +1928,38 @@ stage.dom.addEventListener('pointerdown', (ev) => {
   downAt = { x: ev.clientX, y: ev.clientY };
 });
 
+/** Where a figure stands on screen: from the top of its label down to its tile. */
+function figureRect(u) {
+  const label = view(u)?.label.element.getBoundingClientRect();
+  const v = new THREE.Vector3(u.x, 0, u.z).project(stage.camera);
+  const box = stage.dom.getBoundingClientRect();
+  const x = box.left + ((v.x + 1) / 2) * box.width;
+  const y = box.top + ((1 - v.y) / 2) * box.height;
+  const top = label?.height ? label.top : y - 60;
+  const half = Math.max(24, (label?.width ?? 0) / 2);
+  return new DOMRect(x - half, top, half * 2, y - top);
+}
+
 stage.dom.addEventListener('pointermove', (ev) => {
   if (ev.pointerType !== 'mouse') return;
   const t = tileFromEvent(ev);
   if (t?.x === hovered?.x && t?.z === hovered?.z) return;
   hovered = t;
+  // The character card for a figure the mouse rests on, whoever's turn it is.
+  const who = game && t && !game.over ? visibleUnitAt(t.x, t.z) : null;
+  hud.hoverUnit(game, who, () => figureRect(who));
   if (isHeroTurn() && !busy) refresh();
 });
 
 stage.dom.addEventListener('pointerleave', (ev) => {
   if (ev.pointerType !== 'mouse') return; // a lifted finger leaves its preview up
   hovered = null;
+  hud.hoverUnit(game, null);
   if (isHeroTurn() && !busy) refresh();
 });
+for (const type of ['pointerdown', 'wheel']) {
+  stage.dom.addEventListener(type, (ev) => ev.pointerType !== 'touch' && hud.hoverUnit(game, null), { passive: true });
+}
 
 stage.dom.addEventListener('click', (ev) => {
   if (!isHeroTurn() || busy) return;
