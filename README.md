@@ -95,6 +95,8 @@ It runs on desktop and on phones.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
 - **Achievements:** 23 goals that carry across runs.
+- **Bestiary:** every monster you've met, with its character card and a line of lore. Open it
+  from the title screen or camp.
 - **Past runs:** the title screen lists your last 20 runs.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
@@ -106,7 +108,8 @@ It runs on desktop and on phones.
 - **Enemy reach** (T): stripes the tiles monsters could reach and hit next turn. Red means
   melee and amber means ranged.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does.
-- **Turn order:** portraits along the top, each with its initiative number.
+- **Turn order:** portraits along the top, each with its initiative number. Risen undead
+  show as "R. Mummy" there.
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, and the dice options.
@@ -225,6 +228,7 @@ src/
     replay.js        fight saves: commands replayed from a seed
     history.js       past runs
     achievements.js  achievements and their checks
+    bestiary.js      which monsters you've met
     daily.js         the daily crypt
     settings.js      settings kept in the browser
   render/            three.js only
@@ -245,6 +249,8 @@ src/
     settings.js      the settings panel
     abilityTip.js    tooltip cards for attacks, spells and actions
     unitTip.js       the character card over figures and portraits
+    unitCard.js      the character card's text
+    bestiary.js      the bestiary screen and its lore
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
   main.js            controller: input → game → animations → HUD

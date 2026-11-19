@@ -25,6 +25,8 @@ import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx
 import { wait, playback } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Camp } from './ui/camp.js';
+import { Bestiary } from './ui/bestiary.js';
+import { meet } from './game/bestiary.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
 import { music } from './audio/music.js';
@@ -271,6 +273,9 @@ function toggleMusic() {
 hud.setMusic(music.enabled);
 
 // Volumes, the monster-turn speed and the dice badge (the Settings button).
+const bestiary = new Bestiary();
+for (const b of document.querySelectorAll('.bestiary-open')) b.addEventListener('click', () => bestiary.open(b));
+
 const settings = loadSettings();
 new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
@@ -374,6 +379,7 @@ stage.tickers.add(() => {
     v.group.visible = show && !v.gone;
     if (show && u.alive && !seenIds.has(u.id)) {
       seenIds.add(u.id);
+      meet([u.code]); // into the bestiary
       spotted = true;
     }
   }

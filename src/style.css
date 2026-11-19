@@ -163,7 +163,7 @@ html, body {
   border-radius: 7px;
   border: 1px solid transparent;
   flex: 0 0 auto;
-  width: 92px;
+  width: 102px; /* room for "Skeleton 2" and "R. Mummy" */
   font-size: 11px;
 }
 .chip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; }
@@ -378,8 +378,8 @@ button.ability { -webkit-touch-callout: none; -webkit-user-select: none; user-se
 .tipcard .tip-problem { margin-top: 6px; color: var(--monster); }
 /* the character card: a figure's or portrait's stats, attacks and conditions */
 #unit-tip { max-width: min(320px, calc(100% - 16px)); z-index: 27; }
-#unit-tip .tip-head b.heroes { color: var(--hero); }
-#unit-tip .tip-head b.monsters { color: var(--monster); }
+#unit-tip .tip-head b.heroes, .beast .tip-head b.heroes { color: var(--hero); }
+#unit-tip .tip-head b.monsters, .beast .tip-head b.monsters { color: var(--monster); }
 .tipcard .tip-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 3px; }
 .tipcard .tip-list li { padding-left: 8px; border-left: 2px solid rgba(255, 255, 255, 0.12); font-variant-numeric: tabular-nums; }
 .tipcard .tip-list b { color: var(--ink); font-weight: 600; }
@@ -905,6 +905,49 @@ b.loot { color: var(--gold); }
 }
 .camp-head { display: flex; justify-content: space-between; align-items: center; }
 .camp-head h2 { margin: 0; font: 700 26px var(--display); color: var(--gold); }
+.camp-actions { display: flex; gap: 4px; }
+
+/* --- the bestiary: every monster met, with its card and a line of lore ---------------- */
+#title .bestiary-open {
+  display: block; margin: 2px auto 0; padding: 4px 8px; background: none; border: 0;
+  font: 600 12px var(--display, inherit); color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
+}
+#title .bestiary-open:hover { color: #e6cf98; }
+#bestiary {
+  position: absolute; inset: 0; z-index: 25;
+  display: grid; place-items: center; padding: 16px;
+  background: rgba(5, 4, 8, 0.78);
+}
+#bestiary[hidden] { display: none; }
+.bestiary-card {
+  width: min(980px, 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  padding: 18px 22px 22px;
+  background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 14px;
+}
+#bestiary-count { margin: 4px 0 12px; font-size: 13px; }
+.beasts {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;
+}
+.beast { display: flex; gap: 10px; align-items: flex-start; }
+.beast .pic {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--c, #3a3440); color: #f1dcd2; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+.beast .pic svg { width: 24px; height: 24px; }
+.beast.unknown .pic { color: #8a8494; }
+.beast .tipcard {
+  position: static; flex: 1; width: auto; max-width: none; box-shadow: none; pointer-events: auto;
+}
+.beast.unknown .tipcard { opacity: 0.6; }
+.beast .lore { margin-top: 6px; color: #d8cfc0; font-style: italic; }
+@media (max-width: 520px) {
+  #bestiary { padding: 8px; }
+  .bestiary-card { padding: 14px 12px 16px; }
+  .beasts { grid-template-columns: 1fr; }
+  .beast .pic { width: 32px; height: 32px; }
+  .beast .pic svg { width: 19px; height: 19px; }
+}
 #camp-report p { margin: 8px 0; }
 .camp-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; margin-top: 10px; }
 h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }

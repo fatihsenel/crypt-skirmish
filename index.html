@@ -232,14 +232,29 @@
             <summary>Achievements</summary>
             <ul class="awards"></ul>
           </details>
+          <button id="title-bestiary" type="button" class="bestiary-open">Bestiary</button>
         </div>
       </div>
+
+      <section id="bestiary" hidden role="dialog" aria-modal="true" aria-labelledby="bestiary-head">
+        <div class="bestiary-card">
+          <header class="camp-head">
+            <h2 id="bestiary-head">Bestiary</h2>
+            <button id="bestiary-close" type="button" class="quiet">Close</button>
+          </header>
+          <p id="bestiary-count" class="muted"></p>
+          <ul class="beasts"></ul>
+        </div>
+      </section>
 
       <section id="camp" hidden aria-label="Camp">
         <div class="camp-card">
           <header class="camp-head">
             <h2>Camp</h2>
-            <button id="camp-new" type="button" class="quiet">Abandon run</button>
+            <span class="camp-actions">
+              <button id="camp-bestiary" type="button" class="quiet bestiary-open">Bestiary</button>
+              <button id="camp-new" type="button" class="quiet">Abandon run</button>
+            </span>
           </header>
           <div id="camp-report"></div>
           <div class="camp-grid">

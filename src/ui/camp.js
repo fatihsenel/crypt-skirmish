@@ -1,6 +1,7 @@
 // Between fights: the dungeon map, the party, the pack of loot, and what just happened.
 // Also the title screen. Plain HTML/SVG; all state changes go through the handlers.
 
+import { Bestiary } from './bestiary.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, DIFFICULTIES,
   cleanName,
@@ -131,6 +132,7 @@ export class Camp {
     $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
     this.renderHistory(loadHistory());
     this.renderAwards(loadAchievements());
+    $('#title-bestiary').textContent = Bestiary.label();
     this.renderDaily();
   }
 
@@ -213,6 +215,7 @@ export class Camp {
     $('#camp-party').innerHTML = this.partyHtml(state);
     $('#camp-pack').innerHTML = this.packHtml(state);
     $('#camp-new').textContent = 'Abandon run';
+    $('#camp-bestiary').textContent = Bestiary.label();
   }
 
   reportHtml(state, report) {
