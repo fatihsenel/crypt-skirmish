@@ -231,6 +231,7 @@ export class Camp {
     $('#camp-room').innerHTML = this.roomHtml(state);
     $('#camp-party').innerHTML = this.partyHtml(state);
     $('#camp-pack').innerHTML = this.packHtml(state);
+    $('#camp-pack-box').hidden = !state.pack.length; // nothing to hand out
     $('#camp-new').textContent = 'Abandon run';
     Bestiary.label($('#camp-bestiary'));
   }
@@ -247,17 +248,15 @@ export class Camp {
     </div>`;
     let news = '';
     if (report?.rest) {
-      news = `<p><b>${esc(nodeName(report.rest))}.</b> ${esc(NODES[report.rest].intro)} Everyone is back to full HP with every spell slot.</p>`;
+      news = `<p><b>${esc(nodeName(report.rest))}.</b> ${esc(NODES[report.rest].intro)} Full HP and every spell slot back.</p>`;
     } else if (report) {
-      const parts = [report.longRest
-        ? `<p>The room is cleared: <b>+${report.xp} XP</b>. Before going deeper the party takes a long rest: full HP and every spell slot back.</p>`
-        : `<p>The room is cleared: <b>+${report.xp} XP</b>. A short rest restores half of everyone's missing HP.</p>`];
-      if (report.potions) {
-        parts.push(`<p>Searching the room turns up <b class="loot">${report.potions} potion${report.potions > 1 ? 's' : ''} of healing</b>, shared out among the party.</p>`);
-      }
-      if (report.loot.length) {
-        parts.push(`<p>Found: ${report.loot.map((i) => `<b class="loot">${esc(ITEMS[i].name)}</b>`).join(', ')}. Hand it out below.</p>`);
-      }
+      const found = [
+        ...(report.potions ? [`<b class="loot">${report.potions} potion${report.potions > 1 ? 's' : ''} of healing</b> (shared out)`] : []),
+        ...report.loot.map((i) => `<b class="loot">${esc(ITEMS[i].name)}</b>`),
+      ];
+      const parts = [`<p>Room cleared: <b>+${report.xp} XP</b>. ${report.longRest
+        ? 'Long rest: full HP and every spell slot back.'
+        : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
       if (report.levelUps.length) {
         parts.push(`<div class="levelups"><b>Level up!</b><ul>${report.levelUps.map((l) =>
           `<li><b>${esc(l.name)}</b> reaches level ${l.level}: ${esc(l.note)}</li>`).join('')}</ul></div>`);

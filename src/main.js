@@ -80,6 +80,7 @@ let feats = { maxHit: 0, sneaks: 0 };
 // Once the dungeon tiles are in (they gate the title), the next room's models come first,
 // then the rest in the background (see the boot code at the bottom).
 const $loading = document.getElementById('loading');
+let undoState = null; // { undo, unit }: the last move, while it can still be taken back (see undoMove)
 let fightTicket = 0; // the latest fight asked for while its figures were loading
 const roomFiles = (id, party) => filesForRoom(levelById(NODES[id].level).rows, party);
 
@@ -93,6 +94,7 @@ function saveFight() {
 
 const hud = new Hud({
   onEndTurn: () => endHeroTurn(),
+  onUndo: () => undoMove(),
   onChoose: (choice) => choose(choice),
   onRestart: () => {
     sfx.ui();
@@ -483,6 +485,7 @@ function startFight(resume) {
 
   busy = false;
   ended = false;
+  setUndo(null);
   selected = null;
   pendingReveals = [];
   pendingRisings = [];
@@ -1834,6 +1837,7 @@ function endHeroTurn() {
  */
 async function heroCommand(cmd) {
   const u = game.current;
+  const known = { explored: board.explored.size, seen: seenIds.size };
   const r = command(cmd);
   if (!r.ok) {
     hud.toast(r.reason);
@@ -1862,14 +1866,53 @@ async function heroCommand(cmd) {
     heroFell(game, u);
     return r;
   }
+  // A move that rolled nothing and showed nothing new can be taken back (the view settles first).
+  if (r.undo) {
+    await new Promise(requestAnimationFrame);
+    if (game !== g) return r;
+    if (board.explored.size === known.explored && seenIds.size === known.seen && game.current === u) setUndo({ undo: r.undo, unit: u });
+  }
   busy = false;
   refresh();
   if (game.current === u && cmd.type !== 'end') tips.notice('acted', { unit: u, cmd, touch: touching });
   return r;
 }
 
+function setUndo(state) {
+  undoState = state;
+  hud.canUndo = !!state;
+}
+
+/** Take back the last move: the hero walks back, and the save forgets it. */
+async function undoMove() {
+  if (!isHeroTurn() || busy || !undoState) return;
+  const { undo, unit } = undoState;
+  setUndo(null);
+  if (!game.undoMove(undo)) {
+    refresh();
+    return;
+  }
+  sfx.ui();
+  if (fight) {
+    fight.log.pop();
+    fight.check = fightCheck(game);
+    saveFight();
+  }
+  const g = game;
+  busy = true;
+  selected = null;
+  hovered = null;
+  refresh();
+  await view(unit).moveAlong([...undo.path].reverse());
+  if (game !== g) return;
+  hud.log(`<span class="heroes">${unit.name}</span> takes the move back.`, 'sys');
+  busy = false;
+  refresh();
+}
+
 /** Resolve a command and add it to the fight's save. */
 function command(cmd) {
+  setUndo(null); // anything else the hero does settles the move before it
   const r = applyCommand(game, cmd);
   if (r.ok && fight) {
     fight.log.push(cmd);
@@ -2103,6 +2146,10 @@ window.addEventListener('keydown', (ev) => {
     if (ev.target instanceof HTMLButtonElement) return;
     ev.preventDefault();
     endHeroTurn();
+  }
+  if (ev.code === 'KeyZ' && !ev.altKey) {
+    ev.preventDefault();
+    undoMove();
   }
   if (ev.code === 'KeyT') toggleThreats();
   if (ev.code === 'KeyM') toggleSound();

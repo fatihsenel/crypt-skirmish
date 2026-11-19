@@ -388,6 +388,8 @@ button.ability { -webkit-touch-callout: none; -webkit-user-select: none; user-se
 .tipcard .tip-conds li b { color: inherit; }
 .tipcard .tip-conds li span { color: var(--muted); }
 #end-turn { font-weight: 600; }
+.turn-buttons { display: flex; gap: 6px; align-items: end; }
+#undo[hidden] { display: none; }
 kbd {
   font: 10px var(--body);
   color: var(--muted);
@@ -706,6 +708,8 @@ kbd {
   #attacks::-webkit-scrollbar { display: none; }
   #attacks .group { flex: none; }
   #hint { font-size: 12px; max-width: 100%; }
+  #undo .wide { display: none; }
+  body.touch #undo { padding: 8px 10px; }
 }
 @media (max-height: 520px) {
   #help { display: none; }
@@ -726,9 +730,9 @@ kbd {
 body.touch #help .help-keys .mouse { display: none; }
 body.touch #help .help-keys dt.touch { display: flex; }
 body.touch #help .help-keys dd.touch { display: block; }
-body.touch #end-turn kbd, body.touch #help summary kbd { display: none; }
+body.touch #end-turn kbd, body.touch #undo kbd, body.touch #help summary kbd { display: none; }
 body.touch button.ability { padding: 7px 10px; min-height: 40px; }
-body.touch #end-turn { min-height: 44px; padding: 8px 14px; }
+body.touch #end-turn, body.touch #undo { min-height: 44px; padding: 8px 14px; }
 body.touch .passive-tag { padding: 2px 7px; }
 #next[hidden] { display: none; }
 #to-map[hidden], #restart[hidden] { display: none; }
@@ -915,7 +919,9 @@ b.loot { color: var(--gold); }
 }
 .camp-head { display: flex; justify-content: space-between; align-items: center; }
 .camp-head h2 { margin: 0; font: 700 26px var(--display); color: var(--gold); }
-.camp-actions { display: flex; gap: 4px; }
+.camp-foot { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.camp-foot button { font-size: 12px; color: var(--muted); }
+#camp-pack-box[hidden] { display: none; }
 
 /* --- the bestiary: every monster met, with its card and a line of lore ---------------- */
 /* A panel over the screen: the bestiary, past runs, achievements. */
@@ -1038,9 +1044,15 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 .pack-item .give { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 6px; font-size: 12px; color: var(--muted); }
 .pack-item .give button { padding: 3px 8px; font-size: 12px; }
 
+@media (max-width: 760px), (max-height: 520px) {
+  #camp { padding-top: 58px; } /* clear the sound and settings buttons */
+}
 @media (max-width: 760px) {
-  .camp-grid { grid-template-columns: 1fr; }
+  .camp-grid { grid-template-columns: 1fr; gap: 8px; }
   .camp-card { padding: 14px 16px 18px; }
+}
+@media (min-width: 521px) and (max-width: 760px) {
+  #camp-party { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6px; }
 }
 /* The fight HUD steps back while the title or camp is up. */
 #app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle),

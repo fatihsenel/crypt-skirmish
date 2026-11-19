@@ -240,7 +240,10 @@ const pct = (n, d) => `${Math.round((100 * n) / d)}%`;
 
 /** Hand pack gear to whoever it suits: weapons to the fighter then the rogue, the rest to the casters. */
 function equipAll(state) {
-  const order = { weaponPlus1: ['F', 'R'], weaponPlus2: ['R', 'F', 'C'], ringProtection: ['W', 'C', 'R'], cloakProtection: ['W', 'C', 'R'] };
+  const order = {
+    weaponPlus1: ['F', 'R'], weaponPlus2: ['R', 'F', 'C'], ringProtection: ['W', 'C', 'R'], cloakProtection: ['W', 'C', 'R'],
+    bracersDefense: ['W'], gauntletsOgre: ['F', 'C'], amuletHealth: ['W', 'R', 'C'], periaptPoison: ['F', 'R', 'C'],
+  };
   for (let i = state.pack.length - 1; i >= 0; i--) {
     const id = state.pack[i];
     if (ITEMS[id]?.kind !== 'gear') continue;

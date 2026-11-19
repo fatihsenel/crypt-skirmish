@@ -77,7 +77,7 @@ export const LEVELS = [
       '#......+......>#',
       '################',
     ],
-    loot: [['ringProtection'], ['potion', 'potion']],
+    loot: [['ringProtection'], ['potion', 'potion', 'bracersDefense']],
     asleep: ['8,6', '3,7', '5,9'],
     patrols: { '11,1': [[14, 1], [14, 4]], '12,5': [[7, 6]] },
   },
@@ -121,7 +121,7 @@ export const LEVELS = [
       '#..#..u..#..u.>#',
       '################',
     ],
-    loot: [['potion', 'potion']],
+    loot: [['potion', 'potion', 'periaptPoison']],
     asleep: ['1,7'], // a gorged ghoul, sleeping it off
     patrols: { '9,1': [[13, 1], [13, 4]] },
   },
@@ -217,7 +217,7 @@ LEVELS.push(
       '#......#.....>.#',
       '################',
     ],
-    loot: [['potion', 'potion']],
+    loot: [['potion', 'potion', 'gauntletsOgre']],
     asleep: ['3,7', '2,8'], // rats nesting in the silk
     patrols: { '12,1': [[14, 3], [12, 2]] },
   },
@@ -281,7 +281,7 @@ LEVELS.push(
       '#.....#......>.#',
       '################',
     ],
-    loot: [['potion', 'potion']],
+    loot: [['potion', 'potion', 'amuletHealth']],
     asleep: ['9,5'], // the mummy stands in its alcove until disturbed
     patrols: { '12,7': [[12, 2], [9, 9]] },
   },

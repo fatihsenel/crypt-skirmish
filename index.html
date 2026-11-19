@@ -80,7 +80,10 @@
         <div class="bar">
           <div id="who"></div>
           <div id="attacks"></div>
-          <button id="end-turn" type="button">End turn <kbd>Space</kbd></button>
+          <div class="turn-buttons">
+            <button id="undo" type="button" hidden title="Take back the last move (it rolled no dice and found nothing new)">Undo<span class="wide"> move</span> <kbd>Z</kbd></button>
+            <button id="end-turn" type="button">End turn <kbd>Space</kbd></button>
+          </div>
         </div>
       </footer>
 
@@ -96,6 +99,7 @@
             <dt class="mouse"><kbd>Right-drag</kbd></dt><dd class="mouse">Pan the view</dd>
             <dt class="mouse"><kbd>Wheel</kbd></dt><dd class="mouse">Zoom</dd>
             <dt class="mouse"><kbd>Space</kbd> <kbd>Enter</kbd></dt><dd class="mouse">Throw your die, or end the turn</dd>
+            <dt class="mouse"><kbd>Z</kbd></dt><dd class="mouse">Undo a move that rolled no dice and found nothing new</dd>
             <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Cancel attack or spell</dd>
             <dt class="mouse"><kbd>T</kbd></dt><dd class="mouse">Show where monsters can reach (hover a portrait: just that one)</dd>
             <dt class="mouse"><kbd>M</kbd> <kbd>N</kbd></dt><dd class="mouse">Sound / music on or off</dd>
@@ -103,6 +107,7 @@
             <dt class="mouse"><kbd>H</kbd> <kbd>?</kbd></dt><dd class="mouse">Show or hide these controls</dd>
             <dt class="touch"><kbd>Tap</kbd></dt><dd class="touch">Show the move, attack or spell there</dd>
             <dt class="touch"><kbd>Tap again</kbd></dt><dd class="touch">Do it</dd>
+            <dt class="touch"><kbd>Undo move</kbd></dt><dd class="touch">Take back a move that rolled no dice and found nothing new</dd>
             <dt class="touch"><kbd>Drag</kbd></dt><dd class="touch">Pan the view</dd>
             <dt class="touch"><kbd>Pinch</kbd></dt><dd class="touch">Zoom</dd>
             <dt class="touch"><kbd>Tap a tag</kbd></dt><dd class="touch">What a feature or condition does</dd>
@@ -280,10 +285,7 @@
         <div class="camp-card">
           <header class="camp-head">
             <h2>Camp</h2>
-            <span class="camp-actions">
-              <button id="camp-bestiary" type="button" class="quiet bestiary-open">Bestiary</button>
-              <button id="camp-new" type="button" class="quiet">Abandon run</button>
-            </span>
+            <button id="camp-bestiary" type="button" class="quiet bestiary-open">Bestiary</button>
           </header>
           <div id="camp-report"></div>
           <div class="camp-grid">
@@ -295,10 +297,15 @@
             <div class="camp-right">
               <h3 class="sub">The party</h3>
               <div id="camp-party"></div>
-              <h3 class="sub">Pack</h3>
-              <div id="camp-pack"></div>
+              <div id="camp-pack-box">
+                <h3 class="sub">Pack</h3>
+                <div id="camp-pack"></div>
+              </div>
             </div>
           </div>
+          <footer class="camp-foot">
+            <button id="camp-new" type="button" class="quiet">Abandon run</button>
+          </footer>
         </div>
       </section>
     </div>

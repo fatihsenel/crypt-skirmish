@@ -56,9 +56,11 @@ export class Hud {
   /**
    * onChoose receives { kind: 'attack', attack } | { kind: 'spell', id } | { kind: 'action', id }
    */
-  constructor({ onEndTurn, onChoose, onRestart, onNext, onMap, onToggleSound, onToggleMusic }) {
+  constructor({ onEndTurn, onUndo, onChoose, onRestart, onNext, onMap, onToggleSound, onToggleMusic }) {
     this.handlers = { onChoose };
+    this.canUndo = false; // the controller sets it: the last move can be taken back
     $('#end-turn').addEventListener('click', onEndTurn);
+    $('#undo').addEventListener('click', onUndo);
     $('#restart').addEventListener('click', onRestart);
     $('#next').addEventListener('click', onNext);
     $('#to-map').addEventListener('click', onMap);
@@ -444,6 +446,7 @@ export class Hud {
       this.setHtml($('#who'), `<div class="who-name monsters">${this.unknown?.(u) ? '???' : esc(u.name)} <small>out of sight</small></div>
         <div class="stats"><span>Somewhere in the dark…</span></div>`);
       $('#end-turn').disabled = true;
+      $('#undo').hidden = true;
       this.setHtml($('#attacks'), '<span class="waiting">Something moves in the dark…</span>');
       this.tips.clear();
       this.abilityTip.hide();
@@ -472,6 +475,7 @@ export class Hud {
       </div>`);
 
     $('#end-turn').disabled = !mine || busy;
+    $('#undo').hidden = !mine || busy || !this.canUndo;
     // Rendered as a string and only written when it changes: hover refreshes call this
     // constantly, and replacing buttons mid-click would swallow the click.
     if (!mine) this.tips.clear();

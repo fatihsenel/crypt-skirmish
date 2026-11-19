@@ -19,7 +19,7 @@ export const XP_LEVELS = { 4: 450, 5: 900, 6: 2000, 7: 9700, 8: 10400 };
 export const DIFFICULTIES = {
   story: { name: 'Story', hp: 0.75, bonus: -1, desc: 'Weaker monsters: for enjoying the tale.' },
   normal: { name: 'Normal', hp: 1, bonus: 0, desc: 'The crypt as intended.' },
-  hard: { name: 'Hard', hp: 1.15, bonus: 1, thin: true, desc: 'Tougher monsters that hit harder. Every choice counts.' },
+  hard: { name: 'Hard', hp: 1.2, bonus: 1, thin: true, desc: 'Tougher monsters that hit harder. Every choice counts.' },
 };
 
 /**
@@ -150,6 +150,7 @@ export function heroUnit(code, rec) {
   applyLevel(u, rec.level);
   applyItems(u, rec.items);
   for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
+  u.hp = Math.min(u.hp, u.maxHp);
   if (rec.name) u.name = rec.name;
   return u;
 }
@@ -365,7 +366,15 @@ export function equipProblem(state, i, code) {
   if (id.startsWith('weaponPlus') && state.party[code].items.some((i) => i.startsWith('weaponPlus'))) {
     return `${heroName(code, state.party[code])} already has a runed weapon`;
   }
-  return null;
+  return ITEMS[id].only?.(heroUnit(code, state.party[code])) ?? null;
+}
+
+/** Gear that changes a hero's maximum HP moves their current HP with it (never below 1). */
+function keepWounds(prev, state, code) {
+  const before = heroUnit(code, prev.party[code]).maxHp;
+  const after = heroUnit(code, state.party[code]).maxHp;
+  const rec = state.party[code];
+  if (after !== before && typeof rec.hp === 'number') rec.hp = Math.max(1, Math.min(after, rec.hp + after - before));
 }
 
 export function equip(prev, i, code) {
@@ -373,6 +382,7 @@ export function equip(prev, i, code) {
   const state = clone(prev);
   const [id] = state.pack.splice(i, 1);
   state.party[code].items.push(id);
+  keepWounds(prev, state, code);
   return state;
 }
 
@@ -380,6 +390,7 @@ export function unequip(prev, code, i) {
   const state = clone(prev);
   const [id] = state.party[code].items.splice(i, 1);
   if (id) state.pack.push(id);
+  keepWounds(prev, state, code);
   return state;
 }
 

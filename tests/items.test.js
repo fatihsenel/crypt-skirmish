@@ -1,0 +1,70 @@
+import { describe, it, expect } from 'vitest';
+import { Game } from '../src/game/combat.js';
+import { LEVELS } from '../src/game/maps.js';
+import { seeded } from '../src/game/dice.js';
+import { ITEMS } from '../src/game/items.js';
+import { newCampaign, equip, unequip, equipProblem, heroUnit } from '../src/game/campaign.js';
+
+/** A campaign with `items` in the pack. */
+const withPack = (...items) => ({ ...newCampaign('normal'), pack: [...items] });
+
+describe('magic items', () => {
+  it('lists every item in some chest', () => {
+    const found = new Set(LEVELS.flatMap((l) => (l.loot ?? []).flat()));
+    for (const id of Object.keys(ITEMS)) expect(found.has(id), id).toBe(true);
+  });
+
+  it('keeps Bracers of Defense for a hero in no armor', () => {
+    const state = withPack('bracersDefense');
+    expect(equipProblem(state, 0, 'F')).toMatch(/no armor/);
+    expect(equipProblem(state, 0, 'W')).toBeNull();
+    const w = heroUnit('W', equip(state, 0, 'W').party.W);
+    expect(w.ac + w.acBonus).toBe(heroUnit('W', state.party.W).ac + 2);
+    const warlock = withPack('bracersDefense');
+    warlock.party.W.cls = 'K';
+    expect(equipProblem(warlock, 0, 'W')).toMatch(/no armor/);
+  });
+
+  it('sets Strength to 19 with Gauntlets of Ogre Power', () => {
+    const state = equip(withPack('gauntletsOgre'), 0, 'F');
+    expect(heroUnit('F', state.party.F).stats.str).toBe(19);
+  });
+
+  it('adds hit points with an Amulet of Health, and takes them back', () => {
+    const state = withPack('amuletHealth');
+    state.party.W.hp = 15; // 5 below the Wizard's 20
+    const plain = heroUnit('W', state.party.W);
+    const worn = equip(state, 0, 'W');
+    const u = heroUnit('W', worn.party.W);
+    // Con 12 (+1) to 19 (+4): 3 HP a level, at level 3.
+    expect(u.maxHp).toBe(plain.maxHp + 9);
+    expect(worn.party.W.hp).toBe(24); // still 5 below
+    const off = unequip(worn, 'W', 0);
+    expect(off.party.W.hp).toBe(15);
+    expect(heroUnit('W', off.party.W).maxHp).toBe(plain.maxHp);
+  });
+
+  it('never leaves a hero with more HP than the maximum', () => {
+    const state = withPack();
+    state.party.W.items = ['amuletHealth'];
+    state.party.W.hp = 29;
+    state.party.W.items = [];
+    expect(heroUnit('W', state.party.W).hp).toBe(20);
+    const g = new Game(LEVELS[0], { party: state.party, rng: seeded(1) });
+    expect(g.units.find((u) => u.slot === 'W').hp).toBe(20);
+  });
+
+  it('wards off poison with the Periapt, without a save', () => {
+    const state = equip(withPack('periaptPoison'), 0, 'F');
+    const g = new Game(LEVELS[0], { party: state.party, rng: seeded(2) });
+    const f = g.units.find((u) => u.slot === 'F');
+    const rat = g.units.find((u) => u.team === 'monsters');
+    const rolls = g.rolls;
+    expect(g.applyRider(rat, f, { save: 'con', dc: 10, condition: 'poisoned', turns: 1 })).toBeNull();
+    g.addCondition(f, 'poisoned');
+    expect(f.conditions.poisoned).toBeUndefined();
+    expect(g.rolls).toBe(rolls);
+    g.addCondition(f, 'prone');
+    expect(f.conditions.prone).toBeTruthy();
+  });
+});

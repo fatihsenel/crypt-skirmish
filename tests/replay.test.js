@@ -224,3 +224,54 @@ describe('saving a fight mid-battle', () => {
     expect(parseSave(serialize(campaign)).fight).toBeUndefined();
   });
 });
+
+/** Everything about a fight that a move could touch, units by index (they point at each other). */
+function snapshot(game) {
+  const ref = (k, v) => (v && typeof v === 'object' && 'team' in v && 'hp' in v ? `#${game.units.indexOf(v)}` : v);
+  const units = game.units.map((u) => Object.entries(u).filter(([k]) => k !== 'id').map(([k, v]) => `${k}=${JSON.stringify(v, ref)}`).join('|'));
+  const doors = [...game.grid.doors.values()].map((d) => d.open);
+  const traps = [...game.grid.traps.values()].map((t) => `${t.revealed}${t.sprung}`);
+  return JSON.stringify({ units, doors, traps, round: game.round, turn: game.turn, rolls: game.rolls });
+}
+
+describe('taking back a move', () => {
+  for (const [i, seed] of [[0, 5], [2, 9], [4, 31], [7, 13]]) {
+    it(`leaves ${LEVELS[i].name} exactly as if the move never happened (seed ${seed})`, () => {
+      const a = fresh(LEVELS[i], seed);
+      const b = fresh(LEVELS[i], seed);
+      for (const g of [a, b]) { g.start(); untilHero(g); }
+      const pick = seeded(seed + 1);
+      let undone = 0;
+      for (let n = 0; n < 40 && !a.over; n++) {
+        // On a: wander somewhere first, and take it back when the game allows.
+        const spots = a.destinations(a.current);
+        if (spots.length) {
+          const t = spots[Math.floor(pick() * spots.length)];
+          const r = applyCommand(a, { type: 'move', x: t.x, z: t.z });
+          if (r.undo) {
+            expect(a.undoMove(r.undo)).toBe(true);
+            undone++;
+            expect(snapshot(a)).toBe(snapshot(b));
+          } else {
+            break; // it rolled or set something off: the fights part ways here
+          }
+        }
+        play(a, 1);
+        play(b, 1);
+        expect(snapshot(a)).toBe(snapshot(b));
+      }
+      expect(undone).toBeGreaterThan(0);
+    });
+  }
+
+  it('refuses once dice have been rolled since', () => {
+    const g = fresh(LEVELS[0], 3);
+    g.start();
+    untilHero(g);
+    const t = g.destinations(g.current)[0];
+    const r = applyCommand(g, { type: 'move', x: t.x, z: t.z });
+    expect(r.undo).toBeTruthy();
+    g.rng();
+    expect(g.undoMove(r.undo)).toBe(false);
+  });
+});

@@ -66,7 +66,11 @@ export class Game {
   /** senses: false makes every monster aware from the start (the old behaviour). */
   constructor(level, { rng = Math.random, party = null, senses = true, difficulty = null } = {}) {
     const rows = Array.isArray(level) ? level : level.rows;
-    this.rng = rng;
+    // Every die rolled and every event (but a plain step) is counted, so a move that rolled
+    // nothing and set nothing off can be taken back exactly (see undoMove).
+    this.rolls = 0;
+    this.events = 0;
+    this.rng = () => { this.rolls++; return rng(); };
     this.listeners = {};
     this.grid = new Grid(rows);
     [...this.grid.chests.values()].forEach((c, i) => {
@@ -112,6 +116,7 @@ export class Game {
           if (saved[f] !== undefined) u[f] = structuredClone(saved[f]);
         }
         if (!u.alive) Object.assign(u, { alive: true, hp: 1 }); // carried out by the party
+        u.hp = Math.min(u.hp, u.maxHp); // an Amulet of Health handed back at camp
       }
     }
 
@@ -167,6 +172,7 @@ export class Game {
   }
 
   emit(type, data) {
+    if (type !== 'move') this.events++;
     for (const fn of this.listeners[type] || []) fn(data);
   }
 
@@ -345,7 +351,7 @@ export class Game {
    * Gained during its own turn, the rest of that turn doesn't count.
    */
   addCondition(unit, name, { turns = Infinity, by = null, dc = 10 } = {}) {
-    if (!unit.alive) return;
+    if (!unit.alive || unit.immune?.includes(name)) return;
     const own = unit === this.current;
     const fresh = !unit.conditions[name];
     unit.conditions[name] = { turns: turns + (own && turns !== Infinity ? 1 : 0), by, dc };
@@ -377,7 +383,7 @@ export class Game {
    * hero who passes is used to the smell for the rest of the fight.
    */
   checkStench(u) {
-    if (!u.alive || u.team !== 'heroes' || u.stenchSafe || this.has(u, 'poisoned')) return;
+    if (!u.alive || u.team !== 'heroes' || u.stenchSafe || this.has(u, 'poisoned') || u.immune?.includes('poisoned')) return;
     const by = this.enemiesOf(u).find((m) => m.stench && !m.unaware && gridDistance(m, u) <= 1);
     if (!by) return;
     const s = this.save(u, 'con', by.stench.dc);
@@ -408,7 +414,7 @@ export class Game {
    * Returns { stat, dc, d20, total, success, condition } or null.
    */
   applyRider(attacker, target, rider) {
-    if (!rider || !target.alive || this.has(target, rider.condition)) return null;
+    if (!rider || !target.alive || this.has(target, rider.condition) || target.immune?.includes(rider.condition)) return null;
     if (!rider.save) { // no save: a hit is enough (a web)
       this.addCondition(target, rider.condition, { turns: rider.turns ?? Infinity, by: attacker });
       return { stat: null, success: false, condition: rider.condition };
@@ -835,6 +841,11 @@ export class Game {
     const node = map.get(key(x, z));
     if (!node || node.dist === 0 || !this.canEndOn(unit, x, z)) return null;
     const path = pathFrom(map, x, z);
+    const before = {
+      unit, x: unit.x, z: unit.z, movesLeft: unit.movesLeft, path,
+      lastSeen: this.living('heroes').map((h) => [h, h.lastSeen]),
+      rolls: this.rolls, events: this.events,
+    };
 
     const steps = [];
     let walked = [path[0]];
@@ -899,7 +910,26 @@ export class Game {
     // A door creaks open: anything close by hears it.
     for (const st of steps) if (st.type === 'door') this.noise(st, 3);
     this.updateAwareness();
-    return { steps, path };
+    const clean = this.rolls === before.rolls && this.events === before.events && steps.every((st) => st.type === 'walk');
+    return clean ? { steps, path, undo: before } : { steps, path };
+  }
+
+  /**
+   * Take back a move that rolled no dice and set nothing off (a move result's `undo`): the
+   * mover goes back with its movement, as if the move never happened. False if it's too late.
+   */
+  undoMove(undo) {
+    const { unit } = undo ?? {};
+    if (!unit || this.over || unit !== this.current || !unit.alive) return false;
+    if (this.rolls !== undo.rolls || unit.x !== undo.path.at(-1).x || unit.z !== undo.path.at(-1).z) return false;
+    unit.x = undo.x;
+    unit.z = undo.z;
+    unit.movesLeft = undo.movesLeft;
+    for (const [h, seen] of undo.lastSeen) {
+      if (seen === undefined) delete h.lastSeen;
+      else h.lastSeen = seen;
+    }
+    return true;
   }
 
   springTrap(trap, unit) {

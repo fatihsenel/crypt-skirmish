@@ -88,3 +88,10 @@ Exact maps, HP and damage after the simulator, colours, room text.
   each, seeds 1–3): 32%, 29%, 31%. ×1.2 gave 24% and put the Barrow back to ending 21% of
   runs. Hard bosses at ×1.15: Throne 96% / 61%, Tomb 80% / 34% (rested / not).
 - A saved Hard fight in progress no longer replays to the same state and goes back to camp.
+
+## Follow-up: Hard at ×1.2 HP, with more magic items
+- Four SRD items joined the chests (Bracers of Defense, Gauntlets of Ogre Power, Amulet of
+  Health, Periapt of Proof against Poison). They lifted whole Hard runs to 36–38% (seeds 1, 2,
+  7, 400 each). Hard went from ×1.15 to ×1.2 HP: 31%, 31%, 31%, 32% (seeds 1, 2, 7, 3); the
+  Barrow ends 16% of runs. Normal: 70–72%.
+- A saved Hard fight in progress no longer replays to the same state and goes back to camp.

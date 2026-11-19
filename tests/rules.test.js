@@ -728,7 +728,7 @@ describe('campaign: unopened chests', () => {
     const game = new Game(levelById('ossuary'), { party: start.party });
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;
     const { state, report } = completeFight(start, 'ossuary', game);
-    expect(state.pack).toEqual(['ringProtection']);
+    expect(state.pack).toEqual(['ringProtection', 'bracersDefense']);
     expect(report.potions).toBe(2);
     const total = (p) => Object.values(p).reduce((n, h) => n + h.potions, 0);
     expect(total(state.party)).toBe(total(start.party) + 2);

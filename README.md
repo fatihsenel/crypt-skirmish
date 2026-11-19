@@ -9,7 +9,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | | |
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
-| ![The camp after the Sunken Halls: the party reaches level 8, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: continue or start a campaign, the daily crypt, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
+| ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: continue or start a campaign, the daily crypt, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
 | ![The bestiary: 14 of 17 monsters met, each with its card, a line of lore and how many were slain](docs/screenshots/bestiary.jpg) | |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
@@ -57,6 +57,8 @@ It runs on desktop and on phones.
 - **Cover:** barrels and crates give +2 AC against attacks that pass over them.
 - **Stealth:** a hidden hero is only found by a monster whose Perception beats their roll.
   Attacking gives you away.
+- **Undo:** a move can be taken back until the hero does something else, as long as it rolled
+  no dice and showed nothing new (no door, trap, monster or unexplored tile).
 
 ## Monsters
 
@@ -83,6 +85,9 @@ It runs on desktop and on phones.
 - **Four acts**, each a map with forks: choose which room to clear next, and whether to rest
   or push on for more XP and loot.
 - Between rooms the party takes a short rest, shares XP and hands out magic items at camp.
+- **Magic items:** Runed Weapons +1 and +2, Rings and Cloaks of Protection, Bracers of Defense
+  (only for a hero in no armor), Gauntlets of Ogre Power, an Amulet of Health and a Periapt of
+  Proof against Poison.
 - A lost fight can be retried or skipped by taking another route.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.
@@ -138,6 +143,7 @@ Everything is generated in the browser, with no recordings:
 | Right-drag / wheel | Pan / zoom |
 | Space or Enter | End turn (or throw the die when it's waiting) |
 | Esc | Cancel the selected attack or spell |
+| Z | Undo the last move |
 | T | Show or hide enemy reach |
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel |
@@ -148,6 +154,7 @@ Everything is generated in the browser, with no recordings:
 | Tap a tile, enemy or chest | Preview what would happen |
 | Tap the same spot again | Do it |
 | Drag / pinch | Pan / zoom |
+| Undo button | Take back the last move |
 | Hold a button, or tap a tag | Show its tooltip |
 | Tap a portrait or hold a figure | Show the character card |
 | Log button (top right) | Open the combat log |
@@ -213,8 +220,8 @@ Each act's boss is won almost every time by a rested party and noticeably less o
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
 Armory. On Hard the Throne drops to about 95% and 60%, and the Tomb to about 80% and 35%.
-A whole run (1,500 simulated) wins about 97% of the time on Story, 68% on Normal and 30% on
-Hard (monsters get +15% HP and +1 to hit and damage). On both the Tomb ends the most runs. Samples of 300 runs swing by about 5 points either way.
+A whole run (1,500 simulated) wins about 97% of the time on Story, 70% on Normal and 31% on
+Hard (monsters get +20% HP and +1 to hit and damage). On both the Tomb ends the most runs. Samples of 300 runs swing by about 5 points either way.
 
 ### Layout
 
