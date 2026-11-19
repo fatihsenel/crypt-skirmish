@@ -38,7 +38,7 @@ import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
 import { recordRun, loadHistory, saveLastFight, clearLastFight } from './game/history.js';
-import { encodeFight, decodeFight, replayOutcome, challengeText, fightUrl, WATCH_PREFIX, MAX_LINK_CODE } from './game/fightLink.js';
+import { encodeFight, decodeFight, replayOutcome, challengeText, fightUrl, linkIn, MAX_LINK_CODE } from './game/fightLink.js';
 import { unlock } from './game/achievements.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText } from './game/daily.js';
 
@@ -1989,7 +1989,7 @@ function watchFromTitle(rec, { link = false } = {}) {
  * A link that replays `f` for anyone who opens it: the share sheet on a phone, else the
  * clipboard. `button` says Copied for a moment.
  */
-async function copyFightLink(f, button) {
+async function copyFightLink(f, button, kind = 'watch') {
   if (!f?.check) return;
   sfx.ui();
   const label = button.textContent;
@@ -1999,9 +1999,9 @@ async function copyFightLink(f, button) {
       hud.toast('This fight is too long to fit in a link.');
       return;
     }
-    const url = fightUrl(location.href, code);
+    const url = fightUrl(location.href, code, kind);
     if (touching && navigator.share) {
-      await navigator.share({ url, title: 'Crypt Skirmish replay' });
+      await navigator.share({ url, title: kind === 'play' ? 'Crypt Skirmish challenge' : 'Crypt Skirmish replay' });
       return;
     }
     await navigator.clipboard.writeText(url);
@@ -2017,7 +2017,7 @@ async function watchLink(code) {
   const f = await decodeFight(code);
   const out = f && replayOutcome(f);
   if (!out) {
-    clearWatchHash();
+    clearLinkHash();
     hud.toast(f ? 'This replay was made with another version of the game, so it can’t be shown.' : 'This replay link is broken.');
     return;
   }
@@ -2026,13 +2026,35 @@ async function watchLink(code) {
 
 // A link pasted into a tab that already has the game open.
 window.addEventListener('hashchange', () => {
-  if (!location.hash.startsWith(WATCH_PREFIX) || replay || game) return; // only from the title or camp
-  watchLink(location.hash.slice(WATCH_PREFIX.length));
+  if (!linkIn(location.hash) || replay || game) return; // only from the title or camp
+  openLink(location.hash);
 });
 
-const clearWatchHash = () => {
-  if (location.hash.startsWith(WATCH_PREFIX)) history.replaceState(null, '', location.pathname + location.search);
+const clearLinkHash = () => {
+  if (linkIn(location.hash)) history.replaceState(null, '', location.pathname + location.search);
 };
+
+/**
+ * Opened from a #play= link: a challenge. Check the fight still plays out the same (which
+ * also tells its rounds), then go straight into it; how it went shows only at the end.
+ */
+async function playLink(code) {
+  const f = await decodeFight(code);
+  const out = f && replayOutcome(f);
+  clearLinkHash(); // a reload shows the title
+  if (!out) {
+    hud.toast(f ? 'This challenge was made with another version of the game, so it can’t be played.' : 'This challenge link is broken.');
+    return;
+  }
+  startChallenge({ ...f, rounds: out.rounds }, { result: f.result, rounds: out.rounds });
+}
+
+/** The page's #watch= or #play= link, if it has one. */
+function openLink(hash) {
+  const l = linkIn(hash);
+  if (l?.kind === 'watch') watchLink(l.code);
+  else if (l?.kind === 'play') playLink(l.code);
+}
 
 /** Back to the end banner, with the real fight as it ended. */
 function endReplay() {
@@ -2047,7 +2069,7 @@ function endReplay() {
   busy = false;
   document.body.classList.remove('replaying');
   $replayBar.hidden = true;
-  if (r.link) clearWatchHash(); // done with the link: a reload shows the title
+  if (r.link) clearLinkHash(); // done with the link: a reload shows the title
   if (r.fromTitle) return backToTitle();
   hud.renderInitiative(game);
   syncStatus();
@@ -2088,6 +2110,9 @@ function replayPlay(stepTurn = false) {
 document.getElementById('watch').addEventListener('click', () => startReplay());
 document.getElementById('ngplus').addEventListener('click', (ev) => campaign?.done && heirlooms.open(campaign, ev.currentTarget));
 document.getElementById('copy-link').addEventListener('click', (ev) => copyFightLink(record, ev.currentTarget));
+document.getElementById('copy-challenge').addEventListener('click', (ev) => copyFightLink(record, ev.currentTarget, 'play'));
+// After a challenge: the fight it was made from, then back to this end screen.
+document.getElementById('watch-theirs').addEventListener('click', () => challenge && startReplay(challenge.rec));
 document.getElementById('replay-pause').addEventListener('click', () => replayPlay());
 document.getElementById('replay-step').addEventListener('click', () => replayPlay(true));
 document.getElementById('replay-speed').addEventListener('click', () => {
@@ -2567,7 +2592,7 @@ preloadDungeon(bootProgress).then(() => {
   } else {
     const save = loadSave();
     camp.showTitle(save, loadWonRun());
-    if (location.hash.startsWith(WATCH_PREFIX)) watchLink(location.hash.slice(WATCH_PREFIX.length));
+    openLink(location.hash); // a #watch= replay or #play= challenge
     // While the title is up: the figures for the room the player is most likely to enter
     // next (the saved fight, the rooms open from the saved camp, or the first room), then
     // every other model.

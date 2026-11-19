@@ -150,5 +150,14 @@ export async function decodeFight(code) {
   }
 }
 
-/** The whole link: the page's address with the fight after #watch=. */
-export const fightUrl = (pageUrl, code) => `${pageUrl.split('#')[0].split('?')[0]}${WATCH_PREFIX}${code}`;
+/**
+ * The whole link: the page's address with the fight after #watch= (`kind` 'watch': it's
+ * replayed) or #play= ('play': a challenge, played from the same dice before it's shown).
+ */
+export const fightUrl = (pageUrl, code, kind = 'watch') => `${pageUrl.split('#')[0].split('?')[0]}#${kind}=${code}`;
+
+/** The fight link in a page's `hash`: { kind: 'watch' | 'play', code }, or null. */
+export function linkIn(hash) {
+  const m = /^#(watch|play)=([\w-]+)$/.exec(hash ?? '');
+  return m ? { kind: m[1], code: m[2] } : null;
+}

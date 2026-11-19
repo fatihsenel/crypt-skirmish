@@ -697,8 +697,12 @@ export class Hud {
     $('#save-card').hidden = !summary;
     $('#save-card').textContent = 'Save image';
     $('#watch').hidden = !replay;
+    $('#watch').textContent = 'Watch replay';
     $('#copy-link').hidden = !replay;
     $('#copy-link').textContent = 'Copy replay link';
+    $('#copy-challenge').hidden = !replay;
+    $('#copy-challenge').textContent = 'Copy challenge link';
+    $('#watch-theirs').hidden = !challenge; // the link's fight, once yours is done
     $('#ngplus').hidden = !ngplus;
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
@@ -747,6 +751,7 @@ export class Hud {
   challengeBanner({ title, text }) {
     $('#banner-title').textContent = title;
     $('#banner-text').textContent = text;
+    $('#watch').textContent = 'Watch yours'; // next to Watch theirs
     $('#next').hidden = true;
     $('#restart').hidden = false;
     $('#restart').textContent = 'Try again';

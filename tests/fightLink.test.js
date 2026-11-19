@@ -5,7 +5,7 @@ import { nextMonsterStep } from '../src/game/ai.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign, runDifficulty } from '../src/game/campaign.js';
-import { encodeFight, decodeFight, replaysTrue, replayOutcome, challengeText, cleanParty, unpack, fightUrl, LINK_VERSION } from '../src/game/fightLink.js';
+import { encodeFight, decodeFight, replaysTrue, replayOutcome, challengeText, cleanParty, unpack, fightUrl, linkIn, LINK_VERSION } from '../src/game/fightLink.js';
 
 /** Play a room to the end with the AI choosing the heroes' moves, given as commands like the player's. */
 function playFight(node, seed, party, tier = 0) {
@@ -109,6 +109,7 @@ describe('a fight as a link', () => {
 
   it('builds the link from the page address', () => {
     expect(fightUrl('https://x.io/crypt-skirmish/?level=2#old', 'abc')).toBe('https://x.io/crypt-skirmish/#watch=abc');
+    expect(fightUrl('https://x.io/crypt-skirmish/#watch=old', 'abc', 'play')).toBe('https://x.io/crypt-skirmish/#play=abc');
   });
 });
 
@@ -130,5 +131,15 @@ describe('playing a linked fight yourself', () => {
       .toEqual({ title: 'Defeat', text: 'Your party fell in The Crypt Door in round 4. The link won in 6 rounds. Try again from the same dice.' });
     expect(challengeText({ result: 'defeat', rounds: 5 }, { won: false, rounds: 2 }, room).text)
       .toBe('Your party fell in The Crypt Door in round 2. The link’s party fell too, in round 5. Try again from the same dice.');
+  });
+});
+
+describe('which link the page was opened with', () => {
+  it('tells a replay from a challenge, and ignores anything else', () => {
+    expect(linkIn('#watch=abc')).toEqual({ kind: 'watch', code: 'abc' });
+    expect(linkIn('#play=a-b_c')).toEqual({ kind: 'play', code: 'a-b_c' });
+    expect(linkIn('')).toBeNull();
+    expect(linkIn('#play=')).toBeNull();
+    expect(linkIn('#other=abc')).toBeNull();
   });
 });

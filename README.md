@@ -102,6 +102,9 @@ It runs on desktop and on phones.
   same room, party, difficulty and starting dice, and the end screen compares your rounds with
   the link's. Try again starts from the same dice; Copy replay link sends your fight back.
   Nothing is saved and no achievements are unlocked.
+- **Challenge links:** Copy challenge link on the end screen makes a link that opens straight
+  into the same fight, without showing yours first. The end screen then compares the rounds,
+  and Watch yours and Watch theirs play both fights.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
@@ -269,7 +272,7 @@ src/
     replay.js        fight saves: commands replayed from a seed
     recap.js         a fight told back: who fell to what and a tip, or who led a win
     history.js       past runs and the last fight of each
-    fightLink.js     a fight as a #watch= link, checked by replaying it; Play it yourself's end text
+    fightLink.js     a fight as a #watch= link, checked by replaying it; #play= challenges and their end text
     achievements.js  achievements and their checks
     bestiary.js      which monsters you've met and slain, and what they did to you
     daily.js         the daily crypt
