@@ -11,7 +11,7 @@ import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
 import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
-import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, DIFFICULTIES, runDifficulty } from '../src/game/campaign.js';
+import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, DIFFICULTIES, runDifficulty, newGamePlus } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -20,7 +20,18 @@ import { availableParallelism } from 'node:os';
 const CLASSES = {
   ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }), ...(process.env.WARLOCK && { W: 'K' }),
 };
-const freshCampaign = () => newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES);
+/** TIER=N plays every fight at New Game+ tier N (0 by default). */
+const TIER = Math.max(0, Math.floor(Number(process.env.TIER) || 0));
+/** What a won party typically carries back down in New Game+: one good item each. */
+const HEIRLOOMS = { F: 'weaponPlus2', W: 'bracersDefense', R: 'weaponPlus1', C: 'amuletHealth' };
+
+function freshCampaign() {
+  const start = newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES);
+  if (!TIER) return start;
+  const won = { ...start, done: true, tier: TIER - 1 };
+  for (const code of HERO_CODES) won.party[code] = { ...won.party[code], items: [HEIRLOOMS[code]] };
+  return newGamePlus(won, HEIRLOOMS);
+}
 
 /** A rested party at `level`. */
 function partyAt(level) {
@@ -197,9 +208,6 @@ function playTurn(game, u) {
     apply(game, u, step);
   }
 }
-
-/** TIER=N plays every fight at New Game+ tier N (0 by default). */
-const TIER = Math.max(0, Math.floor(Number(process.env.TIER) || 0));
 
 /** One fight. Returns { won, rounds, downed, state }. */
 export function fight(levelId, campaign, rng) {

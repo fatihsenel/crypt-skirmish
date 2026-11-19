@@ -42,6 +42,11 @@ and one trophy each, and the crypt is harder each time you clear it.
 - **Not changed:** monster AI, the dice order, daily runs (always tier 0), and `?level=N`.
   That route may take `&tier=N` for testing.
 
+## Tuned after the first build
+- With kept items in the sim, +15% HP and +1 per tier won 58%, 20% and 2% at NG+1 to NG+3.
+  Now +10% HP per tier and a flat +1 from NG+1: 68%, 56%, 40%, 29%, 21%, 16% (NG+1 to NG+6).
+- The tier stops at 99; a hero may keep nothing; the deepest win is kept (`crypt-skirmish:deepest`).
+
 ## Docs
 - README: New Game+ under the campaign section. A House rules line on tier scaling.
 - CLAUDE.md: `&tier=N` in the test routes.

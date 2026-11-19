@@ -1,14 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import {
   DIFFICULTIES, runDifficulty, difficultyLabel, newCampaign, parseSave, serialize, runSummary,
-  heirloomChoices, newGamePlus, heroUnit,
+  heirloomChoices, newGamePlus, heroUnit, MAX_TIER,
 } from '../src/game/campaign.js';
+import { deeperWin } from '../src/game/history.js';
 
 describe('the New Game+ tier', () => {
-  it('scales monsters by 15% HP and +1 to hit and damage per tier', () => {
-    expect(runDifficulty('hard', 2)).toMatchObject({ hp: 1.2 * 1.3, bonus: 3, thin: true });
+  it('scales monsters by 10% HP per tier, with +1 to hit and damage from the first', () => {
+    expect(runDifficulty('hard', 2)).toMatchObject({ hp: 1.2 * 1.2, bonus: 2, thin: true });
+    expect(runDifficulty('normal', 5)).toMatchObject({ hp: 1.5, bonus: 1 });
     expect(runDifficulty('normal', 0)).toEqual(DIFFICULTIES.normal);
-    expect(runDifficulty('nope', 1)).toMatchObject({ hp: 1.15, bonus: 1 });
+    expect(runDifficulty('nope', 1)).toMatchObject({ hp: 1.1, bonus: 1 });
   });
 
   it('names the tier after the difficulty', () => {
@@ -97,5 +99,36 @@ describe('a won run kept for New Game+', () => {
     expect(parseWonRun(serialize(newCampaign()))).toBeNull();
     expect(parseWonRun(null)).toBeNull();
     expect(parseWonRun('nonsense')).toBeNull();
+  });
+});
+
+describe('New Game+ limits', () => {
+  it('stops at tier 99, so every fight can still be a link', () => {
+    expect(MAX_TIER).toBe(99);
+    expect(newGamePlus({ ...newCampaign(), done: true, tier: 99 }, {}).tier).toBe(99);
+    expect(parseSave(serialize({ ...newCampaign(), tier: 500 })).tier).toBe(99);
+  });
+
+  it('doesn’t offer or keep an item a fresh hero of that class can’t use', () => {
+    const won = { ...newCampaign(), done: true };
+    won.party.F = { ...won.party.F, items: ['bracersDefense'] }; // the Fighter wears armor
+    expect(heirloomChoices(won).F).toEqual([]);
+    expect(newGamePlus(won, { F: 'bracersDefense' }).party.F.items).toEqual([]);
+  });
+
+  it('keeps nothing for a hero when asked', () => {
+    const won = { ...newCampaign(), done: true };
+    won.party.F = { ...won.party.F, items: ['ringProtection'] };
+    expect(newGamePlus(won, { F: '' }).party.F.items).toEqual([]);
+  });
+});
+
+describe('the deepest win', () => {
+  const won = (difficulty, tier) => ({ ...newCampaign(difficulty), tier });
+  it('goes by tier, then difficulty', () => {
+    expect(deeperWin(null, won('normal', 0))).toEqual({ difficulty: 'normal', tier: 0 });
+    expect(deeperWin({ difficulty: 'hard', tier: 1 }, won('story', 2))).toEqual({ difficulty: 'story', tier: 2 });
+    expect(deeperWin({ difficulty: 'normal', tier: 2 }, won('hard', 2))).toEqual({ difficulty: 'hard', tier: 2 });
+    expect(deeperWin({ difficulty: 'hard', tier: 2 }, won('normal', 1))).toBeNull(); // not deeper: nothing to store
   });
 });

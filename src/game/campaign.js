@@ -23,14 +23,20 @@ export const DIFFICULTIES = {
   hard: { name: 'Hard', hp: 1.2, bonus: 1, thin: true, desc: 'Tougher monsters that hit harder. Every choice counts.' },
 };
 
-/** Each New Game+ tier adds this much monster HP (a share of the difficulty's) and +1 to hit and damage. */
-export const TIER_HP = 0.15;
+/** The deepest New Game+ tier (a link carries up to this). */
+export const MAX_TIER = 99;
+
+/**
+ * Each New Game+ tier adds this much monster HP (a share of the difficulty's). Monsters also get
+ * +1 to hit and damage from the first tier on, but no more: +2 made each tier a cliff (npm run sim).
+ */
+export const TIER_HP = 0.1;
 
 /** The `{ hp, bonus, thin }` the rules take for a run's difficulty at a New Game+ tier. */
 export function runDifficulty(difficulty, tier = 0) {
   const base = DIFFICULTIES[difficulty] ?? DIFFICULTIES.normal;
   if (!tier) return base;
-  return { ...base, hp: base.hp * (1 + TIER_HP * tier), bonus: base.bonus + tier };
+  return { ...base, hp: base.hp * (1 + TIER_HP * tier), bonus: base.bonus + 1 };
 }
 
 /** "Hard", or "Hard NG+2" for a New Game+ run. */
@@ -281,7 +287,7 @@ export function newGamePlus(won, keep = {}) {
     if (won.party[code].name) names[code] = won.party[code].name;
     if (won.party[code].cls) classes[code] = won.party[code].cls;
   }
-  let state = { ...newCampaign(won.difficulty, names, classes), tier: (won.tier ?? 0) + 1 };
+  let state = { ...newCampaign(won.difficulty, names, classes), tier: Math.min(MAX_TIER, (won.tier ?? 0) + 1) };
   const allowed = heirloomChoices(won);
   for (const code of HERO_CODES) {
     const id = keep[code];
@@ -513,6 +519,7 @@ export function parseSave(text) {
     if (typeof s.xp !== 'number') return null;
     if (!DIFFICULTIES[s.difficulty]) s.difficulty = 'normal'; // saves from before difficulties
     if (!Number.isInteger(s.tier) || s.tier < 0) s.tier = 0; // saves from before New Game+
+    s.tier = Math.min(s.tier, MAX_TIER);
     s.stats = validStats(s.stats); // saves from before the run tally start a fresh one
     for (const code of HERO_CODES) {
       const r = s.party?.[code];

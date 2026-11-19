@@ -105,6 +105,14 @@ export const ACHIEVEMENTS = [
     on: 'run', test: ({ state }) => state.difficulty === 'hard',
   },
   {
+    id: 'ngplus', name: 'Back for more', desc: 'Win a New Game+.',
+    on: 'run', test: ({ state }) => (state.tier ?? 0) >= 1,
+  },
+  {
+    id: 'ngplus3', name: 'Deeper still', desc: 'Win New Game+ 3 or deeper.',
+    on: 'run', test: ({ state }) => (state.tier ?? 0) >= 3,
+  },
+  {
     id: 'unbroken', name: 'Unbroken', desc: 'Win a campaign without losing a fight.',
     on: 'run', test: ({ state }) => (state.stats?.lost ?? 0) === 0,
   },

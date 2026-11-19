@@ -30,12 +30,13 @@ export class Heirlooms {
     const choices = heirloomChoices(won);
     const pct = Math.round(TIER_HP * tier * 100);
     $('#heirlooms-intro').textContent = `The same heroes go back down from the first room, as fresh as on day one, on ${difficultyLabel(won.difficulty, tier)}: `
-      + `monsters have ${pct}% more hit points and +${tier} to hit and damage. Each hero may carry one magic item from this run.`;
+      + `monsters have ${pct}% more hit points and +1 to hit and damage. Each hero may carry one magic item from this run.`;
     $('#heirlooms-list').innerHTML = HERO_CODES.map((code) => {
       const rec = won.party[code];
       const items = choices[code];
       const pick = items.length
         ? items.map((id, i) => `<label title="${esc(ITEMS[id].desc ?? '')}"><input type="radio" name="${code}" value="${esc(id)}"${i === 0 ? ' checked' : ''} /> ${esc(ITEMS[id].name)}</label>`).join('')
+          + `<label class="muted"><input type="radio" name="${code}" value="" /> Nothing</label>`
         : '<span class="muted">No magic items to keep</span>';
       return `<li><div class="who"><b>${esc(heroName(code, rec))}</b> <span class="muted">${esc(TEMPLATES[classOf(code, rec)].cls)}</span></div><div class="keep">${pick}</div></li>`;
     }).join('');

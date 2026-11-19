@@ -3,7 +3,7 @@
 // room can be retried), so a run ends only by winning the final room or by being abandoned
 // (Abandon run at camp, or a new campaign replacing the save).
 
-import { runSummary, nodeName } from './campaign.js';
+import { runSummary, nodeName, DIFFICULTIES, MAX_TIER, difficultyLabel } from './campaign.js';
 
 export const HISTORY_KEY = 'crypt-skirmish:history';
 export const MAX_RUNS = 20;
@@ -74,9 +74,37 @@ export function loadHistory() {
   }
 }
 
+/** The deepest campaign ever won, { difficulty, tier }: kept apart from the list, which forgets old runs. */
+export const BEST_KEY = 'crypt-skirmish:deepest';
+const RANK = Object.keys(DIFFICULTIES); // story, normal, hard
+
+/** The new deepest win if the won run `state` goes deeper than `best` (tier first, then difficulty), else null. */
+export function deeperWin(best, state) {
+  const now = { difficulty: DIFFICULTIES[state.difficulty] ? state.difficulty : 'normal', tier: state.tier ?? 0 };
+  if (best && (best.tier > now.tier || (best.tier === now.tier && RANK.indexOf(best.difficulty) >= RANK.indexOf(now.difficulty)))) return null;
+  return now;
+}
+
+/** The deepest win so far, or null. */
+export function loadDeepest() {
+  try {
+    const b = JSON.parse(localStorage.getItem(BEST_KEY));
+    return b && DIFFICULTIES[b.difficulty] && Number.isInteger(b.tier) && b.tier >= 0 && b.tier <= MAX_TIER ? b : null;
+  } catch {
+    return null;
+  }
+}
+
+/** "Hard NG+2": the deepest win as a label, or null. */
+export const deepestLabel = (b) => (b ? difficultyLabel(b.difficulty, b.tier) : null);
+
 export function recordRun(state, result, when = Date.now()) {
   const record = runRecord(state, result, when, loadLastFight());
   clearLastFight(); // it belonged to this run
+  const deeper = result === 'won' && deeperWin(loadDeepest(), state);
+  try {
+    if (deeper) localStorage.setItem(BEST_KEY, JSON.stringify(deeper));
+  } catch { /* not kept */ }
   if (!record) return;
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(addRun(loadHistory(), record)));

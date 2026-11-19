@@ -107,8 +107,8 @@ It runs on desktop and on phones.
   before act four existed carries on into it.
 - **New Game+:** after beating Nekhet, go back down with the same heroes from the first room.
   Each one keeps a magic item of your choice from the run. Every win adds a tier (Hard NG+1,
-  NG+2, …): monsters get 15% more hit points and +1 to hit and damage per tier. The title
-  screen offers it too, until you start a new campaign.
+  NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The title
+  screen offers it too, until you start a new campaign. Each hero may also keep nothing.
 
 ## Modes and extras
 
@@ -116,13 +116,13 @@ It runs on desktop and on phones.
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button.
-- **Achievements:** 25 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 27 goals that carry across runs. Open them from the title screen.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
   kind has dealt your heroes and how many it dropped, with the three deadliest at the top.
 - **Past runs:** your last 20 runs, from the title screen. Each keeps its last fight to watch
-  again or copy as a link.
+  again or copy as a link. Your deepest win (such as Hard NG+2) is kept and shown above them.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
 
@@ -199,8 +199,8 @@ A few things differ from the SRD to keep the game simple:
 - Hex has no ability-check part and lasts the whole fight, with no concentration.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
-- New Game+ is not from the SRD: each tier adds 15% to monster hit points (on top of the
-  difficulty's) and +1 to their weapon attack and damage rolls.
+- New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the
+  difficulty's), and from the first tier their weapon attack and damage rolls get +1.
 
 ## For developers
 

@@ -12,7 +12,7 @@ import { ITEMS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
-import { loadHistory } from '../game/history.js';
+import { loadHistory, loadDeepest, deepestLabel } from '../game/history.js';
 import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
 import { dayKey, dailyPlan, loadDaily, streak } from '../game/daily.js';
 
@@ -160,7 +160,7 @@ export class Camp {
     $('#title-save').textContent = save
       ? `Saved run (${difficultyLabel(save.difficulty, save.tier)}): party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
         + (save.fight ? `. Mid-fight in ${nodeName(save.fight.node)}.` : '')
-      : '';
+      : deepestLabel(loadDeepest()) ? `Deepest win: ${deepestLabel(loadDeepest())}` : '';
     $('#setup-warn').hidden = !save;
     $('#title-main').hidden = false;
     $('#title-setup').hidden = true;
@@ -210,6 +210,9 @@ export class Camp {
     this.runs = runs;
     $('#title-runs').textContent = `Past runs (${runs.length})`;
     $('#title-runs').hidden = runs.length === 0; // nothing to show until a run has ended
+    const deepest = deepestLabel(loadDeepest());
+    $('#history-deepest').hidden = !deepest;
+    $('#history-deepest').textContent = deepest ? `Deepest win: ${deepest}` : '';
     const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
     box.querySelector('.runs').innerHTML = runs.map((r, i) => {
       const date = new Date(r.when).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });

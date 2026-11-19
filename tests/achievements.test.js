@@ -12,6 +12,14 @@ describe('achievements', () => {
     expect(new Set(ids(ACHIEVEMENTS)).size).toBe(ACHIEVEMENTS.length);
   });
 
+  it('marks New Game+ wins, and the third tier deeper still', () => {
+    const run = (tier) => ids(earned('run', { state: { ...newCampaign('normal'), tier } }, {}));
+    expect(run(0)).not.toContain('ngplus');
+    expect(run(1)).toContain('ngplus');
+    expect(run(2)).not.toContain('ngplus3');
+    expect(run(3)).toEqual(expect.arrayContaining(['ngplus', 'ngplus3']));
+  });
+
   it('a first room win earns only the first-room one', () => {
     expect(ids(earned('room', { game: fight(), node: 'crypt' }, {}))).toEqual(['first-room']);
   });
