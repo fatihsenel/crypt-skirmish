@@ -224,7 +224,7 @@ src/
     daily.js         the daily crypt
     settings.js      settings kept in the browser
   render/            three.js only
-    stage.js         renderer, camera, lights, screen shake
+    stage.js         renderer, camera, lights, screen shake, labels kept apart
     board.js         dungeon meshes, highlights, fog of war, wall fading
     dungeonKit.js    loads the dungeon tiles
     gltfModels.js    loads the character models and plays their animations

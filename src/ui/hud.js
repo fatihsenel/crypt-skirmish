@@ -711,7 +711,7 @@ export class Hud {
       <table class="run-heroes">
         <thead><tr><th>Hero</th>${cols.map(([, label]) => `<th>${label}</th>`).join('')}</tr></thead>
         <tbody>${s.heroes.map((h) => `<tr>
-          <th scope="row"><b>${esc(h.name)}</b><small>${esc(h.cls)} · Lv ${h.level}</small></th>
+          <th scope="row"><b>${esc(h.name)}</b><small>${esc(h.cls)} · <span class="nowrap">Lv ${h.level}</span></small></th>
           ${cols.map(([f]) => cell(h, f)).join('')}
         </tr>`).join('')}</tbody>
       </table>

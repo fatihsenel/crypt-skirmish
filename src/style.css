@@ -595,6 +595,7 @@ kbd {
   display: flex;
   overflow-y: auto;
   background: rgba(5, 4, 8, 0.6);
+  z-index: 8; /* over the Controls panel and the log on phones */
 }
 #banner .card { margin: auto; }
 #banner[hidden] { display: none; }
@@ -1102,3 +1103,4 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 .roll-badge.save .roll-result { color: #8fd0a8; }
 .roll-badge.fail .roll-result { color: #ff8a7a; }
 .roll-badge .roll-die.dropped .face { fill: #2b2531; stroke: #8a7f92; }
+.nowrap { white-space: nowrap; }

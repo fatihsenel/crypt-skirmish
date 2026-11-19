@@ -106,6 +106,7 @@ export function createStage(container, { width, height }) {
     }
     renderer.render(scene, camera);
     labels.render(scene, camera);
+    declutter(labels.domElement);
     if (left > 0) camera.position.sub(jitter);
   });
 
@@ -117,3 +118,52 @@ export function createStage(container, { width, height }) {
 
   return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, dom: renderer.domElement };
 }
+
+/**
+ * Keep figure labels from piling up when units crowd together. The active unit's label and
+ * the ones nearer the viewer (lower on screen) stay put; any label that would cover one
+ * takes the shortest move up or sideways that clears it, so a crowd spreads out rather
+ * than stacking into a tower.
+ */
+const nudged = new WeakMap(); // label element -> [dx, dy] px it is moved by
+const SIDEWAYS = 70; // the furthest a label slides left or right of its figure
+function declutter(root) {
+  const items = [];
+  for (const el of root.querySelectorAll('.unit-label')) {
+    if (el.style.display === 'none') continue;
+    const r = el.getBoundingClientRect();
+    if (!r.width) continue;
+    const [ox, oy] = nudged.get(el) ?? [0, 0];
+    items.push({ el, ox, oy, l: r.left - ox, r: r.right - ox, t: r.top - oy, b: r.bottom - oy, active: el.classList.contains('active') });
+  }
+  items.sort((a, b) => (b.active - a.active) || (b.b - a.b));
+  const placed = [];
+  const hitAt = (it, dx, dy) => placed.find((p) =>
+    it.l + dx < p.r - 2 && it.r + dx > p.l + 2 && it.t + dy < p.b && it.b + dy > p.t);
+  for (const it of items) {
+    // Search moves from the spot it would have; each collision suggests up, left or right.
+    let best = null;
+    const queue = [[0, 0]];
+    const seen = new Set();
+    for (let n = 0; n < 40 && queue.length; n++) {
+      queue.sort((a, b) => cost(a) - cost(b));
+      const [dx, dy] = queue.shift();
+      if (seen.has(`${dx},${dy}`)) continue;
+      seen.add(`${dx},${dy}`);
+      if (best && cost([dx, dy]) >= cost(best)) break;
+      const hit = hitAt(it, dx, dy);
+      if (!hit) { best = [dx, dy]; break; }
+      queue.push([dx, hit.t - it.b - 1]);
+      if (Math.abs(hit.l - it.r - 1) <= SIDEWAYS) queue.push([hit.l - it.r - 1, dy]);
+      if (Math.abs(hit.r - it.l + 1) <= SIDEWAYS) queue.push([hit.r - it.l + 1, dy]);
+    }
+    const [dx, dy] = best ?? [0, 0];
+    placed.push({ l: it.l + dx, r: it.r + dx, t: it.t + dy, b: it.b + dy });
+    if (Math.abs(dx - it.ox) > 0.5 || Math.abs(dy - it.oy) > 0.5) {
+      nudged.set(it.el, [dx, dy]);
+      it.el.style.translate = dx || dy ? `${dx}px ${dy}px` : '';
+    }
+  }
+}
+/** Sideways moves cost a little more than lifting, so labels stay close above their figure. */
+const cost = ([dx, dy]) => Math.abs(dx) * 1.3 + Math.abs(dy);
