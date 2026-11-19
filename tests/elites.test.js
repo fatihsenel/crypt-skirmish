@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { Game, ELITE_TRAITS, eliteTrait } from '../src/game/combat.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
-import { NODES, newCampaign, runDifficulty, completeFight, recordDefeat, runSummary, runShareText } from '../src/game/campaign.js';
+import { NODES, newCampaign, runDifficulty, completeFight, recordDefeat, runSummary, runShareText, roomElite } from '../src/game/campaign.js';
 import { runRecord } from '../src/game/history.js';
 
 const room = (tier, seed = 1, node = 'crypt') => {
@@ -136,5 +136,23 @@ describe('elites in the run summary', () => {
     expect(s.elites).toEqual([]);
     expect(runShareText(s)).not.toMatch(/elite/);
     expect(runRecord(state, 'won', 1).elites).toBeUndefined();
+  });
+});
+
+describe('elites on the camp map', () => {
+  it('names the trait each fight room will have, from New Game+ 2', () => {
+    expect(roomElite('crypt', 1)).toBeNull();
+    expect(roomElite('crypt', 4).id).toBe('relentless');
+    expect(roomElite('sanctum', 2).id).toBe('regenerating');
+    const rest = Object.keys(NODES).find((id) => NODES[id].kind === 'rest');
+    expect(roomElite(rest, 3)).toBeNull();
+    expect(roomElite('nowhere', 3)).toBeNull();
+  });
+
+  it('matches the elite the fight then has', () => {
+    for (const node of Object.keys(NODES).filter((id) => NODES[id].kind !== 'rest')) {
+      const g = room(3, 1, node);
+      expect(elites(g).map((u) => u.elite)).toEqual([roomElite(node, 3).id]);
+    }
   });
 });

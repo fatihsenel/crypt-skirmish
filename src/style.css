@@ -1061,11 +1061,14 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 #camp-map .node:focus { outline: none; }
 #camp-map .node:focus-visible circle { stroke: #fff; }
 #camp-map .node.here circle { stroke: var(--hero); }
+#camp-map .node circle.elite-pip { fill: #ffd36b; stroke: #1c1720; stroke-width: 1.5; }
 
 #camp-room { margin-top: 6px; padding: 12px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
 #camp-room h3 { margin: 0 0 4px; font: 700 17px var(--display); color: var(--ink); }
 #camp-room p { margin: 4px 0; }
 #camp-room .teaser { color: var(--gold); font-size: 13px; }
+#camp-room .elite-note { font-size: 13px; }
+#camp-room .elite-note b { color: #ffc94a; font-weight: 600; }
 #camp-room button { margin-top: 8px; }
 
 .hero-card { padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }

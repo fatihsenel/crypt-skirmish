@@ -10,7 +10,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
 | ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: continue or start a campaign, the daily crypt, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
-| ![The bestiary: 14 of 17 monsters met, each with its card, a line of lore and how many were slain](docs/screenshots/bestiary.jpg) | |
+| ![The bestiary: monster cards with a line of lore and how many were slain, and the Elites section with each trait and how many you've slain](docs/screenshots/bestiary.jpg) | ![A won New Game+ 2 campaign: the run's facts, 13 elites slain by trait, and each hero's damage, kills, crits, healing and falls](docs/screenshots/victory.jpg) |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
 
@@ -118,7 +118,8 @@ It runs on desktop and on phones.
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
   its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift
-  or Warded. The trait depends on the room and the tier. When you first see the elite, a horn
+  or Warded. The trait depends on the room and the tier: the camp map marks each room ahead
+  with a gold pip, and picking it names the trait. When you first see the elite, a horn
   sounds, its band flares, a toast and the log name the trait, and on a phone the camera brings
   it into view. Once you have won a campaign, the bestiary lists what each does and how many
   you've slain. The run summary, its image and Past runs count the elites slain.

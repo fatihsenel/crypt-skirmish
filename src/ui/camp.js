@@ -5,7 +5,7 @@ import { Bestiary } from './bestiary.js';
 import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
-  cleanName,
+  cleanName, roomElite,
 } from '../game/campaign.js';
 import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
 import { ITEMS } from '../game/items.js';
@@ -312,11 +312,14 @@ export class Camp {
       const state_ = cleared.has(id) ? 'cleared' : options.includes(id) ? 'available' : 'locked';
       const cls = ['node', kind, state_, id === state.at ? 'here' : '', id === this.selected ? 'selected' : ''].join(' ');
       const label = n.short ?? nodeName(id).replace(/^The /, '');
+      const elite = cleared.has(id) ? null : roomElite(id, state.tier); // New Game+ 2 and deeper
+      const r = kind === 'boss' ? 21 : 18;
       return `<g class="${cls}" data-node="${id}" transform="translate(${p.x} ${p.y})" ${state_ === 'available' ? 'tabindex="0" role="button"' : ''}>
-        <title>${esc(nodeName(id))}</title>
-        <circle r="${kind === 'boss' ? 21 : 18}" />
+        <title>${esc(nodeName(id))}${elite ? ` · Elite: ${esc(elite.name)}` : ''}</title>
+        <circle r="${r}" />
         <g class="glyph">${GLYPH[kind]}</g>
         ${cleared.has(id) ? '<path class="tick" d="M10 -14 l4 4 l8 -9" />' : ''}
+        ${elite ? `<circle class="elite-pip" cx="${-r * 0.72}" cy="${-r * 0.72}" r="4.5" />` : ''}
         <text y="${kind === 'boss' ? 38 : 34}">${esc(label)}</text>
       </g>`;
     }).join('');
@@ -329,9 +332,11 @@ export class Camp {
     const n = NODES[id];
     const intro = n.kind === 'rest' ? n.intro : levelById(n.level).intro;
     const verb = n.verb ?? `Enter ${nodeName(id)}`;
+    const elite = roomElite(id, state.tier);
     return `<h3>${esc(nodeName(id))}</h3>
       <p>${esc(intro)}</p>
       ${n.teaser ? `<p class="teaser">${esc(n.teaser)}</p>` : ''}
+      ${elite ? `<p class="elite-note"><b>Elite here: ${esc(elite.name)}</b> (${esc(elite.desc)}).</p>` : ''}
       <button type="button" class="primary" data-enter="${id}">${esc(verb)}</button>`;
   }
 

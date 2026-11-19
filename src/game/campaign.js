@@ -6,7 +6,7 @@ import { TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLeve
 import { ITEMS, applyItems } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
-import { ELITE_TRAITS } from './combat.js';
+import { ELITE_TRAITS, eliteTrait } from './combat.js';
 
 export const SAVE_VERSION = 1;
 export const HERO_CODES = ['F', 'W', 'R', 'C'];
@@ -193,6 +193,13 @@ export function blankStats() {
   const heroes = {};
   for (const code of HERO_CODES) heroes[code] = Object.fromEntries(STAT_FIELDS.map((f) => [f, 0]));
   return { won: 0, lost: 0, rounds: 0, heroes };
+}
+
+/** The elite trait waiting in a fight room at this New Game+ tier (as the fight will pick it), or null. */
+export function roomElite(nodeId, tier) {
+  const n = NODES[nodeId];
+  if (!n || n.kind === 'rest' || !n.level || (tier ?? 0) < 2) return null;
+  return eliteTrait(levelById(n.level).id, tier);
 }
 
 /** A save's stats if they look right, else a fresh tally (saves from before stats). */
