@@ -3,7 +3,7 @@ import { Game } from '../src/game/combat.js';
 import { LEVELS } from '../src/game/maps.js';
 import { seeded } from '../src/game/dice.js';
 import { ITEMS } from '../src/game/items.js';
-import { newCampaign, equip, unequip, equipProblem, heroUnit } from '../src/game/campaign.js';
+import { newCampaign, equip, unequip, equipProblem, equipPreview, heroUnit } from '../src/game/campaign.js';
 
 /** A campaign with `items` in the pack. */
 const withPack = (...items) => ({ ...newCampaign('normal'), pack: [...items] });
@@ -66,5 +66,37 @@ describe('magic items', () => {
     expect(g.rolls).toBe(rolls);
     g.addCondition(f, 'prone');
     expect(f.conditions.prone).toBeTruthy();
+  });
+});
+
+describe('item previews at camp', () => {
+  it('shows the AC and saves a ring would add', () => {
+    const state = withPack('ringProtection');
+    const w = heroUnit('W', state.party.W);
+    expect(equipPreview(state, 0, 'W')).toEqual([`AC ${w.ac} → ${w.ac + 1}`, '+1 to saves']);
+  });
+
+  it('shows the main weapon getting better with a runed weapon', () => {
+    const [line] = equipPreview(withPack('weaponPlus1'), 0, 'F');
+    expect(line).toMatch(/^.+: hit \+(\d+) → \+\d+, damage \+\d+ → \+\d+$/);
+  });
+
+  it('shows the hit points an Amulet of Health adds', () => {
+    const state = withPack('amuletHealth');
+    const w = heroUnit('W', state.party.W);
+    expect(equipPreview(state, 0, 'W')).toContain(`Max HP ${w.maxHp} → ${w.maxHp + 9}`);
+  });
+
+  it('says when an item does nothing for a hero', () => {
+    // The Rogue fights with Dexterity, so Strength 19 changes nothing.
+    expect(equipPreview(withPack('gauntletsOgre'), 0, 'R')).toEqual([]);
+    expect(equipPreview(withPack('periaptPoison'), 0, 'R')).toEqual(['Can’t be poisoned']);
+  });
+
+  it('leaves the state untouched', () => {
+    const state = withPack('amuletHealth');
+    const copy = structuredClone(state);
+    equipPreview(state, 0, 'C');
+    expect(state).toEqual(copy);
   });
 });

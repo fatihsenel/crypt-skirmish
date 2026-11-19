@@ -87,7 +87,8 @@ It runs on desktop and on phones.
 - Between rooms the party takes a short rest, shares XP and hands out magic items at camp.
 - **Magic items:** Runed Weapons +1 and +2, Rings and Cloaks of Protection, Bracers of Defense
   (only for a hero in no armor), Gauntlets of Ogre Power, an Amulet of Health and a Periapt of
-  Proof against Poison.
+  Proof against Poison. Each hero's button in the pack shows what the item would change for
+  them, such as "AC 15 → 17" or "Max HP 35 → 53".
 - A lost fight can be retried or skipped by taking another route.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.

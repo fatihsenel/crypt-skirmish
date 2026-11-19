@@ -4,7 +4,7 @@
 import { Bestiary } from './bestiary.js';
 import { Overlay } from './overlay.js';
 import {
-  NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, DIFFICULTIES,
+  NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES,
   cleanName,
 } from '../game/campaign.js';
 import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
@@ -336,10 +336,11 @@ export class Camp {
       const give = HERO_CODES.map((code) => {
         const why = equipProblem(state, i, code);
         const name = heroUnit(code, state.party[code]).name;
-        return `<button type="button" data-equip="${i}:${code}" ${why ? `disabled title="${esc(why)}"` : ''}>${esc(name)}</button>`;
+        const gain = why ? why : equipPreview(state, i, code).join(' · ') || 'No change for them';
+        return `<button type="button" data-equip="${i}:${code}" ${why ? 'disabled' : ''}><b>${esc(name)}</b><small>${esc(gain)}</small></button>`;
       }).join('');
       return `<div class="pack-item"><div><b class="loot">${esc(it.name)}</b><small>${esc(it.desc)}</small></div>
-        <div class="give"><span>Give to</span>${give}</div></div>`;
+        <div class="give-label">Give to</div><div class="give">${give}</div></div>`;
     }).join('');
   }
 

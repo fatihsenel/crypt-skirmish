@@ -4,6 +4,7 @@
 
 import { TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf } from './units.js';
 import { ITEMS, applyItems } from './items.js';
+import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
 
 export const SAVE_VERSION = 1;
@@ -362,11 +363,43 @@ export function takeRest(prev, id) {
 export function equipProblem(state, i, code) {
   const id = state.pack[i];
   if (!id || ITEMS[id]?.kind !== 'gear') return 'Nothing to equip';
-  if (state.party[code].items.includes(id)) return `${heroName(code, state.party[code])} already has one`;
+  if (state.party[code].items.includes(id)) return 'Already has one';
   if (id.startsWith('weaponPlus') && state.party[code].items.some((i) => i.startsWith('weaponPlus'))) {
-    return `${heroName(code, state.party[code])} already has a runed weapon`;
+    return 'Already has a runed weapon';
   }
   return ITEMS[id].only?.(heroUnit(code, state.party[code])) ?? null;
+}
+
+const signed = (n) => (n < 0 ? `${n}` : `+${n}`);
+
+/**
+ * What pack item `i` would change on hero `code`, as short lines for the camp:
+ * "AC 12 → 14", "Max HP 20 → 29", "Mace: hit +5 → +7, damage +3 → +5", "+1 to saves",
+ * "Can’t be poisoned". An empty list means it would do nothing for them.
+ */
+export function equipPreview(state, i, code) {
+  const id = state.pack[i];
+  const rec = state.party[code];
+  const before = heroUnit(code, rec);
+  const after = heroUnit(code, { ...rec, items: [...rec.items, id] });
+  const lines = [];
+  const ac = (u) => u.ac + u.acBonus;
+  if (ac(after) !== ac(before)) lines.push(`AC ${ac(before)} → ${ac(after)}`);
+  if (after.maxHp !== before.maxHp) lines.push(`Max HP ${before.maxHp} → ${after.maxHp}`);
+  const weapon = (u, a) => {
+    const dmg = abilityMod(u.stats[a.stat]) + u.weaponBonus;
+    return { hit: dmg + u.prof, dmg };
+  };
+  for (const a of before.attacks.filter((at) => at.stat === 'str' || at.stat === 'dex')) {
+    const b = weapon(before, a);
+    const n = weapon(after, a);
+    if (b.hit === n.hit && b.dmg === n.dmg) continue;
+    lines.push(`${a.name}: hit ${signed(b.hit)} → ${signed(n.hit)}, damage ${signed(b.dmg)} → ${signed(n.dmg)}`);
+    break; // the hero's main weapon is enough
+  }
+  if (after.saveBonus !== before.saveBonus) lines.push(`${signed(after.saveBonus - before.saveBonus)} to saves`);
+  if ((after.immune ?? []).includes('poisoned') && !(before.immune ?? []).includes('poisoned')) lines.push('Can’t be poisoned');
+  return lines;
 }
 
 /** Gear that changes a hero's maximum HP moves their current HP with it (never below 1). */
