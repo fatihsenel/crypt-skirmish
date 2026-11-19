@@ -9,7 +9,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | | |
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
-| ![The camp after the Sunken Halls: the party reaches level 8, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) |
+| ![The camp after the Sunken Halls: the party reaches level 8, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: continue or start a campaign, the daily crypt, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
 | ![The bestiary: 14 of 17 monsters met, each with its card, a line of lore and how many were slain](docs/screenshots/bestiary.jpg) | |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
@@ -35,7 +35,7 @@ It runs on desktop and on phones.
 | | *or* Ranger | Longbow with Archery, Hunter's Mark, Colossus Slayer |
 | Maela | Cleric | Healing, Sacred Flame, Turn Undead, Spiritual Weapon |
 
-- Pick Paladin, Warlock or Ranger and rename the heroes on the title screen.
+- Pick Paladin, Warlock or Ranger and rename the heroes under New campaign on the title screen.
 - The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
   or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
 - Ice Storm leaves its area icy: difficult terrain (each tile costs 10 ft of movement) until
@@ -97,11 +97,11 @@ It runs on desktop and on phones.
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button.
-- **Achievements:** 25 goals that carry across runs.
+- **Achievements:** 25 goals that carry across runs. Open them from the title screen.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp.
-- **Past runs:** the title screen lists your last 20 runs.
+- **Past runs:** your last 20 runs, from the title screen.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
 
@@ -256,6 +256,7 @@ src/
     unitTip.js       the character card over figures and portraits
     unitCard.js      the character card's text
     bestiary.js      the bestiary screen and its lore
+    overlay.js       panels over the screen (bestiary, past runs, achievements)
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
   main.js            controller: input → game → animations → HUD

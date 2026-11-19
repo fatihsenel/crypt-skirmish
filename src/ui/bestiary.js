@@ -5,6 +5,7 @@ import { createUnit } from '../game/units.js';
 import { MONSTERS, loadBestiary, loadSlain, unread, markRead } from '../game/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { unitIcon, unknownIcon } from './icons.js';
+import { Overlay } from './overlay.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -31,15 +32,7 @@ export const LORE = {
 
 export class Bestiary {
   constructor() {
-    this.el = $('#bestiary');
-    $('#bestiary-close').addEventListener('click', () => this.close());
-    this.el.addEventListener('click', (ev) => ev.target === this.el && this.close()); // the backdrop
-    document.addEventListener('keydown', (ev) => {
-      if (ev.key === 'Escape' && !this.el.hidden) {
-        ev.stopPropagation();
-        this.close();
-      }
-    }, true);
+    this.panel = new Overlay($('#bestiary'));
   }
 
   /** A button that opens it: "Bestiary (met/all)", with a dot while new entries wait. */
@@ -52,7 +45,6 @@ export class Bestiary {
   }
 
   open(opener) {
-    this.opener = opener;
     const met = loadBestiary();
     const slain = loadSlain();
     const fresh = unread();
@@ -73,12 +65,6 @@ export class Bestiary {
         <div class="tipcard">${unitCard(OUT_OF_FIGHT, u)}<p class="lore">${esc(LORE[code] ?? '')}</p>
         <p class="slain">${slain[code] ? `Slain: ${slain[code]}` : 'None slain yet'}</p></div></li>`;
     }).join('');
-    this.el.hidden = false;
-    $('#bestiary-close').focus();
-  }
-
-  close() {
-    this.el.hidden = true;
-    this.opener?.focus();
+    this.panel.open(opener);
   }
 }

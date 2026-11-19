@@ -2,6 +2,7 @@
 // Also the title screen. Plain HTML/SVG; all state changes go through the handlers.
 
 import { Bestiary } from './bestiary.js';
+import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, DIFFICULTIES,
   cleanName,
@@ -57,9 +58,15 @@ export class Camp {
       const b = ev.target.closest('button');
       if (b?.id === 'title-continue') this.h.onContinue();
       if (b?.id === 'title-daily-play') this.h.onDaily();
-      if (b?.id === 'title-new') this.h.onNewCampaign(this.difficulty, this.names(), { ...this.classes });
+      if (b?.id === 'title-new') this.titleStep('setup');
+      if (b?.id === 'setup-back') this.titleStep('main');
+      if (b?.id === 'setup-start') this.h.onNewCampaign(this.difficulty, this.names(), { ...this.classes });
+      if (b?.id === 'title-runs') this.runsPanel.open(b);
+      if (b?.id === 'title-achievements') this.awardsPanel.open(b);
       if (b?.dataset.cls) this.pickClass(b.dataset.slot, b.dataset.cls);
     });
+    this.runsPanel = new Overlay($('#title-history'));
+    this.awardsPanel = new Overlay($('#title-awards'));
     $('#title-tips').addEventListener('change', (ev) => tips.setOn(ev.target.checked));
     $('#title-difficulty').addEventListener('change', (ev) => {
       this.difficulty = ev.target.value;
@@ -72,6 +79,13 @@ export class Camp {
   }
 
   // --- title ------------------------------------------------------------------
+  /** The title's two steps: 'main' (continue, daily, records) or 'setup' (a new campaign). */
+  titleStep(step) {
+    $('#title-main').hidden = step !== 'main';
+    $('#title-setup').hidden = step !== 'setup';
+    $(step === 'setup' ? '#setup-start' : '#title-new').focus();
+  }
+
   /** The Story / Normal / Hard picker; the choice is remembered for the next new run. */
   renderDifficulty() {
     this.difficulty ??= 'normal';
@@ -129,7 +143,9 @@ export class Camp {
       ? `Saved run (${DIFFICULTIES[save.difficulty].name}): party level ${save.party.F.level}, ${save.cleared.length} room${save.cleared.length === 1 ? '' : 's'} cleared, ${save.xp} XP`
         + (save.fight ? `. Mid-fight in ${nodeName(save.fight.node)}.` : '')
       : '';
-    $('#title-new').textContent = save ? 'New campaign (replaces the save)' : 'New campaign';
+    $('#setup-warn').hidden = !save;
+    $('#title-main').hidden = false;
+    $('#title-setup').hidden = true;
     this.renderHistory(loadHistory());
     this.renderAwards(loadAchievements());
     Bestiary.label($('#title-bestiary'));
@@ -159,7 +175,8 @@ export class Camp {
   renderAwards(have) {
     const box = $('#title-awards');
     const n = ACHIEVEMENTS.filter((a) => have[a.id]).length;
-    box.querySelector('summary').textContent = `Achievements (${n}/${ACHIEVEMENTS.length})`;
+    $('#title-achievements').textContent = `Achievements (${n}/${ACHIEVEMENTS.length})`;
+    $('#awards-head').textContent = `Achievements (${n}/${ACHIEVEMENTS.length})`;
     box.querySelector('.awards').innerHTML = ACHIEVEMENTS.map((a) => {
       const when = have[a.id] && new Date(have[a.id]).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
       return `<li class="${when ? 'got' : 'locked'}">
@@ -172,8 +189,8 @@ export class Camp {
   /** Past runs, newest first: how each ended, how far the party got, and who was in it. */
   renderHistory(runs) {
     const box = $('#title-history');
-    box.querySelector('summary').textContent = `Past runs (${runs.length})`;
-    box.hidden = runs.length === 0; // nothing to show until a run has ended
+    $('#title-runs').textContent = `Past runs (${runs.length})`;
+    $('#title-runs').hidden = runs.length === 0; // nothing to show until a run has ended
     const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
     box.querySelector('.runs').innerHTML = runs.map((r) => {
       const date = new Date(r.when).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });

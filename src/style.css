@@ -829,38 +829,47 @@ b.loot { color: var(--gold); }
 @media (max-width: 520px) {
   #title .daily { flex-direction: column; align-items: stretch; text-align: center; }
 }
-#title .history { max-width: 460px; margin: 4px auto 0; text-align: left; }
-#title .history[hidden] { display: none; }
-#title .history summary {
-  cursor: pointer; padding: 4px 0; text-align: center;
+/* The row under the daily crypt: past runs, achievements and the bestiary, each a panel. */
+#title .title-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; margin-top: 2px; }
+#title .title-links button {
+  padding: 6px 2px; background: none; border: 0; border-radius: 0;
   font: 600 12px var(--display, inherit); color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
 }
-#title .history summary:hover { color: #e6cf98; }
-#title .history .runs {
-  list-style: none; margin: 8px 0 0; padding: 0; max-height: min(260px, 34vh); overflow-y: auto;
-  border-top: 1px solid #c9b07a33; overscroll-behavior: contain;
+#title .title-links button:hover { color: #e6cf98; }
+#title .title-links button[hidden] { display: none; }
+@media (max-width: 520px) {
+  #title .title-links { gap: 0 12px; }
+  #title .title-links button { font-size: 11px; letter-spacing: 0.03em; }
 }
-#title .history li { padding: 8px 2px; border-bottom: 1px solid #c9b07a22; font-size: 12.5px; color: #d8cfc0; }
-#title .history .run-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13.5px; }
-#title .history .run-head .muted { font-size: 12px; }
-#title .history .won { color: var(--gold); }
-#title .history .lost { color: #c9a0a0; font-weight: 600; }
-#title .history .run-stats, #title .history .run-party { margin-top: 2px; }
-#title .history .run-party small { color: #9d927f; font-size: 11.5px; }
-#title .awards {
-  list-style: none; margin: 8px 0 0; padding: 0; max-height: min(260px, 34vh); overflow-y: auto;
-  border-top: 1px solid #c9b07a33; overscroll-behavior: contain;
+#title-setup h2 { margin: 0 0 4px; font: 600 15px var(--display, inherit); color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase; }
+#title-setup .setup-warn { margin: 0 0 12px; font-size: 12.5px; color: #c9a0a0; }
+#title-setup[hidden], #title-main[hidden] { display: none; }
+.history { text-align: left; }
+.history .runs {
+  list-style: none; margin: 8px 0 0; padding: 0;
+  border-top: 1px solid #c9b07a33;
+}
+.history li { padding: 8px 2px; border-bottom: 1px solid #c9b07a22; font-size: 12.5px; color: #d8cfc0; }
+.history .run-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: 13.5px; }
+.history .run-head .muted { font-size: 12px; }
+.history .won { color: var(--gold); }
+.history .lost { color: #c9a0a0; font-weight: 600; }
+.history .run-stats, .history .run-party { margin-top: 2px; }
+.history .run-party small { color: #9d927f; font-size: 11.5px; }
+.awards {
+  list-style: none; margin: 8px 0 0; padding: 0; text-align: left;
+  border-top: 1px solid #c9b07a33;
   display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 14px;
 }
-@media (max-width: 520px) { #title .awards { grid-template-columns: 1fr; } }
-#title .awards li, #banner-awards li { display: flex; gap: 8px; align-items: flex-start; text-align: left; }
-#title .awards li { padding: 7px 2px; border-bottom: 1px solid #c9b07a22; font-size: 13px; color: #d8cfc0; }
-#title .awards small, #banner-awards small { display: block; font-size: 12px; color: #a99f90; }
-#title .awards .muted { font-size: 11.5px; }
+@media (max-width: 520px) { .awards { grid-template-columns: 1fr; } }
+.awards li, #banner-awards li { display: flex; gap: 8px; align-items: flex-start; text-align: left; }
+.awards li { padding: 7px 2px; border-bottom: 1px solid #c9b07a22; font-size: 13px; color: #d8cfc0; }
+.awards small, #banner-awards small { display: block; font-size: 12px; color: #a99f90; }
+.awards .muted { font-size: 11.5px; }
 .award-mark { flex: none; color: var(--gold); font-size: 15px; line-height: 1.2; }
-#title .awards .got b { color: var(--gold); }
-#title .awards .locked { opacity: 0.6; }
-#title .awards .locked .award-mark { color: #9d927f; }
+.awards .got b { color: var(--gold); }
+.awards .locked { opacity: 0.6; }
+.awards .locked .award-mark { color: #9d927f; }
 #banner-awards[hidden] { display: none; }
 #banner-awards {
   list-style: none; margin: -6px auto 18px; padding: 0; display: flex; flex-direction: column; gap: 6px;
@@ -909,22 +918,19 @@ b.loot { color: var(--gold); }
 .camp-actions { display: flex; gap: 4px; }
 
 /* --- the bestiary: every monster met, with its card and a line of lore ---------------- */
-#title .bestiary-open {
-  display: block; margin: 2px auto 0; padding: 4px 8px; background: none; border: 0;
-  font: 600 12px var(--display, inherit); color: var(--gold); letter-spacing: 0.08em; text-transform: uppercase;
-}
-#title .bestiary-open:hover { color: #e6cf98; }
-#bestiary {
+/* A panel over the screen: the bestiary, past runs, achievements. */
+.overlay {
   position: absolute; inset: 0; z-index: 25;
   display: grid; place-items: center; padding: 16px;
   background: rgba(5, 4, 8, 0.78);
 }
-#bestiary[hidden] { display: none; }
-.bestiary-card {
+.overlay[hidden] { display: none; }
+.overlay-card {
   width: min(980px, 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain;
-  padding: 18px 22px 22px;
+  padding: 18px 22px 22px; box-sizing: border-box;
   background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 14px;
 }
+.overlay-card.narrow { width: min(620px, 100%); }
 #bestiary-count { margin: 4px 0 12px; font-size: 13px; }
 .beasts {
   list-style: none; margin: 0; padding: 0;
@@ -954,8 +960,8 @@ b.loot { color: var(--gold); }
 }
 .beast .slain { margin-top: 4px; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 @media (max-width: 520px) {
-  #bestiary { padding: 8px; }
-  .bestiary-card { padding: 14px 12px 16px; }
+  .overlay { padding: 8px; }
+  .overlay-card { padding: 14px 12px 16px; }
   .beasts { grid-template-columns: 1fr; }
   .beast .pic { width: 32px; height: 32px; }
   .beast .pic svg { width: 19px; height: 19px; }
