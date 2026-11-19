@@ -2,9 +2,12 @@
 
 **Play it in the browser: https://fatihsenel.github.io/crypt-skirmish/**
 
-![The party fighting skeletons in the Flooded Ossuary, with the combat log](docs/screenshots/battle.jpg)
+![The party fighting skeletons and giant rats in the Flooded Ossuary, with the monsters' reach striped on the floor](docs/screenshots/battle.jpg)
 
-![Wren sneaking past a patrolling goblin and sleeping rats while hidden](docs/screenshots/stealth.jpg)
+| | |
+| --- | --- |
+| ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![The camp between rooms: the map of the way down, the party and the loot to hand out](docs/screenshots/camp.jpg) |
+| ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> |
 
 A small turn-based dungeon crawl: a party of four (Fighter, Wizard, Rogue, Cleric) fights
 its way down a crypt on a 5-ft grid, with SRD 5e-style rules:

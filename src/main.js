@@ -1483,6 +1483,7 @@ async function checkGameOver() {
   ended = true;
   await wait(400);
   board.clearHighlights();
+  drawThreats(); // the fight is over: no zones left
   hud.renderActionBar(game, { selected: null, busy: false });
   const level = levelById(NODES[nodeId].level);
   const final = !!level.final;
