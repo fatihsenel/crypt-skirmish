@@ -30,7 +30,7 @@ server on 5173.
   they follow the monster-turn speed setting (`playback.rate`).
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `bestiary`, `slain`, …).
 
 ## Adding content
 

@@ -10,6 +10,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
 | ![The camp after the Sunken Halls: the party reaches level 8, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) |
+| ![The bestiary: 14 of 17 monsters met, each with its card, a line of lore and how many were slain](docs/screenshots/bestiary.jpg) | |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
 
@@ -95,8 +96,8 @@ It runs on desktop and on phones.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
 - **Achievements:** 23 goals that carry across runs.
-- **Bestiary:** every monster you've met, with its character card and a line of lore. Open it
-  from the title screen or camp.
+- **Bestiary:** every monster you've met, with its character card, a line of lore and how
+  many you've slain. A note says when a new one joins. Open it from the title screen or camp.
 - **Past runs:** the title screen lists your last 20 runs.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
@@ -228,7 +229,7 @@ src/
     replay.js        fight saves: commands replayed from a seed
     history.js       past runs
     achievements.js  achievements and their checks
-    bestiary.js      which monsters you've met
+    bestiary.js      which monsters you've met and slain
     daily.js         the daily crypt
     settings.js      settings kept in the browser
   render/            three.js only

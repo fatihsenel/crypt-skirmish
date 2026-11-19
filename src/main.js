@@ -26,7 +26,8 @@ import { wait, playback } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Camp } from './ui/camp.js';
 import { Bestiary } from './ui/bestiary.js';
-import { meet } from './game/bestiary.js';
+import { meet, metBefore, slay } from './game/bestiary.js';
+import { TEMPLATES } from './game/units.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
 import { music } from './audio/music.js';
@@ -34,9 +35,9 @@ import { loadSettings, saveSettings, SPEEDS } from './game/settings.js';
 import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
-import { recordRun } from './game/history.js';
+import { recordRun, loadHistory } from './game/history.js';
 import { unlock } from './game/achievements.js';
-import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak } from './game/daily.js';
+import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily } from './game/daily.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -273,6 +274,16 @@ function toggleMusic() {
 hud.setMusic(music.enabled);
 
 // Volumes, the monster-turn speed and the dice badge (the Settings button).
+// Monsters met before the bestiary existed: from the save, past runs and daily crypts.
+{
+  const save = loadSave();
+  meet(metBefore({
+    cleared: save?.cleared,
+    at: save?.at,
+    reached: loadHistory().map((r) => r.reached),
+    daily: Object.values(loadDaily()).map((d) => d.node),
+  }));
+}
 const bestiary = new Bestiary();
 for (const b of document.querySelectorAll('.bestiary-open')) b.addEventListener('click', () => bestiary.open(b));
 
@@ -371,6 +382,7 @@ stage.tickers.add(() => {
   if (!game || !board) return;
   updateVision();
   let spotted = false;
+  const kinds = [];
   for (const v of views.values()) {
     const u = v.unit;
     if (u.team !== 'monsters') continue;
@@ -379,11 +391,18 @@ stage.tickers.add(() => {
     v.group.visible = show && !v.gone;
     if (show && u.alive && !seenIds.has(u.id)) {
       seenIds.add(u.id);
-      meet([u.code]); // into the bestiary
+      kinds.push(u.code);
       spotted = true;
     }
   }
   if (spotted) hud.renderInitiative(game);
+  // The first of a kind ever seen goes into the bestiary.
+  const fresh = meet(kinds);
+  if (fresh.length) {
+    const names = fresh.map((c) => TEMPLATES[c].name).join(' and ');
+    hud.toast(`New in the bestiary: ${names}`, 'news');
+    hud.log(`New in the bestiary: <b>${names}</b>.`, 'sys');
+  }
 });
 
 function addView(u) {
@@ -508,6 +527,7 @@ function startFight(resume) {
   game.on('action', (r) => { if (!unseen(r.unit)) hud.logAction(r); });
   game.on('death', ({ unit, unmarked, blessing }) => {
     clearSpiritWeapon(unit.id); // a fallen cleric's weapon fades
+    if (unit.team === 'monsters') slay(unit.code); // the bestiary's tally
     if (unmarked) view(unmarked)?.updateStatus(); // and a fallen ranger's mark
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
     else hud.log(`<span class="${unit.team}">${unit.name}</span> falls.`, 'death');

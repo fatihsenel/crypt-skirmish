@@ -2,7 +2,7 @@
 // line of lore; the rest stay ??? until met. Opened from the title screen and from camp.
 
 import { createUnit } from '../game/units.js';
-import { MONSTERS, loadBestiary } from '../game/bestiary.js';
+import { MONSTERS, loadBestiary, loadSlain } from '../game/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { unitIcon, unknownIcon } from './icons.js';
 
@@ -50,6 +50,7 @@ export class Bestiary {
   open(opener) {
     this.opener = opener;
     const met = loadBestiary();
+    const slain = loadSlain();
     $('#bestiary-count').textContent = met.length === MONSTERS.length
       ? 'Every creature of the crypt, met and survived.'
       : `${met.length} of ${MONSTERS.length} met. The rest wait deeper down.`;
@@ -61,7 +62,8 @@ export class Bestiary {
       const u = createUnit(code, 0, 0);
       const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
       return `<li class="beast"><span class="pic" style="--c:${color}">${unitIcon(u)}</span>
-        <div class="tipcard">${unitCard(OUT_OF_FIGHT, u)}<p class="lore">${esc(LORE[code] ?? '')}</p></div></li>`;
+        <div class="tipcard">${unitCard(OUT_OF_FIGHT, u)}<p class="lore">${esc(LORE[code] ?? '')}</p>
+        <p class="slain">${slain[code] ? `Slain: ${slain[code]}` : 'None slain yet'}</p></div></li>`;
     }).join('');
     this.el.hidden = false;
     $('#bestiary-close').focus();

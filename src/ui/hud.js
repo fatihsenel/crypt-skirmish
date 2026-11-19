@@ -671,9 +671,11 @@ export class Hud {
     $('#hint').classList.toggle('show', !!text);
   }
 
-  toast(text) {
+  /** A short note under the top bar. kind 'news' (good news, in gold) or a warning. */
+  toast(text, kind) {
     const el = $('#toast');
     el.textContent = text;
+    el.classList.toggle('news', kind === 'news');
     el.classList.add('show');
     clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => el.classList.remove('show'), Math.max(2200, text.length * 55));
