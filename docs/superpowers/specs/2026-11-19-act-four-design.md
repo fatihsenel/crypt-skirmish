@@ -51,3 +51,12 @@ Exact maps, HP and damage after the simulator, colours, room text.
   Throne too easy, and left the rest route behind the Armory route.
 - Simulator, 300 runs: act four won 80% via the Armory and 94% via the Hearth (Tomb 82% / 95%).
   Act three stays at 79% (gallery) and 96% (shrine).
+
+## Follow-up: Nekhet's rising and two achievements
+- Once a fight, when Nekhet drops to half HP or below (but not straight to 0), up to two of
+  his fallen undead stand up as skeletons where they fell; fresh ones climb out beside him to
+  make up two. Heroes within 2 tiles who can see him make a WIS save (his spell DC) or are
+  frightened for 2 turns. Nekhet's HP went from 150 to 135 to keep the Tomb at about 79% /
+  95% (Armory / Hearth).
+- Achievements: "Not today" (Death Ward keeps a hero up) and "No rest for the wicked" (win a
+  campaign through the Black Armory).

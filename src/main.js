@@ -319,6 +319,7 @@ let ended = false;
 let selected = null;
 let hovered = null; // {x, z}
 let pendingReveals = []; // traps spotted during a move, shown once the move has played out
+let pendingRisings = []; // Nekhet's house rising, shown once the blow that bloodied him has played
 let pendingAlerts = [];  // monsters that noticed the party, shown once the action has played out
 let pendingSpotted = []; // hidden heroes found (or giving themselves away), shown the same way
 let debugAutoplay = false; // __debug.autoplay(true): the monster AI plays the heroes too
@@ -457,6 +458,7 @@ function startFight(resume) {
   ended = false;
   selected = null;
   pendingReveals = [];
+  pendingRisings = [];
   pendingAlerts = [];
   pendingSpotted = [];
   visionSig = '';
@@ -519,6 +521,7 @@ function startFight(resume) {
       view(r.unit)?.updateStatus();
     });
   });
+  game.on('rising', (r) => pendingRisings.push(r));
   game.on('trap', (r) => {
     if (r.unit.team === 'monsters' && !inView(r.trap)) hud.log('A trap snaps shut somewhere in the dark.', 'sys');
     else hud.logTrap(r);
@@ -1639,8 +1642,42 @@ async function playSpell(r) {
   hud.renderInitiative(game);
 }
 
-/** Play back a resolved command or monster step (`kind`: its type). */
-function play(unit, kind, r) {
+/** Play back a resolved command or monster step (`kind`: its type), then anything it set off. */
+async function play(unit, kind, r) {
+  await playStep(unit, kind, r);
+  await flushRisings();
+}
+
+/** Nekhet's house rises: the glare, then the dead climbing up, one after another. */
+async function flushRisings() {
+  const list = pendingRisings;
+  pendingRisings = [];
+  for (const r of list) {
+    const lord = r.unit;
+    if (!unseen(lord)) keepInView(lord);
+    hud.logRising(r);
+    sfx.raise();
+    stage.shake(0.25, 450);
+    floatText(stage.scene, { x: lord.x, z: lord.z - 0.5 }, 'Rise!', 'cond');
+    await wait(400);
+    for (const g of r.glare) {
+      floatText(stage.scene, g.target, g.success ? 'Resists' : 'Frightened!', g.success ? 'miss' : 'cond');
+      view(g.target)?.updateStatus();
+    }
+    await Promise.all(r.risen.map(async (e, i) => {
+      await wait(i * 250);
+      const fx = raiseFx(stage.scene, e.unit);
+      await wait(300);
+      if (e.body) view(e.body)?.vanish();
+      await addView(e.unit).rise();
+      await fx;
+    }));
+    hud.renderInitiative(game);
+    await wait(250);
+  }
+}
+
+function playStep(unit, kind, r) {
   switch (kind) {
     case 'move': return playMove(unit, r);
     case 'attack': return animateAttack(r);

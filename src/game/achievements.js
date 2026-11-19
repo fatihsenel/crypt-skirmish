@@ -80,6 +80,14 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ node, daily }) => !daily && node === 'throne',
   },
   {
+    id: 'warded', name: 'Not today', desc: 'Have Death Ward keep a hero on their feet.',
+    on: 'room', test: ({ game }) => heroTotal(game.stats, 'warded') >= 1,
+  },
+  {
+    id: 'no-rest', name: 'No rest for the wicked', desc: 'Win a campaign through the Black Armory, skipping the Ember Hearth.',
+    on: 'run', test: ({ state }) => (state.cleared ?? []).includes('armory'),
+  },
+  {
     id: 'campaign', name: 'Crypt cleared', desc: 'Win a campaign.',
     on: 'run', test: () => true,
   },

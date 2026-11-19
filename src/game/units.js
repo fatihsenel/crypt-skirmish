@@ -316,13 +316,14 @@ export const TEMPLATES = {
   // Rotting Fists and its Dreadful Glare (Dread); no legendary actions or cleric spells.
   l: {
     name: 'Nekhet', cls: 'Mummy Lord', team: 'monsters', color: 0xd8b860,
-    hp: 150, ac: 17, speed: 4, prof: 3, xp: 3000, cr: 6,
+    hp: 135, ac: 17, speed: 4, prof: 3, xp: 3000, cr: 6,
     multiattack: 2,
     ai: 'brute',
     undead: true,
     castStat: 'wis',
     spells: ['dread'],
     slots: { 1: 3 },
+    rises: 2, // at half HP his house rises (Game.houseRises)
     stats: { str: 18, dex: 10, con: 17, int: 11, wis: 18, cha: 16 },
     attacks: [{ name: 'Rotting Fist', stat: 'str', damage: '4d6', reach: 1 }],
   },

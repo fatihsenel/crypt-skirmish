@@ -65,6 +65,13 @@ describe('newer achievements', () => {
   it('leaves the act goals to the campaign', () => {
     expect(ids(earned('room', { game: fight(), node: 'barrow', daily: true }, won))).toEqual(['clean-boss']);
   });
+  it('knows a Death Ward save and a run through the Black Armory', () => {
+    expect(ids(earned('room', { game: fight({ stats: { C: { warded: 1 } } }), node: 'halls' }, won))).toEqual(['warded']);
+    const state = { ...newCampaign('normal'), cleared: ['halls', 'armory', 'tomb'] };
+    state.stats.lost = 1;
+    state.stats.heroes = { F: { downed: 1 } };
+    expect(ids(earned('run', { state }, {}))).toEqual(['no-rest', 'campaign']);
+  });
   it('rewards daily wins and a three-day streak', () => {
     expect(ids(earned('daily', { streak: 1 }, {}))).toEqual(['daily']);
     expect(ids(earned('daily', { streak: 3 }, { daily: 1 }))).toEqual(['daily-streak']);

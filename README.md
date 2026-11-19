@@ -59,7 +59,8 @@ It runs on desktop and on phones.
   specters.
 - Act four: mummies, wraiths and fallen knights.
 - Bosses: **Grukk** the goblin chief, **Morvath** the necromancer (raises the dead),
-  **Varek** the wight, **Ysolde** the banshee and **Nekhet** the mummy lord.
+  **Varek** the wight, **Ysolde** the banshee and **Nekhet** the mummy lord (at half HP his
+  dead rise again and his glare frightens heroes near him).
 - Monsters start unaware. They notice heroes they can see, hear fighting nearby and shout to
   wake their allies. Some sleep, and some patrol.
 - Goblins hide after shooting. Monsters that lose sight of a hidden hero go to where they last
@@ -88,7 +89,7 @@ It runs on desktop and on phones.
 
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept.
-- **Achievements:** 21 goals that carry across runs.
+- **Achievements:** 23 goals that carry across runs.
 - **Past runs:** the title screen lists your last 20 runs.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
@@ -148,7 +149,8 @@ A few things differ from the SRD to keep the game simple:
   its own.
 - A specter's Life Drain frightens instead of lowering maximum HP. The banshee has no Wail.
 - Mummies' Rotting Fist doesn't curse. The wraith's Life Drain doesn't lower maximum HP and
-  it raises no specters. Nekhet has no legendary actions or cleric spells.
+  it raises no specters. Nekhet has no legendary actions or cleric spells. Instead, once a fight at half HP, two
+  skeletons rise for him and heroes within 10 ft make a WIS save or are frightened.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Hex has no ability-check part and lasts the whole fight, with no concentration.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
@@ -189,7 +191,7 @@ This doesn't touch the save.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
-and about 80% without one. The Tomb is the same: about 94% after the Hearth and 80% after the
+and about 80% without one. The Tomb is the same: about 95% after the Hearth and 80% after the
 Armory.
 
 ### Layout

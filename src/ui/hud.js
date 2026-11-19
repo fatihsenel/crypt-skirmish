@@ -197,6 +197,17 @@ export class Hud {
     this.log(`<b class="heal">Death Ward</b> holds: ${who(unit)} stays on their feet with 1 HP.`);
   }
 
+  logRising({ unit, risen, glare, dc }) {
+    const rose = risen.map((e) => `<span class="monsters">${esc(e.unit.name)}</span>`);
+    let text = `${who(unit)} is bloodied, and his house answers: ` +
+      (rose.length ? `${rose.join(' and ')} ${rose.length > 1 ? 'rise' : 'rises'}!` : 'but nothing is left to rise.');
+    if (glare.length) {
+      text += ` His glare sweeps the room, WIS save DC ${dc}: ` +
+        glare.map((g) => saveText({ ...g, unit: g.target }, 'is frightened')).join(', ') + '.';
+    }
+    this.log(text, 'death');
+  }
+
   logBlessing({ unit, tempHp }) {
     this.log(`${who(unit)} drinks in the fallen foe's life: <b class="heal">${tempHp} temporary HP</b> <span class="dice">Dark One’s Blessing</span>.`);
   }

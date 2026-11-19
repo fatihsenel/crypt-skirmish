@@ -2257,4 +2257,42 @@ describe('act four and levels 7–8', () => {
   it('level 8 tops out: no level 9 from more XP', () => {
     expect(heroUnit('F', { level: 9 }).level).toBe(8);
   });
+
+  it('Nekhet at half HP: his fallen undead rise, fresh ones fill in beside him, his glare frightens', () => {
+    const game = arena(['########', '#F.l.s.#', '#......#', '########'], 8, {}, fixed(0));
+    const [f, l, s] = game.units;
+    game.applyDamage(s, 999, f);
+    const rose = [];
+    game.on('rising', (r) => rose.push(r));
+    game.applyDamage(l, Math.floor(l.maxHp / 2), f); // 135 → 68: just above half
+    expect(rose).toHaveLength(0); // not yet bloodied
+    game.applyDamage(l, 1, f);
+    expect(rose).toHaveLength(1);
+    const [{ risen, glare }] = rose;
+    expect(risen.map((e) => [e.body?.name ?? null, e.unit.name, e.unit.x, e.unit.z]))
+      .toEqual([['Skeleton', 'Risen Skeleton', 5, 1], [null, 'Risen Servant', 2, 1]]);
+    expect(risen.every((e) => e.unit.alive && e.unit.team === 'monsters' && game.order.includes(e.unit))).toBe(true);
+    expect(s.raised).toBe(true);
+    expect(glare).toHaveLength(1);
+    expect(f.conditions.frightened).toBeTruthy();
+    game.applyDamage(l, 10, f);
+    expect(rose).toHaveLength(1); // once a fight
+    expect(game.stats.F).toBeTruthy();
+  });
+
+  it('a blow that drops Nekhet outright raises nobody', () => {
+    const game = arena(['######', '#F.l.#', '######'], 8);
+    const [f, l] = game.units;
+    game.applyDamage(l, 999, f);
+    expect(game.units).toHaveLength(2);
+  });
+
+  it('Death Ward saving a hero is tallied for the achievement', () => {
+    const game = arena(['######', '#CF.g#', '######'], 7);
+    const [c, f] = game.units;
+    setTurn(game, 0);
+    game.castSpell(c, 'deathWard', f);
+    game.applyDamage(f, 500, null);
+    expect(game.stats.F.warded).toBe(1);
+  });
 });

@@ -587,6 +587,8 @@ export class Game {
     if (target.hp <= 0 && target.alive && target.deathWard) {
       target.hp = 1;
       target.deathWard = false;
+      const saved = this.tally(target);
+      if (saved) saved.warded = (saved.warded ?? 0) + 1;
       this.emit('ward', { unit: target, source });
     }
     const t = target.team === 'monsters' ? this.tally(source) : null;
@@ -616,6 +618,52 @@ export class Game {
       this.emit('death', { unit: target, source, unmarked, blessing });
       this.checkEnd();
     }
+    if (target.alive && target.rises && !target.roused && target.hp * 2 <= target.maxHp) this.houseRises(target);
+  }
+
+  /**
+   * Nekhet, bloodied, calls up his house (once a fight): up to `rises` of his fallen undead
+   * stand again as skeletons, and fresh ones climb out beside him to make up the number.
+   * His glare sweeps every hero within 2 tiles who can see him: WIS save or frightened.
+   */
+  houseRises(lord) {
+    lord.roused = true;
+    const free = (x, z) => !this.grid.isSolid(x, z) && !this.unitAt(x, z);
+    const risen = [];
+    const bodies = this.units.filter((u) => !u.alive && !u.raised && !u.corpse && u !== lord
+      && u.team === lord.team && u.undead && free(u.x, u.z));
+    for (const body of bodies.slice(0, lord.rises)) {
+      body.raised = true;
+      risen.push({ body, unit: createUnit('s', body.x, body.z) });
+      risen.at(-1).unit.name = `Risen ${body.cls}`;
+    }
+    for (let r = 1; r <= 2 && risen.length < lord.rises; r++) {
+      for (let dz = -r; dz <= r && risen.length < lord.rises; dz++) {
+        for (let dx = -r; dx <= r && risen.length < lord.rises; dx++) {
+          const x = lord.x + dx, z = lord.z + dz;
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r || !free(x, z)) continue;
+          if (risen.some((e) => e.unit.x === x && e.unit.z === z)) continue;
+          const unit = createUnit('s', x, z);
+          unit.name = 'Risen Servant';
+          risen.push({ body: null, unit });
+        }
+      }
+    }
+    for (const { unit } of risen) {
+      unit.team = lord.team;
+      unit.unaware = false;
+      this.toughen(unit);
+      this.addUnit(unit, lord);
+    }
+    const dc = this.spellDC(lord);
+    const glare = this.living('heroes')
+      .filter((h) => gridDistance(h, lord) <= 2 && this.grid.lineOfSight(lord.x, lord.z, h.x, h.z))
+      .map((target) => ({ target, ...this.save(target, 'wis', dc) }));
+    for (const g of glare) {
+      if (!g.success) this.addCondition(g.target, 'frightened', { turns: SPELLS.dread.turns, by: lord, dc });
+    }
+    this.emit('rising', { unit: lord, risen, glare, dc });
+    this.updateAwareness();
   }
 
   heal(target, amount, source = target) {
