@@ -2223,6 +2223,40 @@ describe('act four and levels 7–8', () => {
     expect(r.saves.map((s) => s.unit.code)).toEqual(['g', 'g']);
   });
 
+  it('Ice Storm leaves its ground difficult until the end of the caster\'s next turn', () => {
+    const game = arena(['################', '#W............g#', '################'], 7);
+    const [w, g] = game.units;
+    g.hp = g.maxHp = 999;
+    expect(game.moveCost()).toBe(null); // no ice: the plain search
+    setTurn(game, 0);
+    game.castSpell(w, 'iceStorm', { x: 7, z: 1 });
+    const icy = game.icyTiles();
+    expect(['3,1', '11,1'].every((k) => icy.has(k)) && !icy.has('12,1')).toBe(true);
+    g.movesLeft = 6;
+    const reach = game.reachable(g);
+    expect([reach.get('12,1').dist, reach.get('11,1').dist, reach.get('10,1').dist, reach.has('9,1')])
+      .toEqual([2, 4, 6, false]);
+    game.endTurn(); // the end of the casting turn: still icy
+    expect(game.icyTiles().size).toBe(icy.size);
+    while (game.current !== w) game.endTurn();
+    game.endTurn(); // the end of the caster's next turn: thawed
+    expect([game.icyTiles().size, game.moveCost()]).toEqual([0, null]);
+  });
+
+  it('a move across icy ground spends the extra movement', () => {
+    const game = arena(['################', '#W..........g..#', '################'], 7);
+    const [w, g] = game.units;
+    g.hp = g.maxHp = 999;
+    setTurn(game, 0);
+    game.castSpell(w, 'iceStorm', { x: 5, z: 1 });
+    game.endTurn();
+    expect(game.current).toBe(g);
+    g.movesLeft = 6;
+    const r = game.move(g, 9, 1); // 11, 10 plain; 9 icy: 1 + 1 + 2
+    expect(r).toBeTruthy();
+    expect(g.movesLeft).toBe(2);
+  });
+
   it('Warlock 7: pact slots become 4th level, so Scorching Ray fires five rays', () => {
     const game = arena(['#########', '#W.....g#', '#########'], 7, { W: 'K' });
     const [k, g] = game.units;

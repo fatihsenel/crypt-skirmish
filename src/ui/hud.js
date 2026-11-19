@@ -246,7 +246,7 @@ export class Hud {
             (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b>`) +
             (s.evasion ? ' <span class="dice">Evasion</span>' : '')).join('<br>')
         : '<span class="miss">The hail strikes no one.</span>';
-      this.log(`${who(r.caster)} calls down an ${name} <span class="dice">${r.roll.total} hail and cold [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
+      this.log(`${who(r.caster)} calls down an ${name} <span class="dice">${r.roll.total} hail and cold [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}<br><span class="dice">The ground ices over: difficult terrain until the end of ${esc(r.caster.name)}’s next turn.</span>`);
     } else if (r.id === 'deathWard') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} casts ${name} on ${self}: the next blow that would drop them leaves them on 1 HP. ${slot}`);

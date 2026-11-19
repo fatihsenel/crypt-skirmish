@@ -19,6 +19,16 @@ export const DAILY_ROOMS = [
   ['barrow', 5], ['larder', 5], ['nest', 6], ['gallery', 6],
 ];
 
+/**
+ * From this date the daily can also be the Throne (no longer the last room) and act four's
+ * Halls and Armory. Days before it keep the old list, so no past daily changes.
+ */
+export const ACT_FOUR_DAILY_FROM = '2026-11-20';
+export const DAILY_ROOMS_ACT_FOUR = [...DAILY_ROOMS, ['throne', 6], ['halls', 7], ['armory', 8]];
+
+/** The room list a day's daily is drawn from. */
+export const dailyRooms = (key) => (key >= ACT_FOUR_DAILY_FROM ? DAILY_ROOMS_ACT_FOUR : DAILY_ROOMS);
+
 /** A date as its local YYYY-MM-DD. */
 export function dayKey(date = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
@@ -47,7 +57,8 @@ function hash(text) {
 /** Today's crypt (or any day's): room, party level, class swaps and dice seed. */
 export function dailyPlan(key = dayKey()) {
   const seed = hash(`crypt-skirmish daily ${key}`);
-  const [node, level] = DAILY_ROOMS[seed % DAILY_ROOMS.length];
+  const rooms = dailyRooms(key);
+  const [node, level] = rooms[seed % rooms.length];
   const classes = {};
   if ((seed >>> 8) & 1) classes.F = 'P';
   if ((seed >>> 9) & 1) classes.R = 'A';
@@ -55,7 +66,7 @@ export function dailyPlan(key = dayKey()) {
   return { key, seed, node, level, classes };
 }
 
-/** A fresh, rested party at `level` (3 to 6). */
+/** A fresh, rested party at `level` (3 to MAX_LEVEL). */
 export function partyAt(state, level) {
   if (!(level > 3 && level <= MAX_LEVEL)) return state;
   for (const [code, rec] of Object.entries(state.party)) {

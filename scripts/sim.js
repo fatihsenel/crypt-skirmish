@@ -44,13 +44,14 @@ function foesIn(game, u, p) {
   return game.living().filter((t) => t.team !== u.team && !t.unaware && tiles.has(`${t.x},${t.z}`)).length;
 }
 
-function bestFireball(game, u) {
-  if (game.spellProblem(u, 'fireball')) return null;
+/** Where a 20-ft burst (Fireball, or `id`: Ice Storm) catches the most foes, or null below two. */
+function bestFireball(game, u, id = 'fireball') {
+  if (game.spellProblem(u, id)) return null;
   let best = null;
   for (let z = u.z - 30; z <= u.z + 30; z++) {
     for (let x = u.x - 30; x <= u.x + 30; x++) {
       const p = { x, z };
-      if (game.spellProblem(u, 'fireball', p)) continue;
+      if (game.spellProblem(u, id, p)) continue;
       const tiles = new Set(areaTiles(game.grid, p, 4).map((t) => `${t.x},${t.z}`));
       const inside = game.living().filter((t) => tiles.has(`${t.x},${t.z}`));
       const foes = inside.filter((t) => t.team !== u.team && !t.unaware).length;
@@ -115,10 +116,13 @@ function heroOpening(game, u) {
     }
   }
   if (u.code === 'W' && !u.actionUsed) {
-    const p = bestFireball(game, u);
+    // Fireball from 3rd-level slots; a 4th-level slot goes on Ice Storm, not a bigger Fireball.
+    const p = (u.slots[3] ?? 0) > 0 ? bestFireball(game, u) : null;
+    const hail = p ? null : bestFireball(game, u, 'iceStorm');
     const bolt = bestBolt(game, u);
     if (bolt && (!p || bolt.foes > foesIn(game, u, p))) game.castSpell(u, 'lightningBolt', bolt.p);
     else if (p) game.castSpell(u, 'fireball', p);
+    else if (hail) game.castSpell(u, 'iceStorm', hail);
     else if ((u.slots[1] ?? 0) + (u.slots[2] ?? 0) > 0) {
       const t = game.spellTargets(u, 'magicMissile').filter((e) => !e.unaware).sort((a, b) => a.hp - b.hp)[0];
       if (t) game.castSpell(u, 'magicMissile', t);

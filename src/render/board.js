@@ -226,6 +226,16 @@ export class Board {
     // other highlights, and left alone by clearHighlights: main.js sets them on their own.
     this.threatMelee = new TileLayer(this.group, stripes(0xff2a1a, 0.6, 6), 0.98, 0.0104);
     this.threatRanged = new TileLayer(this.group, stripes(0xffb347, 0.4, 2.5), 0.98, 0.0102);
+    // Ice Storm's ground (difficult terrain): frost under everything else.
+    this.ice = new TileLayer(this.group, stripes(0xd8f0ff, 0.6, 3), 0.98, 0.0106);
+  }
+
+  /** Frost on the tiles that are difficult terrain (a Set of tile keys). */
+  setIce(keys) {
+    this.ice.set([...keys].map((k) => {
+      const [x, z] = k.split(',').map(Number);
+      return { x, z };
+    }));
   }
 
   // --- fog of war & wall fading ----------------------------------------------

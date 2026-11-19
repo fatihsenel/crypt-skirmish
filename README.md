@@ -35,6 +35,8 @@ It runs on desktop and on phones.
 - Pick Paladin, Warlock or Ranger and rename the heroes on the title screen.
 - The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
   or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
+- Ice Storm leaves its area icy: difficult terrain (each tile costs 10 ft of movement) until
+  the end of the caster's next turn.
 - The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
 - The Warlock has two pact slots that come back after every room.
 
@@ -88,7 +90,7 @@ It runs on desktop and on phones.
 ## Modes and extras
 
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
-  are kept.
+  are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
 - **Achievements:** 23 goals that carry across runs.
 - **Past runs:** the title screen lists your last 20 runs.
 - **Tips for new players:** short hints the first time something matters. They can be turned

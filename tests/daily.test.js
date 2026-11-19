@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS } from '../src/game/daily.js';
+import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM } from '../src/game/daily.js';
 import { NODES } from '../src/game/campaign.js';
 
 describe('daily crypt', () => {
@@ -18,8 +18,27 @@ describe('daily crypt', () => {
   });
 
   it('only picks fight rooms, never the final one', () => {
-    for (const [node] of DAILY_ROOMS) expect(NODES[node].kind).toBe('fight');
-    expect(DAILY_ROOMS.map(([n]) => n)).not.toContain('throne');
+    for (const [node] of DAILY_ROOMS_ACT_FOUR) expect(NODES[node].kind).toBe('fight');
+    expect(DAILY_ROOMS_ACT_FOUR.map(([n]) => n)).not.toContain('tomb');
+  });
+
+  it('draws act four rooms only from the cutoff date, so past dailies never change', () => {
+    let key = prevDay(ACT_FOUR_DAILY_FROM);
+    for (let i = 0; i < 90; i++, key = prevDay(key)) {
+      const plan = dailyPlan(key);
+      expect([plan.node, plan.level]).toEqual(DAILY_ROOMS[plan.seed % DAILY_ROOMS.length]);
+    }
+    const later = new Set();
+    for (let i = 0, k = ACT_FOUR_DAILY_FROM; i < 120; i++) {
+      later.add(dailyPlan(k).node);
+      const [y, m, d] = k.split('-').map(Number);
+      k = dayKey(new Date(y, m - 1, d + 1));
+    }
+    expect(['throne', 'halls', 'armory'].filter((n) => later.has(n))).toEqual(['throne', 'halls', 'armory']);
+  });
+
+  it('builds a level 8 party for the Armory', () => {
+    expect(dailyCampaign({ level: 8, classes: {} }).party.W.level).toBe(8);
   });
 
   it('builds a rested party at the plan level', () => {

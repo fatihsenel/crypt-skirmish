@@ -128,6 +128,7 @@ export class Game {
     this.round = 0;
     this.over = null; // 'victory' | 'defeat'
     this.found = [];  // non-potion loot taken from chests, for the party's pack
+    this.ice = []; // Ice Storm ground: { by, turns, tiles } (see addIce)
     this.stats = {};  // per hero slot: { damage, kills, crits, healing, downed } (for the run's ending)
   }
 
@@ -541,6 +542,7 @@ export class Game {
     const u = this.current;
     if (u.turned > 0) u.turned--;
     this.tickConditions(u);
+    this.thawIce(u);
     this.emit('turnEnd', { unit: u });
     do {
       this.turn++;
@@ -705,7 +707,37 @@ export class Game {
   }
 
   reachable(unit) {
-    return this.grid.flood(unit.x, unit.z, unit.movesLeft, this.passableFor(unit));
+    return this.grid.flood(unit.x, unit.z, unit.movesLeft, this.passableFor(unit), this.moveCost());
+  }
+
+  // --- difficult terrain (Ice Storm) ----------------------------------------
+  /** Keys of the tiles that are difficult terrain right now. */
+  icyTiles() {
+    const out = new Set();
+    for (const f of this.ice ?? []) for (const k of f.tiles) out.add(k);
+    return out;
+  }
+
+  /** What entering a tile costs (2 on difficult ground), or null when there is none. */
+  moveCost() {
+    if (!this.ice?.length) return null;
+    const icy = this.icyTiles();
+    return (x, z) => (icy.has(key(x, z)) ? 2 : 1);
+  }
+
+  /** Ice Storm's ground stays difficult until the end of the caster's next turn. */
+  addIce(caster, tiles) {
+    (this.ice ??= []).push({ by: caster, turns: 2, tiles: new Set(tiles.map((t) => key(t.x, t.z))) });
+    this.emit('ice', { tiles: this.icyTiles(), melted: false });
+  }
+
+  /** At the end of `unit`'s turn: its storms (or a fallen caster's) wear on, and thaw. */
+  thawIce(unit) {
+    if (!this.ice?.length) return;
+    const before = this.ice.length;
+    for (const f of this.ice) if (f.by === unit || !f.by.alive) f.turns--;
+    this.ice = this.ice.filter((f) => f.turns > 0);
+    if (this.ice.length !== before) this.emit('ice', { tiles: this.icyTiles(), melted: true });
   }
 
   /**
@@ -728,7 +760,7 @@ export class Game {
     else if (this.has(monster, 'prone')) moves -= Math.ceil(monster.speed / 2);
     const pass = this.passableFor(monster);
     const away = (x, z) => ignore && ignore.x === x && ignore.z === z;
-    const map = this.grid.flood(monster.x, monster.z, Math.max(0, moves), (x, z) => away(x, z) || pass(x, z));
+    const map = this.grid.flood(monster.x, monster.z, Math.max(0, moves), (x, z) => away(x, z) || pass(x, z), this.moveCost());
     const spots = [...map.values()].filter((n) => {
       if (n.dist === 0) return true;
       const o = this.unitAt(n.x, n.z);
@@ -804,7 +836,7 @@ export class Game {
     };
     const stop = (i) => {
       flush(path[i]);
-      unit.movesLeft -= i;
+      unit.movesLeft -= map.get(key(path[i].x, path[i].z)).dist;
       this.emit('move', { unit, path: path.slice(0, i + 1) });
       return { steps, path: path.slice(0, i + 1), interrupted: true };
     };
@@ -1688,6 +1720,7 @@ export class Game {
         result.saves = this.areaSaves(victims, dc, roll.total);
         this.emit('spell', result);
         for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        this.addIce(caster, tiles);
         break;
       }
       case 'deathWard': {

@@ -145,7 +145,7 @@ export const SPELLS = {
   iceStorm: {
     name: 'Ice Storm', level: 4, time: 'action', range: 30, radius: 4, targeting: 'area',
     damage: '2d8 + 4d6', save: 'dex',
-    desc: 'Hail pounds a 20-ft radius: 2d8 bludgeoning plus 4d6 cold, DEX save for half. +1d8 per slot level above 4th. Hits allies too!',
+    desc: 'Hail pounds a 20-ft radius: 2d8 bludgeoning plus 4d6 cold, DEX save for half. +1d8 per slot level above 4th. The ground stays icy (difficult terrain: 10 ft of movement per tile) until the end of your next turn. Hits allies too!',
   },
   deathWard: {
     name: 'Death Ward', level: 4, time: 'action', range: 1, targeting: 'ally',

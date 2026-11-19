@@ -96,8 +96,12 @@ export class Grid {
    * Breadth-first flood from (sx, sz) up to maxSteps.
    * canPass(x, z) decides whether a tile can be walked through.
    * Returns Map<key, {x, z, dist, prev}>.
+   * With `cost(x, z)` (1 or 2: difficult terrain), dist is the movement spent getting there;
+   * without it the search is the plain breadth-first one, so paths never change for fights
+   * with no difficult ground (saved fights replay on the same paths).
    */
-  flood(sx, sz, maxSteps, canPass = () => true) {
+  flood(sx, sz, maxSteps, canPass = () => true, cost = null) {
+    if (cost) return this.costFlood(sx, sz, maxSteps, canPass, cost);
     const out = new Map([[key(sx, sz), { x: sx, z: sz, dist: 0, prev: null }]]);
     const queue = [[sx, sz]];
     while (queue.length) {
@@ -109,6 +113,26 @@ export class Grid {
         if (out.has(k) || !canPass(nx, nz)) continue;
         out.set(k, { x: nx, z: nz, dist: cur.dist + 1, prev: key(x, z) });
         queue.push([nx, nz]);
+      }
+    }
+    return out;
+  }
+
+  /** flood() over tiles that cost 1 or 2 to enter: a bucket queue, cheapest first. */
+  costFlood(sx, sz, maxSteps, canPass, cost) {
+    const out = new Map([[key(sx, sz), { x: sx, z: sz, dist: 0, prev: null }]]);
+    const buckets = [[[sx, sz]]];
+    for (let d = 0; d < buckets.length; d++) {
+      for (const [x, z] of buckets[d] ?? []) {
+        const cur = out.get(key(x, z));
+        if (cur.dist !== d) continue; // reached more cheaply since it was queued
+        for (const [nx, nz] of this.neighbors(x, z)) {
+          const k = key(nx, nz);
+          const dist = d + cost(nx, nz);
+          if (dist > maxSteps || (out.has(k) && out.get(k).dist <= dist) || !canPass(nx, nz)) continue;
+          out.set(k, { x: nx, z: nz, dist, prev: key(x, z) });
+          (buckets[dist] ??= []).push([nx, nz]);
+        }
       }
     }
     return out;

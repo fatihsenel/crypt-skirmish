@@ -451,6 +451,7 @@ function startFight(resume) {
   }
   board = new Board(game.grid, stage);
   stage.scene.add(board.group);
+  board.setIce(game.icyTiles()); // a restored fight may have icy ground
   views = new Map();
   for (const u of game.units) addView(u);
 
@@ -522,6 +523,12 @@ function startFight(resume) {
     });
   });
   game.on('rising', (r) => pendingRisings.push(r));
+  // A storm's frost goes down as its hail lands (playSpell); it thaws here.
+  game.on('ice', (r) => {
+    if (!r.melted) return;
+    board.setIce(r.tiles);
+    hud.log('The ice from the hailstorm thaws.', 'sys');
+  });
   game.on('trap', (r) => {
     if (r.unit.team === 'monsters' && !inView(r.trap)) hud.log('A trap snaps shut somewhere in the dark.', 'sys');
     else hud.logTrap(r);
@@ -1508,6 +1515,7 @@ async function playSpell(r) {
         await iceStormFx(stage.scene, r.center, r.tiles, () => {
           sfx.thunder();
           stage.shake(0.3, 500);
+          board.setIce(game.icyTiles());
         });
       });
       await showSaves(r.saves, 'DEX', r.dc);
