@@ -191,6 +191,13 @@
       <div id="toast" role="status"></div>
       <div id="loading" role="status" hidden>Gathering the party…</div>
 
+      <div id="replay-bar" hidden role="group" aria-label="Replay">
+        <span id="replay-label">Replay</span>
+        <button id="replay-pause" type="button">Pause</button>
+        <button id="replay-step" type="button" disabled>Next turn</button>
+        <button id="replay-speed" type="button" aria-label="Replay speed">1×</button>
+        <button id="replay-exit" type="button">Exit replay</button>
+      </div>
       <div id="banner" hidden>
         <div class="card">
           <h1 id="banner-title"></h1>
@@ -204,6 +211,7 @@
             <button id="to-map" type="button" hidden>Back to the map</button>
             <button id="share" type="button" hidden>Copy result</button>
             <button id="save-card" type="button" hidden>Save image</button>
+            <button id="watch" type="button" hidden>Watch replay</button>
           </div>
         </div>
       </div>
@@ -281,6 +289,7 @@
             <button id="bestiary-close" type="button" class="quiet" data-close>Close</button>
           </header>
           <p id="bestiary-count" class="muted"></p>
+          <p id="bestiary-deadliest" hidden></p>
           <ul class="beasts"></ul>
         </div>
       </section>

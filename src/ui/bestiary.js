@@ -2,7 +2,7 @@
 // line of lore; the rest stay ??? until met. Opened from the title screen and from camp.
 
 import { createUnit } from '../game/units.js';
-import { MONSTERS, loadBestiary, loadSlain, unread, markRead } from '../game/bestiary.js';
+import { MONSTERS, loadBestiary, loadSlain, loadHurt, deadliest, unread, markRead } from '../game/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { Overlay } from './overlay.js';
@@ -30,6 +30,11 @@ export const LORE = {
   l: 'The crypt’s first lord, sealed below the throne for an age and in no mood to be woken.',
 };
 
+/** "87 damage, 2 heroes dropped". */
+function hurtText({ damage, downs }) {
+  return `${damage} damage${downs ? `, ${downs} ${downs === 1 ? 'hero' : 'heroes'} dropped` : ''}`;
+}
+
 export class Bestiary {
   constructor() {
     this.panel = new Overlay($('#bestiary'));
@@ -47,6 +52,13 @@ export class Bestiary {
   open(opener) {
     const met = loadBestiary();
     const slain = loadSlain();
+    const hurt = loadHurt();
+    const name = (code) => createUnit(code, 0, 0).name;
+    const worst = deadliest(hurt).filter((h) => met.includes(h.code));
+    $('#bestiary-deadliest').hidden = !worst.length;
+    $('#bestiary-deadliest').innerHTML = worst.length
+      ? `<b>Deadliest foes:</b> ${worst.map((h) => `${esc(name(h.code))} (${hurtText(h)})`).join(', ')}`
+      : '';
     const fresh = unread();
     markRead();
     for (const b of document.querySelectorAll('.bestiary-open')) Bestiary.label(b);
@@ -63,7 +75,7 @@ export class Bestiary {
       const isNew = fresh.includes(code) ? '<span class="new-tag">New</span>' : '';
       return `<li class="beast"><span class="pic" style="--c:${color}">${unitIcon(u)}</span>${isNew}
         <div class="tipcard">${unitCard(OUT_OF_FIGHT, u)}<p class="lore">${esc(LORE[code] ?? '')}</p>
-        <p class="slain">${slain[code] ? `Slain: ${slain[code]}` : 'None slain yet'}</p></div></li>`;
+        <p class="slain">${slain[code] ? `Slain: ${slain[code]}` : 'None slain yet'}${hurt[code] ? ` · Dealt you ${hurtText(hurt[code])}` : ''}</p></div></li>`;
     }).join('');
     this.panel.open(opener);
   }

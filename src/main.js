@@ -27,7 +27,7 @@ import { Hud } from './ui/hud.js';
 import { fightRecap, winRecap } from './game/recap.js';
 import { Camp } from './ui/camp.js';
 import { Bestiary } from './ui/bestiary.js';
-import { meet, metBefore, slay, loadBestiary, slainTotal } from './game/bestiary.js';
+import { meet, metBefore, slay, loadBestiary, slainTotal, recordBlows } from './game/bestiary.js';
 import { TEMPLATES } from './game/units.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
@@ -72,6 +72,17 @@ let nodeId = null;
  * { node, seed, log, check, explored, seen } (see replay.js). null when it can't be saved.
  */
 let fight = null;
+/**
+ * The fight as it was played, to watch again from the end banner:
+ * { node, seed, party, difficulty, log }. null once the AI has played a hero (autoplay).
+ */
+let record = null;
+/**
+ * The replay being watched, else null: { log, at, finished, fight, paused, speed, stepTurn, wake }.
+ * `finished` and `fight` are the real fight's, put back when the replay ends.
+ */
+let replay = null;
+const REPLAY_SPEEDS = [1, 2, 4];
 /** Today's daily crypt while it's being played (see daily.js), else null. */
 let daily = null;
 /** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
@@ -455,7 +466,8 @@ function newGame(resume = null) {
   });
 }
 
-function startFight(resume) {
+/** Start a fight, or (`watch`: a record) a replay of a finished one. */
+function startFight(resume, watch = null) {
   for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
   if (board) {
     stage.scene.remove(board.group);
@@ -468,9 +480,12 @@ function startFight(resume) {
 
   const level = levelById(NODES[nodeId].level);
   // A daily always starts from the day's seed, so every try (and everyone) faces the same dice.
-  const seed = resume?.seed ?? daily?.seed ?? newSeed();
-  game = new Game(level, { party: campaign.party, difficulty: DIFFICULTIES[campaign.difficulty], rng: seeded(seed) });
-  fight = daily ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
+  const seed = watch?.seed ?? resume?.seed ?? daily?.seed ?? newSeed();
+  const party = watch?.party ?? campaign.party;
+  const difficulty = watch?.difficulty ?? campaign.difficulty;
+  game = new Game(level, { party, difficulty: DIFFICULTIES[difficulty], rng: seeded(seed) });
+  fight = daily || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
+  if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, log: resume ? [...resume.log] : [] };
   feats = { maxHit: 0, sneaks: 0 };
   game.on('attack', (r) => {
     if (r.attacker.team !== 'heroes' || !r.hit) return;
@@ -479,6 +494,7 @@ function startFight(resume) {
   });
   if (resume && !replaySaved(resume)) {
     game = null;
+    record = null;
     views = new Map();
     fight = null;
     showBackdrop();
@@ -512,7 +528,7 @@ function startFight(resume) {
   hud.unknown = (u) => u.team === 'monsters' && !seenIds.has(u.id);
   hud.hidden = (u) => unseen(u);
   hud.reset();
-  hud.levelIntro(level, campaign.party.F.level);
+  hud.levelIntro(level, party.F.level);
   if (resume) hud.log(`The fight picks up where you left it: round ${game.round}.`, 'sys');
 
   game.on('initiative', ({ order }) => {
@@ -542,7 +558,7 @@ function startFight(resume) {
   game.on('action', (r) => { if (!unseen(r.unit)) hud.logAction(r); });
   game.on('death', ({ unit, unmarked, blessing }) => {
     clearSpiritWeapon(unit.id); // a fallen cleric's weapon fades
-    if (unit.team === 'monsters') slay(unit.code); // the bestiary's tally
+    if (unit.team === 'monsters' && !replay) slay(unit.code); // the bestiary's tally
     if (unmarked) view(unmarked)?.updateStatus(); // and a fallen ranger's mark
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
     else hud.log(`<span class="${unit.team}">${unit.name}</span> falls.`, 'death');
@@ -718,7 +734,7 @@ function restoreBoard(saved) {
 }
 
 function isHeroTurn() {
-  return game && !game.over && !camp.open && game.current?.team === 'heroes';
+  return game && !replay && !game.over && !camp.open && game.current?.team === 'heroes';
 }
 
 /** The dungeon without anyone in it, behind the title screen. */
@@ -798,6 +814,20 @@ async function onTurnStart(unit) {
   syncStatus();
   hud.renderInitiative(game);
   refresh();
+  if (replay) {
+    const g = game;
+    replayLabel();
+    if (replay.stepTurn) { // "Next turn": stop at the one after
+      replay.stepTurn = false;
+      replay.paused = true;
+      replayLabel();
+    }
+    await replayGate();
+    if (game !== g) return;
+    if (unit.team === 'heroes') await replayHeroTurn(unit);
+    else await runMonsterTurn(unit);
+    return;
+  }
   if (unit.team === 'heroes') {
     sfx.turn();
     voices.bark(unit, 'turn'); // now and then
@@ -1252,7 +1282,7 @@ async function playRebuke(r) {
 }
 
 /** An attack on a hero's own turn, which the player throws (Settings can turn it off). */
-const throwsOwn = (r) => settings.throwDice && !debugAutoplay && r.attacker.team === 'heroes'
+const throwsOwn = (r) => settings.throwDice && !debugAutoplay && !replay && r.attacker.team === 'heroes'
   && game.current === r.attacker && !unseen(r.attacker);
 
 /**
@@ -1760,6 +1790,12 @@ async function checkGameOver() {
   await wait(400);
   board.clearHighlights();
   drawThreats(); // the fight is over: no zones left
+  if (replay) {
+    await wait(600);
+    endReplay();
+    return true;
+  }
+  recordBlows(game.blows); // the bestiary's deadliest foes
   hud.renderActionBar(game, { selected: null, busy: false });
   const level = levelById(NODES[nodeId].level);
   const final = !!level.final;
@@ -1803,7 +1839,7 @@ async function checkGameOver() {
   }
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary, awards, daily: dailyResult, share, recap: game.over === 'defeat' ? fightRecap(game) : null,
+    summary, awards, daily: dailyResult, share, replay: !!record, recap: game.over === 'defeat' ? fightRecap(game) : null,
     win: game.over === 'victory' && !summary ? winRecap(game) : null,
   });
   return true;
@@ -1815,7 +1851,7 @@ async function runMonsterTurn(unit) {
   busy = true;
   refresh();
   // The monster-turn speed setting: everything plays faster until the turn is over.
-  playback.rate = unit.team === 'monsters' ? SPEEDS[settings.speed] : 1;
+  playback.rate = replay ? replayRate() : unit.team === 'monsters' ? SPEEDS[settings.speed] : 1;
   try {
     // Monsters out of sight act quickly: nothing to watch.
     const pace = (ms) => wait(unit.team === 'monsters' && (unseen(unit) || unit.unaware) ? ms / 4 : ms);
@@ -1827,16 +1863,127 @@ async function runMonsterTurn(unit) {
       syncStatus();
       hud.renderActionBar(game, { selected, busy });
       await pace(180);
+      await replayGate();
+      if (game !== g) return;
     }
 
     if (game !== g || await checkGameOver()) return;
     await pace(300);
     if (game !== g) return;
   } finally {
-    playback.rate = 1;
+    playback.rate = replay ? replayRate() : 1;
   }
   busy = false;
   game.endTurn();
+}
+
+// --- watching a finished fight again ------------------------------------------
+const $replayBar = document.getElementById('replay-bar');
+const replayRate = () => (replay ? REPLAY_SPEEDS[replay.speed] : 1);
+
+/** Replay the fight that just ended, from its seed and the commands given (see replay.js). */
+function startReplay() {
+  if (!record || !game?.over || replay) return;
+  sfx.ui();
+  replay = { log: record.log, at: 0, finished: game, fight, paused: false, speed: 0, stepTurn: false, wake: null };
+  $banner.hidden = true;
+  tips.hide(); // nothing to do while watching
+  document.body.classList.add('replaying');
+  $replayBar.hidden = false;
+  startFight(null, record);
+}
+
+/** Back to the end banner, with the real fight as it ended. */
+function endReplay() {
+  if (!replay) return;
+  const r = replay;
+  replay = null;
+  r.wake?.();
+  playback.rate = 1;
+  game = r.finished;
+  fight = r.fight;
+  ended = true;
+  busy = false;
+  document.body.classList.remove('replaying');
+  $replayBar.hidden = true;
+  hud.renderInitiative(game);
+  syncStatus();
+  $banner.hidden = false;
+}
+
+/** Resolves at once, or when a paused replay is played again. */
+function replayGate() {
+  if (!replay?.paused) return Promise.resolve();
+  return new Promise((resolve) => { replay.wake = resolve; });
+}
+
+function replayLabel() {
+  if (!replay) return;
+  const el = (id) => document.getElementById(id);
+  el('replay-label').textContent = `Replay · round ${Math.max(1, game.round)}`;
+  el('replay-pause').textContent = replay.paused ? 'Play' : 'Pause';
+  el('replay-step').disabled = !replay.paused;
+  el('replay-speed').textContent = `${REPLAY_SPEEDS[replay.speed]}×`;
+}
+
+/** Pause or play on; with `stepTurn`, play to the start of the next turn and pause there. */
+function replayPlay(stepTurn = false) {
+  if (!replay) return;
+  sfx.ui();
+  replay.paused = stepTurn ? false : !replay.paused;
+  replay.stepTurn = stepTurn;
+  if (!replay.paused) {
+    const wake = replay.wake;
+    replay.wake = null;
+    wake?.();
+  }
+  replayLabel();
+}
+
+document.getElementById('watch').addEventListener('click', () => startReplay());
+document.getElementById('replay-pause').addEventListener('click', () => replayPlay());
+document.getElementById('replay-step').addEventListener('click', () => replayPlay(true));
+document.getElementById('replay-speed').addEventListener('click', () => {
+  if (!replay) return;
+  sfx.ui();
+  replay.speed = (replay.speed + 1) % REPLAY_SPEEDS.length;
+  playback.rate = replayRate();
+  replayLabel();
+});
+document.getElementById('replay-exit').addEventListener('click', () => {
+  sfx.ui();
+  endReplay();
+});
+
+/** A hero's turn as it was played: the commands the player gave, one after another. */
+async function replayHeroTurn(unit) {
+  const g = game;
+  busy = true;
+  refresh();
+  playback.rate = replayRate();
+  await wait(350);
+  while (game === g && game.current === unit && !game.over) {
+    const cmd = replay.log[replay.at++];
+    const r = cmd ? applyCommand(game, cmd) : null;
+    if (!r?.ok) return endReplay(); // the record ran out or went astray
+    if (cmd.type === 'end') return; // the next turn has begun
+    try {
+      await play(unit, cmd.type, r);
+    } catch (err) {
+      console.error(err);
+    }
+    if (game !== g) return;
+    syncStatus();
+    if (await checkGameOver()) return;
+    if (!unit.alive) {
+      await wait(500);
+      if (game !== g) return;
+      heroFell(game, unit);
+      return;
+    }
+    await wait(250);
+    await replayGate();
+  }
 }
 
 function endHeroTurn() {
@@ -1906,6 +2053,7 @@ async function undoMove() {
     return;
   }
   sfx.ui();
+  record?.log.pop();
   if (fight) {
     fight.log.pop();
     fight.check = fightCheck(game);
@@ -1927,6 +2075,7 @@ async function undoMove() {
 function command(cmd) {
   setUndo(null); // anything else the hero does settles the move before it
   const r = applyCommand(game, cmd);
+  if (r.ok) record?.log.push(cmd);
   if (r.ok && fight) {
     fight.log.push(cmd);
     fight.check = fightCheck(game);
@@ -2268,6 +2417,7 @@ window.__debug = {
   command: (cmd) => heroCommand(cmd),
   autoplay(on = true) {
     debugAutoplay = on;
+    if (on) record = null; // the AI's hero turns aren't commands: nothing to replay
     if (on && fight) {
       // The AI's hero turns aren't commands, so this fight can't be replayed.
       fight = null;

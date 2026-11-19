@@ -960,6 +960,9 @@ b.loot { color: var(--gold); }
 }
 .overlay-card.narrow { width: min(620px, 100%); }
 #bestiary-count { margin: 4px 0 12px; font-size: 13px; }
+#bestiary-deadliest { margin: -6px 0 12px; font-size: 13px; color: #d8cfc0; }
+#bestiary-deadliest[hidden] { display: none; }
+#bestiary-deadliest b { color: var(--monster); font-weight: 600; }
 .beasts {
   list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;
@@ -1213,3 +1216,20 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 .roll-badge.fail .roll-result { color: #ff8a7a; }
 .roll-badge .roll-die.dropped .face { fill: #2b2531; stroke: #8a7f92; }
 .nowrap { white-space: nowrap; }
+
+/* watching a finished fight again */
+body.replaying #actionbar, body.replaying #undo { display: none; }
+#replay-bar[hidden] { display: none; }
+#replay-bar {
+  position: absolute;
+  left: 50%; bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
+  width: max-content; max-width: calc(100% - 24px); box-sizing: border-box;
+  padding: 8px 12px;
+  background: var(--panel); border: 1px solid var(--gold); border-radius: 12px;
+  z-index: 7;
+}
+#replay-label { font: 600 14px var(--display); color: var(--gold); margin-right: 4px; white-space: nowrap; }
+#replay-speed { min-width: 3.2em; font-variant-numeric: tabular-nums; }
+body.touch #replay-bar button { min-height: 44px; }

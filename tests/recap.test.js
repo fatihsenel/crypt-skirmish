@@ -10,7 +10,7 @@ describe('a lost fight’s recap', () => {
     f.hp = 3;
     game.attack(o, f, o.attacks[0]);
     expect(game.blows).toEqual([{
-      round: game.round, to: f.name, by: o.name, byId: o.id, kind: o.cls, how: o.attacks[0].name, via: 'melee', damage: 3, hp: 0, down: true,
+      round: game.round, to: f.name, by: o.name, byId: o.id, kind: o.cls, code: o.code, how: o.attacks[0].name, via: 'melee', damage: 3, hp: 0, down: true,
     }]);
   });
 

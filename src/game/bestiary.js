@@ -8,6 +8,7 @@ import { levelById } from './maps.js';
 export const BESTIARY_KEY = 'crypt-skirmish:bestiary';
 export const SLAIN_KEY = 'crypt-skirmish:slain';
 export const READ_KEY = 'crypt-skirmish:bestiary-read';
+export const HURT_KEY = 'crypt-skirmish:hurt';
 
 /** Every monster kind, in the order the crypt introduces them. */
 export const MONSTERS = Object.keys(TEMPLATES).filter((code) => TEMPLATES[code].team === 'monsters');
@@ -74,6 +75,56 @@ export function slay(code) {
     /* storage unavailable: not counted */
   }
 }
+
+/** What each kind has done to the party over every fight: { code: { damage, downs } }. */
+export function parseHurt(raw) {
+  try {
+    const all = JSON.parse(raw ?? '{}');
+    if (!all || typeof all !== 'object' || Array.isArray(all)) return {};
+    const count = (n) => (Number.isInteger(n) && n > 0 ? n : 0);
+    return Object.fromEntries(MONSTERS
+      .filter((c) => all[c] && typeof all[c] === 'object')
+      .map((c) => [c, { damage: count(all[c].damage), downs: count(all[c].downs) }])
+      .filter(([, h]) => h.damage || h.downs));
+  } catch {
+    return {};
+  }
+}
+
+export function loadHurt() {
+  try {
+    return parseHurt(localStorage.getItem(HURT_KEY));
+  } catch {
+    return {};
+  }
+}
+
+/** `hurt` with a fight's blows (game.blows) added: the damage each kind dealt and the heroes it dropped. */
+export function addBlows(hurt, blows) {
+  const next = Object.fromEntries(Object.entries(hurt).map(([c, h]) => [c, { ...h }]));
+  for (const b of blows) {
+    if (!MONSTERS.includes(b.code)) continue;
+    const h = (next[b.code] ??= { damage: 0, downs: 0 });
+    h.damage += b.damage;
+    if (b.down) h.downs++;
+  }
+  return next;
+}
+
+/** A finished fight's blows go into the stored tally. */
+export function recordBlows(blows) {
+  try {
+    localStorage.setItem(HURT_KEY, JSON.stringify(addBlows(loadHurt(), blows)));
+  } catch {
+    /* storage unavailable: not counted */
+  }
+}
+
+/** The kinds that hurt the party most, worst first: [{ code, damage, downs }]. */
+export const deadliest = (hurt = loadHurt(), n = 3) => Object.entries(hurt)
+  .map(([code, h]) => ({ code, ...h }))
+  .sort((a, b) => b.damage - a.damage || b.downs - a.downs)
+  .slice(0, n);
 
 /** The monster kinds placed in a campaign node's room (none for a rest). */
 export function roomMonsters(node) {

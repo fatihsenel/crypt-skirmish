@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { MONSTERS, BESTIARY_KEY, parseBestiary, loadBestiary, meet, parseSlain, loadSlain, slay, slainTotal, unread, markRead, roomMonsters, onEveryPath, metBefore } from '../src/game/bestiary.js';
+import { MONSTERS, BESTIARY_KEY, parseBestiary, loadBestiary, meet, parseSlain, loadSlain, slay, slainTotal, unread, markRead, roomMonsters, onEveryPath, metBefore, HURT_KEY, parseHurt, loadHurt, addBlows, recordBlows, deadliest } from '../src/game/bestiary.js';
 import { LORE } from '../src/ui/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from '../src/ui/unitCard.js';
 import { createUnit } from '../src/game/units.js';
@@ -92,6 +92,42 @@ describe('the tally of monsters slain', () => {
     expect(parseSlain('{"g":3,"zz":1,"s":-1,"o":"2"}')).toEqual({ g: 3 });
     expect(parseSlain('[1]')).toEqual({});
     expect(parseSlain('nope')).toEqual({});
+  });
+});
+
+describe('the deadliest foes', () => {
+  let store;
+  beforeEach(() => {
+    store = new Map();
+    globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) };
+  });
+  afterEach(() => { delete globalThis.localStorage; });
+
+  const blow = (code, damage, down = false) => ({ code, damage, down });
+
+  it('adds up the damage each kind dealt and the heroes it dropped, leaving traps out', () => {
+    recordBlows([blow('g', 5), blow('g', 7, true), blow('s', 4), blow(null, 9, true)]);
+    recordBlows([blow('s', 6, true), blow('F', 3)]);
+    expect(loadHurt()).toEqual({ g: { damage: 12, downs: 1 }, s: { damage: 10, downs: 1 } });
+  });
+
+  it('does not change the tally it was given', () => {
+    const hurt = { g: { damage: 1, downs: 0 } };
+    addBlows(hurt, [blow('g', 5)]);
+    expect(hurt.g.damage).toBe(1);
+  });
+
+  it('lists the worst first, damage then falls', () => {
+    const hurt = { g: { damage: 30, downs: 1 }, s: { damage: 30, downs: 2 }, l: { damage: 80, downs: 0 }, o: { damage: 5, downs: 0 } };
+    expect(deadliest(hurt).map((h) => h.code)).toEqual(['l', 's', 'g']);
+    expect(deadliest({})).toEqual([]);
+  });
+
+  it('ignores junk in storage', () => {
+    store.set(HURT_KEY, '{"g":{"damage":4,"downs":"x"},"zz":{"damage":3},"s":5,"l":{"damage":-2}}');
+    expect(loadHurt()).toEqual({ g: { damage: 4, downs: 0 } });
+    expect(parseHurt('[1]')).toEqual({});
+    expect(parseHurt('nope')).toEqual({});
   });
 });
 

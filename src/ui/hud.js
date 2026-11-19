@@ -690,12 +690,13 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null, win = null }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null, win = null, replay = false }) {
     this.renderSummary(summary);
     this.renderRecap(recap, win);
     this.cardSummary = summary;
     $('#save-card').hidden = !summary;
     $('#save-card').textContent = 'Save image';
+    $('#watch').hidden = !replay;
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';

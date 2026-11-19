@@ -26,11 +26,12 @@ server on 5173.
 - **Randomness in rules goes through `this.rng`** (or a passed-in `rng`), never
   `Math.random`. Fights are saved as a seed plus the heroes' commands and replayed on load
   (`replay.js`). Anything that changes the dice order makes old saves fall back to camp.
+  The end banner's Watch replay plays the same record back (`startReplay` in `main.js`).
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`).
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `bestiary`, `bestiary-read`, `slain`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `bestiary`, `bestiary-read`, `slain`, `hurt`, …).
 
 ## Adding content
 
