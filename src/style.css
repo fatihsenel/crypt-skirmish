@@ -1059,6 +1059,20 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 }
 .roll-badge.landed .roll-line { visibility: visible; }
 .roll-line:empty { display: none; }
+.roll-badge.below .roll-in { bottom: auto; top: 34px; transform-origin: 50% 0; }
+/* While waiting there's no line or result yet, so the die sits right over the prompt. */
+.roll-badge.waiting .roll-line, .roll-badge.waiting .roll-result { display: none; }
+.roll-prompt { display: none; }
+/* Waiting for the player to throw: a bigger die that pulses, and how to throw it. */
+.roll-badge.waiting .roll-prompt {
+  display: block; font-weight: 700; font-size: 13px; color: var(--gold); white-space: nowrap;
+  background: #1d1922ee; border: 1px solid #8a6a2c; border-radius: 6px; padding: 2px 8px;
+}
+.roll-badge.waiting .roll-die { width: 54px; height: 54px; animation: roll-pulse 0.9s ease-in-out infinite alternate; }
+.roll-badge.waiting .roll-die span { font-size: 21px; }
+.roll-badge.waiting .roll-die .face { stroke: #ffd76a; }
+@keyframes roll-pulse { from { transform: rotate(-8deg) scale(0.96); } to { transform: rotate(8deg) scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .roll-badge.waiting .roll-die { animation: none; } }
 .roll-badge.told .roll-result { opacity: 1; transform: none; }
 .roll-badge.hit .roll-result { color: #f0c674; }
 .roll-badge.crit .face { fill: #5a4318; stroke: #ffd76a; }

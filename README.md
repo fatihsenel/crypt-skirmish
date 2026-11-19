@@ -188,9 +188,12 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   Music button (or N) turns it off; Sound (or M) mutes everything
 - **settings** (the button beside Sound, on the title and camp screens too): a volume
   slider each for music, effects (with the dungeon ambience) and voices, and how fast
-  monster turns play out: Normal, Fast (1.75×) or Fastest (3×), and a switch for the dice
-  badge. Kept in the browser
-- **dice on the board**: every attack roll pops up as a d20 over the attacker, tumbles and
+  monster turns play out: Normal, Fast (1.75×) or Fastest (3×), and two dice switches:
+  throwing your own attack dice, and showing everyone else's rolls. Kept in the browser
+- **dice on the board**: on a hero's own turn you throw their attack die yourself: after
+  picking the attack, the d20 waits over the hero, pulsing, until you click or tap anywhere
+  (or press Space); the log keeps the result back until it lands. Monsters' attack rolls
+  pop up the same way on their own: the d20 tumbles and
   lands, with the bonus, total and AC under it and then Hit, Miss or Critical hit. A
   natural 20 turns gold, a natural 1 grey; with advantage or disadvantage both dice show and
   the one that doesn't count fades. Saves against Burning Hands, Lightning Bolt, Fireball and

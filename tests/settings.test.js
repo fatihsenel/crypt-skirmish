@@ -10,7 +10,7 @@ describe('settings', () => {
 
   it('keeps valid values and clamps levels to 0..1', () => {
     const s = parseSettings(JSON.stringify({ music: 0.3, effects: 2, voices: -1, speed: 'fastest' }));
-    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true });
+    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true });
   });
 
   it('drops an unknown speed and non-numeric levels', () => {
@@ -22,6 +22,7 @@ describe('settings', () => {
   it('keeps the dice switch only when it is a true or false', () => {
     expect(parseSettings(JSON.stringify({ rolls: false })).rolls).toBe(false);
     expect(parseSettings(JSON.stringify({ rolls: 'no' })).rolls).toBe(true);
+    expect(parseSettings(JSON.stringify({ throwDice: false })).throwDice).toBe(false);
   });
 
   it('only speeds monster turns up', () => {

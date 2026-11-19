@@ -87,7 +87,20 @@ export class Hud {
     this.hint('');
   }
 
+  /** Hold new log lines back (while the player's die waits, so the log doesn't tell first). */
+  holdLog() {
+    this.held ??= [];
+  }
+
+  /** Write the held lines, in order. */
+  releaseLog() {
+    const held = this.held;
+    this.held = null;
+    for (const [html, cls] of held ?? []) this.log(html, cls);
+  }
+
   log(html, cls = '') {
+    if (this.held) return void this.held.push([html, cls]);
     const li = document.createElement('li');
     li.className = cls;
     li.innerHTML = html;

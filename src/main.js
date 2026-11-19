@@ -275,7 +275,7 @@ const settings = loadSettings();
 new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
-  if (key === 'speed' || key === 'rolls') return;
+  if (key === 'speed' || key === 'rolls' || key === 'throwDice') return;
   unlockAudio();
   sfx.setLevel(key, value);
 });
@@ -487,7 +487,11 @@ function startFight(resume) {
   });
   game.on('round', ({ round }) => hud.log(`Round ${round}`, 'round'));
   game.on('turnStart', ({ unit }) => onTurnStart(unit));
-  game.on('attack', (r) => hud.logAttack(r));
+  game.on('attack', (r) => {
+    // The player is about to throw this one: the log waits until the die lands.
+    if (throwsOwn(r)) hud.holdLog();
+    hud.logAttack(r);
+  });
   game.on('spell', (r) => {
     if (unseen(r.caster)) hud.log('You hear chanting somewhere in the dark…', 'sys');
     else hud.logSpell(r);
@@ -1071,12 +1075,21 @@ async function animateAttack(r, at = r.target) {
   const tv = view(target);
   const pos = { x: at.x, z: at.z };
   let reaction = null;
-  // The roll pops up over the attacker (Settings can turn it off; then only natural 20s and
-  // 1s get a die, thrown on the board).
+  // The roll pops up over the attacker; on the hero's own turn the player throws it.
+  // (Settings can turn both off; then only natural 20s and 1s get a die, thrown on the board.)
   if (!unseen(attacker)) {
-    if (settings.rolls) {
-      sfx.dice();
-      await rollBadge(stage.scene, attacker, badgeHeight(attacker), attackRoll(r));
+    if (settings.rolls || throwsOwn(r)) {
+      if (throwsOwn(r)) {
+        // The hint repeats it, in case the figure is behind a panel or off screen.
+        hud.hint(touching ? `${attacker.name}’s ${attack.name}: tap anywhere to roll the d20`
+          : `${attacker.name}’s ${attack.name}: click anywhere or press Space to roll the d20`);
+        await rollBadge(stage.scene, attacker, badgeHeight(attacker), attackRoll(r), throwPrompt());
+        hud.hint('');
+        hud.releaseLog();
+      } else {
+        sfx.dice();
+        await rollBadge(stage.scene, attacker, badgeHeight(attacker), attackRoll(r));
+      }
     } else if (r.d20 === 20 || r.d20 === 1) {
       sfx.dice();
       await d20Fx(stage.scene, attacker, r.d20);
@@ -1122,6 +1135,42 @@ async function animateAttack(r, at = r.target) {
   }
   await reaction;
   hud.renderInitiative(game);
+}
+
+/** An attack on a hero's own turn, which the player throws (Settings can turn it off). */
+const throwsOwn = (r) => settings.throwDice && !debugAutoplay && r.attacker.team === 'heroes'
+  && game.current === r.attacker && !unseen(r.attacker);
+
+/**
+ * The player's throw: a click or tap anywhere (but the top buttons and open panels), or
+ * Space or Enter. That press does nothing else.
+ */
+function throwPrompt() {
+  return {
+    label: touching ? 'Tap to roll' : 'Click to roll',
+    thrown: () => new Promise((resolve) => {
+      const swallow = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
+      const done = (ev) => {
+        swallow(ev);
+        window.removeEventListener('pointerdown', onPointer, true);
+        window.removeEventListener('keydown', onKey, true);
+        // The press's click (and a touch's mouse emulation) shouldn't move or attack.
+        window.addEventListener('click', swallow, true);
+        setTimeout(() => window.removeEventListener('click', swallow, true), 450);
+        sfx.dice();
+        resolve();
+      };
+      const onPointer = (ev) => {
+        if (ev.button !== 0 || ev.target.closest('#audio, #settings, #log, #help, #initiative')) return;
+        done(ev);
+      };
+      const onKey = (ev) => {
+        if ((ev.code === 'Space' || ev.code === 'Enter') && !ev.repeat) done(ev);
+      };
+      window.addEventListener('pointerdown', onPointer, true);
+      window.addEventListener('keydown', onKey, true);
+    }),
+  };
 }
 
 /** Just above a unit's name label. */
@@ -1613,6 +1662,7 @@ async function heroCommand(cmd) {
     // A broken animation must never leave the controls locked: the rules already applied.
     console.error(err);
   }
+  hud.releaseLog(); // in case the throw never came (nothing held: no-op)
   if (game !== g) return r;
   syncStatus();
   if (await checkGameOver()) return r;
