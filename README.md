@@ -90,12 +90,14 @@ It runs on desktop and on phones.
   Proof against Poison. Each hero's button in the pack shows what the item would change for
   them, such as "AC 15 → 17" or "Max HP 35 → 53".
 - A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
-  each hero fell, which foe hit hardest and who was still standing.
+  each hero fell, which foe hit hardest and who was still standing, with a tip for next time
+  (unused potions, archers, a foe to focus).
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
   on the same turn.
-- Beating Nekhet shows a tally of the run and each hero's stats. A run that ended at Ysolde
+- Beating Nekhet shows a tally of the run and each hero's stats. Save image downloads it as a
+  picture with the party's gear and the way down (on a phone, the share sheet). A run that ended at Ysolde
   before act four existed carries on into it.
 
 ## Modes and extras
@@ -242,7 +244,7 @@ src/
     combat.js        Game: turns, movement, attacks, spells, events
     ai.js            monster brains
     replay.js        fight saves: commands replayed from a seed
-    recap.js         a lost fight told back: who fell to what
+    recap.js         a lost fight told back: who fell to what, and a tip
     history.js       past runs
     achievements.js  achievements and their checks
     bestiary.js      which monsters you've met and slain
@@ -262,6 +264,7 @@ src/
   audio/             sfx.js, music.js, voices.js (all procedural)
   ui/
     hud.js           initiative, action bar, combat log
+    runCard.js       the won campaign drawn as a picture to save
     camp.js          title screen and camp
     settings.js      the settings panel
     abilityTip.js    tooltip cards for attacks, spells and actions

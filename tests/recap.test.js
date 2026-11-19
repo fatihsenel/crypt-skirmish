@@ -10,7 +10,7 @@ describe('a lost fight’s recap', () => {
     f.hp = 3;
     game.attack(o, f, o.attacks[0]);
     expect(game.blows).toEqual([{
-      round: game.round, to: f.name, by: o.name, byId: o.id, kind: o.cls, how: o.attacks[0].name, damage: 3, down: true,
+      round: game.round, to: f.name, by: o.name, byId: o.id, kind: o.cls, how: o.attacks[0].name, via: 'melee', damage: 3, down: true,
     }]);
   });
 
@@ -45,6 +45,7 @@ describe('a lost fight’s recap', () => {
       ],
       worst: 'Skeletons hit hardest: 9 damage to the party.',
       left: 'Still standing: Wight (12/45 HP), 2 Skeletons (13/13, 4/13 HP).',
+      tip: null, // no one kind or kind of attack did half the damage
     });
   });
 
@@ -54,5 +55,33 @@ describe('a lost fight’s recap', () => {
       units: [{ id: 3, name: 'Mummy', cls: 'Mummy', team: 'monsters', alive: true, hp: 30, maxHp: 58 }],
     };
     expect(fightRecap(game).worst).toBe('Mummy hit hardest: 11 damage to the party.');
+  });
+
+  describe('the tip for next time', () => {
+    const hero = (name, cls, more = {}) => ({ name, cls, team: 'heroes', alive: false, hp: 0, maxHp: 30, potions: 0, ...more });
+    const blow = (more) => ({ round: 1, to: 'Wren', by: 'Skeleton 1', byId: 1, kind: 'Skeleton', how: 'Shortbow', via: 'ranged', damage: 5, down: false, ...more });
+    const tip = (blows, heroes = [hero('Wren', 'Rogue')]) => fightRecap({ blows, units: heroes }).tip;
+
+    it('points the Rogue at traps after a trap drops someone', () => {
+      expect(tip([blow({ by: null, kind: null, how: 'a trap', via: 'trap', down: true })]))
+        .toBe('A trap brought someone down. Wren spots traps nearby: let them lead through unexplored halls.');
+      expect(tip([blow({ by: null, kind: null, how: 'a trap', via: 'trap', down: true })], [hero('Wren', 'Ranger')])).toBe(null);
+    });
+
+    it('notices potions left in the pack', () => {
+      expect(tip([blow({ via: 'melee' })], [hero('Maela', 'Cleric', { potions: 2 })]))
+        .toBe('Maela fell with 2 potions unused. Drinking one takes an action and heals 2d4 + 2.');
+      expect(tip([blow({ via: 'melee' })], [hero('Ilsa', 'Wizard', { potions: 1 }), hero('Maela', 'Cleric', { potions: 1 }), hero('Wren', 'Rogue', { potions: 3 })]))
+        .toBe('Ilsa, Maela and Wren fell with potions unused. Drinking one takes an action and heals 2d4 + 2.');
+    });
+
+    it('blames archers, spells or one foe when they did most of the damage', () => {
+      expect(tip([blow({}), blow({ via: 'melee', damage: 4 })])).toMatch(/^Most of the damage came from range/);
+      expect(tip([blow({ via: 'spell' }), blow({ via: 'melee', damage: 4 })])).toMatch(/^Spells did most/);
+      expect(tip([blow({ by: 'Wraith', kind: 'Wraith', via: 'melee', damage: 9 }), blow({ via: 'melee' })]))
+        .toBe('Wraith dealt over half the damage. Bring it down first, or stay out of reach.');
+      expect(tip([blow({ via: 'melee' }), blow({ by: 'Skeleton 2', byId: 2, via: 'melee' }), blow({ by: 'Mummy', kind: 'Mummy', via: 'melee', damage: 3 })]))
+        .toBe('The Skeletons dealt over half the damage. Bring them down first, or stay out of reach.');
+    });
   });
 });

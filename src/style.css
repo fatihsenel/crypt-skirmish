@@ -632,9 +632,11 @@ kbd {
 #banner-recap ol { margin: 0 0 6px; padding-left: 18px; }
 #banner-recap li { margin: 2px 0; }
 #banner-recap p { margin: 2px 0 0; color: #d8cfc0; max-width: none; }
+#banner-recap .recap-tip { margin-top: 8px; padding-top: 6px; border-top: 1px solid #b0484833; }
+#banner-recap .recap-tip b { color: var(--gold); font-weight: 600; }
 @media (max-height: 520px) {
   #banner-recap { margin-bottom: 10px; padding: 6px 10px; font-size: 12px; }
-  #banner-recap h2 { display: none; }
+  #banner-recap h2, #banner-recap .recap-worst { display: none; }
   #banner-recap li, #banner-recap p { margin: 1px 0; }
 }
 #banner .banner-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }

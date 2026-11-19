@@ -139,8 +139,9 @@ export class Game {
     this.found = [];  // non-potion loot taken from chests, for the party's pack
     this.ice = []; // Ice Storm ground: { by, turns, tiles } (see addIce)
     this.stats = {};  // per hero slot: { damage, kills, crits, healing, downed } (for the run's ending)
-    this.blows = [];  // every hit a hero took: { round, to, by, byId, kind, how, damage, down } (for a lost fight's recap)
+    this.blows = [];  // every hit a hero took: { round, to, by, byId, kind, how, via, damage, down } (for a lost fight's recap)
     this.cause = null; // what is dealing damage right now: an attack's or spell's name, or 'a trap'
+    this.via = null;   // and how: 'melee', 'ranged', 'spell' or 'trap'
   }
 
   /** The tally for a hero, or null for monsters. */
@@ -610,7 +611,7 @@ export class Game {
     if (t) t.damage += before - target.hp; // only what landed, not overkill
     if (target.team === 'heroes' && before > target.hp) {
       this.blows.push({
-        round: this.round, to: target.name, by: source?.name ?? null, byId: source?.id ?? null, kind: source?.cls ?? null, how: this.cause,
+        round: this.round, to: target.name, by: source?.name ?? null, byId: source?.id ?? null, kind: source?.cls ?? null, how: this.cause, via: this.via,
         damage: before - target.hp, down: target.hp <= 0 && target.alive,
       });
     }
@@ -951,6 +952,7 @@ export class Game {
     const result = { trap, unit, d20, total, dc: TRAP_DC, success, roll, damage, prone: false };
     this.emit('trap', result);
     this.cause = 'a trap';
+    this.via = 'trap';
     this.applyDamage(unit, damage, null);
     if (!success && unit.alive) {
       result.prone = true;
@@ -1288,6 +1290,7 @@ export class Game {
     }
     if (hit) {
       this.cause = attack.name;
+      this.via = attack.reach === 1 ? 'melee' : 'ranged';
       if (damage) this.applyDamage(target, damage, attacker);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
@@ -1688,6 +1691,7 @@ export class Game {
     if (problem) return { ok: false, reason: problem };
     const spell = SPELLS[id];
     this.cause = spell.name;
+    this.via = 'spell';
     if (spell.time === 'action') caster.actionUsed = true;
     else caster.bonusUsed = true;
     const again = this.freeRecast(caster, id);

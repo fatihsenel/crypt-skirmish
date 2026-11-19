@@ -204,7 +204,10 @@ export function runSummary(state) {
   const stats = validStats(state.stats);
   const heroes = HERO_CODES.map((code) => {
     const rec = state.party[code];
-    return { code, name: heroName(code, rec), cls: TEMPLATES[classOf(code, rec)].cls, level: rec.level, ...stats.heroes[code], best: [] };
+    return {
+      code, name: heroName(code, rec), cls: TEMPLATES[classOf(code, rec)].cls, level: rec.level,
+      items: (rec.items ?? []).map((id) => ITEMS[id]?.name).filter(Boolean), ...stats.heroes[code], best: [],
+    };
   });
   for (const f of ['damage', 'kills', 'crits', 'healing']) {
     const top = Math.max(...heroes.map((h) => h[f]));
@@ -217,6 +220,7 @@ export function runSummary(state) {
     won: stats.won,
     lost: stats.lost,
     rounds: stats.rounds,
+    route: (state.cleared ?? []).filter((id) => NODES[id]).map((id) => NODES[id].short ?? nodeName(id).replace(/^The /, '')), // as on the camp map
     heroes,
   };
 }

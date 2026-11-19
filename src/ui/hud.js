@@ -1,5 +1,6 @@
 // HTML overlay: initiative tracker, action bar, combat log, banners.
 
+import { saveRunCard } from './runCard.js';
 import { signed } from '../game/dice.js';
 import { ACTIONS, SPELLS, PASSIVES, SHOVE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
@@ -65,6 +66,7 @@ export class Hud {
     $('#next').addEventListener('click', onNext);
     $('#to-map').addEventListener('click', onMap);
     $('#share').addEventListener('click', () => this.share());
+    $('#save-card').addEventListener('click', () => this.saveCard());
     $('#sound').addEventListener('click', onToggleSound);
     $('#music').addEventListener('click', onToggleMusic);
     $('#attacks').addEventListener('click', (ev) => this.onAbilityClick(ev));
@@ -691,6 +693,9 @@ export class Hud {
   banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null }) {
     this.renderSummary(summary);
     this.renderRecap(recap);
+    this.cardSummary = summary;
+    $('#save-card').hidden = !summary;
+    $('#save-card').textContent = 'Save image';
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';
@@ -759,17 +764,36 @@ export class Hud {
     }
   }
 
-  /** Achievements this fight unlocked, as gold chips under the banner text. */
+  /** The won campaign as a picture (see runCard.js): a download, or the share sheet on a phone. */
+  async saveCard() {
+    if (!this.cardSummary) return;
+    const btn = $('#save-card');
+    btn.disabled = true;
+    try {
+      const done = await saveRunCard(this.cardSummary, { touch: this.touch });
+      if (done !== 'cancelled') {
+        btn.textContent = done === 'shared' ? 'Shared' : 'Saved';
+        setTimeout(() => { btn.textContent = 'Save image'; }, 2000);
+      }
+    } catch {
+      this.toast('Couldn’t save the image here.');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   /** A lost fight in a few lines (see game/recap.js): how each hero fell, then the foes. */
   renderRecap(recap) {
     const el = $('#banner-recap');
-    const lines = recap ? [recap.worst, recap.left].filter(Boolean) : [];
+    const lines = recap ? [['recap-worst', recap.worst], ['recap-left', recap.left]].filter(([, l]) => l) : [];
     el.hidden = !recap || (!recap.falls.length && !lines.length);
     el.innerHTML = el.hidden ? '' : `<h2>How it went</h2>`
       + (recap.falls.length ? `<ol>${recap.falls.map((f) => `<li>${esc(f)}</li>`).join('')}</ol>` : '')
-      + lines.map((l) => `<p>${esc(l)}</p>`).join('');
+      + lines.map(([cls, l]) => `<p class="${cls}">${esc(l)}</p>`).join('')
+      + (recap.tip ? `<p class="recap-tip"><b>Next time:</b> ${esc(recap.tip)}</p>` : '');
   }
 
+  /** Achievements this fight unlocked, as gold chips under the banner text. */
   renderAwards(awards) {
     const el = $('#banner-awards');
     el.hidden = awards.length === 0;
