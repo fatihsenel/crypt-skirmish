@@ -118,7 +118,8 @@ It runs on desktop and on phones.
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
   its base and one trait: Regenerating, Relentless, Frenzied, Swift or Warded. The trait
-  depends on the room and the tier. The bestiary lists what each does.
+  depends on the room and the tier. Once you have won a campaign, the bestiary lists what each
+  does.
 
 ## Modes and extras
 

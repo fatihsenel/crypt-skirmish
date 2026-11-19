@@ -95,6 +95,9 @@ export function loadDeepest() {
   }
 }
 
+/** True once a campaign has been won: New Game+ is open. Takes the deepest win and the run history. */
+export const reachedNewGamePlus = (deepest, runs) => !!deepest || runs.some((r) => r.result === 'won');
+
 /** "Hard NG+2": the deepest win as a label, or null. */
 export const deepestLabel = (b) => (b ? difficultyLabel(b.difficulty, b.tier) : null);
 

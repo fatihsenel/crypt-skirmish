@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { runRecord, addRun, parseHistory, MAX_RUNS, watchable, saveLastFight, loadLastFight, recordRun, loadHistory, LAST_FIGHT_KEY } from '../src/game/history.js';
+import { runRecord, addRun, parseHistory, MAX_RUNS, watchable, saveLastFight, loadLastFight, recordRun, loadHistory, LAST_FIGHT_KEY, reachedNewGamePlus } from '../src/game/history.js';
 import { newCampaign, runShareText } from '../src/game/campaign.js';
 
 describe('run history', () => {
@@ -97,5 +97,14 @@ describe('sharing a won campaign', () => {
     const text = runShareText(summary({ lost: 0, heroes: summary().heroes.map((h) => ({ ...h, downed: 0 })) }));
     expect(text).toContain('11 rooms won, no fight lost, 84 rounds');
     expect(text).toContain('No hero ever fell 🛡️');
+  });
+});
+
+describe('reaching New Game+', () => {
+  it('needs a won campaign, from the deepest win or the run history', () => {
+    expect(reachedNewGamePlus(null, [])).toBe(false);
+    expect(reachedNewGamePlus(null, [{ result: 'abandoned' }])).toBe(false);
+    expect(reachedNewGamePlus({ difficulty: 'normal', tier: 0 }, [])).toBe(true);
+    expect(reachedNewGamePlus(null, [{ result: 'abandoned' }, { result: 'won' }])).toBe(true);
   });
 });
