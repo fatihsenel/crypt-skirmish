@@ -6,10 +6,10 @@ import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { AbilityTip } from './abilityTip.js';
 import { UnitTip } from './unitTip.js';
-import { unitCard } from './unitCard.js';
+import { unitCard, shortName } from './unitCard.js';
 
-/** A turn-order name, short enough to tell apart: "Risen Mummy" shows as "R. Mummy". */
-const chipName = (name) => esc(name.replace(/^Risen /, 'R. '));
+/** A turn-order name, short enough to tell apart: "Giant Spider 2" shows as "G. Spider 2". */
+const chipName = (name) => esc(shortName(name));
 import { isWeapon, isMelee } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -62,6 +62,7 @@ export class Hud {
     $('#restart').addEventListener('click', onRestart);
     $('#next').addEventListener('click', onNext);
     $('#to-map').addEventListener('click', onMap);
+    $('#share').addEventListener('click', () => this.share());
     $('#sound').addEventListener('click', onToggleSound);
     $('#music').addEventListener('click', onToggleMusic);
     $('#attacks').addEventListener('click', (ev) => this.onAbilityClick(ev));
@@ -701,6 +702,7 @@ export class Hud {
     $('#restart').textContent = won ? 'New campaign' : 'Try again';
     $('#restart').hidden = won && !final;
     $('#to-map').textContent = 'Back to the map';
+    $('#share').hidden = true;
     if (daily) this.dailyBanner(daily, level);
     $('#banner').dataset.result = result;
     $('#banner').hidden = false;
@@ -722,6 +724,28 @@ export class Hud {
     $('#restart').textContent = 'Try again';
     $('#to-map').hidden = false;
     $('#to-map').textContent = 'Back to the title';
+    this.shareText = d.share || null;
+    $('#share').hidden = !this.shareText;
+    $('#share').textContent = 'Copy result';
+  }
+
+  /** Copy the won daily's text, or hand it to the phone's share sheet. */
+  async share() {
+    const text = this.shareText;
+    if (!text) return;
+    const btn = $('#share');
+    try {
+      if (this.touch && navigator.share) {
+        await navigator.share({ text });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = 'Copy result'; }, 2000);
+    } catch (err) {
+      if (err?.name === 'AbortError') return; // the share sheet was closed
+      this.toast('Couldn’t copy the result here.');
+    }
   }
 
   /** Achievements this fight unlocked, as gold chips under the banner text. */

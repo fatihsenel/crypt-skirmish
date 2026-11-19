@@ -94,3 +94,16 @@ describe('the tally of monsters slain', () => {
     expect(parseSlain('nope')).toEqual({});
   });
 });
+
+describe('names in the turn order', () => {
+  it('shortens long names to fit a portrait', async () => {
+    const { shortName } = await import('../src/ui/unitCard.js');
+    expect(shortName('Skeleton 2')).toBe('Skeleton 2');
+    expect(shortName('Giant Spider 2')).toBe('G. Spider 2');
+    expect(shortName('Fallen Knight 1')).toBe('F. Knight 1');
+    expect(shortName('Risen Mummy')).toBe('R. Mummy');
+    expect(shortName('Risen Servant')).toBe('R. Servant');
+    expect(shortName('Bartholomew12')).toBe('Bartholomew12');
+    expect(shortName('Nekhet')).toBe('Nekhet');
+  });
+});

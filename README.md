@@ -95,6 +95,7 @@ It runs on desktop and on phones.
 
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
+  Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
 - **Achievements:** 25 goals that carry across runs.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note says when a new one joins, and a gold dot on its button waits
@@ -110,8 +111,8 @@ It runs on desktop and on phones.
 - **Enemy reach** (T): stripes the tiles monsters could reach and hit next turn. Red means
   melee and amber means ranged.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does.
-- **Turn order:** portraits along the top, each with its initiative number. Risen undead
-  show as "R. Mummy" there.
+- **Turn order:** portraits along the top, each with its initiative number. Long names
+  shrink to fit, like "G. Spider 2" or "R. Mummy".
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, and the dice options.

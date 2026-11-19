@@ -141,3 +141,21 @@ export function recordDaily(key, attempt) {
   }
   return results;
 }
+
+/**
+ * A won daily as text to paste anywhere: the day, the room, how it went, a mark per hero
+ * (a shield if they stayed up, a skull if they fell) and the streak.
+ */
+export function shareText({ key, room, level, rounds, marks, streak: days = 0 }) {
+  const [y, m, d] = key.split('-').map(Number);
+  const date = new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const fell = marks.filter((x) => x === 'fell').length;
+  return [
+    `Crypt Skirmish daily, ${date}`,
+    `${room}, party level ${level}`,
+    `Won in ${rounds} round${rounds === 1 ? '' : 's'}, ${fell === 0 ? 'nobody fell' : `${fell} of ${marks.length} fell`}`,
+    marks.map((x) => (x === 'fell' ? '💀' : '🛡️')).join(''),
+    ...(days > 1 ? [`Streak: ${days} days`] : []),
+    'https://fatihsenel.github.io/crypt-skirmish/',
+  ].join('\n');
+}

@@ -37,7 +37,7 @@ import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
 import { recordRun, loadHistory } from './game/history.js';
 import { unlock } from './game/achievements.js';
-import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily } from './game/daily.js';
+import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText } from './game/daily.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -1778,7 +1778,10 @@ async function checkGameOver() {
     const results = recordDaily(daily.key, attempt);
     const run = streak(results, daily.key);
     if (attempt.won) awards.push(...unlock('daily', { streak: run }));
-    dailyResult = { ...attempt, best: results[daily.key], streak: run };
+    // A won daily can be shared: a mark per hero, a skull if they fell at any point.
+    const marks = game.units.filter((u) => u.team === 'heroes').map((u) => (game.stats[u.slot]?.downed ? 'fell' : 'up'));
+    const share = attempt.won && shareText({ key: daily.key, room: level.name, level: daily.level, rounds: game.round, marks, streak: run });
+    dailyResult = { ...attempt, best: results[daily.key], streak: run, share };
   }
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,

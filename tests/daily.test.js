@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM } from '../src/game/daily.js';
+import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, shareText } from '../src/game/daily.js';
 import { NODES } from '../src/game/campaign.js';
 
 describe('daily crypt', () => {
@@ -69,5 +69,27 @@ describe('daily crypt', () => {
     expect(parseDaily('nope')).toEqual({});
     expect(parseDaily('{"2026-11-18":{"won":true,"rounds":3},"x":{"won":true,"rounds":1}}'))
       .toEqual({ '2026-11-18': { won: true, rounds: 3 } });
+  });
+});
+
+describe('sharing a daily', () => {
+  const base = { key: '2026-11-19', room: 'The Haunted Gallery', level: 6, rounds: 7 };
+
+  it('writes the day, the room, how it went and a mark per hero', () => {
+    expect(shareText({ ...base, marks: ['up', 'up', 'up', 'up'], streak: 3 })).toBe([
+      'Crypt Skirmish daily, 19 Nov 2026',
+      'The Haunted Gallery, party level 6',
+      'Won in 7 rounds, nobody fell',
+      '🛡️🛡️🛡️🛡️',
+      'Streak: 3 days',
+      'https://fatihsenel.github.io/crypt-skirmish/',
+    ].join('\n'));
+  });
+
+  it('counts who fell and leaves out a one-day streak', () => {
+    const text = shareText({ ...base, rounds: 1, marks: ['up', 'fell', 'up', 'fell'], streak: 1 });
+    expect(text).toContain('Won in 1 round, 2 of 4 fell');
+    expect(text).toContain('🛡️💀🛡️💀');
+    expect(text).not.toContain('Streak');
   });
 });

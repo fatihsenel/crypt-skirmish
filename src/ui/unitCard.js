@@ -71,3 +71,16 @@ export function unitCard(game, u) {
     ${traits.map((t) => `<p>${esc(t)}</p>`).join('')}
     ${tags.length ? `<p class="tip-note">${esc(tags.join(' · '))}</p>` : ''}`;
 }
+
+/**
+ * A name short enough for a turn-order portrait: past 10 letters, the words before the last
+ * shrink to initials, so "Giant Spider 2" shows as "G. Spider 2" and "Risen Mummy" as
+ * "R. Mummy". One-word names are left for the ellipsis.
+ */
+export function shortName(name) {
+  if (name.length <= 10) return name;
+  const words = name.split(' ');
+  const num = /^\d+$/.test(words.at(-1)) ? words.pop() : null;
+  if (words.length < 2) return name;
+  return [...words.slice(0, -1).map((w) => `${w[0]}.`), words.at(-1), ...(num ? [num] : [])].join(' ');
+}
