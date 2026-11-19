@@ -10,6 +10,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![The camp between rooms: the map of the way down, the party and the loot to hand out](docs/screenshots/camp.jpg) |
 | ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> |
+| ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 
 A party of four fights its way down a crypt on a 5-ft grid, room by room, across four acts.
 It runs on desktop and on phones.
