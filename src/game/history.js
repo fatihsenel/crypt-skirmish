@@ -43,6 +43,7 @@ export function runRecord(state, result, when, fight = null) {
     won: s.won,
     lost: s.lost,
     rounds: s.rounds,
+    ...(s.eliteCount && { elites: s.eliteCount }),
     xp: s.xp,
     reached: state.at ? nodeName(state.at) : null,
     heroes: s.heroes.map((h) => ({ name: h.name, cls: h.cls, level: h.level })),

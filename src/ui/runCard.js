@@ -89,6 +89,7 @@ export async function drawRunCard(s, { date = new Date() } = {}) {
     `${plural(s.won, 'room')} won`,
     s.lost ? `${plural(s.lost, 'fight')} lost` : 'no fight lost',
     plural(s.rounds, 'round'),
+    ...(s.eliteCount ? [`${plural(s.eliteCount, 'elite')} slain`] : []),
     falls ? `heroes fell ${plural(falls, 'time')}` : 'no hero ever fell',
   ].join('  ·  '), tx, 168);
 

@@ -877,6 +877,7 @@ export class Hud {
         : `${plural(s.lost, 'fight')} lost along the way, but the crypt is quiet at last.`;
     el.innerHTML = `
       <dl class="run-facts">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
+      ${s.eliteCount ? `<p class="run-elites"><b>${plural(s.eliteCount, 'elite')} slain:</b> ${s.elites.map((e) => `${e.count} ${esc(e.name)}`).join(', ')}</p>` : ''}
       <table class="run-heroes">
         <thead><tr><th>Hero</th>${cols.map(([, label]) => `<th>${label}</th>`).join('')}</tr></thead>
         <tbody>${s.heroes.map((h) => `<tr>

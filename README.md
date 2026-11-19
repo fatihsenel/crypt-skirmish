@@ -118,8 +118,10 @@ It runs on desktop and on phones.
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
   its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift
-  or Warded. The trait depends on the room and the tier, and the log names it once you see the
-  elite. Once you have won a campaign, the bestiary lists what each does and how many you've slain.
+  or Warded. The trait depends on the room and the tier. When you first see the elite, a horn
+  sounds, its band flares, a toast and the log name the trait, and on a phone the camera brings
+  it into view. Once you have won a campaign, the bestiary lists what each does and how many
+  you've slain. The run summary, its image and Past runs count the elites slain.
 
 ## Modes and extras
 
@@ -238,7 +240,8 @@ Every push to `main` runs the tests, builds and deploys to GitHub Pages
 This doesn't touch the save.
 
 **See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,
-to try Copy result and Save image (on a phone, the share sheet). Nothing is saved.
+to try Copy result and Save image (on a phone, the share sheet). Add `&tier=2` for a New Game+
+run with elites slain. Nothing is saved.
 
 **Console:** `__debug.autoplay()` lets the AI play the heroes too. `__debug.win()` and
 `__debug.lose()` end the fight.

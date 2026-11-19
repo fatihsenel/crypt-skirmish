@@ -37,6 +37,7 @@ function buildBase(unit) {
       new THREE.MeshStandardMaterial({ color: 0xffd36b, emissive: 0xb07a20, emissiveIntensity: 0.9, metalness: 0.6, roughness: 0.3 }),
     );
     band.position.y = 0.075;
+    band.name = 'elite-band';
     base.add(band);
   }
   return base;
@@ -213,6 +214,17 @@ export class UnitView {
     const step = this.walking ? Math.abs(Math.sin(this.phase)) * 0.025 : 0;
     m.body.position.y = m.bodyY + breathe + step;
     m.idle?.(ts, this.walking);
+  }
+
+  /** The elite is first seen: its band swells and flares, then settles. */
+  flashElite() {
+    const band = this.base.getObjectByName('elite-band');
+    if (!band) return Promise.resolve();
+    return tween(900, (t) => {
+      const k = Math.sin(t * Math.PI); // 0 → 1 → 0
+      band.scale.setScalar(1 + 0.3 * k);
+      band.material.emissiveIntensity = 0.9 + 2.5 * k;
+    }, linear);
   }
 
   updateHp() {

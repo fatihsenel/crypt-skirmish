@@ -471,6 +471,15 @@ class Sfx {
     }, 0.25);
   }
 
+  /** An elite comes into view: a low horn-like swell under a bright gold ring. */
+  elite() {
+    this.play((t) => {
+      this.tone(t, { type: 'sawtooth', freq: 147, dur: 0.7, gain: 0.05, attack: 0.06, lowpass: 900 });
+      this.tone(t + 0.18, { type: 'sawtooth', freq: 220, dur: 0.8, gain: 0.045, attack: 0.06, lowpass: 1100 });
+      this.tone(t + 0.18, { type: 'triangle', freq: 1320, dur: 0.6, gain: 0.03 });
+    }, 0.1);
+  }
+
   /** Chest lid creaks open, coins and glass clink. */
   chest() {
     this.play((t) => {

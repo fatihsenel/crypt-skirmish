@@ -223,6 +223,7 @@ export class Camp {
       return `<li>
         <div class="run-head"><span>${how}</span><span class="muted">${esc(r.difficulty)} · ${date}</span></div>
         <div class="run-stats">Party level ${r.level} · ${plural(r.won, 'room')} won · ${plural(r.rounds, 'round')}`
+        + (Number.isInteger(r.elites) && r.elites > 0 ? ` · ${plural(r.elites, 'elite')} slain` : '')
         + (r.mvp ? ` · most damage: ${esc(r.mvp.name)} (${r.mvp.damage})` : '') + `</div>
         <div class="run-party">${party}</div>`
         + (r.fight && NODES[r.fight.node] ? `<button type="button" class="watch-run" data-watch="${i}">Watch the last fight: ${esc(nodeName(r.fight.node))}`

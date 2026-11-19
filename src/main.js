@@ -461,6 +461,7 @@ stage.tickers.add(() => {
   if (!game || !board) return;
   updateVision();
   let spotted = false;
+  let elite = null;
   const kinds = [];
   for (const v of views.values()) {
     const u = v.unit;
@@ -472,24 +473,30 @@ stage.tickers.add(() => {
       seenIds.add(u.id);
       kinds.push(u.code);
       spotted = true;
-      if (u.elite) logElite(u);
+      if (u.elite) elite = u;
     }
   }
   if (spotted) hud.renderInitiative(game);
   // The first of a kind ever seen goes into the bestiary.
   const fresh = meet(kinds);
-  if (fresh.length) {
-    const names = fresh.map((c) => TEMPLATES[c].name).join(' and ');
+  const names = fresh.map((c) => TEMPLATES[c].name).join(' and ');
+  if (fresh.length) hud.log(`New in the bestiary: <b>${names}</b>.`, 'sys');
+  if (elite) spotElite(elite, fresh.length ? `New in the bestiary: ${names}` : '');
+  else if (fresh.length) {
     hud.toast(`New in the bestiary: ${names}`, 'news');
     sfx.bestiary();
-    hud.log(`New in the bestiary: <b>${names}</b>.`, 'sys');
   }
 });
 
-/** The elite comes into view: name its trait. */
-function logElite(u) {
+/** The elite comes into view: name its trait in the log and a toast (after `news`, if any), sound a horn, flare its band and, on a phone, pan to it. */
+function spotElite(u, news) {
   const t = ELITE_TRAITS.find((e) => e.id === u.elite);
-  if (t) hud.log(`<span class="monsters">${u.name}</span> is an <b>elite</b>: ${t.name.toLowerCase()} (${t.desc}).`, 'sys');
+  if (!t) return;
+  hud.log(`<span class="monsters">${u.name}</span> is an <b>elite</b>: ${t.name.toLowerCase()} (${t.desc}).`, 'sys');
+  hud.toast(`${news ? `${news} · ` : ''}Elite: ${t.name}`, 'news');
+  sfx.elite();
+  view(u)?.flashElite();
+  keepInView(u);
 }
 
 function addView(u) {
@@ -2570,6 +2577,9 @@ function showSampleVictory() {
     won: 13, lost: 1, rounds: 95,
     heroes: { F: tally(612, 31, 9, 0, 2), W: tally(540, 22, 1, 0, 1), R: tally(488, 19, 6, 0, 0), C: tally(301, 9, 2, 356, 1) },
   };
+  // &tier=2 or deeper: a New Game+ run, with elites slain.
+  run.tier = Math.max(0, Math.min(99, Math.floor(Number(new URLSearchParams(location.search).get('tier')) || 0)));
+  if (run.tier >= 2) run.stats.elites = { regenerating: 3, relentless: 4, frenzied: 2, swift: 2, warded: 2 };
   const summary = runSummary(run);
   const tomb = levelById('tomb');
   hud.banner('victory', { round: 9, level: tomb.name, final: true, xp: 0, outro: tomb.outro, summary, share: runShareText(summary) });
@@ -2663,18 +2673,18 @@ window.__debug = {
     newGame();
   },
   campaign: () => campaign,
-  /** Win the current fight on the spot. */
+  /** Win the current fight on the spot (a Relentless elite takes a second blow). */
   win() {
     for (const u of game.living('monsters')) {
-      game.applyDamage(u, u.hp, null);
+      for (let blows = 0; u.alive && blows < 3; blows++) game.applyDamage(u, u.hp, null);
       damageReaction(u);
     }
     checkGameOver();
   },
-  /** Lose the current fight on the spot. */
+  /** Lose the current fight on the spot (through Death Ward too). */
   lose() {
     for (const u of game.living('heroes')) {
-      game.applyDamage(u, u.hp, null);
+      for (let blows = 0; u.alive && blows < 3; blows++) game.applyDamage(u, u.hp, null);
       damageReaction(u);
     }
     checkGameOver();

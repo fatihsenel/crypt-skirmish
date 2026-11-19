@@ -51,7 +51,8 @@ server on 5173.
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
   `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&paladin`, `&ranger`, `&warlock`.
-- `?victory` shows the won-campaign screen for a sample run (Copy result, Save image).
+- `?victory` shows the won-campaign screen for a sample run (Copy result, Save image);
+  `&tier=2` makes it a New Game+ run with elites slain.
 - `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.
 - `window.__debug` in the console: `command({type:'move', x, z})`,

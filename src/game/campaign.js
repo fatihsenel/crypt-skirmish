@@ -6,6 +6,7 @@ import { TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLeve
 import { ITEMS, applyItems } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
+import { ELITE_TRAITS } from './combat.js';
 
 export const SAVE_VERSION = 1;
 export const HERO_CODES = ['F', 'W', 'R', 'C'];
@@ -204,6 +205,12 @@ function validStats(s) {
 /** Add a fight's per-hero tally (game.stats) to the run's. */
 function addStats(stats, game) {
   stats.rounds += game.round;
+  // New Game+ 2 and deeper: the room's elite, by trait (a won room has none left standing).
+  for (const u of game.units ?? []) {
+    if (!u.elite || u.alive) continue;
+    stats.elites ??= {};
+    stats.elites[u.elite] = (stats.elites[u.elite] ?? 0) + 1;
+  }
   for (const [code, t] of Object.entries(game.stats ?? {})) {
     const h = stats.heroes[code];
     if (h) for (const f of STAT_FIELDS) h[f] += t[f] ?? 0;
@@ -236,6 +243,9 @@ export function runSummary(state) {
     const top = Math.max(...heroes.map((h) => h[f]));
     if (top > 0) for (const h of heroes) if (h[f] === top) h.best.push(f);
   }
+  const elites = ELITE_TRAITS
+    .filter((t) => Number.isInteger(stats.elites?.[t.id]) && stats.elites[t.id] > 0)
+    .map((t) => ({ id: t.id, name: t.name, count: stats.elites[t.id] }));
   return {
     difficulty: difficultyLabel(state.difficulty, state.tier),
     xp: state.xp,
@@ -243,6 +253,8 @@ export function runSummary(state) {
     won: stats.won,
     lost: stats.lost,
     rounds: stats.rounds,
+    elites,
+    eliteCount: elites.reduce((n, e) => n + e.count, 0),
     route: (state.cleared ?? []).filter((id) => NODES[id]).map((id) => NODES[id].short ?? nodeName(id).replace(/^The /, '')), // as on the camp map
     heroes,
   };
@@ -555,7 +567,8 @@ export function runShareText(s) {
   const classes = s.heroes.map((h) => h.cls);
   return [
     `Crypt Skirmish: the crypt cleared on ${s.difficulty}`,
-    `${plural(s.won, 'room')} won, ${s.lost ? plural(s.lost, 'fight') + ' lost' : 'no fight lost'}, ${plural(s.rounds, 'round')}`,
+    `${plural(s.won, 'room')} won, ${s.lost ? plural(s.lost, 'fight') + ' lost' : 'no fight lost'}, ${plural(s.rounds, 'round')}`
+      + (s.eliteCount ? `, ${plural(s.eliteCount, 'elite')} slain` : ''),
     `${classes.slice(0, -1).join(', ')} and ${classes.at(-1)}, level ${s.level}`,
     falls === 0 ? 'No hero ever fell 🛡️' : `Heroes fell ${plural(falls, 'time')} 💀`,
     'https://fatihsenel.github.io/crypt-skirmish/',

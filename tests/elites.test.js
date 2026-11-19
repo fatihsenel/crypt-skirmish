@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { Game, ELITE_TRAITS, eliteTrait } from '../src/game/combat.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
-import { NODES, newCampaign, runDifficulty } from '../src/game/campaign.js';
+import { NODES, newCampaign, runDifficulty, completeFight, recordDefeat, runSummary, runShareText } from '../src/game/campaign.js';
+import { runRecord } from '../src/game/history.js';
 
 const room = (tier, seed = 1, node = 'crypt') => {
   const level = levelById(NODES[node].level);
@@ -101,5 +102,39 @@ describe('elite monsters', () => {
     expect(r.success).toBe(false);
     expect(r.prone).toBe(false);
     expect(g.has(m, 'prone')).toBe(false);
+  });
+});
+
+describe('elites in the run summary', () => {
+  const won = (state, node, tier) => {
+    const g = new Game(levelById(NODES[node].level), { party: state.party, difficulty: runDifficulty('normal', tier) });
+    for (const m of g.units) if (m.team === 'monsters') m.alive = false;
+    return completeFight(state, node, g).state;
+  };
+
+  it('counts the elites slain in won rooms, by trait', () => {
+    let state = { ...newCampaign(), tier: 4 };
+    state = won(state, 'crypt', 4); // the crypt's NG+4 elite is Relentless
+    expect(state.stats.elites).toEqual({ relentless: 1 });
+    state = won(state, 'crypt', 4);
+    state = won(state, 'sanctum', 2); // the sanctum's NG+2 elite is Regenerating
+    expect(state.stats.elites).toEqual({ relentless: 2, regenerating: 1 });
+    const s = runSummary(state);
+    expect(s.eliteCount).toBe(3);
+    expect(s.elites).toEqual([{ id: 'regenerating', name: 'Regenerating', count: 1 }, { id: 'relentless', name: 'Relentless', count: 2 }]);
+    expect(runShareText(s).split('\n')[1]).toMatch(/, 3 elites slain$/);
+    expect(runRecord(state, 'won', 1).elites).toBe(3);
+  });
+
+  it('has none below NG+2, after a loss, or in a save from before', () => {
+    const state = won(newCampaign(), 'crypt', 0);
+    expect(state.stats.elites).toBeUndefined();
+    const lost = new Game(levelById('crypt'), { party: state.party, difficulty: runDifficulty('normal', 4) });
+    expect(recordDefeat(state, lost).stats.elites).toBeUndefined();
+    const s = runSummary({ ...state, stats: { ...state.stats, elites: { relentless: 'x', nonsense: 2 } } });
+    expect(s.eliteCount).toBe(0);
+    expect(s.elites).toEqual([]);
+    expect(runShareText(s)).not.toMatch(/elite/);
+    expect(runRecord(state, 'won', 1).elites).toBeUndefined();
   });
 });
