@@ -486,8 +486,13 @@ kbd {
 #help .sw.danger::before, #help .sw.danger::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #ff3b3b; }
 #help .sw.target { background: rgba(255, 74, 74, 0.55); }
 #help .sw.ally { background: rgba(74, 222, 128, 0.55); }
-#help .sw.threat { background: repeating-linear-gradient(-45deg, rgba(255, 42, 26, 0.75) 0 2px, transparent 2px 5px); }
-#help .sw.threat-ranged { background: repeating-linear-gradient(-45deg, rgba(255, 179, 71, 0.55) 0 1px, transparent 1px 5px); }
+#help .sw.threat {
+  --c: rgba(255, 42, 26, 0.8);
+  background: repeating-linear-gradient(45deg, var(--c) 0 1.5px, transparent 1.5px 5px), repeating-linear-gradient(-45deg, var(--c) 0 1.5px, transparent 1.5px 5px);
+}
+#help .sw.threat-ranged { --c: rgba(255, 179, 71, 0.75); background: radial-gradient(circle, var(--c) 0 1.6px, transparent 2px) 0 0 / 5px 5px; }
+body.colorblind #help .sw.threat { --c: rgba(204, 121, 167, 0.9); }
+body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
 
 #audio {
   position: absolute;

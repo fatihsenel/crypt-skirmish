@@ -10,7 +10,7 @@ describe('settings', () => {
 
   it('keeps valid values and clamps levels to 0..1', () => {
     const s = parseSettings(JSON.stringify({ music: 0.3, effects: 2, voices: -1, speed: 'fastest' }));
-    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true });
+    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true, colorblind: false });
   });
 
   it('drops an unknown speed and non-numeric levels', () => {
@@ -23,6 +23,12 @@ describe('settings', () => {
     expect(parseSettings(JSON.stringify({ rolls: false })).rolls).toBe(false);
     expect(parseSettings(JSON.stringify({ rolls: 'no' })).rolls).toBe(true);
     expect(parseSettings(JSON.stringify({ throwDice: false })).throwDice).toBe(false);
+  });
+
+  it('keeps the colour-blind reach off unless switched on', () => {
+    expect(parseSettings(null).colorblind).toBe(false);
+    expect(parseSettings(JSON.stringify({ colorblind: true })).colorblind).toBe(true);
+    expect(parseSettings(JSON.stringify({ colorblind: 'yes' })).colorblind).toBe(false);
   });
 
   it('only speeds monster turns up', () => {

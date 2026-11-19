@@ -1,13 +1,14 @@
 // Player settings kept in the browser: a volume for each kind of sound (music, effects and
 // voices, each 0 to 1, under the main sound switch), how fast monster turns play out, and
-// whether d20 rolls pop up over the board and the player throws their heroes' attack dice.
+// whether d20 rolls pop up over the board and the player throws their heroes' attack dice,
+// and whether the enemy reach uses colours that work with colour blindness.
 
 export const SETTINGS_KEY = 'crypt-skirmish:settings';
 
 /** Monster-turn speeds: how many times faster than normal their animations and pauses run. */
 export const SPEEDS = { normal: 1, fast: 1.75, fastest: 3 };
 
-export const DEFAULT_SETTINGS = Object.freeze({ music: 1, effects: 1, voices: 1, speed: 'normal', rolls: true, throwDice: true });
+export const DEFAULT_SETTINGS = Object.freeze({ music: 1, effects: 1, voices: 1, speed: 'normal', rolls: true, throwDice: true, colorblind: false });
 
 const level = (v, fallback) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
 
@@ -28,6 +29,7 @@ export function parseSettings(text) {
     speed: Object.hasOwn(SPEEDS, raw.speed) ? raw.speed : d.speed,
     rolls: typeof raw.rolls === 'boolean' ? raw.rolls : d.rolls,
     throwDice: typeof raw.throwDice === 'boolean' ? raw.throwDice : d.throwDice,
+    colorblind: typeof raw.colorblind === 'boolean' ? raw.colorblind : d.colorblind,
   };
 }
 

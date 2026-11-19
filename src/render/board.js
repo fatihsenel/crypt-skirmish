@@ -103,25 +103,49 @@ const overlay = (color, opacity) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
 /**
- * Diagonal stripes, for the threat zones: they read as "danger" on any floor, and can't be
- * mistaken for the solid move, attack and heal highlights drawn over them.
+ * A patterned overlay: diagonal stripes (Ice Storm's frost), a crosshatch (melee reach) or
+ * dots (ranged reach). Patterns read on any floor, can't be mistaken for the solid move,
+ * attack and heal highlights drawn over them, and tell melee from ranged without colour.
  */
-function stripes(color, opacity, width) {
+function stripes(color, opacity, width, pattern = 'stripes') {
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const g = c.getContext('2d');
-  g.strokeStyle = '#fff';
+  g.strokeStyle = g.fillStyle = '#fff';
   g.lineWidth = width;
-  for (let i = -64; i <= 128; i += 16) {
-    g.beginPath();
-    g.moveTo(i, 64);
-    g.lineTo(i + 64, 0);
-    g.stroke();
+  if (pattern === 'dots') {
+    for (let x = 8; x < 64; x += 16) {
+      for (let y = 8; y < 64; y += 16) {
+        g.beginPath();
+        g.arc(x, y, width, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  } else {
+    for (let i = -64; i <= 128; i += 16) {
+      g.beginPath();
+      g.moveTo(i, 64);
+      g.lineTo(i + 64, 0);
+      g.stroke();
+      if (pattern === 'crosshatch') {
+        g.beginPath();
+        g.moveTo(i, 0);
+        g.lineTo(i + 64, 64);
+        g.stroke();
+      }
+    }
   }
   const map = new THREE.CanvasTexture(c);
   map.colorSpace = THREE.SRGBColorSpace;
   return new THREE.MeshBasicMaterial({ color, map, transparent: true, opacity, depthWrite: false });
 }
+
+/** Melee and ranged reach. The colour-blind pair (Okabe–Ito purple and yellow) differs in
+ * brightness as well as hue, so it reads with any kind of colour blindness. */
+export const THREAT_COLORS = {
+  normal: { melee: 0xff2a1a, ranged: 0xffb347 },
+  colorblind: { melee: 0xcc79a7, ranged: 0xf0e442 },
+};
 
 export class Board {
   constructor(grid, stage) {
@@ -224,10 +248,19 @@ export class Board {
     this.layers = [this.reach, this.path, this.hover, this.targets, this.active, this.cone, this.teleport, this.danger, this.allies];
     // Where the monsters could hurt a hero next turn (the Threats toggle). Drawn under the
     // other highlights, and left alone by clearHighlights: main.js sets them on their own.
-    this.threatMelee = new TileLayer(this.group, stripes(0xff2a1a, 0.6, 6), 0.98, 0.0104);
-    this.threatRanged = new TileLayer(this.group, stripes(0xffb347, 0.4, 2.5), 0.98, 0.0102);
+    this.threatMelee = new TileLayer(this.group, stripes(THREAT_COLORS.normal.melee, 0.6, 4, 'crosshatch'), 0.98, 0.0104);
+    this.threatRanged = new TileLayer(this.group, stripes(THREAT_COLORS.normal.ranged, 0.55, 4, 'dots'), 0.98, 0.0102);
     // Ice Storm's ground (difficult terrain): frost under everything else.
     this.ice = new TileLayer(this.group, stripes(0xd8f0ff, 0.6, 3), 0.98, 0.0106);
+  }
+
+  /** The threat colours: red and amber, or purple and yellow for colour-blind players. */
+  setThreatColors(colorblind) {
+    const c = THREAT_COLORS[colorblind ? 'colorblind' : 'normal'];
+    this.threatMelee.material.color.setHex(c.melee);
+    this.threatRanged.material.color.setHex(c.ranged);
+    this.threatMelee.material.opacity = colorblind ? 0.85 : 0.6; // the paler pair needs more ink
+    this.threatRanged.material.opacity = colorblind ? 0.7 : 0.55;
   }
 
   /** Frost on the tiles that are difficult terrain (a Set of tile keys). */

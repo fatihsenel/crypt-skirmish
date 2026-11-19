@@ -98,6 +98,10 @@ const hud = new Hud({
   onUndo: () => undoMove(),
   onChoose: (choice) => choose(choice),
   onRestart: () => {
+    if (!game) { // the ?victory sample: nothing to restart
+      $banner.hidden = true;
+      return backToTitle();
+    }
     sfx.ui();
     if (daily) newGame(); // the daily again, from the same seed
     else if (game?.over === 'victory') startCampaign(); // after the final room
@@ -291,10 +295,15 @@ const bestiary = new Bestiary();
 for (const b of document.querySelectorAll('.bestiary-open')) b.addEventListener('click', () => bestiary.open(b));
 
 const settings = loadSettings();
+document.body.classList.toggle('colorblind', settings.colorblind);
 new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
-  if (key === 'speed' || key === 'rolls' || key === 'throwDice') return;
+  if (key === 'colorblind') {
+    board?.setThreatColors(value);
+    document.body.classList.toggle('colorblind', value);
+  }
+  if (key === 'speed' || key === 'rolls' || key === 'throwDice' || key === 'colorblind') return;
   unlockAudio();
   sfx.setLevel(key, value);
 });
@@ -479,6 +488,7 @@ function startFight(resume) {
     return;
   }
   board = new Board(game.grid, stage);
+  board.setThreatColors(settings.colorblind);
   stage.scene.add(board.group);
   board.setIce(game.icyTiles()); // a restored fight may have icy ground
   views = new Map();
@@ -714,6 +724,7 @@ function isHeroTurn() {
 /** The dungeon without anyone in it, behind the title screen. */
 function showBackdrop() {
   board = new Board(new Grid(LEVELS[0].rows), stage);
+  board.setThreatColors(settings.colorblind);
   stage.scene.add(board.group);
 }
 
@@ -2166,6 +2177,27 @@ window.addEventListener('keydown', (ev) => {
 /** A rested party at `level` (3 to 8), for the ?level= test route (&party=5). */
 const testParty = partyAt;
 
+/**
+ * ?victory: the won-campaign screen for a made-up run, to try Save image and Copy result
+ * (on a phone, the share sheet) without playing to the end. Nothing is saved or recorded.
+ */
+function showSampleVictory() {
+  saving = false;
+  const run = partyAt(newCampaign('normal'), 8);
+  const gear = { F: ['weaponPlus2', 'gauntletsOgre'], W: ['bracersDefense', 'ringProtection', 'amuletHealth'], R: ['weaponPlus1', 'cloakProtection'], C: ['periaptPoison', 'cloakProtection', 'weaponPlus1'] };
+  for (const [code, items] of Object.entries(gear)) run.party[code].items = items;
+  run.cleared = ['crypt', 'ossuary', 'chapel', 'sanctum', 'catacombs', 'vault', 'barrow', 'nest', 'gallery', 'throne', 'halls', 'armory', 'tomb'];
+  run.xp = 14350;
+  const tally = (damage, kills, crits, healing, downed) => ({ damage, kills, crits, healing, downed });
+  run.stats = {
+    won: 13, lost: 1, rounds: 95,
+    heroes: { F: tally(612, 31, 9, 0, 2), W: tally(540, 22, 1, 0, 1), R: tally(488, 19, 6, 0, 0), C: tally(301, 9, 2, 356, 1) },
+  };
+  const summary = runSummary(run);
+  const tomb = levelById('tomb');
+  hud.banner('victory', { round: 9, level: tomb.name, final: true, xp: 0, outro: tomb.outro, summary, share: runShareText(summary) });
+}
+
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets
 // the heroes' level, &paladin swaps the Fighter for a Paladin, &warlock the Wizard for a
 // Warlock and &ranger the Rogue for a Ranger.
@@ -2201,6 +2233,8 @@ preloadDungeon(bootProgress).then(() => {
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
     loadModels(roomFiles(nodeId, campaign.party)).then(() => loadModels(allFiles())); // this room first
+  } else if (new URLSearchParams(location.search).has('victory')) {
+    showSampleVictory();
   } else {
     const save = loadSave();
     camp.showTitle(save);

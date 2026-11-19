@@ -118,14 +118,16 @@ It runs on desktop and on phones.
 
 - **Dice on the board:** on your heroes' turns you throw the d20 yourself by clicking,
   tapping or pressing Space. Monsters' rolls and saving throws show too.
-- **Enemy reach** (T): stripes the tiles monsters could reach and hit next turn. Red means
-  melee and amber means ranged.
+- **Enemy reach** (T): marks the tiles monsters could reach and hit next turn. A red
+  crosshatch means melee and amber dots mean ranged. Settings can switch them to purple and
+  yellow for colour-blind players.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does.
 - **Turn order:** portraits along the top, each with its initiative number. Long names
   shrink to fit, like "G. Spider 2" or "R. Mummy".
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
-- **Settings:** volume for music, effects and voices, monster turn speed, and the dice options.
+- **Settings:** volume for music, effects and voices, monster turn speed, the dice options and
+  colour-blind friendly enemy reach.
 
 ## Sound
 
@@ -206,6 +208,9 @@ Every push to `main` runs the tests, builds and deploys to GitHub Pages
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
 12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&paladin`, `&ranger` or `&warlock`.
 This doesn't touch the save.
+
+**See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,
+to try Copy result and Save image (on a phone, the share sheet). Nothing is saved.
 
 **Console:** `__debug.autoplay()` lets the AI play the heroes too. `__debug.win()` and
 `__debug.lose()` end the fight.
