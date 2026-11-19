@@ -191,13 +191,15 @@ This doesn't touch the save.
 - `npm run sim -- 300` plays 300 campaigns down each route.
 - `npm run sim -- 300 act2`, `act3` or `act4` plays just that act, starting from real parties
   that finished the act before.
+- `npm run sim -- 300 full` plays whole runs, first room to the Tomb, and says where they end.
 - `SEED=n`, `DIFFICULTY=story|hard`, `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
 Armory. On Hard the Throne drops to about 95% and 50%, and the Tomb to about 75% and 30%.
-Story wins nearly every time.
+Story wins nearly every time. A whole run wins about 75% of the time on Normal and about 18%
+on Hard, where the Barrow ends the most runs.
 
 ### Layout
 

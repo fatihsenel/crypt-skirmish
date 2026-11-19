@@ -1,6 +1,6 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
-//   node scripts/sim.js [runs] [act2|act3|act4]
+//   node scripts/sim.js [runs] [act2|act3|act4|full]
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
 // RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
@@ -357,6 +357,21 @@ function actFour(runs, rng) {
   console.log('  act four won via', whole);
 }
 
+/** Whole runs, first room to the tomb, cycling through every route; where do they end? */
+function fullRuns(runs, rng) {
+  const ends = {};
+  let won = 0;
+  for (let i = 0; i < runs; i++) {
+    const route = [...ACT_ONE[i % 3], ...ACT_TWO[i % 4], ...ACT_THREE[i % 2], ...ACT_FOUR[Math.floor(i / 2) % 2]];
+    const res = campaign(route, rng);
+    const last = res.at(-1);
+    if (last.id === 'tomb' && last.won) won++;
+    else ends[last.id] = (ends[last.id] ?? 0) + 1;
+  }
+  console.log(`Whole campaigns, ${runs} runs (${process.env.DIFFICULTY ?? 'normal'})`);
+  console.log(`  won ${pct(won, runs)}; lost at`, Object.fromEntries(Object.entries(ends).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, pct(v, runs)])));
+}
+
 function report(name, results) {
   const wins = results.filter((r) => r.won);
   const avg = (f, list = results) => (list.reduce((s, r) => s + f(r), 0) / Math.max(1, list.length)).toFixed(1);
@@ -369,6 +384,7 @@ function main() {
   if (process.argv[3] === 'act2') return actTwo(runs, rng);
   if (process.argv[3] === 'act3') return actThree(runs, rng);
   if (process.argv[3] === 'act4') return actFour(runs, rng);
+  if (process.argv[3] === 'full') return fullRuns(runs, rng);
   const stats = {};
   let wholeRuns = {};
   for (const one of ACT_ONE) {

@@ -66,3 +66,6 @@ Exact maps, HP and damage after the simulator, colours, room text.
   regained for two of the target's turns. Normal Tomb: 75% / 94% (was 78% / 95%).
 - Simulator, 300 runs: Story act four 98% / 99%. Hard Tomb 30% / 76% against the Hard Throne's
   53% / 95%, so the Tomb is the steepest fight on Hard.
+- Tried: on Hard, Nekhet raising one fewer. The Hard Tomb barely moved (29% / 79%), so it was
+  dropped. Whole runs (`sim full`, 300): Normal 75%, Hard 18%; on Hard the Barrow ends 33% of
+  runs and the Tomb 17%.

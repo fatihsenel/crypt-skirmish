@@ -72,7 +72,8 @@ html, body {
 .hpbar i[data-level='high'] { background: var(--hp-high); }
 .hpbar i[data-level='mid'] { background: var(--hp-mid); }
 .hpbar i[data-level='low'] { background: var(--hp-low); }
-.unit-label .tags { display: flex; gap: 3px; }
+/* Wrap after about two tags, extra rows stacking upward, so a busy figure doesn't cover its neighbours. */
+.unit-label .tags { display: flex; flex-wrap: wrap-reverse; justify-content: center; gap: 2px 3px; max-width: 136px; }
 .unit-label .tag {
   font: 600 9.5px var(--body);
   font-style: normal;
