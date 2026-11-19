@@ -2243,6 +2243,17 @@ describe('act four and levels 7–8', () => {
     expect([game.icyTiles().size, game.moveCost()]).toEqual([0, null]);
   });
 
+  it('fliers (specters, wraiths, Ysolde) drift over icy ground at full speed', () => {
+    const game = arena(['################', '#W............t#', '################'], 7);
+    const [w, t] = game.units;
+    t.hp = t.maxHp = 999;
+    setTurn(game, 0);
+    game.castSpell(w, 'iceStorm', { x: 7, z: 1 });
+    t.movesLeft = 8;
+    expect(t.flies).toBe(true);
+    expect(game.reachable(t).get('6,1')?.dist).toBe(8);
+  });
+
   it('a move across icy ground spends the extra movement', () => {
     const game = arena(['################', '#W..........g..#', '################'], 7);
     const [w, g] = game.units;

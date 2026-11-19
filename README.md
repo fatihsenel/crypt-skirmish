@@ -36,7 +36,7 @@ It runs on desktop and on phones.
 - The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
   or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
 - Ice Storm leaves its area icy: difficult terrain (each tile costs 10 ft of movement) until
-  the end of the caster's next turn.
+  the end of the caster's next turn. Specters, wraiths and Ysolde fly over it.
 - The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
 - The Warlock has two pact slots that come back after every room.
 

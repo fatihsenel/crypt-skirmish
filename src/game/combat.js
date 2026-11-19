@@ -707,7 +707,7 @@ export class Game {
   }
 
   reachable(unit) {
-    return this.grid.flood(unit.x, unit.z, unit.movesLeft, this.passableFor(unit), this.moveCost());
+    return this.grid.flood(unit.x, unit.z, unit.movesLeft, this.passableFor(unit), this.moveCost(unit));
   }
 
   // --- difficult terrain (Ice Storm) ----------------------------------------
@@ -718,9 +718,12 @@ export class Game {
     return out;
   }
 
-  /** What entering a tile costs (2 on difficult ground), or null when there is none. */
-  moveCost() {
-    if (!this.ice?.length) return null;
+  /**
+   * What entering a tile costs `unit` (2 on difficult ground), or null when nothing slows it:
+   * no ice, or a flier (specters, wraiths, Ysolde) passing over it.
+   */
+  moveCost(unit = null) {
+    if (!this.ice?.length || unit?.flies) return null;
     const icy = this.icyTiles();
     return (x, z) => (icy.has(key(x, z)) ? 2 : 1);
   }
@@ -760,7 +763,7 @@ export class Game {
     else if (this.has(monster, 'prone')) moves -= Math.ceil(monster.speed / 2);
     const pass = this.passableFor(monster);
     const away = (x, z) => ignore && ignore.x === x && ignore.z === z;
-    const map = this.grid.flood(monster.x, monster.z, Math.max(0, moves), (x, z) => away(x, z) || pass(x, z), this.moveCost());
+    const map = this.grid.flood(monster.x, monster.z, Math.max(0, moves), (x, z) => away(x, z) || pass(x, z), this.moveCost(monster));
     const spots = [...map.values()].filter((n) => {
       if (n.dist === 0) return true;
       const o = this.unitAt(n.x, n.z);

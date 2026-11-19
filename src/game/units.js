@@ -251,6 +251,7 @@ export const TEMPLATES = {
   e: {
     name: 'Specter', cls: 'Specter', team: 'monsters', color: 0xb8c8d8,
     hp: 22, ac: 12, speed: 8, prof: 2, xp: 200, cr: 1,
+    flies: true, // drifts over difficult ground (Ice Storm)
     ai: 'brute',
     undead: true,
     stats: { str: 1, dex: 14, con: 11, int: 10, wis: 10, cha: 11 },
@@ -265,6 +266,7 @@ export const TEMPLATES = {
   q: {
     name: 'Ysolde', cls: 'Banshee', team: 'monsters', color: 0xd8e4f0,
     hp: 130, ac: 14, speed: 8, prof: 3, xp: 1100, cr: 4,
+    flies: true, // drifts over difficult ground (Ice Storm)
     multiattack: 2,
     ai: 'brute',
     undead: true,
@@ -294,6 +296,7 @@ export const TEMPLATES = {
   t: {
     name: 'Wraith', cls: 'Wraith', team: 'monsters', color: 0x4a3a60,
     hp: 67, ac: 13, speed: 8, prof: 3, xp: 1800, cr: 5,
+    flies: true, // drifts over difficult ground (Ice Storm)
     ai: 'brute',
     undead: true,
     stats: { str: 6, dex: 16, con: 16, int: 12, wis: 14, cha: 15 },
