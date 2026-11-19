@@ -690,9 +690,9 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null, win = null }) {
     this.renderSummary(summary);
-    this.renderRecap(recap);
+    this.renderRecap(recap, win);
     this.cardSummary = summary;
     $('#save-card').hidden = !summary;
     $('#save-card').textContent = 'Save image';
@@ -782,9 +782,19 @@ export class Hud {
     }
   }
 
-  /** A lost fight in a few lines (see game/recap.js): how each hero fell, then the foes. */
-  renderRecap(recap) {
+  /**
+   * The fight in a few lines (see game/recap.js). Lost: how each hero fell, then the foes.
+   * Won: who led the way, the closest call, who fell and the potions drunk.
+   */
+  renderRecap(recap, win = null) {
     const el = $('#banner-recap');
+    el.classList.toggle('won', !!win);
+    if (win) {
+      const lines = [['recap-best', win.best], ['recap-closest', win.closest], ['recap-fell', win.fell], ['recap-potions', win.potions]].filter(([, l]) => l);
+      el.hidden = false;
+      el.innerHTML = `<h2>How it went</h2>${lines.map(([cls, l]) => `<p class="${cls}">${esc(l)}</p>`).join('')}`;
+      return;
+    }
     const lines = recap ? [['recap-worst', recap.worst], ['recap-left', recap.left]].filter(([, l]) => l) : [];
     el.hidden = !recap || (!recap.falls.length && !lines.length);
     el.innerHTML = el.hidden ? '' : `<h2>How it went</h2>`

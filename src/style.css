@@ -639,9 +639,10 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
 #banner-recap p { margin: 2px 0 0; color: #d8cfc0; max-width: none; }
 #banner-recap .recap-tip { margin-top: 8px; padding-top: 6px; border-top: 1px solid #b0484833; }
 #banner-recap .recap-tip b { color: var(--gold); font-weight: 600; }
+#banner-recap.won { border-color: #d9b45a55; background: #d9b45a10; }
 @media (max-height: 520px) {
   #banner-recap { margin-bottom: 10px; padding: 6px 10px; font-size: 12px; }
-  #banner-recap h2, #banner-recap .recap-worst { display: none; }
+  #banner-recap h2, #banner-recap .recap-worst, #banner-recap .recap-potions { display: none; }
   #banner-recap li, #banner-recap p { margin: 1px 0; }
 }
 #banner .banner-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }

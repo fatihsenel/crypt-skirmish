@@ -91,7 +91,8 @@ It runs on desktop and on phones.
   them, such as "AC 15 → 17" or "Max HP 35 → 53".
 - A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
   each hero fell, which foe hit hardest and who was still standing, with a tip for next time
-  (unused potions, archers, a foe to focus).
+  (unused potions, archers, a foe to focus). A won room says who led the way, the closest
+  call, who fell and how many potions were drunk.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
@@ -249,7 +250,7 @@ src/
     combat.js        Game: turns, movement, attacks, spells, events
     ai.js            monster brains
     replay.js        fight saves: commands replayed from a seed
-    recap.js         a lost fight told back: who fell to what, and a tip
+    recap.js         a fight told back: who fell to what and a tip, or who led a win
     history.js       past runs
     achievements.js  achievements and their checks
     bestiary.js      which monsters you've met and slain

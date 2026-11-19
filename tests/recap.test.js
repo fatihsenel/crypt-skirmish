@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Game } from '../src/game/combat.js';
-import { fightRecap } from '../src/game/recap.js';
+import { fightRecap, winRecap } from '../src/game/recap.js';
 
 describe('a lost fight’s recap', () => {
   it('logs each blow a hero takes, with the attack that dealt it', () => {
@@ -10,7 +10,7 @@ describe('a lost fight’s recap', () => {
     f.hp = 3;
     game.attack(o, f, o.attacks[0]);
     expect(game.blows).toEqual([{
-      round: game.round, to: f.name, by: o.name, byId: o.id, kind: o.cls, how: o.attacks[0].name, via: 'melee', damage: 3, down: true,
+      round: game.round, to: f.name, by: o.name, byId: o.id, kind: o.cls, how: o.attacks[0].name, via: 'melee', damage: 3, hp: 0, down: true,
     }]);
   });
 
@@ -82,6 +82,53 @@ describe('a lost fight’s recap', () => {
         .toBe('Wraith dealt over half the damage. Bring it down first, or stay out of reach.');
       expect(tip([blow({ via: 'melee' }), blow({ by: 'Skeleton 2', byId: 2, via: 'melee' }), blow({ by: 'Mummy', kind: 'Mummy', via: 'melee', damage: 3 })]))
         .toBe('The Skeletons dealt over half the damage. Bring them down first, or stay out of reach.');
+    });
+  });
+
+  describe('a won fight', () => {
+    const hero = (name, slot, maxHp = 30) => ({ name, slot, team: 'heroes', alive: true, hp: maxHp, maxHp });
+    const party = [hero('Brannoc', 'F', 44), hero('Maela', 'C', 31), hero('Wren', 'R', 27)];
+    const blow = (more) => ({ round: 2, to: 'Maela', by: 'Ghoul', damage: 5, hp: 20, down: false, ...more });
+
+    it('names the top hitter, the closest call and the potions drunk', () => {
+      const game = {
+        units: party,
+        stats: { F: { damage: 34, kills: 3 }, C: { damage: 12, kills: 1 }, R: { damage: 34, kills: 1 } },
+        blows: [blow({ round: 2, hp: 14 }), blow({ round: 4, hp: 2 }), blow({ to: 'Brannoc', hp: 9 })],
+        drunk: 2,
+      };
+      expect(winRecap(game)).toEqual({
+        best: 'Brannoc led the way: 34 damage, 3 kills.',
+        closest: 'Closest call: Maela held on at 2/31 HP in round 4.',
+        fell: null,
+        potions: '2 potions drunk.',
+      });
+    });
+
+    it('leaves out calls that weren’t close or ended in a fall, and says who fell', () => {
+      const game = {
+        units: party,
+        stats: { C: { damage: 6, kills: 0 } },
+        blows: [blow({ hp: 20 }), blow({ to: 'Wren', round: 2, hp: 3 }), blow({ to: 'Wren', round: 3, hp: 0, down: true })],
+        drunk: 0,
+      };
+      expect(winRecap(game)).toEqual({
+        best: 'Maela led the way: 6 damage.',
+        closest: null,
+        fell: 'Wren fell in round 3 but the party won through.',
+        potions: 'No potions needed.',
+      });
+    });
+
+    it('counts potions in a real fight', () => {
+      const game = new Game(['######', '#F..o#', '######'], { senses: false, rng: () => 0.5 });
+      game.start();
+      const [f] = game.units;
+      f.potions = 1;
+      f.hp = 5;
+      game.doAction(f, 'potion');
+      expect(f.potions).toBe(0);
+      expect(winRecap(game).potions).toBe('1 potion drunk.');
     });
   });
 });

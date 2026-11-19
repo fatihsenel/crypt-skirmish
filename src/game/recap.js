@@ -77,3 +77,39 @@ function lossTip(game, byKind) {
   }
   return null;
 }
+
+/**
+ * A won fight in a few lines:
+ *   best:    "Brannoc led the way: 34 damage, 3 kills."
+ *   closest: "Closest call: Maela held on at 2/31 HP in round 4." (only at half HP or less)
+ *   fell:    "Wren fell in round 3 but the party won through." (null when no one fell)
+ *   potions: "2 potions drunk." / "No potions needed."
+ */
+export function winRecap(game) {
+  const heroes = game.units.filter((u) => u.team === 'heroes' && !u.corpse);
+  const tally = (u) => game.stats?.[u.slot] ?? {};
+  const [top] = heroes.filter((u) => tally(u).damage > 0)
+    .sort((a, b) => tally(b).damage - tally(a).damage || tally(b).kills - tally(a).kills);
+  const kills = top ? tally(top).kills : 0;
+  const best = top
+    ? `${top.name} led the way: ${tally(top).damage} damage${kills ? `, ${kills} kill${kills === 1 ? '' : 's'}` : ''}.`
+    : null;
+
+  const falls = game.blows.filter((b) => b.down);
+  const names = [...new Set(falls.map((b) => b.to))];
+  // A close call is someone who stayed up: one who fell anyway is told below.
+  const maxHp = (name) => heroes.find((u) => u.name === name)?.maxHp;
+  const [near] = game.blows
+    .filter((b) => !names.includes(b.to) && b.hp > 0 && maxHp(b.to) && b.hp * 2 <= maxHp(b.to))
+    .sort((a, b) => a.hp / maxHp(a.to) - b.hp / maxHp(b.to) || a.round - b.round);
+  const closest = near ? `Closest call: ${near.to} held on at ${near.hp}/${maxHp(near.to)} HP in round ${near.round}.` : null;
+
+  const fell = names.length === 0 ? null
+    : names.length === 1
+      ? `${names[0]} fell in round ${falls[0].round} but the party won through.`
+      : `${names.join(' and ').replace(/ and (?=.* and )/g, ', ')} fell but the party won through.`;
+
+  const n = game.drunk ?? 0;
+  const potions = n ? `${n} potion${n === 1 ? '' : 's'} drunk.` : 'No potions needed.';
+  return { best, closest, fell, potions };
+}
