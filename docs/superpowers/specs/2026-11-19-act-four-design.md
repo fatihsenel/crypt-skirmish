@@ -74,3 +74,10 @@ Exact maps, HP and damage after the simulator, colours, room text.
   83%. Normal and Story are unchanged.
 - The simulator now runs on worker threads. 1,500 whole runs each: Story 97%, Normal 68%, Hard
   29%. (The earlier 75% / 26% were single 300-run samples, which swing about ±5 points.)
+
+## Follow-up: replay tests, the Hard Barrow
+- A replay test saves a Tomb fight while a hero is rotting and again after Nekhet's rising,
+  and both rebuild exactly.
+- Hard leaves one ghoul (10,10) out of the Barrow (`thinned` on the level, `thin` on Hard).
+  Hard Barrow, 300 runs per route: 34–91% → 64–97% (Normal 80–98%). Whole Hard runs, 1,500:
+  29% → 35%; the Tomb now ends the most (20%), then the Barrow (14%) and the Throne (13%).

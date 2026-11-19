@@ -78,6 +78,10 @@ export class Game {
       }
     });
 
+    // Hard leaves a few monsters out of its worst rooms (level.thinned, by tile).
+    if (difficulty?.thin && level.thinned) {
+      this.grid.spawns = this.grid.spawns.filter((s) => !level.thinned.includes(key(s.x, s.z)));
+    }
     const all = [...this.grid.spawns, ...this.grid.corpses];
     const totals = {};
     for (const s of all) totals[s.code] = (totals[s.code] || 0) + 1;

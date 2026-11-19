@@ -1532,6 +1532,16 @@ describe('level 6 and difficulty', () => {
     expect(story.units.find((u) => u.code === 'u').weaponBonus).toBe(-1);
   });
 
+  it('Hard leaves one ghoul out of the Barrow', () => {
+    const ghouls = (d) => new Game(levelById('barrow'), { difficulty: DIFFICULTIES[d] }).units.filter((u) => u.code === 'u');
+    expect(ghouls('normal').length).toBe(5);
+    expect(ghouls('story').length).toBe(5);
+    const hard = ghouls('hard');
+    expect(hard.length).toBe(4);
+    expect(hard.some((u) => u.x === 10 && u.z === 10)).toBe(false);
+    expect(hard.map((u) => u.name)).toEqual(['Ghoul 1', 'Ghoul 2', 'Ghoul 3', 'Ghoul 4']);
+  });
+
   it('a new run keeps its difficulty; older saves load as Normal', () => {
     expect(newCampaign('hard').difficulty).toBe('hard');
     const old = newCampaign();

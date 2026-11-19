@@ -168,6 +168,7 @@ export const LEVELS = [
     ],
     loot: [['potion', 'potion']],
     patrols: { '12,2': [[14, 6]] },
+    thinned: ['10,10'], // one ghoul fewer on Hard
   },
 ];
 

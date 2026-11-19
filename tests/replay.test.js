@@ -117,6 +117,41 @@ describe('saving a fight mid-battle', () => {
     expect(back.rng()).toBe(live.rng());
   });
 
+  it('replays the Hollow Tomb through mummy rot and Nekhet\'s rising', () => {
+    const party = dailyCampaign({ level: 8, classes: {} }).party;
+    const tomb = () => new Game(levelById('tomb'), { party, difficulty: DIFFICULTIES.normal, rng: seeded(4) });
+    const live = tomb();
+    let rose = false;
+    live.on('rising', () => { rose = true; });
+    live.start();
+    untilHero(live);
+    const log = [];
+    const units = (game) => game.units.map((u) => [u.name, u.hp, u.x, u.z, u.alive, Object.keys(u.conditions).sort().join()]);
+    let rotting = null; // the fight as it stood with a hero rotting
+    for (let n = 0; n < 120 && !live.over && !(rose && log.length >= (rotting?.at ?? 0) + 4); n++) {
+      play(live, 1, log);
+      if (!rotting && live.units.some((u) => u.team === 'heroes' && u.conditions.rotting)) {
+        rotting = { at: log.length, units: units(live), check: fightCheck(live) };
+      }
+    }
+    expect(rotting && rose).toBeTruthy();
+
+    // Saved while a hero is rotting.
+    const mid = tomb();
+    expect(replayFight(mid, log.slice(0, rotting.at)).ok).toBe(true);
+    expect(units(mid)).toEqual(rotting.units);
+    expect(fightCheck(mid)).toBe(rotting.check);
+
+    // Saved after the risen dead joined the fight.
+    const back = tomb();
+    expect(replayFight(back, log).ok).toBe(true);
+    expect(back.units.length).toBe(live.units.length);
+    expect(back.units.some((u) => u.name.startsWith('Risen'))).toBe(true);
+    expect(units(back)).toEqual(units(live));
+    expect(back.units.find((u) => u.rises)?.roused).toBe(true);
+    expect(back.rng()).toBe(live.rng());
+  });
+
   it('reports the fingerprint right after the last command', () => {
     const live = fresh(LEVELS[0], 3);
     live.start();
