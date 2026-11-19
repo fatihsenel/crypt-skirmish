@@ -49,6 +49,24 @@ export const TEMPLATES = {
       { name: 'Dagger', stat: 'dex', damage: '1d4', reach: 1 },
     ],
   },
+  // The Warlock (Fiend patron) can take the Wizard's place: two pact slots that come back
+  // after every room, Eldritch Blast with Agonizing Blast (CHA to damage), Hex, and
+  // Dark One's Blessing (temporary HP on a kill). Armor of Shadows gives Mage Armor's AC.
+  K: {
+    name: 'Ilsa', cls: 'Warlock', team: 'heroes', color: 0xb03a3a,
+    hp: 24, ac: 15, speed: 6, prof: 2, level: 3,
+    castStat: 'cha',
+    spells: ['hex', 'scorchingRay', 'burningHands'],
+    slots: { 2: 2 },
+    pactMagic: true, // slots come back after every room (a short rest)
+    passives: ['hellishRebuke', 'darkOnesBlessing'],
+    ai: 'skirmisher',
+    stats: { str: 8, dex: 14, con: 14, int: 12, wis: 10, cha: 16 },
+    attacks: [
+      { name: 'Eldritch Blast', stat: 'cha', damage: '1d10', reach: 24, projectile: 'eldritch' },
+      { name: 'Dagger', stat: 'dex', damage: '1d4', reach: 1 },
+    ],
+  },
   R: {
     name: 'Wren', cls: 'Rogue', team: 'heroes', color: 0x3a8f6a,
     hp: 24, ac: 14, speed: 6, prof: 2, level: 3,
@@ -305,7 +323,10 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     smiteArmed: false,  // Divine Smite on the next melee hit
     faithFrom: null,    // the paladin whose Shield of Faith is on it (+2 AC)
     spiritWeapon: null, // a cleric's Spiritual Weapon: { x, z, slot } once cast this fight
-    mark: null,         // a ranger's Hunter's Mark: { id, slot } of the marked foe
+    mark: null,         // Hunter's Mark or Hex: { id, slot, spell } of the marked foe
+    tempHp: 0,          // temporary HP (Dark One's Blessing): lost first, gone after the fight
+    rebukeArmed: false, // Hellish Rebuke on the next enemy that damages it
+    luckUsed: false,    // Dark One's Own Luck, once per fight
     colossusUsed: false, // Colossus Slayer, once per turn
     conditions: {},     // prone / poisoned / frightened (combat.js)
   };
@@ -337,6 +358,14 @@ export const PROGRESSION = {
       hp: 5, slots: { 3: 3 }, sculpt: true, passives: ['sculptSpells'],
       note: 'Sculpt Spells: Fireball, Lightning Bolt and Burning Hands spare the party; a third 3rd-level slot',
     },
+  },
+  K: {
+    4: { hp: 7, stats: { cha: 2 }, note: 'Charisma 18: +1 to Eldritch Blast hits and damage, and to your spell DC' },
+    5: {
+      hp: 7, prof: 3, slots: { 2: 0, 3: 2 }, spells: ['fireball'], extraAttack: 2, extraAttackWith: 'Eldritch Blast',
+      note: 'Eldritch Blast fires two beams, Fireball, and your pact slots become 3rd level',
+    },
+    6: { hp: 7, passives: ['ownLuck'], note: 'Dark One’s Own Luck: once per room, add 1d10 to a failed save' },
   },
   R: {
     4: { hp: 6, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
@@ -390,7 +419,7 @@ export function applyLevel(unit, level) {
 }
 
 /** Classes that can fill each hero slot: the first is the default. */
-export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W'], R: ['R', 'A'], C: ['C'] };
+export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W', 'K'], R: ['R', 'A'], C: ['C'] };
 
 /** The class (template code) a party record plays in a slot. */
 export const classOf = (slot, rec) => (CLASS_CHOICES[slot]?.includes(rec?.cls) ? rec.cls : slot);

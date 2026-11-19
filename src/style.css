@@ -66,6 +66,9 @@ html, body {
   overflow: hidden;
 }
 .unit-label .hpbar i { display: block; height: 100%; transition: width 0.3s; }
+.unit-label .hpbar { position: relative; }
+.unit-label .hpbar b { position: absolute; top: 0; left: 0; height: 100%; width: 0; background: rgba(200, 220, 255, 0.75); transition: width 0.3s; }
+.temp-hp { color: #c8dcff; }
 .hpbar i[data-level='high'] { background: var(--hp-high); }
 .hpbar i[data-level='mid'] { background: var(--hp-mid); }
 .hpbar i[data-level='low'] { background: var(--hp-low); }
@@ -86,6 +89,8 @@ html, body {
 .tag.asleep { color: #8fa3c8; font-style: italic; }
 .tag.hidden { color: #b9a4e8; }
 .tag.marked { color: #e8c070; }
+.tag.hexed { color: #d070e0; }
+.tag.rebuke { color: #ff7a4a; }
 /* conditions: on figure labels, the action bar and in the log */
 .tag.prone, .cond.prone { color: #e0a060; }
 .tag.poisoned, .cond.poisoned { color: #9ad45a; }

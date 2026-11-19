@@ -92,9 +92,9 @@ export const ACHIEVEMENTS = [
     on: 'run', test: ({ state }) => heroTotal(state.stats?.heroes, 'downed') === 0,
   },
   {
-    id: 'new-blood', name: 'New blood', desc: 'Win a campaign with a Paladin or a Ranger in the party.',
+    id: 'new-blood', name: 'New blood', desc: 'Win a campaign with a Paladin, a Ranger or a Warlock in the party.',
     on: 'run',
-    test: ({ state }) => HERO_CODES.some((c) => ['P', 'A'].includes(classOf(c, state.party?.[c]))),
+    test: ({ state }) => HERO_CODES.some((c) => ['P', 'A', 'K'].includes(classOf(c, state.party?.[c]))),
   },
   {
     id: 'daily', name: 'Daily delver', desc: 'Win a daily crypt.',

@@ -33,7 +33,7 @@ const fail = (reason) => ({ ok: false, reason });
 /**
  * Carry out one of the player's commands for the unit whose turn it is.
  * Commands: move {x, z}, attack {target, attack}, shove {target}, chest {x, z},
- * action {id}, spell {id, unit | x, z}, smite, end. Returns the engine's result.
+ * action {id}, spell {id, unit | x, z}, smite, rebuke, end. Returns the engine's result.
  */
 export function applyCommand(game, cmd) {
   const u = game.current;
@@ -62,6 +62,8 @@ export function applyCommand(game, cmd) {
       return game.castSpell(u, cmd.id, spellTarget(game, cmd));
     case 'smite':
       return game.toggleSmite(u);
+    case 'rebuke':
+      return game.toggleRebuke(u);
     case 'end':
       game.endTurn();
       return { ok: true };

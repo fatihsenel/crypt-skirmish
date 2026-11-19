@@ -58,6 +58,9 @@ export const PASSIVES = {
   auraOfProtection: 'Aura of Protection: you and allies within 10 ft add your CHA modifier to saving throws.',
   archery: 'Archery: +1 to hit with ranged weapon attacks.',
   colossusSlayer: 'Colossus Slayer: once per turn, a weapon hit on a foe that is already hurt deals an extra 1d8.',
+  hellishRebuke: 'Hellish Rebuke: arm it, and the next enemy that damages you with an attack takes 2d10 fire (+1d10 per slot level above 1st), DEX save for half. Spends your reaction and a pact slot.',
+  darkOnesBlessing: 'Dark One’s Blessing: when you drop a foe to 0 HP, gain temporary HP equal to your CHA modifier + your level.',
+  ownLuck: 'Dark One’s Own Luck: once per room, when you fail a saving throw, add 1d10 to it (used automatically when it could turn the failure into a success).',
   escapeTheHorde: 'Escape the Horde: opportunity attacks against you have disadvantage.',
   packTactics:'Pack Tactics: advantage when an ally is next to the target.',
   trapSense: 'Keen Eyes: spots traps within 10 ft.',
@@ -115,6 +118,21 @@ export const SPELLS = {
     name: 'Hunter’s Mark', level: 1, time: 'bonus', range: 18, targeting: 'enemy',
     damage: '1d6',
     desc: 'Bonus action, 90 ft: mark a foe. Your weapon hits on it deal an extra 1d6 for the rest of the fight. One mark at a time; marking another foe, even after this one drops, takes a new slot. The foe feels it: marking wakes a sleeping or unaware one.',
+  },
+  hex: {
+    name: 'Hex', level: 1, time: 'bonus', range: 18, targeting: 'enemy',
+    damage: '1d6',
+    desc: 'Bonus action, 90 ft: curse a foe. Every hit you land on it deals an extra 1d6 necrotic for the rest of the fight. One curse at a time; cursing another foe, even after this one drops, takes a new slot. Cursing wakes a sleeping or unaware foe.',
+  },
+  hellishRebuke: {
+    name: 'Hellish Rebuke', level: 1, time: 'reaction', range: 12, targeting: 'none',
+    damage: '2d10', save: 'dex',
+    desc: 'Reaction when an enemy damages you: it takes 2d10 fire (+1d10 per slot level above 1st), DEX save for half. Arm it first.',
+  },
+  scorchingRay: {
+    name: 'Scorching Ray', level: 2, time: 'action', range: 24, targeting: 'enemy',
+    rays: 3, damage: '2d6',
+    desc: 'Three rays of fire at one foe, a ranged spell attack each: 2d6 fire per hit. +1 ray per slot level above 2nd. If the foe falls, the rest fly at the nearest other foe in range.',
   },
   fireball: {
     name: 'Fireball', level: 3, time: 'action', range: 30, radius: 4, targeting: 'area',

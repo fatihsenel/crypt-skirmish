@@ -278,12 +278,19 @@ export function completeFight(prev, id, game) {
     if (after.layOnHandsMax) rec.layOnHands = (rec.layOnHands ?? 0) + after.layOnHandsMax - before.layOnHandsMax;
     // Newly gained slots arrive ready to use.
     for (const [l, n] of Object.entries(after.slotMax)) {
-      rec.slots[l] = (rec.slots[l] ?? 0) + n - (before.slotMax[l] ?? 0);
+      rec.slots[l] = Math.max(0, (rec.slots[l] ?? 0) + n - (before.slotMax[l] ?? 0));
     }
     for (let l = rec.level + 1; l <= target; l++) {
       levelUps.push({ code, name: heroName(code, rec), level: l, note: PROGRESSION[classOf(code, rec)][l]?.note ?? '' });
     }
     rec.level = target;
+  }
+
+  // Pact Magic: a warlock's slots come back with the short rest after every room.
+  for (const code of HERO_CODES) {
+    const rec = state.party[code];
+    const u = restedHero(code, rec);
+    if (u.pactMagic) rec.slots = { ...u.slotMax };
   }
 
   // With the room cleared, the party searches any chests it didn't get to.

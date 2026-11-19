@@ -497,11 +497,19 @@ function startFight(resume) {
     else hud.logSpell(r);
   });
   game.on('action', (r) => { if (!unseen(r.unit)) hud.logAction(r); });
-  game.on('death', ({ unit, unmarked }) => {
+  game.on('death', ({ unit, unmarked, blessing }) => {
     clearSpiritWeapon(unit.id); // a fallen cleric's weapon fades
     if (unmarked) view(unmarked)?.updateStatus(); // and a fallen ranger's mark
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
     else hud.log(`<span class="${unit.team}">${unit.name}</span> falls.`, 'death');
+    if (blessing) {
+      hud.logBlessing(blessing);
+      // Shown once the blow has landed (the death plays out first).
+      wait(500).then(() => {
+        floatText(stage.scene, { x: blessing.unit.x, z: blessing.unit.z - 0.5 }, `+${blessing.tempHp} temp HP`, 'heal');
+        view(blessing.unit)?.updateHp();
+      });
+    }
   });
   game.on('trap', (r) => {
     if (r.unit.team === 'monsters' && !inView(r.trap)) hud.log('A trap snaps shut somewhere in the dark.', 'sys');
@@ -947,6 +955,13 @@ function spellPreview(u, id, t) {
     }
     case 'huntersMark':
       return `Hunter’s Mark → ${t.name}: +1d6 on your weapon hits against it · a 1st-level slot`;
+    case 'hex':
+      return `Hex → ${t.name}: +1d6 necrotic on every hit against it · a ${ordinalSlot(u, 1)}-level slot`;
+    case 'scorchingRay': {
+      const slot = lowestSlot(u, 2);
+      const toHit = u.prof + abilityMod(u.stats[u.castStat]);
+      return `Scorching Ray → ${t.name}: ${s.rays + slot - 2} rays, each ${signed(toHit)} vs AC ${game.acOf(t)} for 2d6 fire · a ${ordinalSlot(u, 2)}-level slot`;
+    }
     case 'sacredFlame':
       return `Sacred Flame → ${t.name}: ${s.damage} radiant, DEX save DC ${game.spellDC(u)} negates (their DEX ${signed(abilityMod(t.stats.dex))})`;
     case 'cureWounds':
@@ -958,6 +973,12 @@ function spellPreview(u, id, t) {
       return `${s.name} → ${t.name}`;
   }
 }
+
+/** The slot a spell of `level` would spend: the lowest one left at that level or above. */
+function lowestSlot(u, level) {
+  return Object.keys(u.slots).map(Number).sort((a, b) => a - b).find((l) => l >= level && u.slots[l] > 0) ?? level;
+}
+const ordinalSlot = (u, level) => ({ 1: '1st', 2: '2nd', 3: '3rd' })[lowestSlot(u, level)] ?? `${lowestSlot(u, level)}th`;
 
 function refreshSpell(u, id) {
   const s = SPELLS[id];
@@ -989,7 +1010,7 @@ function refreshSpell(u, id) {
       const allies = caught.filter((c) => c.team === u.team);
       const foes = caught.filter((c) => c.team !== u.team);
       hud.hint(
-        `${s.name}: ${s.damage} fire, DEX save DC ${game.spellDC(u)} for half · ` +
+        `${s.name}: ${2 + lowestSlot(u, 1)}d6 fire, DEX save DC ${game.spellDC(u)} for half · ` +
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the cone') +
           (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
             : ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!`) : ''),
@@ -1113,7 +1134,7 @@ async function animateAttack(r, at = r.target) {
         radiantFx(stage.scene, pos);
         floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Divine Smite!', 'spell');
       }
-      const hunter = [r.mark && 'Hunter’s Mark', r.colossus && 'Colossus Slayer'].filter(Boolean).join(' · ');
+      const hunter = [r.mark && (r.mark.spell === 'hex' ? 'Hex' : 'Hunter’s Mark'), r.colossus && 'Colossus Slayer'].filter(Boolean).join(' · ');
       if (hunter) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, hunter, 'spell');
       if (attack.damage) floatText(stage.scene, pos, r.crit ? `CRIT −${r.damage}` : `−${r.damage}`, r.crit ? 'crit' : 'dmg');
       tv.updateHp();
@@ -1134,7 +1155,27 @@ async function animateAttack(r, at = r.target) {
     await av.swing(pos, onImpact);
   }
   await reaction;
+  if (r.rebuke) await playRebuke(r.rebuke);
   hud.renderInitiative(game);
+}
+
+/** Hellish Rebuke: the hurt warlock answers with flames around the attacker. */
+async function playRebuke(r) {
+  const { caster, target } = r;
+  if (!unseen(target) || !unseen(caster)) {
+    floatText(stage.scene, { x: caster.x, z: caster.z - 0.5 }, 'Hellish Rebuke!', 'spell');
+    view(caster)?.updateStatus();
+    await view(caster).cast(target, async () => {
+      sfx.fireCone();
+      await shootProjectile(stage.scene, caster, target, 'fire');
+      fireBurstFx(stage.scene, target);
+    });
+    await showSaves([{ ...r.save, unit: target }], 'DEX', r.dc);
+  }
+  floatText(stage.scene, target, r.save.success ? `Save −${r.damage}` : `−${r.damage}`, 'crit');
+  if (r.damage) hitFx(stage.scene, target);
+  view(target)?.updateHp();
+  await damageReaction(target);
 }
 
 /** An attack on a hero's own turn, which the player throws (Settings can turn it off). */
@@ -1467,6 +1508,30 @@ async function playSpell(r) {
         mistFx(stage.scene, r.to);
       });
       break;
+    case 'scorchingRay':
+      await cv.cast(r.target, async () => {
+        sfx.cast();
+        for (const ray of r.rays) {
+          if (settings.rolls || settings.throwDice) {
+            sfx.dice();
+            await rollBadge(stage.scene, caster, badgeHeight(caster), attackRoll({ ...ray, shielded: false }));
+          }
+          await shootProjectile(stage.scene, caster, ray.target, 'fire');
+          fireBurstFx(stage.scene, ray.target);
+          if (ray.hit) {
+            sfx.hit(ray.target.code, { crit: ray.crit, fire: true });
+            hitFx(stage.scene, ray.target, caster, { crit: ray.crit });
+            floatText(stage.scene, ray.target, ray.crit ? `CRIT −${ray.damage}` : `−${ray.damage}`, ray.crit ? 'crit' : 'dmg');
+          } else {
+            sfx.miss();
+            floatText(stage.scene, ray.target, 'Miss', 'miss');
+          }
+          view(ray.target).updateHp();
+          await wait(120);
+        }
+      });
+      await Promise.all([...new Set(r.rays.filter((ray) => ray.hit).map((ray) => ray.target))].map((t) => damageReaction(t)));
+      break;
     case 'sacredFlame':
       await cv.cast(r.target, async () => {
         sfx.radiant();
@@ -1499,10 +1564,12 @@ async function playSpell(r) {
       });
       break;
     case 'huntersMark':
+    case 'hex':
       if (r.unmarked) view(r.unmarked)?.updateStatus();
       await cv.cast(r.target, async () => {
-        sfx.bow();
-        floatText(stage.scene, r.target, 'Marked', 'spell');
+        if (id === 'hex') sfx.necro();
+        else sfx.bow();
+        floatText(stage.scene, r.target, id === 'hex' ? 'Hexed' : 'Marked', 'spell');
         view(r.target).updateStatus();
         await radiantFx(stage.scene, r.target);
       });
@@ -1706,6 +1773,15 @@ function choose(choice) {
     refresh();
     return;
   }
+  if (choice.kind === 'rebuke') {
+    const r = command({ type: 'rebuke' });
+    if (r.ok) {
+      hud.logRebukeArmed(u, r.armed);
+      view(u)?.updateStatus();
+    } else hud.toast(r.reason);
+    refresh();
+    return;
+  }
   if (choice.kind === 'spell' && SPELLS[choice.id].targeting === 'self') {
     heroCommand({ type: 'spell', id: choice.id });
     return;
@@ -1872,7 +1948,8 @@ window.addEventListener('keydown', (ev) => {
 const testParty = partyAt;
 
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets
-// the heroes' level, &paladin swaps the Fighter for a Paladin and &ranger the Rogue for a Ranger.
+// the heroes' level, &paladin swaps the Fighter for a Paladin, &warlock the Wizard for a
+// Warlock and &ranger the Rogue for a Ranger.
 // The title waits only for the dungeon tiles (~0.25 MB compressed); the .glb figures
 // follow, the next room's first, and a fight waits only for its own. Any that fail fall
 // back to the built-in miniatures.
@@ -1901,7 +1978,7 @@ preloadDungeon(bootProgress).then(() => {
     saving = false;
     const q = new URLSearchParams(location.search);
     const d = q.get('difficulty'); // e.g. &difficulty=hard
-    campaign = testParty(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('ranger') && { R: 'A' }) }), Number(q.get('party')));
+    campaign = testParty(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('warlock') && { W: 'K' }), ...(q.has('ranger') && { R: 'A' }) }), Number(q.get('party')));
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
     loadModels(roomFiles(nodeId, campaign.party)).then(() => loadModels(allFiles())); // this room first

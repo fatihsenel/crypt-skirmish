@@ -30,6 +30,13 @@ export const SPECS = {
     show: ['2H_Staff'],
     clips: { melee: '2H_Melee_Attack_Stab' },
   },
+  // The Warlock: Ilsa's mage robes dyed a deep infernal red.
+  K: {
+    file: 'Mage', height: 1.35,
+    show: ['2H_Staff'],
+    recolor: { hue: 352, sat: 1.7, light: 0.9, from: [190, 320] },
+    clips: { melee: '2H_Melee_Attack_Stab' },
+  },
   R: {
     file: 'Rogue_Hooded', height: 1.28,
     show: ['Knife', 'Knife_Offhand'],

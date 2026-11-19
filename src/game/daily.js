@@ -50,6 +50,7 @@ export function dailyPlan(key = dayKey()) {
   const classes = {};
   if ((seed >>> 8) & 1) classes.F = 'P';
   if ((seed >>> 9) & 1) classes.R = 'A';
+  if ((seed >>> 10) & 1) classes.W = 'K';
   return { key, seed, node, level, classes };
 }
 

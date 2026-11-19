@@ -86,7 +86,7 @@ export class UnitView {
 
     const el = document.createElement('div');
     el.className = `unit-label ${unit.team}`;
-    el.innerHTML = `<span class="tags"></span><span class="name"></span><span class="hpbar"><i></i></span>`;
+    el.innerHTML = `<span class="tags"></span><span class="name"></span><span class="hpbar"><i></i><b></b></span>`;
     el.querySelector('.name').textContent = unit.name;
     this.label = new CSS2DObject(el);
     this.label.position.y = this.model.height + 0.2;
@@ -212,6 +212,9 @@ export class UnitView {
     const bar = this.label.element.querySelector('.hpbar i');
     bar.style.width = `${pct}%`;
     bar.dataset.level = pct > 50 ? 'high' : pct > 25 ? 'mid' : 'low';
+    // Temporary HP: a pale band laid over the bar, as a share of max HP.
+    const temp = this.label.element.querySelector('.hpbar b');
+    temp.style.width = `${Math.min(100, ((this.unit.tempHp ?? 0) / this.unit.maxHp) * 100)}%`;
   }
 
   setActive(on) {
@@ -231,7 +234,8 @@ export class UnitView {
       u.conditions?.poisoned && ['poisoned', 'Poisoned'],
       u.conditions?.frightened && ['frightened', 'Frightened'],
       u.conditions?.restrained && ['restrained', 'Webbed'],
-      u.marked && u.alive && ['marked', 'Marked'],
+      u.marked && u.alive && (u.marked === 'hex' ? ['marked hexed', 'Hexed'] : ['marked', 'Marked']),
+      u.rebukeArmed && u.alive && ['rebuke', 'Rebuke'],
       // A hero's own Stealth roll is theirs to see; a goblin's isn't.
       u.hidden && ['hidden', u.team === 'heroes' ? `Hidden · ${u.hidden}` : 'Hidden'],
       u.asleep ? ['asleep', 'Asleep'] : u.patrol && u.unaware ? ['unaware', 'Patrolling'] : u.unaware && ['unaware', 'Unaware'],
@@ -413,11 +417,11 @@ export class UnitView {
    * kind: 'fire' / 'necro' (cast), 'javelin' (overarm throw), 'arrow' (draw a bow)
    */
   async shoot(target, kind, release, onImpact) {
-    this.cry(kind === 'fire' || kind === 'necro' ? 'cast' : 'attack'); // Fire Bolt, Chill Touch: an incantation
+    this.cry(SPELL_BOLTS.includes(kind) ? 'cast' : 'attack'); // Fire Bolt, Chill Touch: an incantation
     await this.turnTowards(target.x, target.z);
     if (this.rig) {
-      const spell = kind === 'fire' || kind === 'necro';
-      if (kind === 'fire') sfx.cast();
+      const spell = SPELL_BOLTS.includes(kind);
+      if (kind === 'fire' || kind === 'eldritch') sfx.cast();
       if (kind === 'necro') sfx.necro();
       if (kind === 'arrow') this.rig.drawRanged(true);
       const { hit, done } = this.rig.play(spell ? 'spell' : kind === 'web' ? 'melee' : kind, { at: 0.45 });
@@ -434,11 +438,11 @@ export class UnitView {
     const { armR, armL, rest } = this.model;
     this.armsBusy = true;
     const poseR = kind === 'javelin' ? -2.8 : kind === 'arrow' ? -1.5 : -1.35;
-    const spell = kind === 'fire' || kind === 'necro';
+    const spell = SPELL_BOLTS.includes(kind);
     const poseL = kind === 'arrow' ? -1.6 : spell ? -0.9 : rest.armL;
     const r0 = armR.rotation.x;
     const l0 = armL.rotation.x;
-    if (kind === 'fire') sfx.cast();
+    if (kind === 'fire' || kind === 'eldritch') sfx.cast();
     if (kind === 'necro') sfx.necro();
     await tween(220, (t) => {
       armR.rotation.x = lerp(r0, poseR, t);
@@ -497,10 +501,13 @@ export class UnitView {
   }
 }
 
-/** Projectile flight between two units. kind: 'fire' | 'necro' | 'arrow' | 'javelin' | 'web' */
+/** Projectiles thrown by a spell (cast pose and glow rather than a bow or a throw). */
+const SPELL_BOLTS = ['fire', 'necro', 'eldritch'];
+
+/** Projectile flight between two units. kind: 'fire' | 'necro' | 'eldritch' | 'arrow' | 'javelin' | 'web' */
 export async function shootProjectile(scene, from, to, kind) {
   let mesh;
-  const bolt = kind === 'fire' || kind === 'necro' || kind === 'web';
+  const bolt = SPELL_BOLTS.includes(kind) || kind === 'web';
   if (kind === 'web') {
     // a wad of grey-white silk
     mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.13, 0),
@@ -508,8 +515,13 @@ export async function shootProjectile(scene, from, to, kind) {
     mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6),
       new THREE.MeshBasicMaterial({ color: 0xf4f0e4, transparent: true, opacity: 0.6 })));
   } else if (bolt) {
-    const color = kind === 'fire' ? 0xff7a1a : 0x50ff80;
+    const color = kind === 'fire' ? 0xff7a1a : kind === 'eldritch' ? 0xd060ff : 0x50ff80;
     mesh = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), new THREE.MeshBasicMaterial({ color }));
+    if (kind === 'eldritch') {
+      // a crackling beam-head: a violet core in a dark shroud
+      mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8),
+        new THREE.MeshBasicMaterial({ color: 0x4a1060, transparent: true, opacity: 0.5, depthWrite: false })));
+    }
     if (kind === 'necro') {
       // a ghostly skeletal hand: a pale core inside a green halo
       mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8),

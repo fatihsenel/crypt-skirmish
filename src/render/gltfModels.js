@@ -87,11 +87,12 @@ const recolored = new Map(); // atlas uuid + recipe -> texture
 
 /**
  * The model's texture atlas with its green cloth turned another hue (a colour multiply can
- * only darken green). Pixels whose hue is green get `hue` (degrees), their saturation and
- * lightness scaled by `sat` and `light`; skin, leather and steel are left alone.
+ * only darken green). Pixels whose hue is green (or within `from`, in degrees) get `hue`,
+ * their saturation and lightness scaled by `sat` and `light`; skin, leather and steel are
+ * left alone.
  */
-function recolorMap(map, { hue, sat = 1, light = 1 }) {
-  const key = `${map.uuid}:${hue}:${sat}:${light}`;
+function recolorMap(map, { hue, sat = 1, light = 1, from = [70, 170] }) {
+  const key = `${map.uuid}:${hue}:${sat}:${light}:${from}`;
   if (recolored.has(key)) return recolored.get(key);
   const { width: w, height: h } = map.image;
   const canvas = document.createElement('canvas');
@@ -106,7 +107,7 @@ function recolorMap(map, { hue, sat = 1, light = 1 }) {
     const d = img.data;
     c.setRGB(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
     c.getHSL(hsl);
-    if (hsl.h < 70 / 360 || hsl.h > 170 / 360 || hsl.s < 0.15) continue;
+    if (hsl.h < from[0] / 360 || hsl.h > from[1] / 360 || hsl.s < 0.15) continue;
     c.setHSL(hue / 360, Math.min(1, hsl.s * sat), Math.min(1, hsl.l * light));
     d[i] = c.r * 255;
     d[i + 1] = c.g * 255;

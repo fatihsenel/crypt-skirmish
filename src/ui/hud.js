@@ -15,7 +15,7 @@ const spellLevel = (s) => (s.level ? `${ordinal(s.level)}-level spell` : s.pool 
 /** The numbers worth seeing at a glance on a spell's card. */
 function spellChips(s, u) {
   const chips = [];
-  if (s.damage) chips.push(`${s.darts ? `${s.darts} × ` : ''}${s.damage} damage`);
+  if (s.damage) chips.push(`${s.darts ? `${s.darts} × ` : s.rays ? `${s.rays} × ` : ''}${s.damage} damage`);
   if (s.heal) chips.push(`heal ${s.heal[0]}d${s.heal[1]} + WIS`);
   if (s.pool) chips.push(`${u.layOnHands} HP in the pool`);
   if (s.save) chips.push(`${s.save.toUpperCase()} save`);
@@ -30,6 +30,8 @@ function tipCard({ name, kind, chips = [], desc, notes = [], note, how, problem 
     ${[...notes, note].filter(Boolean).map((n) => `<p class="tip-note">${esc(n)}</p>`).join('')}
     ${problem ? `<p class="tip-problem">${esc(problem)}</p>` : how ? `<p class="tip-how">${esc(how)}</p>` : ''}`;
 }
+/** Which spell marks a unit: Hunter's Mark (older saves stored `true`) or Hex. */
+const markOf = (u) => (u.marked === true ? 'huntersMark' : u.marked);
 const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus ? ` ${signed(roll.bonus)}` : ''}]</span>`;
 // (logAction builds every action's text, so this must cope with results that have no roll)
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
@@ -130,7 +132,7 @@ export class Hud {
     const tag = r.opportunity ? '<b class="opp">Opportunity attack!</b><br>' : '';
     const sneak = (r.sneak ? ` incl. <b class="sneak">Sneak Attack +${r.sneak.total}</b> ${dice(r.sneak)}` : '')
       + (r.smite ? ` incl. <b class="spell">Divine Smite +${r.smite.total} radiant</b> ${dice(r.smite.roll)}${r.target.undead ? ' (undead +1d8)' : ''} <span class="dice">${ordinal(r.smite.slot)}-level slot</span>` : '')
-      + (r.mark ? ` incl. <b class="spell">Hunter’s Mark +${r.mark.total}</b> ${dice(r.mark)}` : '')
+      + (r.mark ? ` incl. <b class="spell">${r.mark.spell === 'hex' ? 'Hex' : 'Hunter’s Mark'} +${r.mark.total}</b> ${dice(r.mark)}` : '')
       + (r.colossus ? ` incl. <b class="sneak">Colossus Slayer +${r.colossus.total}</b> ${dice(r.colossus)}` : '')
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '');
     this.log(
@@ -178,6 +180,15 @@ export class Hud {
   logMimic({ unit, mimic, chest }) {
     this.log(`${who(unit)} reaches for the chest… and it opens its mouth. <b class="crit">A ${esc(mimic.name.toLowerCase())}!</b>` +
       (chest.suspected ? '' : ' It strikes before anyone can react.'), 'death');
+  }
+
+  logRebukeArmed(unit, armed) {
+    this.log(`${who(unit)} ${armed ? 'readies a <b class="spell">Hellish Rebuke</b> for the next enemy that hurts them' : 'lets the Rebuke go'}.`);
+  }
+
+  /** Dark One's Blessing: temporary HP from a kill. */
+  logBlessing({ unit, tempHp }) {
+    this.log(`${who(unit)} drinks in the fallen foe's life: <b class="heal">${tempHp} temporary HP</b> <span class="dice">Dark One’s Blessing</span>.`);
   }
 
   logSmiteArmed(unit, armed) {
@@ -238,6 +249,20 @@ export class Hud {
       this.log(`${who(r.caster)} lays hands on ${self}: <b class="heal">+${r.healed} HP</b> <span class="dice">${r.left} left in the pool</span>.`);
     } else if (r.id === 'huntersMark') {
       this.log(`${who(r.caster)} casts ${name} on ${who(r.target)}: <b>+1d6</b> on every weapon hit against it. ${slot}`);
+    } else if (r.id === 'hex') {
+      this.log(`${who(r.caster)} casts ${name} on ${who(r.target)}: <b>+1d6 necrotic</b> on every hit against it. ${slot}`);
+    } else if (r.id === 'scorchingRay') {
+      const rays = r.rays.map((ray) => {
+        const d20 = ray.rolls.length > 1 ? `d20 [${ray.rolls.join(', ')}] → ${ray.d20}` : `d20 ${ray.d20}`;
+        const hex = ray.mark ? ` incl. <b class="spell">Hex +${ray.mark.total}</b>` : '';
+        const out = ray.crit ? `<b class="crit">Critical hit!</b> ${ray.damage} fire${hex}`
+          : ray.hit ? `<b class="hit">Hit</b> for ${ray.damage} fire${hex}` : '<b class="miss">Miss</b>';
+        return `→ ${who(ray.target)} <span class="dice">${d20} ${signed(ray.toHit)} = ${ray.total}</span> vs AC ${ray.ac}${ray.cover ? ' <span class="cover">(half cover +2)</span>' : ''}. ${out}`;
+      });
+      this.log(`${who(r.caster)} casts ${name}: ${r.rays.length} rays of fire. ${slot}<br>${rays.join('<br>')}`);
+    } else if (r.id === 'hellishRebuke') {
+      this.log(`${who(r.caster)} answers with ${name}: flames engulf ${who(r.target)}. DEX save DC ${r.dc}: `
+        + `${saveText({ ...r.save, unit: r.target })}, <b class="hit">${r.damage} fire</b> ${dice(r.roll)}. ${slot}`);
     } else if (r.id === 'shieldOfFaith') {
       const self = r.target === r.caster ? 'themself' : who(r.target);
       this.log(`${who(r.caster)} casts ${name} on ${self}: <b>AC +2</b> for the rest of the fight. ${slot}`);
@@ -336,17 +361,18 @@ export class Hud {
     const pip = (label, used) => `<span class="pip ${used ? 'used' : 'ready'}">${label}</span>`;
     const conds = Object.keys(u.conditions ?? {});
     const slots = Object.entries(u.slots)
+      .filter(([l, n]) => n > 0 || (u.slotMax?.[l] ?? 0) > 0) // a warlock's old 2nd-level slots are gone at 5
       .map(([l, n]) => `<span class="slots" title="${ordinal(+l)}-level spell slots">${ordinal(+l)} ${'◆'.repeat(n)}<s>${'◇'.repeat(Math.max(0, (u.slotMax?.[l] ?? n) - n))}</s></span>`)
       .join('');
     this.setHtml($('#who'), `
       <div class="who-name ${u.team}">${esc(u.name)} <small>${esc(u.cls)}${u.team === 'heroes' ? ` · Lv ${u.level}` : ''}</small></div>
       <div class="stats">
-        <span>HP <b>${u.hp}</b>/${u.maxHp}</span>
+        <span>HP <b>${u.hp}</b>/${u.maxHp}${u.tempHp > 0 ? ` <b class="temp-hp" title="Temporary HP: lost before your hit points">+${u.tempHp}</b>` : ''}</span>
         <span>AC <b>${game.acOf(u)}</b></span>
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span title="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
       </div>
-      ${u.passives.length || u.items?.length || conds.length || u.marked ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" title="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.marked ? `<span class="passive-tag cond" title="${esc(SPELLS.huntersMark.desc)}">Hunter’s Mark</span>` : ''}${conds.map((c) =>
+      ${u.passives.length || u.items?.length || conds.length || u.marked ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" title="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.marked ? `<span class="passive-tag cond" title="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
         `<span class="passive-tag cond ${c}" title="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
         `<span class="passive-tag" title="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
         `<span class="passive-tag item" title="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
@@ -409,6 +435,23 @@ export class Hud {
         problem: problem && `${problem}.`,
         disabled: !!problem,
         active: u.smiteArmed,
+      }));
+    }
+    if (u.passives.includes('hellishRebuke')) {
+      const problem = game.rebukeProblem(u);
+      const slot = Object.keys(u.slots).map(Number).sort((a, b) => a - b).find((l) => u.slots[l] > 0) ?? 2;
+      atks.push(button({
+        kind: 'rebuke', id: 'rebuke', name: u.rebukeArmed ? 'Rebuke armed' : 'Hellish Rebuke', cls: `spell ${u.rebukeArmed ? 'armed' : ''}`,
+        sub: u.rebukeArmed ? 'next foe to hurt you · click to cancel' : `${1 + slot}d10 fire · spends a slot`,
+        tip: {
+          kind: 'Warlock spell · reaction, armed ahead',
+          chips: [`${1 + slot}d10 fire`, 'DEX save for half', 'range 60 ft'],
+          desc: SPELLS.hellishRebuke.desc,
+          note: u.rebukeArmed ? 'Armed: the next enemy that damages you with an attack burns. Press again to cancel.' : null,
+        },
+        problem: problem && `${problem}.`,
+        disabled: !!problem,
+        active: u.rebukeArmed,
       }));
     }
     atks.push(button({
@@ -487,6 +530,9 @@ export class Hud {
     if (u.passives.includes('colossusSlayer') && weapon) notes.push(`Colossus Slayer: +1d8 once a turn on a foe that is already hurt.${u.colossusUsed ? ' Used this turn.' : ''}`);
     if (u.smiteArmed && isMelee(atk)) notes.push('Divine Smite is armed: a hit spends a slot for extra radiant damage.');
     if (atk.addMod === false) notes.push('A cantrip: no slot needed, and no ability bonus to damage.');
+    if (!weapon && atk.addMod !== false) notes.push(`A cantrip: no slot needed. Agonizing Blast adds your ${atk.stat.toUpperCase()} to the damage.`);
+    if (u.extraAttackWith === atk.name) notes.push('Two beams: the Attack action fires it twice, at one foe or two.');
+    if (u.mark?.spell === 'hex') notes.push('Hex: +1d6 necrotic on every hit against the cursed foe.');
     if (weapon && u.weaponBonus) notes.push(`Runed Weapon: +${u.weaponBonus} to hit and damage, included above.`);
     return {
       kind: weapon ? `${melee ? 'Melee' : 'Ranged'} weapon · ${atk.stat === 'str' ? 'Strength' : 'Dexterity'}`
@@ -505,7 +551,7 @@ export class Hud {
     if (!b || b.disabled) return;
     const { kind, id } = b.dataset;
     if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (kind === 'shove' || kind === 'smite') this.handlers.onChoose({ kind });
+    else if (kind === 'shove' || kind === 'smite' || kind === 'rebuke') this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

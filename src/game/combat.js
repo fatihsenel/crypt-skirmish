@@ -223,8 +223,15 @@ export class Game {
     let d20 = rollDice(1, 20, this.rng).total;
     if (stat === 'dex' && this.has(unit, 'restrained')) d20 = Math.min(d20, rollDice(1, 20, this.rng).total);
     const aura = this.auraBonus(unit);
-    const total = d20 + abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0) + aura;
-    return { unit, d20, total, aura, success: total >= dc };
+    let total = d20 + abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0) + aura;
+    // Dark One's Own Luck: once per fight, a d10 on a failed save that it could still turn.
+    let luck = null;
+    if (total < dc && total + 10 >= dc && unit.passives?.includes('ownLuck') && !unit.luckUsed) {
+      unit.luckUsed = true;
+      luck = rollDice(1, 10, this.rng).total;
+      total += luck;
+    }
+    return { unit, d20, total, aura, luck, success: total >= dc };
   }
 
   /** Aura of Protection: the best CHA modifier (min +1) of a living paladin of its side within 10 ft. */
@@ -564,8 +571,11 @@ export class Game {
     this.alert(target, 'hurt');
     const before = target.hp;
     if (amount > 0) this.reveal(target, 'hurt'); // caught in a blast: no hiding that
-    target.hp = Math.max(0, target.hp - amount);
     if (amount > 0) target.turned = 0; // damage breaks Turn Undead
+    // Temporary HP soak up damage first.
+    const soaked = Math.min(target.tempHp ?? 0, Math.max(0, amount));
+    if (soaked) target.tempHp -= soaked;
+    target.hp = Math.max(0, target.hp - (amount - soaked));
     const t = target.team === 'monsters' ? this.tally(source) : null;
     if (t) t.damage += before - target.hp; // only what landed, not overkill
     if (target.hp <= 0 && target.alive) {
@@ -578,10 +588,19 @@ export class Game {
       let unmarked = null;
       if (target.mark) { // a fallen ranger's Hunter's Mark ends
         unmarked = this.units.find((u) => u.id === target.mark.id) ?? null;
-        if (unmarked) unmarked.marked = false;
+        if (unmarked?.marked === target.mark.spell) unmarked.marked = false;
         target.mark = null;
       }
-      this.emit('death', { unit: target, source, unmarked });
+      // Dark One's Blessing: a warlock who drops a foe gains CHA + level temporary HP.
+      let blessing = null;
+      if (source?.alive && source.team !== target.team && source.passives?.includes('darkOnesBlessing')) {
+        const gain = Math.max(1, abilityMod(source.stats.cha) + source.level);
+        if (gain > (source.tempHp ?? 0)) {
+          source.tempHp = gain;
+          blessing = { unit: source, tempHp: gain };
+        }
+      }
+      this.emit('death', { unit: target, source, unmarked, blessing });
       this.checkEnd();
     }
   }
@@ -873,6 +892,9 @@ export class Game {
       return opportunity ? 'Reaction already used' : 'Action already used this turn';
     }
     if (!opportunity && attacker.turned) return 'Turned: can only flee';
+    if (!opportunity && attacker.actionUsed && attacker.extraAttackWith && attack.name !== attacker.extraAttackWith) {
+      return `Only ${attacker.extraAttackWith} fires again`;
+    }
     if (!target?.alive) return 'No valid target';
     if (target.team === attacker.team) return 'That is an ally';
     if (attacker.spent?.[attack.name]) return `${attack.name} hasn't recharged`;
@@ -969,6 +991,67 @@ export class Game {
     return { ok: true, armed: unit.smiteArmed };
   }
 
+  /**
+   * Attacks left after the first of the Attack action. A warlock's second beam comes only
+   * with Eldritch Blast: opening with the dagger (or a shove) is the whole action.
+   */
+  followUps(attacker, attack) {
+    if (attacker.extraAttackWith && attack?.name !== attacker.extraAttackWith) return 0;
+    return (attacker.multiattack ?? attacker.extraAttack ?? 1) - 1;
+  }
+
+  /** Why `unit` can't arm Hellish Rebuke, or null. */
+  rebukeProblem(unit) {
+    if (!unit.passives.includes('hellishRebuke')) return 'Unknown feature';
+    if (this.over) return 'The battle is over';
+    if (!unit.rebukeArmed && !this.hasSlot(unit, 1)) return 'No spell slots left';
+    return null;
+  }
+
+  /** Arm or disarm Hellish Rebuke for the next enemy that damages you (a free choice). */
+  toggleRebuke(unit) {
+    const problem = this.rebukeProblem(unit);
+    if (problem) return { ok: false, reason: problem };
+    unit.rebukeArmed = !unit.rebukeArmed;
+    return { ok: true, armed: unit.rebukeArmed };
+  }
+
+  /**
+   * Hellish Rebuke, armed: the warlock's reaction to being damaged by `foe` within 60 ft and
+   * in sight. 2d10 fire, +1d10 per slot level above 1st, DEX save for half. Returns the
+   * spell result (already emitted and applied), or null if it didn't go off.
+   */
+  rebuke(warlock, foe) {
+    if (!warlock.rebukeArmed || !warlock.alive || warlock.reactionUsed || !foe?.alive) return null;
+    if (foe.team === warlock.team || !this.hasSlot(warlock, 1)) return null;
+    const d = gridDistance(warlock, foe);
+    if (d > 12 || (d > 1 && !this.grid.lineOfSight(warlock.x, warlock.z, foe.x, foe.z))) return null;
+    warlock.rebukeArmed = false;
+    warlock.reactionUsed = true;
+    const slot = this.spendSlot(warlock, 1);
+    const dc = this.spellDC(warlock);
+    const save = this.save(foe, 'dex', dc);
+    const roll = rollExpr(`${1 + slot}d10`, { rng: this.rng });
+    const damage = save.success ? Math.floor(roll.total / 2) : roll.total;
+    const r = {
+      ok: true, kind: 'spell', id: 'hellishRebuke', spell: SPELLS.hellishRebuke,
+      caster: warlock, target: foe, slot, dc, save, roll, damage,
+    };
+    this.reveal(warlock, 'spell');
+    this.emit('spell', r);
+    this.applyDamage(foe, damage, warlock);
+    return r;
+  }
+
+  /** Hunter's Mark (weapon hits) or Hex (any hit) on this target: the extra roll, or null. */
+  markDamage(attacker, target, attack, crit) {
+    const m = attacker.mark;
+    if (m?.id !== target.id) return null;
+    const spell = m.spell ?? 'huntersMark';
+    if (spell === 'huntersMark' && !isWeapon(attack)) return null;
+    return { ...rollExpr(SPELLS[spell].damage, { crit, rng: this.rng }), spell };
+  }
+
   canSneak(attacker, target, mods) {
     if (!attacker.passives.includes('sneakAttack') || attacker.sneakUsed) return false;
     return mods.mode === 'adv' || (mods.mode === 'normal' && this.allyNextTo(attacker, target));
@@ -984,7 +1067,7 @@ export class Game {
       attacker.reactionUsed = true;
     } else if (!attacker.actionUsed) {
       attacker.actionUsed = true;
-      attacker.attacksLeft = (attacker.multiattack ?? attacker.extraAttack ?? 1) - 1;
+      attacker.attacksLeft = this.followUps(attacker, attack);
     } else {
       attacker.attacksLeft--;
     }
@@ -1027,10 +1110,8 @@ export class Game {
         smite = this.smite(attacker, target, crit);
         damage += smite.total;
       }
-      if (isWeapon(attack) && attacker.mark?.id === target.id) {
-        mark = rollExpr(SPELLS.huntersMark.damage, { crit, rng: this.rng });
-        damage += mark.total;
-      }
+      mark = this.markDamage(attacker, target, attack, crit);
+      if (mark) damage += mark.total;
       // Colossus Slayer looks at the foe as the arrow lands, before this hit's damage.
       if (isWeapon(attack) && attacker.passives.includes('colossusSlayer') && !attacker.colossusUsed && target.hp < target.maxHp) {
         attacker.colossusUsed = true;
@@ -1050,7 +1131,7 @@ export class Game {
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
-      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, uncanny, rider: null,
+      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, uncanny, rider: null, rebuke: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -1060,6 +1141,7 @@ export class Game {
       if (damage) this.applyDamage(target, damage, attacker);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
+      if (damage) result.rebuke = this.rebuke(target, attacker);
     }
     this.alert(target, 'hurt'); // a miss gives you away too
     this.noise(attacker);
@@ -1070,6 +1152,7 @@ export class Game {
   shoveProblem(attacker, target) {
     if (this.over) return 'The battle is over';
     if (!this.canAttack(attacker)) return 'Action already used this turn';
+    if (attacker.actionUsed && attacker.extraAttackWith) return `Only ${attacker.extraAttackWith} fires again`;
     if (attacker.turned) return 'Turned: can only flee';
     if (!target?.alive || target.team === attacker.team) return 'Choose an enemy';
     if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
@@ -1088,7 +1171,7 @@ export class Game {
     this.reveal(attacker, 'attack');
     if (!attacker.actionUsed) {
       attacker.actionUsed = true;
-      attacker.attacksLeft = (attacker.multiattack ?? attacker.extraAttack ?? 1) - 1;
+      attacker.attacksLeft = this.followUps(attacker, null);
     } else {
       attacker.attacksLeft--;
     }
@@ -1337,7 +1420,7 @@ export class Game {
           if (gridDistance(caster.spiritWeapon, target) > s.reach) return `Too far from the spectral weapon (${s.reach * 5} ft)`;
         } else if (!inRange(target)) return `Out of range or not in sight (${s.range * 5} ft)`;
         if (s.condition && this.has(target, s.condition)) return `${target.name} is already ${s.condition}`;
-        if (id === 'huntersMark' && caster.mark?.id === target.id) return `${target.name} is already marked`;
+        if ((id === 'huntersMark' || id === 'hex') && caster.mark?.id === target.id) return `${target.name} is already ${id === 'hex' ? 'hexed' : 'marked'}`;
         break;
       case 'ally':
         if (!target.alive || target.team !== caster.team) return 'Choose an ally (or yourself)';
@@ -1402,6 +1485,49 @@ export class Game {
    */
   freeRecast(caster, id) {
     return id === 'spiritualWeapon' && !!caster.spiritWeapon;
+  }
+
+  /**
+   * Scorching Ray's volley: a ranged spell attack per ray, all at `target`. Once the rays
+   * have dropped it, the rest fly at the nearest other foe in range and sight (or are lost).
+   */
+  scorchingRays(caster, target, count) {
+    const spell = SPELLS.scorchingRay;
+    const ray = { name: spell.name, reach: spell.range };
+    const toHit = caster.prof + abilityMod(caster.stats[caster.castStat]);
+    const left = new Map(); // hit points left as the rays land
+    const hpOf = (u) => left.get(u.id) ?? u.hp;
+    const inReach = (u) => {
+      const d = gridDistance(caster, u);
+      return d <= spell.range && (d <= 1 || this.grid.lineOfSight(caster.x, caster.z, u.x, u.z));
+    };
+    const rays = [];
+    let t = target;
+    for (let i = 0; i < count && t; i++) {
+      const mods = this.attackMods(caster, t, ray);
+      const { d20, rolls } = this.rollD20(mods.mode);
+      const cover = this.coverBonus(caster, t);
+      const ac = this.acOf(t) + cover;
+      const crit = d20 === 20;
+      const hit = crit || (d20 !== 1 && d20 + toHit >= ac);
+      if (crit && this.tally(caster)) this.tally(caster).crits++;
+      let damage = 0;
+      let roll = null;
+      let mark = null;
+      if (hit) {
+        roll = rollExpr(spell.damage, { crit, rng: this.rng });
+        mark = this.markDamage(caster, t, ray, crit);
+        damage = roll.total + (mark?.total ?? 0);
+        left.set(t.id, hpOf(t) - damage);
+      }
+      rays.push({ target: t, d20, rolls, mods, toHit, total: d20 + toHit, ac, cover, hit, crit, fumble: d20 === 1, roll, mark, damage });
+      if (hpOf(t) <= 0) {
+        t = this.knownFoes(caster)
+          .filter((e) => hpOf(e) > 0 && !e.hidden && inReach(e))
+          .sort((a, b) => gridDistance(caster, a) - gridDistance(caster, b))[0] ?? null;
+      }
+    }
+    return rays;
   }
 
   castSpell(caster, id, target) {
@@ -1491,6 +1617,16 @@ export class Game {
         this.emit('spell', result);
         break;
       }
+      case 'scorchingRay': {
+        result.target = target;
+        result.rays = this.scorchingRays(caster, target, spell.rays + upcast);
+        this.emit('spell', result);
+        for (const ray of result.rays) {
+          if (ray.hit) this.applyDamage(ray.target, ray.damage, caster);
+          else this.alert(ray.target, 'hurt');
+        }
+        break;
+      }
       case 'sacredFlame': {
         const dc = this.spellDC(caster);
         const { d20, total, success } = this.save(target, 'dex', dc);
@@ -1535,13 +1671,14 @@ export class Game {
         this.emit('spell', result);
         break;
       }
-      case 'huntersMark': {
+      case 'huntersMark':
+      case 'hex': {
         result.target = target;
         const old = caster.mark && this.units.find((u) => u.id === caster.mark.id);
         result.unmarked = old || null; // whose tag to clear
-        if (old) old.marked = false; // for the status tags; caster.mark is what the rules read
-        target.marked = true;
-        caster.mark = { id: target.id, slot };
+        if (old && old.marked === (caster.mark.spell ?? 'huntersMark')) old.marked = false; // for the status tags; caster.mark is what the rules read
+        target.marked = id;
+        caster.mark = { id: target.id, slot, spell: id };
         this.emit('spell', result);
         break;
       }

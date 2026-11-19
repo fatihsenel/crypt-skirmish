@@ -46,7 +46,7 @@ server on 5173.
 ## Testing in the browser
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
-  `&party=5`, `&difficulty=hard|story`, `&paladin`, `&ranger`.
+  `&party=5`, `&difficulty=hard|story`, `&paladin`, `&ranger`, `&warlock`.
 - `window.__debug` in the console: `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
   `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `threats()`.

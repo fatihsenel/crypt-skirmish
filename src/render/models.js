@@ -753,7 +753,7 @@ function mimic() {
 }
 
 const BUILDERS = {
-  F: fighter, P: fighter, W: wizard, R: rogue, A: rogue, C: cleric,
+  F: fighter, P: fighter, W: wizard, K: wizard, R: rogue, A: rogue, C: cleric,
   g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer,
   // act two: ghouls and the wight fall back to the skeleton miniature if their .glb fails
   u: skeleton, w: skeleton, m: mimic,

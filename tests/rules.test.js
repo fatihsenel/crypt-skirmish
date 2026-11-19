@@ -1775,7 +1775,7 @@ describe('the ranger', () => {
     g2.hp = g2.maxHp = 999;
     const cast = game.castSpell(r, 'huntersMark', g1);
     expect(cast).toMatchObject({ ok: true, slot: 1 });
-    expect([r.slots[1], r.bonusUsed, r.mark]).toEqual([2, true, { id: g1.id, slot: 1 }]);
+    expect([r.slots[1], r.bonusUsed, r.mark]).toEqual([2, true, { id: g1.id, slot: 1, spell: 'huntersMark' }]);
     const hit = game.attack(r, g1, r.attacks[1]);
     expect(hit.hit).toBe(true);
     expect(hit.mark.total).toBe(4); // 1d6 at the middle roll
@@ -1794,7 +1794,7 @@ describe('the ranger', () => {
     r.slots = { 1: 1 };
     const moved = game.castSpell(r, 'huntersMark', g2);
     expect(moved).toMatchObject({ ok: true, slot: 1 });
-    expect([r.slots[1], r.mark]).toEqual([0, { id: g2.id, slot: 1 }]);
+    expect([r.slots[1], r.mark]).toEqual([0, { id: g2.id, slot: 1, spell: 'huntersMark' }]);
     r.bonusUsed = false;
     game.applyDamage(r, 999, g2);
     expect(r.mark).toBeNull(); // a fallen ranger's mark ends
@@ -1808,7 +1808,7 @@ describe('the ranger', () => {
     r.bonusUsed = false;
     const moved = game.castSpell(r, 'huntersMark', g2);
     expect(moved).toMatchObject({ ok: true, slot: 1, unmarked: g1 });
-    expect([r.slots[1], g1.marked, g2.marked]).toEqual([1, false, true]);
+    expect([r.slots[1], g1.marked, g2.marked]).toEqual([1, false, 'huntersMark']);
     const deaths = [];
     game.on('death', (e) => deaths.push(e));
     game.applyDamage(r, 999, g2);
@@ -1861,6 +1861,148 @@ describe('the ranger', () => {
     const bad = JSON.parse(serialize(state));
     bad.party.W.cls = 'A';
     expect(parseSave(JSON.stringify(bad)).party.W.cls).toBeUndefined();
+  });
+});
+
+describe('the warlock', () => {
+  const warlockParty = (level = 3) => {
+    const c = newCampaign('normal', {}, { W: 'K' });
+    if (level > 3) {
+      const done = completeFight(c, 'crypt', { partyState: () => ({}), stats: {}, round: 0, found: [], grid: { chests: new Map() }, xpEarned: () => ({ 4: 450, 5: 900, 6: 2000 })[level] });
+      return done.state.party;
+    }
+    return c.party;
+  };
+  // fixed(0.5): every d20 is 11, d10 6, d6 4.
+  const arena = (rows, level, rng = fixed(0.5)) => {
+    const game = new Game(rows, { party: warlockParty(level), senses: false, rng });
+    game.start();
+    return game;
+  };
+
+  it('takes the Wizard slot: Ilsa as a Warlock with two 2nd-level pact slots', () => {
+    const c = newCampaign('normal', {}, { W: 'K' });
+    expect(c.party.W).toMatchObject({ cls: 'K', hp: 24, slots: { 2: 2 } });
+    const game = arena(['######', '#Wg..#', '######']);
+    const k = game.units[0];
+    expect([k.cls, k.code, k.slot, k.name, game.acOf(k)]).toEqual(['Warlock', 'K', 'W', 'Ilsa', 15]);
+    expect(game.spellDC(k)).toBe(13);
+  });
+
+  it('Eldritch Blast adds CHA to damage; Hex adds 1d6 to every hit on the cursed foe', () => {
+    const game = arena(['#########', '#W...g.g#', '#########']);
+    const [k, g1, g2] = game.units;
+    g1.hp = g1.maxHp = g2.hp = g2.maxHp = 999;
+    setTurn(game, 0);
+    const blast = game.attack(k, g1, k.attacks[0]);
+    expect([blast.hit, blast.toHit, blast.damage, blast.mark]).toEqual([true, 5, 6 + 3, null]);
+    const hex = game.castSpell(k, 'hex', g1);
+    expect(hex).toMatchObject({ ok: true, slot: 2 }); // pact slots are all 2nd level
+    expect([k.slots[2], k.mark, g1.marked]).toEqual([1, { id: g1.id, slot: 2, spell: 'hex' }, 'hex']);
+    setTurn(game, 0);
+    const cursed = game.attack(k, g1, k.attacks[0]);
+    expect([cursed.mark.spell, cursed.mark.total, cursed.damage]).toEqual(['hex', 4, 6 + 3 + 4]);
+    expect(game.attack(k, g2, k.attacks[0]).ok).toBe(false); // action spent: no second beam yet
+    setTurn(game, 0);
+    expect(game.attack(k, g2, k.attacks[0]).mark).toBeNull(); // only the cursed foe
+    k.bonusUsed = false;
+    expect(game.spellProblem(k, 'hex', g1)).toBe('Goblin 1 is already hexed');
+  });
+
+  it('Scorching Ray: three spell attacks at one foe; once it falls, the rest go to the nearest other', () => {
+    const game = arena(['##########', '#W..g.g..#', '##########']);
+    const [k, g1, g2] = game.units;
+    setTurn(game, 0);
+    g2.hp = g2.maxHp = 999;
+    const r = game.castSpell(k, 'scorchingRay', g1);
+    expect(r).toMatchObject({ ok: true, slot: 2 });
+    expect(r.rays.map((ray) => [ray.target.name, ray.hit, ray.damage])).toEqual([
+      ['Goblin 1', true, 8], ['Goblin 2', true, 8], ['Goblin 2', true, 8],
+    ]);
+    expect([g1.alive, g2.hp]).toEqual([false, 999 - 16]);
+    // A 3rd-level slot adds a ray.
+    setTurn(game, 0);
+    k.slots = { 3: 1 };
+    expect(game.castSpell(k, 'scorchingRay', g2).rays).toHaveLength(4);
+  });
+
+  it('Hellish Rebuke: armed, the next enemy that damages you takes 3d10 fire, DEX save for half', () => {
+    const game = arena(['######', '#Wg..#', '######']);
+    const [k, g] = game.units;
+    setTurn(game, 1);
+    expect(game.attack(g, k, g.attacks[0]).rebuke).toBeNull(); // not armed: nothing
+    expect(game.toggleRebuke(k)).toEqual({ ok: true, armed: true });
+    setTurn(game, 1);
+    g.hp = g.maxHp = 50;
+    const hit = game.attack(g, k, g.attacks[0]);
+    // DEX save: 11 + 2 = 13 against DC 13, a success: half of 3 × 6.
+    expect(hit.rebuke).toMatchObject({ id: 'hellishRebuke', slot: 2, damage: 9, dc: 13 });
+    expect(hit.rebuke.save.success).toBe(true);
+    expect([g.hp, k.slots[2], k.rebukeArmed, k.reactionUsed]).toEqual([41, 1, false, true]);
+    expect(game.rebukeProblem({ ...k, rebukeArmed: false, slots: { 2: 0 } })).toBe('No spell slots left');
+    // Dropped by the hit: no rebuke.
+    game.toggleRebuke(k);
+    setTurn(game, 1);
+    k.hp = 1;
+    expect(game.attack(g, k, g.attacks[0]).rebuke).toBeNull();
+  });
+
+  it('Dark One’s Blessing: a kill gives CHA + level temporary HP, lost first, gone after the fight', () => {
+    const game = arena(['######', '#Wg.g#', '######']);
+    const [k, g1, g2] = game.units;
+    const deaths = [];
+    game.on('death', (d) => deaths.push(d));
+    setTurn(game, 0);
+    game.attack(k, g1, k.attacks[0]); // 9 damage on 7 HP
+    expect([g1.alive, k.tempHp, deaths[0].blessing]).toEqual([false, 6, { unit: k, tempHp: 6 }]);
+    game.applyDamage(k, 4, g2);
+    expect([k.tempHp, k.hp]).toEqual([2, 24]);
+    game.applyDamage(k, 5, g2);
+    expect([k.tempHp, k.hp]).toEqual([0, 21]);
+    expect(game.partyState().W.tempHp).toBeUndefined();
+  });
+
+  it('level 5: two beams, but only with Eldritch Blast; 3rd-level pact slots and Fireball', () => {
+    const game = arena(['########', '#Wg.g..#', '########'], 5);
+    const [k, g1, g2] = game.units;
+    g1.hp = g1.maxHp = g2.hp = g2.maxHp = 999;
+    expect([k.slots, k.spells.includes('fireball')]).toEqual([{ 2: 0, 3: 2 }, true]);
+    setTurn(game, 0);
+    expect(game.attack(k, g2, k.attacks[0]).ok).toBe(true);
+    expect(game.attackProblem(k, g1, k.attacks[1])).toBe('Only Eldritch Blast fires again');
+    expect(game.attack(k, g1, k.attacks[0]).ok).toBe(true);
+    expect(game.canAttack(k)).toBe(false);
+    setTurn(game, 0);
+    game.attack(k, g1, k.attacks[1]); // opening with the dagger is the whole action
+    expect(game.canAttack(k)).toBe(false);
+    expect(game.shoveProblem(k, g1)).toBe('Action already used this turn');
+  });
+
+  it('level 6: Dark One’s Own Luck adds 1d10 to one failed save a fight, when it could help', () => {
+    const game = arena(['######', '#Wg..#', '######'], 6);
+    const k = game.units[0];
+    expect(game.save(k, 'dex', 30)).toMatchObject({ total: 13, luck: null, success: false }); // out of reach
+    expect(game.save(k, 'dex', 16)).toMatchObject({ total: 19, luck: 6, success: true });
+    expect(game.save(k, 'dex', 16)).toMatchObject({ total: 13, luck: null, success: false }); // once a fight
+  });
+
+  it('pact slots come back after every room, and survive the level-5 switch to 3rd level', () => {
+    const c = newCampaign('normal', {}, { W: 'K' });
+    const game = new Game(['######', '#Wg..#', '######'], { party: c.party, senses: false, rng: () => 0.999 });
+    game.start();
+    const [k, g] = game.units;
+    setTurn(game, 0);
+    game.castSpell(k, 'scorchingRay', g);
+    expect(k.slots[2]).toBe(1);
+    const { state } = completeFight(c, 'crypt', game);
+    expect(state.party.W.slots).toEqual({ 2: 2 });
+    state.party.W.slots = { 2: 0 };
+    const up = completeFight({ ...state, xp: 890 }, 'warren', { ...game, partyState: () => ({}), xpEarned: () => 10, found: [], grid: { chests: new Map() }, stats: {}, round: 0 });
+    expect(up.state.party.W).toMatchObject({ level: 5, slots: { 2: 0, 3: 2 } });
+    expect(parseSave(serialize(up.state)).party.W.cls).toBe('K');
+    const bad = JSON.parse(serialize(up.state));
+    bad.party.R.cls = 'K';
+    expect(parseSave(JSON.stringify(bad)).party.R.cls).toBeUndefined();
   });
 });
 

@@ -34,6 +34,8 @@ const GLYPH = {
 const CLASS_BLURB = {
   F: 'Fighter: the most HP, Second Wind to heal mid-fight, Extra Attack at level 5.',
   P: 'Paladin: Divine Smite burns spell slots for radiant damage, Lay on Hands and Shield of Faith protect the party, Aura of Protection at level 6.',
+  W: 'Wizard: the most spell slots: Magic Missile, Burning Hands, Misty Step and Shield, then Fireball and Lightning Bolt at level 5.',
+  K: 'Warlock: two strong pact slots that come back after every room, Eldritch Blast, Hex and Hellish Rebuke, and temporary HP for every kill. Fireball and two beams at level 5.',
   R: 'Rogue: Sneak Attack, hides as a bonus action and slips past monsters unseen, spots traps.',
   A: 'Ranger: a longbow with Archery, Hunter’s Mark for extra damage on one foe, spots traps. Extra Attack and Colossus Slayer at level 5.',
 };
@@ -137,7 +139,7 @@ export class Camp {
     const plan = dailyPlan(dayKey());
     const results = loadDaily();
     const today = results[plan.key];
-    const party = [plan.classes.F ? 'a Paladin' : 'a Fighter', 'a Wizard', plan.classes.R ? 'a Ranger' : 'a Rogue', 'a Cleric'];
+    const party = [plan.classes.F ? 'a Paladin' : 'a Fighter', plan.classes.W ? 'a Warlock' : 'a Wizard', plan.classes.R ? 'a Ranger' : 'a Rogue', 'a Cleric'];
     const box = $('#title-daily');
     box.querySelector('.daily-date').textContent = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
     box.querySelector('.daily-room').textContent =

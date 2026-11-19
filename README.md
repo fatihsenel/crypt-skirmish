@@ -27,14 +27,16 @@ It runs on desktop and on phones.
 | Brannoc | Fighter | Second Wind, Extra Attack at level 5 |
 | | *or* Paladin | Divine Smite, Lay on Hands, Shield of Faith, Aura of Protection |
 | Ilsa | Wizard | Magic Missile, Burning Hands, Misty Step, Shield, then Fireball and Lightning Bolt |
+| | *or* Warlock | Eldritch Blast, Hex, Scorching Ray, Hellish Rebuke, temp HP on kills |
 | Wren | Rogue | Sneak Attack, Cunning Action, hides as a bonus action, spots traps |
 | | *or* Ranger | Longbow with Archery, Hunter's Mark, Colossus Slayer |
 | Maela | Cleric | Healing, Sacred Flame, Turn Undead, Spiritual Weapon |
 
-- Pick Paladin or Ranger and rename the heroes on the title screen.
+- Pick Paladin, Warlock or Ranger and rename the heroes on the title screen.
 - The party starts at level 3 and reaches level 6. Each level brings new spells, more attacks
   or more spell slots.
 - The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
+- The Warlock has two pact slots that come back after every room.
 
 ## Rules
 
@@ -143,6 +145,9 @@ A few things differ from the SRD to keep the game simple:
 - A giant spider's bite poisons instead of dealing poison damage, and its web wears off on
   its own.
 - A specter's Life Drain frightens instead of lowering maximum HP. The banshee has no Wail.
+- Hex has no ability-check part and lasts the whole fight, with no concentration.
+- Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
+- Hellish Rebuke is armed ahead of time and only answers attacks.
 
 ## For developers
 
@@ -162,7 +167,7 @@ Every push to `main` runs the tests, builds and deploys to GitHub Pages
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne). Add
-`&difficulty=hard` or `story`, `&party=5` for another level (3 to 6), `&paladin` or `&ranger`.
+`&difficulty=hard` or `story`, `&party=5` for another level (3 to 6), `&paladin`, `&ranger` or `&warlock`.
 This doesn't touch the save.
 
 **Console:** `__debug.autoplay()` lets the AI play the heroes too. `__debug.win()` and
@@ -175,7 +180,7 @@ This doesn't touch the save.
 - `npm run sim -- 300` plays 300 campaigns down each route.
 - `npm run sim -- 300 act2` or `act3` plays just that act, starting from real parties that
   finished the act before.
-- `SEED=n`, `DIFFICULTY=story|hard`, `PALADIN=1` and `RANGER=1` change the run.
+- `SEED=n`, `DIFFICULTY=story|hard`, `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest

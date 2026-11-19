@@ -32,6 +32,10 @@ const ICONS = {
     <path fill="none" stroke-width="1.8" d="M3 12h16"/>
     <path stroke="none" d="M22.5 12 18 9.4v5.2z"/>
     <path stroke="none" d="M3 12 1.2 9.6h2.6L5.4 12l-1.6 2.4H1.2z"/>`),
+  // A horned sigil: the fiend's mark.
+  K: svg(`<path stroke="none" d="M3.5 2.5c.6 4.4 2.4 7.2 5.2 8.6l.9-1.9C7.4 8 5.6 5.6 3.5 2.5zM20.5 2.5c-.6 4.4-2.4 7.2-5.2 8.6l-.9-1.9c2.2-1.2 4-3.6 6.1-6.7z"/>
+    <path stroke="none" d="M12 7.5c-3.3 0-5.6 2.7-5.6 6.2 0 3.6 2.6 7.8 5.6 7.8s5.6-4.2 5.6-7.8c0-3.5-2.3-6.2-5.6-6.2z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M9 13.2l2.2.9-.4 1.2zm6 0-2.2.9.4 1.2zM10.6 18.3h2.8L12 19.6z"/>`),
   C: svg(`<circle stroke="none" cx="12" cy="12" r="4.2"/>
     <g stroke-width="1.9" fill="none">
       <path d="M12 2.2v3.2M12 18.6v3.2M2.2 12h3.2M18.6 12h3.2M5.1 5.1l2.2 2.2M16.7 16.7l2.2 2.2M5.1 18.9l2.2-2.2M16.7 7.3l2.2-2.2"/>

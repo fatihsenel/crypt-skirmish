@@ -2,7 +2,7 @@
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
 //   node scripts/sim.js [runs] [act2|act3]
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
-// RANGER=1 (a Ranger in the Rogue's).
+// RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
 // way the campaign does (short rests between fights, a long rest at the well).
 
@@ -14,7 +14,9 @@ import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES, DIFF
 import { ITEMS } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 
-const CLASSES = { ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }) };
+const CLASSES = {
+  ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }), ...(process.env.WARLOCK && { W: 'K' }),
+};
 const freshCampaign = () => newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES);
 
 /** A rested party at `level`. */
@@ -119,6 +121,7 @@ function heroOpening(game, u) {
   if (u.code === 'F' && u.hp < u.maxHp / 2 && !game.actionProblem(u, 'secondWind')) game.doAction(u, 'secondWind');
   if (u.code === 'P') paladinOpening(game, u, heroes);
   if (u.code === 'A') rangerOpening(game, u);
+  if (u.code === 'K') warlockOpening(game, u);
   if (!u.actionUsed && u.hp < u.maxHp * 0.35 && u.potions > 0 && !game.actionProblem(u, 'potion')) game.doAction(u, 'potion');
 }
 
@@ -145,6 +148,29 @@ function rangerOpening(game, u) {
   if (!markedAlive && foes.length && (foes.length >= 2 || foes.some((e) => (e.cr ?? 0) >= 1))) {
     game.castSpell(u, 'huntersMark', foes.sort((a, b) => b.hp - a.hp)[0]);
   }
+}
+
+/**
+ * Two pact slots a room: Fireball on a crowd, Hex on a boss, Scorching Ray at a tough foe,
+ * and whatever is left armed as Hellish Rebuke once enemies close in. Eldritch Blast is the
+ * AI's ranged attack.
+ */
+function warlockOpening(game, u) {
+  const foes = game.knownFoes(u).filter((e) => !e.unaware);
+  if (!foes.length) return;
+  if (!u.actionUsed) {
+    const p = bestFireball(game, u);
+    if (p) game.castSpell(u, 'fireball', p);
+  }
+  const hexed = u.mark && game.units.find((e) => e.id === u.mark.id)?.alive;
+  const boss = game.spellTargets(u, 'hex').filter((e) => !e.unaware && (e.cr ?? 0) >= 2).sort((a, b) => b.hp - a.hp)[0];
+  if (!hexed && boss && !u.bonusUsed) game.castSpell(u, 'hex', boss);
+  if (!u.actionUsed) {
+    const tough = game.spellTargets(u, 'scorchingRay').filter((e) => !e.unaware && e.hp >= 15).sort((a, b) => b.hp - a.hp)[0];
+    if (tough) game.castSpell(u, 'scorchingRay', tough);
+  }
+  const close = foes.some((e) => gridDistanceTo(u, e) <= e.speed + 1);
+  if (close && !u.rebukeArmed && !game.rebukeProblem(u)) game.toggleRebuke(u);
 }
 
 const gridDistanceTo =(a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
