@@ -5,7 +5,7 @@ import { nextMonsterStep } from '../src/game/ai.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign, runDifficulty } from '../src/game/campaign.js';
-import { encodeFight, decodeFight, replaysTrue, cleanParty, unpack, fightUrl, LINK_VERSION } from '../src/game/fightLink.js';
+import { encodeFight, decodeFight, replaysTrue, replayOutcome, challengeText, cleanParty, unpack, fightUrl, LINK_VERSION } from '../src/game/fightLink.js';
 
 /** Play a room to the end with the AI choosing the heroes' moves, given as commands like the player's. */
 function playFight(node, seed, party, tier = 0) {
@@ -37,7 +37,7 @@ function playFight(node, seed, party, tier = 0) {
     }
     if (game.current === u && !game.over) give({ type: 'end' });
   }
-  return { node, seed, party, difficulty: 'normal', ...(tier && { tier }), log, result: game.over, check: fightCheck(game) };
+  return { node, seed, party, difficulty: 'normal', ...(tier && { tier }), log, result: game.over, check: fightCheck(game), rounds: game.round };
 }
 
 describe('a fight as a link', () => {
@@ -53,11 +53,15 @@ describe('a fight as a link', () => {
     const code = await encodeFight(fight);
     expect(code).toMatch(/^[\w-]+$/);
     expect(code.length).toBeLessThan(3000);
-    expect(await decodeFight(code)).toEqual(fight);
+    const { rounds, ...sent } = fight; // the rounds aren't in the link: replaying tells them
+    expect(rounds).toBeGreaterThan(0);
+    expect(await decodeFight(code)).toEqual(sent);
   });
 
   it('replays to the end it claims, and not to a changed one', () => {
     expect(replaysTrue(fight)).toBe(true);
+    expect(replayOutcome(fight)).toEqual({ rounds: fight.rounds });
+    expect(replayOutcome({ ...fight, check: 'nope' })).toBeNull();
     expect(replaysTrue({ ...fight, check: 'nope' })).toBe(false);
     expect(replaysTrue({ ...fight, seed: fight.seed + 1 })).toBe(false);
     expect(replaysTrue({ ...fight, result: fight.result === 'victory' ? 'defeat' : 'victory' })).toBe(false);
@@ -66,9 +70,10 @@ describe('a fight as a link', () => {
   it('carries a New Game+ tier, and the fight replays only at that tier', async () => {
     const f1 = playFight('crypt', 1234, party, 1);
     expect(f1.tier).toBe(1);
-    expect(await decodeFight(await encodeFight(f1))).toEqual(f1);
+    const { rounds: _r, ...sent1 } = f1;
+    expect(await decodeFight(await encodeFight(f1))).toEqual(sent1);
     expect(replaysTrue(f1)).toBe(true);
-    const { tier, ...asZero } = f1;
+    const { tier, rounds: _r2, ...asZero } = f1;
     expect(tier).toBe(1);
     expect(replaysTrue(asZero)).toBe(false);
   });
@@ -104,5 +109,26 @@ describe('a fight as a link', () => {
 
   it('builds the link from the page address', () => {
     expect(fightUrl('https://x.io/crypt-skirmish/?level=2#old', 'abc')).toBe('https://x.io/crypt-skirmish/#watch=abc');
+  });
+});
+
+describe('playing a linked fight yourself', () => {
+  const room = 'The Crypt Door';
+  it('compares a win with the link’s', () => {
+    expect(challengeText({ result: 'victory', rounds: 6 }, { won: true, rounds: 5 }, room))
+      .toEqual({ title: 'Challenge won', text: 'You won The Crypt Door in 5 rounds, faster than the link’s 6.' });
+    expect(challengeText({ result: 'victory', rounds: 6 }, { won: true, rounds: 6 }, room).text)
+      .toBe('You won The Crypt Door in 6 rounds, level with the link.');
+    expect(challengeText({ result: 'victory', rounds: 4 }, { won: true, rounds: 7 }, room).text)
+      .toBe('You won The Crypt Door in 7 rounds. The link did it in 4.');
+    expect(challengeText({ result: 'defeat', rounds: 3 }, { won: true, rounds: 1 }, room).text)
+      .toBe('You won The Crypt Door in 1 round, where the link’s party fell in round 3.');
+  });
+
+  it('says how a loss compares', () => {
+    expect(challengeText({ result: 'victory', rounds: 6 }, { won: false, rounds: 4 }, room))
+      .toEqual({ title: 'Defeat', text: 'Your party fell in The Crypt Door in round 4. The link won in 6 rounds. Try again from the same dice.' });
+    expect(challengeText({ result: 'defeat', rounds: 5 }, { won: false, rounds: 2 }, room).text)
+      .toBe('Your party fell in The Crypt Door in round 2. The link’s party fell too, in round 5. Try again from the same dice.');
   });
 });

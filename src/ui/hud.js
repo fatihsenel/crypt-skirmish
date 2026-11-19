@@ -690,7 +690,7 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null, recap = null, win = null, replay = false, ngplus = false }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, challenge = null, share = null, recap = null, win = null, replay = false, ngplus = false }) {
     this.renderSummary(summary);
     this.renderRecap(recap, win);
     this.cardSummary = summary;
@@ -719,6 +719,7 @@ export class Hud {
     $('#to-map').textContent = 'Back to the map';
     this.setShare(share);
     if (daily) this.dailyBanner(daily, level);
+    if (challenge) this.challengeBanner(challenge);
     $('#banner').dataset.result = result;
     $('#banner').hidden = false;
   }
@@ -740,6 +741,18 @@ export class Hud {
     $('#to-map').hidden = false;
     $('#to-map').textContent = 'Back to the title';
     this.setShare(d.share);
+  }
+
+  /** A linked fight played yourself: how it went next to the link's ({ title, text }); try again or leave. */
+  challengeBanner({ title, text }) {
+    $('#banner-title').textContent = title;
+    $('#banner-text').textContent = text;
+    $('#next').hidden = true;
+    $('#restart').hidden = false;
+    $('#restart').textContent = 'Try again';
+    $('#to-map').hidden = false;
+    $('#to-map').textContent = 'Back to the title';
+    this.setShare(null);
   }
 
   /** The banner's Copy result button, for a won daily or campaign. */

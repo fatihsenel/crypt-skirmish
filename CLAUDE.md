@@ -51,7 +51,7 @@ server on 5173.
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
   `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+), `&paladin`, `&ranger`, `&warlock`.
 - `?victory` shows the won-campaign screen for a sample run (Copy result, Save image).
-- `#watch=…` (from Copy replay link) opens a fight's replay.
+- `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.
 - `window.__debug` in the console: `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
   `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `threats()`.

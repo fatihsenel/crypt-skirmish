@@ -38,7 +38,7 @@ import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
 import { recordRun, loadHistory, saveLastFight, clearLastFight } from './game/history.js';
-import { encodeFight, decodeFight, replaysTrue, fightUrl, WATCH_PREFIX, MAX_LINK_CODE } from './game/fightLink.js';
+import { encodeFight, decodeFight, replayOutcome, challengeText, fightUrl, WATCH_PREFIX, MAX_LINK_CODE } from './game/fightLink.js';
 import { unlock } from './game/achievements.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText } from './game/daily.js';
 
@@ -99,6 +99,8 @@ let replay = null;
 const REPLAY_SPEEDS = [1, 2, 4];
 /** Today's daily crypt while it's being played (see daily.js), else null. */
 let daily = null;
+/** A linked fight being played yourself ({ rec, theirs }: the link's record and how it went), else null. */
+let challenge = null;
 /** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
 let feats = { maxHit: 0, sneaks: 0 };
 
@@ -128,13 +130,13 @@ const hud = new Hud({
       return backToTitle();
     }
     sfx.ui();
-    if (daily) newGame(); // the daily again, from the same seed
+    if (daily || challenge) newGame(); // the daily or the linked fight again, from the same seed
     else if (game?.over === 'victory') startCampaign(); // after the final room
     else newGame(); // retry this room with the party as it entered
   },
   onNext: () => leaveRoom(),
   onMap: () => {
-    if (daily) return backToTitle();
+    if (daily || challenge) return backToTitle();
     sfx.ui();
     showCamp(null);
   },
@@ -168,6 +170,7 @@ const camp = new Camp({
     sfx.ui();
     saving = true;
     daily = null;
+    challenge = null;
     campaign = loadSave() ?? newCampaign();
     const saved = campaign.fight;
     delete campaign.fight;
@@ -185,6 +188,7 @@ function startCampaign(difficulty, names, classes) {
   sfx.ui();
   saving = true;
   daily = null;
+  challenge = null;
   // A run being replaced (Abandon run, or New campaign over a save) goes into the history.
   const old = loadSave();
   if (old && !old.done) recordRun(old, 'abandoned');
@@ -200,6 +204,7 @@ const heirlooms = new Heirlooms((won, keep) => {
   sfx.ui();
   saving = true;
   daily = null;
+  challenge = null;
   clearLastFight();
   setWonRun(null);
   campaign = newGamePlus(won, keep);
@@ -211,9 +216,25 @@ const heirlooms = new Heirlooms((won, keep) => {
 function startDaily() {
   sfx.ui();
   saving = false;
+  challenge = null;
   daily = dailyPlan(dayKey());
   campaign = dailyCampaign(daily);
   nodeId = daily.node;
+  camp.hide();
+  newGame();
+}
+
+/**
+ * Play a linked fight yourself: its room, party, difficulty and starting dice, apart from
+ * the campaign (nothing is saved). `theirs` ({ result, rounds }) is how the link's fight went.
+ */
+function startChallenge(rec, theirs) {
+  sfx.ui();
+  saving = false;
+  daily = null;
+  challenge = { rec, theirs };
+  campaign = { ...newCampaign(rec.difficulty), party: structuredClone(rec.party), ...(rec.tier && { tier: rec.tier }) };
+  nodeId = rec.node;
   camp.hide();
   newGame();
 }
@@ -235,6 +256,7 @@ function backToTitle() {
   game = null;
   fight = null;
   daily = null;
+  challenge = null;
   campaign = null;
   hud.reset();
   showBackdrop();
@@ -514,12 +536,13 @@ function startFight(resume, watch = null) {
 
   const level = levelById(NODES[nodeId].level);
   // A daily always starts from the day's seed, so every try (and everyone) faces the same dice.
-  const seed = watch?.seed ?? resume?.seed ?? daily?.seed ?? newSeed();
+  // A linked fight played yourself starts from the link's seed: the same dice it had.
+  const seed = watch?.seed ?? resume?.seed ?? daily?.seed ?? challenge?.rec.seed ?? newSeed();
   const party = watch?.party ?? campaign.party;
   const difficulty = watch?.difficulty ?? campaign.difficulty;
   const tier = (watch ? watch.tier : campaign.tier) ?? 0; // New Game+
   game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed) });
-  fight = daily || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
+  fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
   if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), log: resume ? [...resume.log] : [] };
   feats = { maxHit: 0, sneaks: 0 };
   game.on('attack', (r) => {
@@ -1827,6 +1850,12 @@ async function checkGameOver() {
   drawThreats(); // the fight is over: no zones left
   if (replay) {
     await wait(600);
+    if (!replay) return true;
+    if (replay.link) { // a link's fight: stay at its end, where it can be played or left
+      replay.over = true;
+      replayLabel();
+      return true;
+    }
     endReplay();
     return true;
   }
@@ -1835,7 +1864,7 @@ async function checkGameOver() {
   if (saving && record) saveLastFight({ ...record, log: [...record.log] }); // kept with the run when it ends
   hud.renderActionBar(game, { selected: null, busy: false });
   const level = levelById(NODES[nodeId].level);
-  const final = !!level.final;
+  const final = !!level.final && !challenge; // a linked fight is one room, not the campaign's end
   let summary = null;
   let awards = []; // achievements unlocked by this fight (none on test runs)
   let share = null; // a won campaign's text to share
@@ -1875,9 +1904,10 @@ async function checkGameOver() {
     const share = attempt.won && shareText({ key: daily.key, room: level.name, level: daily.level, rounds: game.round, marks, streak: run });
     dailyResult = { ...attempt, best: results[daily.key], streak: run, share };
   }
+  const versus = challenge && challengeText(challenge.theirs, { won: game.over === 'victory', rounds: game.round }, level.name);
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary, awards, daily: dailyResult, share, replay: !!record, recap: game.over === 'defeat' ? fightRecap(game) : null,
+    summary, awards, daily: dailyResult, challenge: versus, share, replay: !!record, recap: game.over === 'defeat' ? fightRecap(game) : null,
     win: game.over === 'victory' && !summary ? winRecap(game) : null,
     ngplus: !!summary && saving && !!campaign?.done,
   });
@@ -1932,7 +1962,7 @@ const replayRate = () => (replay ? REPLAY_SPEEDS[replay.speed] : 1);
 function startReplay(rec = record, { fromTitle = false, link = false } = {}) {
   if (!rec || replay || (!fromTitle && !game?.over)) return;
   sfx.ui();
-  replay = { log: rec.log, at: 0, finished: fromTitle ? null : game, fight, fromTitle, link, paused: false, speed: 0, stepTurn: false, wake: null };
+  replay = { rec, log: rec.log, at: 0, finished: fromTitle ? null : game, fight, fromTitle, link, over: false, paused: false, speed: 0, stepTurn: false, wake: null };
   $banner.hidden = true;
   tips.hide(); // nothing to do while watching
   document.body.classList.add('replaying');
@@ -1985,12 +2015,13 @@ async function copyFightLink(f, button) {
 /** Opened from a #watch= link: check the fight still plays out the same, then show it. */
 async function watchLink(code) {
   const f = await decodeFight(code);
-  if (!f || !replaysTrue(f)) {
+  const out = f && replayOutcome(f);
+  if (!out) {
     clearWatchHash();
     hud.toast(f ? 'This replay was made with another version of the game, so it can’t be shown.' : 'This replay link is broken.');
     return;
   }
-  watchFromTitle(f, { link: true });
+  watchFromTitle({ ...f, rounds: out.rounds }, { link: true }); // the rounds, for Play it yourself
 }
 
 // A link pasted into a tab that already has the game open.
@@ -2032,15 +2063,17 @@ function replayGate() {
 function replayLabel() {
   if (!replay) return;
   const el = (id) => document.getElementById(id);
-  el('replay-label').textContent = `Replay · round ${Math.max(1, game.round)}`;
+  el('replay-label').textContent = replay.over ? `Replay · ${replay.rec.result === 'victory' ? 'won' : 'lost'} in round ${game.round}` : `Replay · round ${Math.max(1, game.round)}`;
   el('replay-pause').textContent = replay.paused ? 'Play' : 'Pause';
-  el('replay-step').disabled = !replay.paused;
+  el('replay-pause').disabled = replay.over;
+  el('replay-step').disabled = !replay.paused || replay.over;
+  el('replay-play').hidden = !replay.link;
   el('replay-speed').textContent = `${REPLAY_SPEEDS[replay.speed]}×`;
 }
 
 /** Pause or play on; with `stepTurn`, play to the start of the next turn and pause there. */
 function replayPlay(stepTurn = false) {
-  if (!replay) return;
+  if (!replay || replay.over) return;
   sfx.ui();
   replay.paused = stepTurn ? false : !replay.paused;
   replay.stepTurn = stepTurn;
@@ -2063,6 +2096,12 @@ document.getElementById('replay-speed').addEventListener('click', () => {
   replay.speed = (replay.speed + 1) % REPLAY_SPEEDS.length;
   playback.rate = replayRate();
   replayLabel();
+});
+document.getElementById('replay-play').addEventListener('click', () => {
+  if (!replay?.link) return;
+  const { rec } = replay;
+  endReplay(); // back to the title, then straight into the fight
+  startChallenge(rec, { result: rec.result, rounds: rec.rounds });
 });
 document.getElementById('replay-exit').addEventListener('click', () => {
   sfx.ui();

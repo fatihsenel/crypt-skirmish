@@ -79,15 +79,41 @@ export function unpack(o) {
   return { node: o.n, seed: o.s, difficulty: o.d, ...(o.t && { tier: o.t }), party, log, result: o.r, check: o.c };
 }
 
-/** Does the record replay to the end it says it had? (Same rules, same dice, same result.) */
-export function replaysTrue(f) {
+/**
+ * Replay the record headlessly: { rounds } when it lands on the end it says it had (same
+ * rules, same dice, same result), else null. The rounds aren't in the link; this tells them.
+ */
+export function replayOutcome(f) {
   try {
     const game = new Game(levelById(NODES[f.node].level), { party: f.party, difficulty: runDifficulty(f.difficulty, f.tier ?? 0), rng: seeded(f.seed) });
     const r = replayFight(game, f.log);
-    return r.ok && game.over === f.result && fightCheck(game) === f.check;
+    return r.ok && game.over === f.result && fightCheck(game) === f.check ? { rounds: game.round } : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+/** Does the record replay to the end it says it had? */
+export const replaysTrue = (f) => replayOutcome(f) !== null;
+
+const roundsText = (n) => `${n} round${n === 1 ? '' : 's'}`;
+
+/**
+ * The end screen of playing a linked fight yourself: { title, text } comparing `theirs`
+ * ({ result, rounds }, the link's fight) with `mine` ({ won, rounds }) in the room `room`.
+ */
+export function challengeText(theirs, mine, room) {
+  const theyWon = theirs.result === 'victory';
+  if (!mine.won) {
+    const them = theyWon ? `The link won in ${roundsText(theirs.rounds)}.` : `The link’s party fell too, in round ${theirs.rounds}.`;
+    return { title: 'Defeat', text: `Your party fell in ${room} in round ${mine.rounds}. ${them} Try again from the same dice.` };
+  }
+  let them;
+  if (!theyWon) them = `, where the link’s party fell in round ${theirs.rounds}.`;
+  else if (mine.rounds < theirs.rounds) them = `, faster than the link’s ${theirs.rounds}.`;
+  else if (mine.rounds === theirs.rounds) them = ', level with the link.';
+  else them = `. The link did it in ${theirs.rounds}.`;
+  return { title: 'Challenge won', text: `You won ${room} in ${roundsText(mine.rounds)}${them}` };
 }
 
 // --- packing: JSON, deflated, in URL-safe base64 -------------------------------
