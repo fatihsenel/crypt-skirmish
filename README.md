@@ -95,7 +95,7 @@ It runs on desktop and on phones.
   call, who fell and how many potions were drunk.
 - **Watch replay:** after any fight you played yourself, the end screen can play it again from
   the start, move by move with the same dice. Pause, step to the next turn, speed it up to 4×,
-  or exit back to the end screen.
+  or exit back to the end screen (keys: Space, →, + and −, Esc).
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
   ghoul out of the Barrow.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
@@ -115,7 +115,8 @@ It runs on desktop and on phones.
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
   kind has dealt your heroes and how many it dropped, with the three deadliest at the top.
-- **Past runs:** your last 20 runs, from the title screen.
+- **Past runs:** your last 20 runs, from the title screen. Each keeps its last fight to watch
+  again.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
 
@@ -255,7 +256,7 @@ src/
     ai.js            monster brains
     replay.js        fight saves: commands replayed from a seed
     recap.js         a fight told back: who fell to what and a tip, or who led a win
-    history.js       past runs
+    history.js       past runs and the last fight of each
     achievements.js  achievements and their checks
     bestiary.js      which monsters you've met and slain, and what they did to you
     daily.js         the daily crypt

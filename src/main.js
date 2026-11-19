@@ -36,7 +36,7 @@ import { loadSettings, saveSettings, SPEEDS } from './game/settings.js';
 import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
-import { recordRun, loadHistory } from './game/history.js';
+import { recordRun, loadHistory, saveLastFight, clearLastFight } from './game/history.js';
 import { unlock } from './game/achievements.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText } from './game/daily.js';
 
@@ -144,6 +144,7 @@ const camp = new Camp({
   },
   onNewCampaign: (difficulty, names, classes) => startCampaign(difficulty, names, classes),
   onDaily: () => startDaily(),
+  onWatch: (f) => watchFromTitle(f),
   onContinue: () => {
     sfx.ui();
     saving = true;
@@ -168,6 +169,7 @@ function startCampaign(difficulty, names, classes) {
   // A run being replaced (Abandon run, or New campaign over a save) goes into the history.
   const old = loadSave();
   if (old && !old.done) recordRun(old, 'abandoned');
+  clearLastFight(); // whatever it was, it isn't this run's
   campaign = newCampaign(difficulty, names, classes);
   writeSave(campaign);
   showCamp(null);
@@ -1796,6 +1798,7 @@ async function checkGameOver() {
     return true;
   }
   recordBlows(game.blows); // the bestiary's deadliest foes
+  if (saving && record) saveLastFight({ ...record, log: [...record.log], result: game.over }); // kept with the run when it ends
   hud.renderActionBar(game, { selected: null, busy: false });
   const level = levelById(NODES[nodeId].level);
   const final = !!level.final;
@@ -1858,7 +1861,12 @@ async function runMonsterTurn(unit) {
     await pace(450);
 
     for (const { step, result } of monsterTurn(g, unit)) {
-      if (result.ok) await play(unit, step.type, result);
+      try {
+        if (result.ok) await play(unit, step.type, result);
+      } catch (err) {
+        if (game === g) throw err;
+        return; // the fight was left mid-animation (a replay exited to the title): nothing to finish
+      }
       if (game !== g) return;
       syncStatus();
       hud.renderActionBar(game, { selected, busy });
@@ -1881,16 +1889,34 @@ async function runMonsterTurn(unit) {
 const $replayBar = document.getElementById('replay-bar');
 const replayRate = () => (replay ? REPLAY_SPEEDS[replay.speed] : 1);
 
-/** Replay the fight that just ended, from its seed and the commands given (see replay.js). */
-function startReplay() {
-  if (!record || !game?.over || replay) return;
+/**
+ * Replay a fight from its record (seed and the commands given, see replay.js): the one that
+ * just ended, from the end banner, or a past run's last fight, from the title (`fromTitle`).
+ */
+function startReplay(rec = record, { fromTitle = false } = {}) {
+  if (!rec || replay || (!fromTitle && !game?.over)) return;
   sfx.ui();
-  replay = { log: record.log, at: 0, finished: game, fight, paused: false, speed: 0, stepTurn: false, wake: null };
+  replay = { log: rec.log, at: 0, finished: fromTitle ? null : game, fight, fromTitle, paused: false, speed: 0, stepTurn: false, wake: null };
   $banner.hidden = true;
   tips.hide(); // nothing to do while watching
   document.body.classList.add('replaying');
   $replayBar.hidden = false;
-  startFight(null, record);
+  startFight(null, rec);
+}
+
+/** Past runs → Watch the last fight: the room's figures first, then the replay; Exit goes back to the title. */
+function watchFromTitle(rec) {
+  if (replay || !NODES[rec.node]) return;
+  camp.hide();
+  nodeId = rec.node;
+  const files = roomFiles(rec.node, rec.party);
+  const ticket = ++fightTicket;
+  $loading.hidden = modelsSettled(files);
+  loadModels(files).then(() => {
+    if (ticket !== fightTicket) return;
+    $loading.hidden = true;
+    startReplay(rec, { fromTitle: true });
+  });
 }
 
 /** Back to the end banner, with the real fight as it ended. */
@@ -1906,6 +1932,7 @@ function endReplay() {
   busy = false;
   document.body.classList.remove('replaying');
   $replayBar.hidden = true;
+  if (r.fromTitle) return backToTitle();
   hud.renderInitiative(game);
   syncStatus();
   $banner.hidden = false;
@@ -1955,6 +1982,30 @@ document.getElementById('replay-exit').addEventListener('click', () => {
   endReplay();
 });
 
+/** The replay's keys: Space pause, → next turn, + and − speed, Esc exit. True if handled. */
+function replayKey(ev) {
+  if (ev.code === 'Space' || ev.code === 'KeyK') {
+    if (ev.target instanceof HTMLButtonElement) return true; // the focused button takes it
+    ev.preventDefault();
+    replayPlay();
+  } else if (ev.code === 'ArrowRight') {
+    ev.preventDefault();
+    replayPlay(true);
+  } else if (ev.key === '+' || ev.key === '=' || ev.key === '-' || ev.key === '_') {
+    const up = ev.key === '+' || ev.key === '=';
+    const speed = Math.min(REPLAY_SPEEDS.length - 1, Math.max(0, replay.speed + (up ? 1 : -1)));
+    if (speed === replay.speed) return true;
+    sfx.ui();
+    replay.speed = speed;
+    playback.rate = replayRate();
+    replayLabel();
+  } else if (ev.code === 'Escape') {
+    sfx.ui();
+    endReplay();
+  } else return false;
+  return true;
+}
+
 /** A hero's turn as it was played: the commands the player gave, one after another. */
 async function replayHeroTurn(unit) {
   const g = game;
@@ -1970,7 +2021,7 @@ async function replayHeroTurn(unit) {
     try {
       await play(unit, cmd.type, r);
     } catch (err) {
-      console.error(err);
+      if (game === g) console.error(err); // else the replay was exited mid-animation
     }
     if (game !== g) return;
     syncStatus();
@@ -2304,6 +2355,7 @@ stage.dom.addEventListener('click', (ev) => {
 
 window.addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement) return; // typing a hero's name
+  if (replay && replayKey(ev)) return;
   if (ev.code === 'Space' || ev.code === 'Enter') {
     if (ev.target instanceof HTMLButtonElement) return;
     ev.preventDefault();

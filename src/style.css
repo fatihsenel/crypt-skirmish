@@ -882,6 +882,8 @@ b.loot { color: var(--gold); }
 .history .lost { color: #c9a0a0; font-weight: 600; }
 .history .run-stats, .history .run-party { margin-top: 2px; }
 .history .run-party small { color: #9d927f; font-size: 11.5px; }
+.history .watch-run { margin-top: 8px; font-size: 12px; padding: 5px 10px; }
+.history .watch-run small { color: var(--muted); margin-left: 4px; }
 .awards {
   list-style: none; margin: 8px 0 0; padding: 0; text-align: left;
   border-top: 1px solid #c9b07a33;

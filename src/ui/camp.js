@@ -43,8 +43,8 @@ const CLASS_BLURB = {
 };
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWatch }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWatch };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -66,6 +66,14 @@ export class Camp {
       if (b?.dataset.cls) this.pickClass(b.dataset.slot, b.dataset.cls);
     });
     this.runsPanel = new Overlay($('#title-history'));
+    $('#title-history').addEventListener('click', (ev) => {
+      const b = ev.target.closest('button[data-watch]');
+      if (!b) return;
+      const run = this.runs?.[Number(b.dataset.watch)];
+      if (!run?.fight) return;
+      this.runsPanel.close();
+      this.h.onWatch(run.fight);
+    });
     this.awardsPanel = new Overlay($('#title-awards'));
     $('#title-tips').addEventListener('change', (ev) => tips.setOn(ev.target.checked));
     $('#title-difficulty').addEventListener('change', (ev) => {
@@ -189,10 +197,11 @@ export class Camp {
   /** Past runs, newest first: how each ended, how far the party got, and who was in it. */
   renderHistory(runs) {
     const box = $('#title-history');
+    this.runs = runs;
     $('#title-runs').textContent = `Past runs (${runs.length})`;
     $('#title-runs').hidden = runs.length === 0; // nothing to show until a run has ended
     const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-    box.querySelector('.runs').innerHTML = runs.map((r) => {
+    box.querySelector('.runs').innerHTML = runs.map((r, i) => {
       const date = new Date(r.when).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
       const how = r.result === 'won'
         ? '<b class="won">Victory</b>'
@@ -202,8 +211,10 @@ export class Camp {
         <div class="run-head"><span>${how}</span><span class="muted">${esc(r.difficulty)} · ${date}</span></div>
         <div class="run-stats">Party level ${r.level} · ${plural(r.won, 'room')} won · ${plural(r.rounds, 'round')}`
         + (r.mvp ? ` · most damage: ${esc(r.mvp.name)} (${r.mvp.damage})` : '') + `</div>
-        <div class="run-party">${party}</div>
-      </li>`;
+        <div class="run-party">${party}</div>`
+        + (r.fight && NODES[r.fight.node] ? `<button type="button" class="watch-run" data-watch="${i}">Watch the last fight: ${esc(nodeName(r.fight.node))}`
+          + ` <small>${r.fight.result === 'victory' ? 'won' : 'lost'}</small></button>` : '')
+        + `</li>`;
     }).join('');
   }
 

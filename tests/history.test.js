@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { runRecord, addRun, parseHistory, MAX_RUNS } from '../src/game/history.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { runRecord, addRun, parseHistory, MAX_RUNS, watchable, saveLastFight, loadLastFight, recordRun, loadHistory, LAST_FIGHT_KEY } from '../src/game/history.js';
 import { newCampaign, runShareText } from '../src/game/campaign.js';
 
 describe('run history', () => {
@@ -33,6 +33,43 @@ describe('run history', () => {
     expect(parseHistory('not json')).toEqual([]);
     expect(parseHistory('{"a":1}')).toEqual([]);
     expect(parseHistory('[null, 3, {"result":"won","when":1}]')).toEqual([{ result: 'won', when: 1 }]);
+  });
+});
+
+describe('a run’s last fight', () => {
+  let store;
+  beforeEach(() => {
+    store = new Map();
+    globalThis.localStorage = {
+      getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k),
+    };
+  });
+  afterEach(() => { delete globalThis.localStorage; });
+
+  const fight = (more = {}) => ({ node: 'tomb', seed: 42, party: { F: { level: 8 } }, difficulty: 'normal', log: [{ type: 'end' }], result: 'victory', ...more });
+
+  it('keeps only a complete record, without extra fields', () => {
+    expect(watchable(fight({ extra: 1 }))).toEqual(fight());
+    expect(watchable(fight({ seed: 'x' }))).toBeNull();
+    expect(watchable(fight({ result: 'draw' }))).toBeNull();
+    expect(watchable(fight({ log: null }))).toBeNull();
+    expect(watchable(null)).toBeNull();
+  });
+
+  it('drops a record too big to keep', () => {
+    expect(watchable(fight({ log: Array.from({ length: 5000 }, () => ({ type: 'move', x: 10, z: 10 })) }))).toBeNull();
+  });
+
+  it('goes with the run when it ends, and is then cleared', () => {
+    saveLastFight(fight({ result: 'defeat' }));
+    expect(loadLastFight().result).toBe('defeat');
+    const state = newCampaign('normal');
+    state.stats.won = 2;
+    recordRun(state, 'abandoned', 7);
+    expect(loadHistory()[0].fight).toEqual(fight({ result: 'defeat' }));
+    expect(store.has(LAST_FIGHT_KEY)).toBe(false);
+    recordRun(state, 'abandoned', 8);
+    expect(loadHistory()[0].fight).toBeNull();
   });
 });
 
