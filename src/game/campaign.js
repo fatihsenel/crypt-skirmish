@@ -36,7 +36,8 @@ export const TIER_HP = 0.1;
 export function runDifficulty(difficulty, tier = 0) {
   const base = DIFFICULTIES[difficulty] ?? DIFFICULTIES.normal;
   if (!tier) return base;
-  return { ...base, hp: base.hp * (1 + TIER_HP * tier), bonus: base.bonus + 1 };
+  // From NG+2 each room's strongest monster is an elite (Game#makeElite).
+  return { ...base, hp: base.hp * (1 + TIER_HP * tier), bonus: base.bonus + 1, ...(tier >= 2 && { elite: tier }) };
 }
 
 /** "Hard", or "Hard NG+2" for a New Game+ run. */

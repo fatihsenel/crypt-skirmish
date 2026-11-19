@@ -4,7 +4,7 @@
 import { signed } from '../game/dice.js';
 import { SPELLS, PASSIVES, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
-import { Game } from '../game/combat.js';
+import { Game, ELITE_TRAITS } from '../game/combat.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const markOf = (u) => (u.marked === true ? 'huntersMark' : u.marked);
@@ -49,7 +49,9 @@ export function unitCard(game, u) {
   ].filter(Boolean);
   const attacks = u.alive ? u.attacks.filter((a) => u.team === 'monsters' || a.damage) : [];
   const conds = Object.keys(u.conditions ?? {});
+  const elite = ELITE_TRAITS.find((t) => t.id === u.elite);
   const traits = [
+    elite && `Elite · ${elite.name}: ${elite.desc}.`,
     u.multiattack > 1 && `Attacks ${u.multiattack === 2 ? 'twice' : `${u.multiattack} times`} a turn.`,
     u.team === 'monsters' && u.spells?.length && `Casts ${u.spells.map((id) => SPELLS[id]?.name ?? id).join(', ')} (DC ${game.spellDC(u)}).`,
     u.flies && 'Flies: icy ground doesn’t slow it.',

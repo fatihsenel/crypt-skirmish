@@ -41,6 +41,7 @@ server on 5173.
   procedural builder in `render/models.js`), an icon in `ui/icons.js`.
 - **Condition:** add it to `CONDITIONS` in `combat.js` and a line in `attackMods`. Monsters
   apply it through an attack `rider` or a spell's `condition`.
+- **Elite trait:** `ELITE_TRAITS` and `makeElite` in `combat.js`; the bestiary lists them.
 - **Room:** a map in `LEVELS` (`game/maps.js`) and a node in `NODES` (`game/campaign.js`).
 - **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
   `scripts/sim.js` if the AI wouldn't use its abilities.
@@ -49,7 +50,7 @@ server on 5173.
 ## Testing in the browser
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
-  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+), `&paladin`, `&ranger`, `&warlock`.
+  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&paladin`, `&ranger`, `&warlock`.
 - `?victory` shows the won-campaign screen for a sample run (Copy result, Save image).
 - `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.

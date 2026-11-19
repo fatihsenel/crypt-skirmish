@@ -116,6 +116,9 @@ It runs on desktop and on phones.
   Each one keeps a magic item of your choice from the run. Every win adds a tier (Hard NG+1,
   NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The title
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
+- **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
+  its base and one trait: Regenerating, Relentless, Frenzied, Swift or Warded. The trait
+  depends on the room and the tier. The bestiary lists what each does.
 
 ## Modes and extras
 
@@ -208,6 +211,9 @@ A few things differ from the SRD to keep the game simple:
 - Hellish Rebuke is armed ahead of time and only answers attacks.
 - New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the
   difficulty's), and from the first tier their weapon attack and damage rolls get +1.
+- Elites (NG+2 and deeper) are not from the SRD: the room's monster worth the most XP gets a
+  trait (regains 5 HP a turn; stays on 1 HP once; one more attack; +10 ft speed; or +2 AC and
+  no frightened, prone or poisoned).
 
 ## For developers
 

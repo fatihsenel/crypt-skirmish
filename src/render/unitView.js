@@ -31,6 +31,14 @@ function buildBase(unit) {
   rim.receiveShadow = top.receiveShadow = true;
   rim.castShadow = true;
   base.add(rim, top);
+  if (unit.elite) { // New Game+ elite: a gold band around the base
+    const band = new THREE.Mesh(
+      new THREE.TorusGeometry(0.44, 0.04, 10, 48).rotateX(Math.PI / 2),
+      new THREE.MeshStandardMaterial({ color: 0xffd36b, emissive: 0xb07a20, emissiveIntensity: 0.9, metalness: 0.6, roughness: 0.3 }),
+    );
+    band.position.y = 0.075;
+    base.add(band);
+  }
   return base;
 }
 
@@ -237,7 +245,7 @@ export class UnitView {
       u.conditions?.rotting && ['rotting', 'Rotting'],
       u.marked && u.alive && (u.marked === 'hex' ? ['marked hexed', 'Hexed'] : ['marked', 'Marked']),
       u.rebukeArmed && u.alive && ['rebuke', 'Rebuke'],
-      u.deathWard && u.alive && ['ward', 'Warded'],
+      u.deathWard && u.alive && ['ward', u.elite === 'relentless' ? 'Relentless' : 'Warded'],
       // A hero's own Stealth roll is theirs to see; a goblin's isn't.
       u.hidden && ['hidden', u.team === 'heroes' ? `Hidden · ${u.hidden}` : 'Hidden'],
       u.asleep ? ['asleep', 'Asleep'] : u.patrol && u.unaware ? ['unaware', 'Patrolling'] : u.unaware && ['unaware', 'Unaware'],

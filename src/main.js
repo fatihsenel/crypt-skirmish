@@ -3,7 +3,7 @@
 
 import './style.css';
 import * as THREE from 'three';
-import { Game } from './game/combat.js';
+import { Game, ELITE_TRAITS } from './game/combat.js';
 import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
@@ -601,6 +601,9 @@ function startFight(resume, watch = null) {
       hud.log(`<span class="${u.team}">${u.name}</span> <span class="dice">d20 ${u.initRoll} ${signed(u.initiative - u.initRoll)} = ${u.initiative}</span>`);
     }
     if (lurking) hud.log(`<span class="monsters">Something</span> stirs beyond your sight…`, 'sys');
+    // New Game+ 2 and deeper: which foe is the elite shows on its card once it's seen.
+    const elite = ELITE_TRAITS.find((t) => game.units.some((u) => u.elite === t.id));
+    if (elite) hud.log(`The strongest foe here is an <b>elite</b>: ${elite.name.toLowerCase()} (${elite.desc}).`, 'sys');
   });
   game.on('round', ({ round }) => hud.log(`Round ${round}`, 'round'));
   game.on('turnStart', ({ unit }) => onTurnStart(unit));
@@ -633,9 +636,16 @@ function startFight(resume, watch = null) {
     hud.logWard(r);
     // Shown once the blow has landed.
     wait(500).then(() => {
-      floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, 'Death Ward!', 'heal');
+      floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, r.relentless ? 'Relentless!' : 'Death Ward!', r.relentless ? 'warn' : 'heal');
       view(r.unit)?.updateStatus();
     });
+  });
+  game.on('regen', (r) => {
+    if (unseen(r.unit)) return; // out of sight: nothing to see
+    hud.logRegen(r);
+    floatText(stage.scene, r.unit, `+${r.amount}`, 'heal');
+    view(r.unit)?.updateHp();
+    view(r.unit)?.updateStatus();
   });
   game.on('rising', (r) => pendingRisings.push(r));
   // A storm's frost goes down as its hail lands (playSpell); it thaws here.

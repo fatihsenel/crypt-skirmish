@@ -255,8 +255,14 @@ export class Hud {
   }
 
   /** Dark One's Blessing: temporary HP from a kill. */
-  logWard({ unit }) {
-    this.log(`<b class="heal">Death Ward</b> holds: ${who(unit)} stays on their feet with 1 HP.`);
+  logWard({ unit, relentless }) {
+    if (relentless) this.log(`${who(unit)} is <b>Relentless</b>: it stays on its feet with 1 HP.`);
+    else this.log(`<b class="heal">Death Ward</b> holds: ${who(unit)} stays on their feet with 1 HP.`);
+  }
+
+  /** A regenerating elite's wounds close at the start of its turn. */
+  logRegen({ unit, amount }) {
+    this.log(`${who(unit)} regenerates ${amount} HP.`);
   }
 
   logRising({ unit, risen, glare, dc }) {

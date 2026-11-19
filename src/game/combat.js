@@ -55,6 +55,26 @@ export const isWeapon = (attack) => attack.stat === 'str' || attack.stat === 'de
 /** A melee weapon attack (not a thrown javelin): what Dueling and Divine Smite need. */
 export const isMelee = (attack) => isWeapon(attack) && attack.reach === 1;
 
+/**
+ * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits
+ * (see Game#makeElite). Which trait goes by the room and the tier, never by the dice.
+ */
+export const ELITE_TRAITS = [
+  { id: 'regenerating', name: 'Regenerating', desc: 'regains 5 HP at the start of each of its turns' },
+  { id: 'relentless', name: 'Relentless', desc: 'the first time it drops to 0 HP, it stays on 1 instead' },
+  { id: 'frenzied', name: 'Frenzied', desc: 'makes one more attack with each Attack action' },
+  { id: 'swift', name: 'Swift', desc: 'moves 10 ft farther' },
+  { id: 'warded', name: 'Warded', desc: '+2 AC; can’t be frightened, knocked prone or poisoned' },
+];
+export const ELITE_REGEN = 5;
+
+/** The elite's trait in the room `levelId` at New Game+ `tier`. */
+export function eliteTrait(levelId, tier) {
+  let hash = 0;
+  for (const ch of String(levelId)) hash += ch.charCodeAt(0);
+  return ELITE_TRAITS[(tier + hash) % ELITE_TRAITS.length];
+}
+
 export class Game {
   /**
    * @param level  ASCII rows, or { rows, loot, asleep, patrols } where loot lists the
@@ -100,6 +120,11 @@ export class Game {
     this.difficulty = difficulty; // { hp, bonus } from DIFFICULTIES, or null for as written
     this.units = this.grid.spawns.map(make);
     for (const u of this.units) this.toughen(u);
+    // New Game+ 2 and deeper: the room's strongest monster (most XP, the first on a tie) is an elite.
+    if (difficulty?.elite >= 2) {
+      const top = this.units.filter((u) => u.team === 'monsters').reduce((a, u) => (!a || u.xp > a.xp ? u : a), null);
+      if (top) this.makeElite(top, eliteTrait(level.id, difficulty.elite).id);
+    }
     for (const c of this.grid.corpses) {
       const u = make(c);
       Object.assign(u, { alive: false, hp: 0, corpse: true, name: `Dead ${u.cls}` });
@@ -531,6 +556,10 @@ export class Game {
     this.standUp(u);
     if (this.has(u, 'restrained')) u.movesLeft = 0;
     this.recharge(u);
+    if (u.elite === 'regenerating' && u.alive && u.hp < u.maxHp) {
+      const amount = this.heal(u, ELITE_REGEN);
+      if (amount) this.emit('regen', { unit: u, amount });
+    }
     this.updateAwareness();
     this.emit('turnStart', { unit: u });
     this.checkStench(u);
@@ -570,6 +599,19 @@ export class Game {
     this.beginTurn();
   }
 
+  /** Make `u` an elite with the trait `id` (one of ELITE_TRAITS). */
+  makeElite(u, id) {
+    u.elite = id;
+    if (id === 'relentless') u.deathWard = true; // works as Death Ward does
+    else if (id === 'frenzied') u.multiattack = (u.multiattack ?? 1) + 1;
+    else if (id === 'swift') u.speed += 2;
+    else if (id === 'warded') {
+      u.ac += 2;
+      u.immune = [...new Set([...(u.immune ?? []), 'frightened', 'prone', 'poisoned'])];
+    }
+    return u;
+  }
+
   /** Add a unit mid-fight, acting right after `after` in the initiative order. */
   /** Apply the run's difficulty to a monster (on creation, and to a mimic as it wakes). */
   toughen(u) {
@@ -606,7 +648,7 @@ export class Game {
       target.deathWard = false;
       const saved = this.tally(target);
       if (saved) saved.warded = (saved.warded ?? 0) + 1;
-      this.emit('ward', { unit: target, source });
+      this.emit('ward', { unit: target, source, ...(target.elite === 'relentless' && { relentless: true }) });
     }
     const t = target.team === 'monsters' ? this.tally(source) : null;
     if (t) t.damage += before - target.hp; // only what landed, not overkill
@@ -956,8 +998,8 @@ export class Game {
     this.via = 'trap';
     this.applyDamage(unit, damage, null);
     if (!success && unit.alive) {
-      result.prone = true;
       this.addCondition(unit, 'prone');
+      result.prone = this.has(unit, 'prone'); // not if it can't be knocked down (a Warded elite)
     }
     return result;
   }
@@ -1312,6 +1354,7 @@ export class Game {
     if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
     if (this.has(target, 'prone')) return `${target.name} is already prone`;
     if (target.huge) return `${target.name} is too big to shove`;
+    if (target.immune?.includes('prone')) return `${target.name} can’t be knocked prone`; // a Warded elite
     return null;
   }
 
