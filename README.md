@@ -4,7 +4,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 
 **Play it: https://fatihsenel.github.io/crypt-skirmish/**
 
-![The party fighting skeletons and giant rats in the Flooded Ossuary, with the monsters' reach striped on the floor](docs/screenshots/battle.jpg)
+![The party fighting a mummy, a wraith and skeletons in the Sunken Halls](docs/screenshots/battle.jpg)
 
 | | |
 | --- | --- |
@@ -197,9 +197,9 @@ This doesn't touch the save.
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
-Armory. On Hard the Throne drops to about 95% and 50%, and the Tomb to about 75% and 30%.
-Story wins nearly every time. A whole run wins about 75% of the time on Normal and about 18%
-on Hard, where the Barrow ends the most runs.
+Armory. On Hard the Throne drops to about 95% and 65%, and the Tomb to about 85% and 45%.
+Story wins nearly every time. A whole run wins about 75% of the time on Normal and about 25%
+on Hard (monsters get +10% HP and +1 to hit and damage), where the Barrow ends the most runs.
 
 ### Layout
 

@@ -19,7 +19,7 @@ export const XP_LEVELS = { 4: 450, 5: 900, 6: 2000, 7: 9700, 8: 10400 };
 export const DIFFICULTIES = {
   story: { name: 'Story', hp: 0.75, bonus: -1, desc: 'Weaker monsters: for enjoying the tale.' },
   normal: { name: 'Normal', hp: 1, bonus: 0, desc: 'The crypt as intended.' },
-  hard: { name: 'Hard', hp: 1.2, bonus: 1, desc: 'Tougher monsters that hit harder. Every choice counts.' },
+  hard: { name: 'Hard', hp: 1.1, bonus: 1, desc: 'Tougher monsters that hit harder. Every choice counts.' },
 };
 
 /**

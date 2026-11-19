@@ -82,6 +82,13 @@ html, body {
   background: rgba(0, 0, 0, 0.65);
   border: 1px solid currentColor;
 }
+@media (max-height: 520px) {
+  /* A phone on its side zooms the map far out: smaller labels so close figures don't bury each other. */
+  .unit-label { font-size: 9px; gap: 1px; }
+  .unit-label .hpbar { width: 32px; height: 4px; }
+  .unit-label .tag { font-size: 7.5px; padding: 0 3px; }
+  .unit-label .tags { max-width: 100px; gap: 1px 2px; }
+}
 .tag.dodge { color: var(--hit); }
 .tag.shield { color: var(--shield); }
 .tag.disengage { color: var(--heal); }

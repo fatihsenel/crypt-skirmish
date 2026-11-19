@@ -568,6 +568,16 @@ function frameParty() {
   const x = heroes.reduce((a, u) => a + u.x, 0) / heroes.length;
   const z = heroes.reduce((a, u) => a + u.z, 0) / heroes.length;
   lookAt(x, z, 2);
+  // The initiative and action bars lay out over the next frames and refit the camera, which
+  // can leave the party under the action bar: frame again once they have, unless a pan
+  // (keepInView) has taken over by then.
+  const ticket = panTween;
+  const settle = (n) => requestAnimationFrame(() => {
+    if (ticket !== panTween) return;
+    if (n) settle(n - 1);
+    else lookAt(x, z, stage.camera.zoom);
+  });
+  settle(3);
 }
 
 /** Centre the view on a tile at a zoom level, in the middle of the area the HUD leaves free. */

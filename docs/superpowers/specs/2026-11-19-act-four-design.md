@@ -69,3 +69,6 @@ Exact maps, HP and damage after the simulator, colours, room text.
 - Tried: on Hard, Nekhet raising one fewer. The Hard Tomb barely moved (29% / 79%), so it was
   dropped. Whole runs (`sim full`, 300): Normal 75%, Hard 18%; on Hard the Barrow ends 33% of
   runs and the Tomb 17%.
+- Hard's monster HP went from ×1.2 to ×1.1 (still +1 to hit and damage). Whole Hard runs: 18% →
+  26%. Hard bosses: Barrow 24–85% → 43–91%, Throne 53% / 95% → 66% / 96%, Tomb 29% / 79% → 43% /
+  83%. Normal and Story are unchanged.
