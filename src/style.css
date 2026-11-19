@@ -200,6 +200,7 @@ html, body {
 .chip.unknown .nm, .chip.unknown .init { color: #8a8494; font-style: italic; }
 .chip.unknown .pic { color: #8a8494; --c: #3a3440; }
 .chip.current .pic { box-shadow: 0 0 0 2px var(--gold); }
+.chip.elite .pic { border: 2px solid #ffd36b; }
 .chip.dead .pic { filter: grayscale(1); }
 .chip.unknown .mini i { background: #4a4552; }
 .chip.dead .nm { text-decoration: line-through; }

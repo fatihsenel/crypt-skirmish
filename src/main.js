@@ -28,7 +28,7 @@ import { Hud } from './ui/hud.js';
 import { fightRecap, winRecap } from './game/recap.js';
 import { Camp } from './ui/camp.js';
 import { Bestiary } from './ui/bestiary.js';
-import { meet, metBefore, slay, loadBestiary, slainTotal, recordBlows } from './game/bestiary.js';
+import { meet, metBefore, slay, loadBestiary, slainTotal, recordBlows, slayElite, loadElitesSlain } from './game/bestiary.js';
 import { TEMPLATES } from './game/units.js';
 import { ITEMS } from './game/items.js';
 import { sfx } from './audio/sfx.js';
@@ -102,7 +102,7 @@ let daily = null;
 /** A linked fight being played yourself ({ rec, theirs }: the link's record and how it went), else null. */
 let challenge = null;
 /** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
-let feats = { maxHit: 0, sneaks: 0 };
+let feats = { maxHit: 0, sneaks: 0, stayDown: false };
 
 // The character models load room by room: a fight waits only for the figures it needs.
 // Once the dungeon tiles are in (they gate the title), the next room's models come first,
@@ -472,6 +472,7 @@ stage.tickers.add(() => {
       seenIds.add(u.id);
       kinds.push(u.code);
       spotted = true;
+      if (u.elite) logElite(u);
     }
   }
   if (spotted) hud.renderInitiative(game);
@@ -484,6 +485,12 @@ stage.tickers.add(() => {
     hud.log(`New in the bestiary: <b>${names}</b>.`, 'sys');
   }
 });
+
+/** The elite comes into view: name its trait. */
+function logElite(u) {
+  const t = ELITE_TRAITS.find((e) => e.id === u.elite);
+  if (t) hud.log(`<span class="monsters">${u.name}</span> is an <b>elite</b>: ${t.name.toLowerCase()} (${t.desc}).`, 'sys');
+}
 
 function addView(u) {
   const v = new UnitView(u, stage);
@@ -544,12 +551,16 @@ function startFight(resume, watch = null) {
   game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed) });
   fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
   if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), log: resume ? [...resume.log] : [] };
-  feats = { maxHit: 0, sneaks: 0 };
+  feats = { maxHit: 0, sneaks: 0, stayDown: false };
   game.on('attack', (r) => {
     if (r.attacker.team !== 'heroes' || !r.hit) return;
     feats.maxHit = Math.max(feats.maxHit, r.damage ?? 0);
     if (r.sneak) feats.sneaks++;
   });
+  // A Relentless elite finished in the round it clung on at 1 HP.
+  let clung = null;
+  game.on('ward', (r) => { if (r.relentless) clung = { unit: r.unit, round: game.round }; });
+  game.on('death', ({ unit }) => { if (clung?.unit === unit && clung.round === game.round) feats.stayDown = true; });
   if (resume && !replaySaved(resume)) {
     game = null;
     record = null;
@@ -601,9 +612,9 @@ function startFight(resume, watch = null) {
       hud.log(`<span class="${u.team}">${u.name}</span> <span class="dice">d20 ${u.initRoll} ${signed(u.initiative - u.initRoll)} = ${u.initiative}</span>`);
     }
     if (lurking) hud.log(`<span class="monsters">Something</span> stirs beyond your sight…`, 'sys');
-    // New Game+ 2 and deeper: which foe is the elite shows on its card once it's seen.
-    const elite = ELITE_TRAITS.find((t) => game.units.some((u) => u.elite === t.id));
-    if (elite) hud.log(`The strongest foe here is an <b>elite</b>: ${elite.name.toLowerCase()} (${elite.desc}).`, 'sys');
+    // New Game+ 2 and deeper: the elite's trait is named once it's seen (the vision ticker).
+    const elite = game.units.find((u) => u.elite && u.alive);
+    if (elite && unseen(elite)) hud.log('Something strong lurks here: an <b>elite</b>.', 'sys');
   });
   game.on('round', ({ round }) => hud.log(`Round ${round}`, 'round'));
   game.on('turnStart', ({ unit }) => onTurnStart(unit));
@@ -619,7 +630,10 @@ function startFight(resume, watch = null) {
   game.on('action', (r) => { if (!unseen(r.unit)) hud.logAction(r); });
   game.on('death', ({ unit, unmarked, blessing }) => {
     clearSpiritWeapon(unit.id); // a fallen cleric's weapon fades
-    if (unit.team === 'monsters' && !replay) slay(unit.code); // the bestiary's tally
+    if (unit.team === 'monsters' && !replay) {
+      slay(unit.code); // the bestiary's tally
+      if (unit.elite) slayElite(unit.elite);
+    }
     if (unmarked) view(unmarked)?.updateStatus(); // and a fallen ranger's mark
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
     else hud.log(`<span class="${unit.team}">${unit.name}</span> falls.`, 'death');
@@ -1880,7 +1894,7 @@ async function checkGameOver() {
   let share = null; // a won campaign's text to share
   if (game.over === 'victory') {
     sfx.victory();
-    if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily, met: loadBestiary().length, slain: slainTotal() });
+    if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily, met: loadBestiary().length, slain: slainTotal(), eliteKinds: Object.keys(loadElitesSlain()).length });
     if (!final) {
       board.lightStairs();
       setTimeout(() => sfx.stairs(), 900);

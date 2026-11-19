@@ -3,7 +3,7 @@
 
 import { createUnit } from '../game/units.js';
 import { ELITE_TRAITS } from '../game/combat.js';
-import { MONSTERS, loadBestiary, loadSlain, loadHurt, deadliest, unread, markRead } from '../game/bestiary.js';
+import { MONSTERS, loadBestiary, loadSlain, loadHurt, deadliest, unread, markRead, loadElitesSlain } from '../game/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { reachedNewGamePlus, loadDeepest, loadHistory } from '../game/history.js';
 import { unitIcon, unknownIcon } from './icons.js';
@@ -63,10 +63,12 @@ export class Bestiary {
       : '';
     // New Game+ 2 and deeper: what an elite can be, shown once New Game+ is open.
     const elites = reachedNewGamePlus(loadDeepest(), loadHistory());
+    const eliteSlain = loadElitesSlain();
     $('#bestiary-elites').hidden = !elites;
     $('#bestiary-elites').innerHTML = !elites ? '' : `<h3 class="sub">Elites</h3>
       <p class="muted">From New Game+ 2, the strongest monster in each room is an elite with one of these traits. It wears a gold band.</p>
-      <ul class="elite-traits">${ELITE_TRAITS.map((t) => `<li><b>${esc(t.name)}</b>: ${esc(t.desc)}.</li>`).join('')}</ul>`;
+      <ul class="elite-traits">${ELITE_TRAITS.map((t) => `<li><b>${esc(t.name)}</b>: ${esc(t.desc)}.${
+        eliteSlain[t.id] ? ` <span class="muted">${eliteSlain[t.id]} slain</span>` : ''}</li>`).join('')}</ul>`;
     const fresh = unread();
     markRead();
     for (const b of document.querySelectorAll('.bestiary-open')) Bestiary.label(b);

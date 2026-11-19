@@ -117,9 +117,9 @@ It runs on desktop and on phones.
   NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The title
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
-  its base and one trait: Regenerating, Relentless, Frenzied, Swift or Warded. The trait
-  depends on the room and the tier. Once you have won a campaign, the bestiary lists what each
-  does.
+  its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift
+  or Warded. The trait depends on the room and the tier, and the log names it once you see the
+  elite. Once you have won a campaign, the bestiary lists what each does and how many you've slain.
 
 ## Modes and extras
 
@@ -127,7 +127,7 @@ It runs on desktop and on phones.
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button.
-- **Achievements:** 27 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 30 goals that carry across runs. Open them from the title screen.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each

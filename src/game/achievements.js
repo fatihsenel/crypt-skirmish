@@ -2,7 +2,8 @@
 // is won (`room`: the fight that just ended, its node, and `feats` main.js tallied from the
 // fight's attacks), when a campaign is won (`run`: the finished campaign), or when the daily
 // crypt is won (`daily`: the daily win streak, today included), and unlocks once. A room's
-// check also gets the bestiary: `met` (kinds met) and `slain` (monsters slain, all runs).
+// check also gets the bestiary: `met` (kinds met), `slain` (monsters slain, all runs) and
+// `eliteKinds` (elite traits slain at least once, all runs).
 // Pure checks here; main.js stores and shows them.
 
 import { NODES, HERO_CODES } from './campaign.js';
@@ -91,6 +92,18 @@ export const ACHIEVEMENTS = [
   {
     id: 'warded', name: 'Not today', desc: 'Have Death Ward keep a hero on their feet.',
     on: 'room', test: ({ game }) => heroTotal(game.stats, 'warded') >= 1,
+  },
+  {
+    id: 'elite', name: 'Gilded prey', desc: 'Slay an elite (New Game+ 2 and deeper).',
+    on: 'room', test: ({ game }) => game.units.some((u) => u.elite && !u.alive),
+  },
+  {
+    id: 'stay-down', name: 'Stay down', desc: 'Finish a Relentless elite in the same round it clung on at 1 HP.',
+    on: 'room', test: ({ feats }) => !!feats?.stayDown,
+  },
+  {
+    id: 'elite-hunter', name: 'Trophy hunter', desc: 'Slay an elite of each of the five traits, counted across runs.',
+    on: 'room', test: ({ eliteKinds }) => (eliteKinds ?? 0) >= 5,
   },
   {
     id: 'no-rest', name: 'No rest for the wicked', desc: 'Win a campaign through the Black Armory, skipping the Ember Hearth.',

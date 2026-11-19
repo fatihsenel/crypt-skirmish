@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { MONSTERS, BESTIARY_KEY, parseBestiary, loadBestiary, meet, parseSlain, loadSlain, slay, slainTotal, unread, markRead, roomMonsters, onEveryPath, metBefore, HURT_KEY, parseHurt, loadHurt, addBlows, recordBlows, deadliest } from '../src/game/bestiary.js';
+import { MONSTERS, BESTIARY_KEY, parseBestiary, loadBestiary, meet, parseSlain, loadSlain, slay, slainTotal, unread, markRead, roomMonsters, onEveryPath, metBefore, HURT_KEY, parseHurt, loadHurt, addBlows, recordBlows, deadliest, parseElitesSlain, loadElitesSlain, slayElite } from '../src/game/bestiary.js';
 import { LORE } from '../src/ui/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from '../src/ui/unitCard.js';
 import { createUnit } from '../src/game/units.js';
@@ -71,6 +71,18 @@ describe('the tally of monsters slain', () => {
     globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)) };
   });
   afterEach(() => { delete globalThis.localStorage; });
+
+  it('counts elites slain by trait, and drops junk', () => {
+    expect(loadElitesSlain()).toEqual({});
+    slayElite('relentless');
+    slayElite('relentless');
+    slayElite('swift');
+    slayElite('nonsense');
+    expect(loadElitesSlain()).toEqual({ relentless: 2, swift: 1 });
+    expect(parseElitesSlain('{"warded":1,"frenzied":0,"swift":"2","x":3}')).toEqual({ warded: 1 });
+    expect(parseElitesSlain('[1]')).toEqual({});
+    expect(parseElitesSlain('nope')).toEqual({});
+  });
 
   it('adds up every kind slain', () => {
     expect(slainTotal({})).toBe(0);

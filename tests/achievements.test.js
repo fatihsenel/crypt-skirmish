@@ -20,6 +20,15 @@ describe('achievements', () => {
     expect(run(3)).toEqual(expect.arrayContaining(['ngplus', 'ngplus3']));
   });
 
+  it('marks elites slain, a Relentless one finished in time, and every trait', () => {
+    const got = (game, ctx = {}) => ids(earned('room', { game, node: 'crypt', ...ctx }, { 'first-room': 1 }));
+    expect(got(fight({ units: [{ team: 'monsters', alive: false }] }))).toEqual([]);
+    expect(got(fight({ units: [{ team: 'monsters', elite: 'swift', alive: false }] }))).toEqual(['elite']);
+    expect(got(fight(), { feats: { stayDown: true } })).toEqual(['stay-down']);
+    expect(got(fight(), { eliteKinds: 4 })).toEqual([]);
+    expect(got(fight(), { eliteKinds: 5 })).toEqual(['elite-hunter']);
+  });
+
   it('a first room win earns only the first-room one', () => {
     expect(ids(earned('room', { game: fight(), node: 'crypt' }, {}))).toEqual(['first-room']);
   });

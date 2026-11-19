@@ -2,6 +2,7 @@
 // A kind counts as met once the heroes have seen one in a fight (main.js calls meet).
 
 import { TEMPLATES } from './units.js';
+import { ELITE_TRAITS } from './combat.js';
 import { NODES, nodeName } from './campaign.js';
 import { levelById } from './maps.js';
 
@@ -9,6 +10,7 @@ export const BESTIARY_KEY = 'crypt-skirmish:bestiary';
 export const SLAIN_KEY = 'crypt-skirmish:slain';
 export const READ_KEY = 'crypt-skirmish:bestiary-read';
 export const HURT_KEY = 'crypt-skirmish:hurt';
+export const ELITES_SLAIN_KEY = 'crypt-skirmish:elites-slain';
 
 /** Every monster kind, in the order the crypt introduces them. */
 export const MONSTERS = Object.keys(TEMPLATES).filter((code) => TEMPLATES[code].team === 'monsters');
@@ -71,6 +73,37 @@ export function slay(code) {
   counts[code] = (counts[code] ?? 0) + 1;
   try {
     localStorage.setItem(SLAIN_KEY, JSON.stringify(counts));
+  } catch {
+    /* storage unavailable: not counted */
+  }
+}
+
+/** How many elites of each trait the player has felled: { traitId: count }. */
+export function parseElitesSlain(raw) {
+  try {
+    const counts = JSON.parse(raw ?? '{}');
+    if (!counts || typeof counts !== 'object' || Array.isArray(counts)) return {};
+    return Object.fromEntries(ELITE_TRAITS.filter((t) => Number.isInteger(counts[t.id]) && counts[t.id] > 0).map((t) => [t.id, counts[t.id]]));
+  } catch {
+    return {};
+  }
+}
+
+export function loadElitesSlain() {
+  try {
+    return parseElitesSlain(localStorage.getItem(ELITES_SLAIN_KEY));
+  } catch {
+    return {};
+  }
+}
+
+/** One more elite with this trait felled. */
+export function slayElite(id) {
+  if (!ELITE_TRAITS.some((t) => t.id === id)) return;
+  const counts = loadElitesSlain();
+  counts[id] = (counts[id] ?? 0) + 1;
+  try {
+    localStorage.setItem(ELITES_SLAIN_KEY, JSON.stringify(counts));
   } catch {
     /* storage unavailable: not counted */
   }

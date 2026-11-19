@@ -433,7 +433,8 @@ export class Hud {
           </div>`;
         }
         const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
-        return `<div class="${cls}" data-unit="${u.id}" aria-label="${esc(u.name)} (${esc(u.cls)}) · initiative ${u.initiative}">
+        // New Game+ 2 and deeper: the elite's portrait wears the same gold as its band.
+        return `<div class="${cls}${u.elite ? ' elite' : ''}" data-unit="${u.id}" aria-label="${esc(u.name)} (${esc(u.cls)})${u.elite ? ' · elite' : ''} · initiative ${u.initiative}">
           <span class="pic" style="--c:${color}">${unitIcon(u)}<b class="init">${u.initiative}</b></span>
           <span class="nm">${chipName(u.name)}</span>
           <span class="mini"><i style="width:${pct}%"></i></span>
