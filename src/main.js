@@ -8,7 +8,7 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
-  recordDefeat, runSummary, heroUnit, choices, START_NODE,
+  recordDefeat, runSummary, runShareText, heroUnit, choices, START_NODE,
 } from './game/campaign.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed, unitRef, targetRef } from './game/replay.js';
 import { key, pathFrom, gridDistance } from './game/grid.js';
@@ -401,6 +401,7 @@ stage.tickers.add(() => {
   if (fresh.length) {
     const names = fresh.map((c) => TEMPLATES[c].name).join(' and ');
     hud.toast(`New in the bestiary: ${names}`, 'news');
+    sfx.bestiary();
     hud.log(`New in the bestiary: <b>${names}</b>.`, 'sys');
   }
 });
@@ -1749,6 +1750,7 @@ async function checkGameOver() {
   const final = !!level.final;
   let summary = null;
   let awards = []; // achievements unlocked by this fight (none on test runs)
+  let share = null; // a won campaign's text to share
   if (game.over === 'victory') {
     sfx.victory();
     if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily, met: loadBestiary().length, slain: slainTotal() });
@@ -1764,6 +1766,7 @@ async function checkGameOver() {
       }
       clearSave();
       summary = runSummary(campaign);
+      if (saving) share = runShareText(summary);
     }
   } else {
     sfx.defeat();
@@ -1785,7 +1788,7 @@ async function checkGameOver() {
   }
   hud.banner(game.over, {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary, awards, daily: dailyResult,
+    summary, awards, daily: dailyResult, share,
   });
   return true;
 }
@@ -2104,7 +2107,8 @@ window.addEventListener('keydown', (ev) => {
   if (ev.code === 'KeyT') toggleThreats();
   if (ev.code === 'KeyM') toggleSound();
   if (ev.code === 'KeyN') toggleMusic();
-  if (ev.code === 'KeyH') helpBox.open = !helpBox.open;
+  if (ev.code === 'KeyH' || ev.key === '?') helpBox.open = !helpBox.open;
+  if (ev.code === 'KeyL' && game) hud.toggleLog();
   if (ev.code === 'Escape') {
     selected = null;
     if (isHeroTurn() && !busy) refresh();

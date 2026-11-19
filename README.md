@@ -96,9 +96,10 @@ It runs on desktop and on phones.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
+  A won campaign has the same button.
 - **Achievements:** 25 goals that carry across runs.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
-  many you've slain. A note says when a new one joins, and a gold dot on its button waits
+  many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp.
 - **Past runs:** the title screen lists your last 20 runs.
 - **Tips for new players:** short hints the first time something matters. They can be turned
@@ -139,7 +140,8 @@ Everything is generated in the browser, with no recordings:
 | Esc | Cancel the selected attack or spell |
 | T | Show or hide enemy reach |
 | M / N | Sound / music on or off |
-| H | Show or hide the controls panel |
+| H or ? | Show or hide the controls panel |
+| L | Open or close the combat log |
 
 | Touch | Action |
 | --- | --- |
@@ -210,9 +212,9 @@ This doesn't touch the save.
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
-Armory. On Hard the Throne drops to about 95% and 65%, and the Tomb to about 85% and 45%.
-A whole run (1,500 simulated) wins about 97% of the time on Story, 68% on Normal and 35% on
-Hard (monsters get +10% HP and +1 to hit and damage). On both the Tomb ends the most runs. Samples of 300 runs swing by about 5 points either way.
+Armory. On Hard the Throne drops to about 95% and 60%, and the Tomb to about 80% and 35%.
+A whole run (1,500 simulated) wins about 97% of the time on Story, 68% on Normal and 30% on
+Hard (monsters get +15% HP and +1 to hit and damage). On both the Tomb ends the most runs. Samples of 300 runs swing by about 5 points either way.
 
 ### Layout
 

@@ -1519,7 +1519,7 @@ describe('level 6 and difficulty', () => {
   it('difficulty scales monster HP and weapon bonus, mimics included', () => {
     const hard = new Game(levelById('vault'), { difficulty: DIFFICULTIES.hard });
     const ghoul = hard.units.find((u) => u.code === 'u');
-    expect(ghoul.maxHp).toBe(Math.round(createUnit('u', 0, 0).maxHp * 1.1));
+    expect(ghoul.maxHp).toBe(Math.round(createUnit('u', 0, 0).maxHp * DIFFICULTIES.hard.hp));
     expect(ghoul.weaponBonus).toBe(1);
     expect(hard.units.find((u) => u.code === 'F').maxHp).toBe(createUnit('F', 0, 0).maxHp); // heroes untouched
     hard.start();
@@ -1527,7 +1527,7 @@ describe('level 6 and difficulty', () => {
     const chest = [...hard.grid.chests.values()].find((c) => c.mimic);
     Object.assign(f, { x: chest.x - 1, z: chest.z, interacted: false });
     const r = hard.springMimic(f, chest);
-    expect(r.mimic.maxHp).toBe(Math.round(createUnit('m', 0, 0).maxHp * 1.1));
+    expect(r.mimic.maxHp).toBe(Math.round(createUnit('m', 0, 0).maxHp * DIFFICULTIES.hard.hp));
     const story = new Game(levelById('vault'), { difficulty: DIFFICULTIES.story });
     expect(story.units.find((u) => u.code === 'u').weaponBonus).toBe(-1);
   });

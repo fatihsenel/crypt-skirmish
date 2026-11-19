@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { runRecord, addRun, parseHistory, MAX_RUNS } from '../src/game/history.js';
-import { newCampaign } from '../src/game/campaign.js';
+import { newCampaign, runShareText } from '../src/game/campaign.js';
 
 describe('run history', () => {
   it('skips an abandoned run that never won a room', () => {
@@ -33,5 +33,29 @@ describe('run history', () => {
     expect(parseHistory('not json')).toEqual([]);
     expect(parseHistory('{"a":1}')).toEqual([]);
     expect(parseHistory('[null, 3, {"result":"won","when":1}]')).toEqual([{ result: 'won', when: 1 }]);
+  });
+});
+
+describe('sharing a won campaign', () => {
+  const summary = (over = {}) => ({
+    difficulty: 'Hard', level: 8, won: 11, lost: 1, rounds: 84,
+    heroes: [{ cls: 'Fighter', downed: 2 }, { cls: 'Wizard', downed: 1 }, { cls: 'Rogue', downed: 0 }, { cls: 'Cleric', downed: 0 }],
+    ...over,
+  });
+
+  it('writes the difficulty, the rooms, the party and its falls', () => {
+    expect(runShareText(summary())).toBe([
+      'Crypt Skirmish: the crypt cleared on Hard',
+      '11 rooms won, 1 fight lost, 84 rounds',
+      'Fighter, Wizard, Rogue and Cleric, level 8',
+      'Heroes fell 3 times 💀',
+      'https://fatihsenel.github.io/crypt-skirmish/',
+    ].join('\n'));
+  });
+
+  it('celebrates a run with no losses and no falls', () => {
+    const text = runShareText(summary({ lost: 0, heroes: summary().heroes.map((h) => ({ ...h, downed: 0 })) }));
+    expect(text).toContain('11 rooms won, no fight lost, 84 rounds');
+    expect(text).toContain('No hero ever fell 🛡️');
   });
 });

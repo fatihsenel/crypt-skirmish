@@ -19,7 +19,7 @@ export const XP_LEVELS = { 4: 450, 5: 900, 6: 2000, 7: 9700, 8: 10400 };
 export const DIFFICULTIES = {
   story: { name: 'Story', hp: 0.75, bonus: -1, desc: 'Weaker monsters: for enjoying the tale.' },
   normal: { name: 'Normal', hp: 1, bonus: 0, desc: 'The crypt as intended.' },
-  hard: { name: 'Hard', hp: 1.1, bonus: 1, thin: true, desc: 'Tougher monsters that hit harder. Every choice counts.' },
+  hard: { name: 'Hard', hp: 1.15, bonus: 1, thin: true, desc: 'Tougher monsters that hit harder. Every choice counts.' },
 };
 
 /**
@@ -434,4 +434,18 @@ export function parseSave(text) {
   } catch {
     return null;
   }
+}
+
+/** A won campaign as text to paste anywhere: difficulty, rooms, rounds, the party and its falls. */
+export function runShareText(s) {
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const falls = s.heroes.reduce((n, h) => n + (h.downed ?? 0), 0);
+  const classes = s.heroes.map((h) => h.cls);
+  return [
+    `Crypt Skirmish: the crypt cleared on ${s.difficulty}`,
+    `${plural(s.won, 'room')} won, ${s.lost ? plural(s.lost, 'fight') + ' lost' : 'no fight lost'}, ${plural(s.rounds, 'round')}`,
+    `${classes.slice(0, -1).join(', ')} and ${classes.at(-1)}, level ${s.level}`,
+    falls === 0 ? 'No hero ever fell 🛡️' : `Heroes fell ${plural(falls, 'time')} 💀`,
+    'https://fatihsenel.github.io/crypt-skirmish/',
+  ].join('\n');
 }

@@ -683,7 +683,7 @@ export class Hud {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null }) {
+  banner(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, share = null }) {
     this.renderSummary(summary);
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
@@ -702,7 +702,7 @@ export class Hud {
     $('#restart').textContent = won ? 'New campaign' : 'Try again';
     $('#restart').hidden = won && !final;
     $('#to-map').textContent = 'Back to the map';
-    $('#share').hidden = true;
+    this.setShare(share);
     if (daily) this.dailyBanner(daily, level);
     $('#banner').dataset.result = result;
     $('#banner').hidden = false;
@@ -724,7 +724,12 @@ export class Hud {
     $('#restart').textContent = 'Try again';
     $('#to-map').hidden = false;
     $('#to-map').textContent = 'Back to the title';
-    this.shareText = d.share || null;
+    this.setShare(d.share);
+  }
+
+  /** The banner's Copy result button, for a won daily or campaign. */
+  setShare(text) {
+    this.shareText = text || null;
     $('#share').hidden = !this.shareText;
     $('#share').textContent = 'Copy result';
   }

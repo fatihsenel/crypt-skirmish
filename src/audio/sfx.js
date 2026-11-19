@@ -462,6 +462,15 @@ class Sfx {
     });
   }
 
+  /** A new monster for the bestiary: a soft, low bell and its answer, under the fight's noise. */
+  bestiary() {
+    this.play((t) => {
+      this.tone(t, { type: 'sine', freq: 659, dur: 0.6, gain: 0.045, attack: 0.01 });
+      this.tone(t, { type: 'sine', freq: 1318, dur: 0.35, gain: 0.015, attack: 0.01 });
+      this.tone(t + 0.16, { type: 'sine', freq: 988, dur: 0.8, gain: 0.04, attack: 0.01 });
+    }, 0.25);
+  }
+
   /** Chest lid creaks open, coins and glass clink. */
   chest() {
     this.play((t) => {

@@ -81,3 +81,10 @@ Exact maps, HP and damage after the simulator, colours, room text.
 - Hard leaves one ghoul (10,10) out of the Barrow (`thinned` on the level, `thin` on Hard).
   Hard Barrow, 300 runs per route: 34–91% → 64–97% (Normal 80–98%). Whole Hard runs, 1,500:
   29% → 35%; the Tomb now ends the most (20%), then the Barrow (14%) and the Throne (13%).
+
+## Follow-up: Hard at ×1.15 HP
+- With one ghoul fewer in the Hard Barrow, whole Hard runs had climbed to 35%. Monster HP on
+  Hard went from ×1.1 to ×1.15 (still +1 to hit and damage). Whole Hard runs (`sim full`, 400
+  each, seeds 1–3): 32%, 29%, 31%. ×1.2 gave 24% and put the Barrow back to ending 21% of
+  runs. Hard bosses at ×1.15: Throne 96% / 61%, Tomb 80% / 34% (rested / not).
+- A saved Hard fight in progress no longer replays to the same state and goes back to camp.
