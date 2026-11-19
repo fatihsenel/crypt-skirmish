@@ -8,7 +8,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 
 | | |
 | --- | --- |
-| ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![The camp between rooms: the map of the way down, the party and the loot to hand out](docs/screenshots/camp.jpg) |
+| ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![The camp after the Sunken Halls: the party reaches level 8, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) |
 | ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 
@@ -192,14 +192,17 @@ This doesn't touch the save.
 - `npm run sim -- 300 act2`, `act3` or `act4` plays just that act, starting from real parties
   that finished the act before.
 - `npm run sim -- 300 full` plays whole runs, first room to the Tomb, and says where they end.
+- Runs are split over one worker thread per core; `JOBS=1` plays them on one thread (the same
+  numbers as before threads, for a given `SEED`).
 - `SEED=n`, `DIFFICULTY=story|hard`, `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
 Armory. On Hard the Throne drops to about 95% and 65%, and the Tomb to about 85% and 45%.
-Story wins nearly every time. A whole run wins about 75% of the time on Normal and about 25%
-on Hard (monsters get +10% HP and +1 to hit and damage), where the Barrow ends the most runs.
+A whole run (1,500 simulated) wins about 97% of the time on Story, 68% on Normal and 29% on
+Hard (monsters get +10% HP and +1 to hit and damage). On Normal the Tomb ends the most runs, on
+Hard the Barrow. Samples of 300 runs swing by about 5 points either way.
 
 ### Layout
 

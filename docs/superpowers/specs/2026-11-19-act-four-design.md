@@ -72,3 +72,5 @@ Exact maps, HP and damage after the simulator, colours, room text.
 - Hard's monster HP went from ×1.2 to ×1.1 (still +1 to hit and damage). Whole Hard runs: 18% →
   26%. Hard bosses: Barrow 24–85% → 43–91%, Throne 53% / 95% → 66% / 96%, Tomb 29% / 79% → 43% /
   83%. Normal and Story are unchanged.
+- The simulator now runs on worker threads. 1,500 whole runs each: Story 97%, Normal 68%, Hard
+  29%. (The earlier 75% / 26% were single 300-run samples, which swing about ±5 points.)

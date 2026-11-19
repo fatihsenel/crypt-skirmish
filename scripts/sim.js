@@ -1,6 +1,7 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
 //   node scripts/sim.js [runs] [act2|act3|act4|full]
+// Runs are split over worker threads, one per core; JOBS=n sets how many (JOBS=1: one thread).
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
 // RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
@@ -13,6 +14,8 @@ import { levelById } from '../src/game/maps.js';
 import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
+import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
+import { availableParallelism } from 'node:os';
 
 const CLASSES = {
   ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }), ...(process.env.WARLOCK && { W: 'K' }),
@@ -277,99 +280,162 @@ function campaign(route, rng, start = freshCampaign()) {
   return out;
 }
 
-/** Act two only, from a pool of real end-of-act-one parties (faster for tuning). */
-function actTwo(runs, rng) {
-  const pool = [];
-  while (pool.length < 60) {
-    const res = campaign(ACT_ONE[pool.length % 3], rng);
-    if (res.at(-1).id === 'sanctum' && res.at(-1).won) pool.push(res.at(-1).after);
-  }
-  const stats = {};
-  const whole = {};
-  for (const two of ACT_TWO) {
-    let won = 0;
-    for (let i = 0; i < runs; i++) {
-      const res = campaign(two, rng, pool[i % pool.length]);
-      for (const r of res) (stats[r.id === 'catacombs' ? r.id : `${r.id} (${via(two)})`] ??= []).push(r);
-      if (res.at(-1).id === 'barrow' && res.at(-1).won) won++;
-    }
-    whole[via(two)] = pct(won, runs);
-  }
-  console.log(`Act two, ${runs} runs per route from 60 act-one parties`);
-  for (const [room, list] of Object.entries(stats)) {
-    report(room, list);
-    if (room.startsWith('vault')) console.log(`    mimic sprung in ${pct(list.filter((r) => r.sprung).length, list.length)}; vault lost after it sprang ${pct(list.filter((r) => r.sprung && !r.won).length, list.filter((r) => r.sprung).length)}`);
-  }
-  console.log('  act two won via', whole);
-}
+// --- modes ------------------------------------------------------------------------------
+// Each mode plays its share of the runs and returns plain data ({ stats, whole, ... }), so
+// worker threads can split the runs between them and the main thread can merge and print.
 
-/** Act three only, from a pool of real parties that won the barrow (rested by its act break). */
-function actThree(runs, rng) {
-  const pool = [];
+/** A room result without its game and state: small enough to pass between threads. */
+const lite = (r) => ({ won: r.won, rounds: r.rounds, downed: r.downed, hpLeft: r.hpLeft, sprung: r.sprung, level: r.level });
+const add = (stats, key, r) => (stats[key] ??= []).push(lite(r));
+
+/** `size` parties that won `last`, played from scratch along `routes(tries, found)`. */
+function pool(size, routes, last, rng) {
+  const out = [];
   let tries = 0;
-  while (pool.length < 40) {
-    const route = [...ACT_ONE[tries % 3], ...ACT_TWO[tries % 4]];
-    tries++;
-    const res = campaign(route, rng);
-    if (res.at(-1).id === 'barrow' && res.at(-1).won) pool.push(res.at(-1).after);
+  while (out.length < size) {
+    const res = campaign(routes(tries++, out.length), rng);
+    if (res.at(-1).id === last && res.at(-1).won) out.push(res.at(-1).after);
   }
-  const stats = {};
-  const whole = {};
-  for (const three of ACT_THREE) {
-    let won = 0;
-    for (let i = 0; i < runs; i++) {
-      const res = campaign(three, rng, pool[i % pool.length]);
-      for (const r of res) (stats[r.id === 'nest' ? r.id : `${r.id} (${three[1]})`] ??= []).push(r);
-      if (res.at(-1).id === 'throne' && res.at(-1).won) won++;
-    }
-    whole[three[1]] = pct(won, runs);
-  }
-  console.log(`Act three, ${runs} runs per route from 40 parties that won act two`);
-  for (const [room, list] of Object.entries(stats)) report(`${room} L${[...new Set(list.map((r) => r.level))].join('/')}`, list);
-  console.log('  act three won via', whole);
+  return out;
 }
 
-/** Act four only, from a pool of real parties that won the throne (rested by its act break). */
-function actFour(runs, rng) {
-  const pool = [];
-  let tries = 0;
-  while (pool.length < 40) {
-    const route = [...ACT_ONE[tries % 3], ...ACT_TWO[tries % 4], ...ACT_THREE[tries % 2]];
-    tries++;
-    const res = campaign(route, rng);
-    if (res.at(-1).id === 'throne' && res.at(-1).won) pool.push(res.at(-1).after);
-  }
-  const levels = pool.map((p) => p.party.F.level);
-  console.log(`  pool: ${pool.length} parties, levels ${[...new Set(levels)].sort().join('/')}, XP ${Math.min(...pool.map((p) => p.xp))}–${Math.max(...pool.map((p) => p.xp))}`);
-  const stats = {};
-  const whole = {};
-  for (const four of ACT_FOUR) {
-    let won = 0;
-    for (let i = 0; i < runs; i++) {
-      const res = campaign(four, rng, pool[i % pool.length]);
-      for (const r of res) (stats[r.id === 'halls' ? r.id : `${r.id} (${four[1]})`] ??= []).push(r);
-      if (res.at(-1).id === 'tomb' && res.at(-1).won) won++;
+const MODES = {
+  /** Acts one and two, every route pair, from a fresh party. */
+  campaign(runs, rng) {
+    const stats = {};
+    const whole = {};
+    for (const one of ACT_ONE) {
+      for (const two of ACT_TWO) {
+        const route = [...one, ...two];
+        const name = `${one[1]}${one[2] === 'chapel' ? '' : '+' + one[2]} / ${via(two)}`;
+        let won = 0;
+        for (let i = 0; i < runs; i++) {
+          const res = campaign(route, rng);
+          for (const r of res) add(stats, ['vault', 'larder', 'barrow'].includes(r.id) ? `${r.id} (${via(two)})` : r.id, r);
+          if (res.length === route.filter((x) => !REST.has(x)).length && res.at(-1).won) won++;
+        }
+        whole[name] = [won, runs];
+      }
     }
-    whole[four[1]] = pct(won, runs);
+    return { stats, whole };
+  },
+
+  /** Act two only, from a pool of real end-of-act-one parties (faster for tuning). */
+  act2(runs, rng, poolSize = 60) {
+    const parties = pool(poolSize, (_t, n) => ACT_ONE[n % 3], 'sanctum', rng);
+    const stats = {};
+    const whole = {};
+    for (const two of ACT_TWO) {
+      let won = 0;
+      for (let i = 0; i < runs; i++) {
+        const res = campaign(two, rng, parties[i % parties.length]);
+        for (const r of res) add(stats, r.id === 'catacombs' ? r.id : `${r.id} (${via(two)})`, r);
+        if (res.at(-1).id === 'barrow' && res.at(-1).won) won++;
+      }
+      whole[via(two)] = [won, runs];
+    }
+    return { stats, whole };
+  },
+
+  /** Act three only, from a pool of real parties that won the barrow (rested by its act break). */
+  act3(runs, rng, poolSize = 40) {
+    const parties = pool(poolSize, (t) => [...ACT_ONE[t % 3], ...ACT_TWO[t % 4]], 'barrow', rng);
+    const stats = {};
+    const whole = {};
+    for (const three of ACT_THREE) {
+      let won = 0;
+      for (let i = 0; i < runs; i++) {
+        const res = campaign(three, rng, parties[i % parties.length]);
+        for (const r of res) add(stats, r.id === 'nest' ? r.id : `${r.id} (${three[1]})`, r);
+        if (res.at(-1).id === 'throne' && res.at(-1).won) won++;
+      }
+      whole[three[1]] = [won, runs];
+    }
+    return { stats, whole };
+  },
+
+  /** Act four only, from a pool of real parties that won the throne (rested by its act break). */
+  act4(runs, rng, poolSize = 40) {
+    const parties = pool(poolSize, (t) => [...ACT_ONE[t % 3], ...ACT_TWO[t % 4], ...ACT_THREE[t % 2]], 'throne', rng);
+    const stats = {};
+    const whole = {};
+    for (const four of ACT_FOUR) {
+      let won = 0;
+      for (let i = 0; i < runs; i++) {
+        const res = campaign(four, rng, parties[i % parties.length]);
+        for (const r of res) add(stats, r.id === 'halls' ? r.id : `${r.id} (${four[1]})`, r);
+        if (res.at(-1).id === 'tomb' && res.at(-1).won) won++;
+      }
+      whole[four[1]] = [won, runs];
+    }
+    const levels = parties.map((p) => p.party.F.level);
+    return { stats, whole, levels, xp: parties.map((p) => p.xp) };
+  },
+
+  /** Whole runs, first room to the tomb, cycling through every route; where do they end? */
+  full(runs, rng, _pool, offset = 0) {
+    const ends = {};
+    let won = 0;
+    for (let i = offset; i < offset + runs; i++) {
+      const route = [...ACT_ONE[i % 3], ...ACT_TWO[i % 4], ...ACT_THREE[i % 2], ...ACT_FOUR[Math.floor(i / 2) % 2]];
+      const last = campaign(route, rng).at(-1);
+      if (last.id === 'tomb' && last.won) won++;
+      else ends[last.id] = (ends[last.id] ?? 0) + 1;
+    }
+    return { stats: {}, whole: { all: [won, runs] }, ends };
+  },
+};
+
+/** Fold the workers' results together. */
+function merge(parts) {
+  const out = { stats: {}, whole: {}, ends: {}, levels: [], xp: [] };
+  for (const p of parts) {
+    for (const [k, list] of Object.entries(p.stats)) (out.stats[k] ??= []).push(...list);
+    for (const [k, [won, runs]] of Object.entries(p.whole)) {
+      const w = (out.whole[k] ??= [0, 0]);
+      w[0] += won;
+      w[1] += runs;
+    }
+    for (const [k, n] of Object.entries(p.ends ?? {})) out.ends[k] = (out.ends[k] ?? 0) + n;
+    out.levels.push(...(p.levels ?? []));
+    out.xp.push(...(p.xp ?? []));
   }
-  console.log(`Act four, ${runs} runs per route from 40 parties that won act three`);
-  for (const [room, list] of Object.entries(stats)) report(`${room} L${[...new Set(list.map((r) => r.level))].join('/')}`, list);
-  console.log('  act four won via', whole);
+  return out;
 }
 
-/** Whole runs, first room to the tomb, cycling through every route; where do they end? */
-function fullRuns(runs, rng) {
-  const ends = {};
-  let won = 0;
-  for (let i = 0; i < runs; i++) {
-    const route = [...ACT_ONE[i % 3], ...ACT_TWO[i % 4], ...ACT_THREE[i % 2], ...ACT_FOUR[Math.floor(i / 2) % 2]];
-    const res = campaign(route, rng);
-    const last = res.at(-1);
-    if (last.id === 'tomb' && last.won) won++;
-    else ends[last.id] = (ends[last.id] ?? 0) + 1;
+const rates = (whole) => Object.fromEntries(Object.entries(whole).map(([k, [won, runs]]) => [k, pct(won, runs)]));
+const levelsOf = (list) => [...new Set(list.map((r) => r.level))].join('/');
+
+function print(mode, data, runs, seed, jobs) {
+  const how = `seed ${seed}${jobs > 1 ? `, ${jobs} threads` : ''}`;
+  if (mode === 'full') {
+    const [won, total] = data.whole.all;
+    console.log(`Whole campaigns, ${total} runs (${process.env.DIFFICULTY ?? 'normal'}, ${how})`);
+    console.log(`  won ${pct(won, total)}; lost at`, Object.fromEntries(Object.entries(data.ends).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, pct(v, total)])));
+    return;
   }
-  console.log(`Whole campaigns, ${runs} runs (${process.env.DIFFICULTY ?? 'normal'})`);
-  console.log(`  won ${pct(won, runs)}; lost at`, Object.fromEntries(Object.entries(ends).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, pct(v, runs)])));
+  if (mode === 'campaign') {
+    console.log(`${runs} campaigns per route (${how})`);
+    for (const [room, list] of Object.entries(data.stats)) {
+      report(`${room} L${levelsOf(list)}`, list);
+      if (room.startsWith('vault')) console.log(`    mimic sprung in ${pct(list.filter((r) => r.sprung).length, list.length)} of vault fights`);
+    }
+    console.log('  whole campaign won:', rates(data.whole));
+    return;
+  }
+  const act = { act2: 'two', act3: 'three', act4: 'four' }[mode];
+  if (mode === 'act4') {
+    console.log(`  pool: ${data.levels.length} parties, levels ${[...new Set(data.levels)].sort().join('/')}, XP ${Math.min(...data.xp)}–${Math.max(...data.xp)}`);
+  }
+  console.log(`Act ${act}, ${runs} runs per route (${how})`);
+  for (const [room, list] of Object.entries(data.stats)) {
+    report(mode === 'act2' ? room : `${room} L${levelsOf(list)}`, list);
+    if (mode === 'act2' && room.startsWith('vault')) {
+      const sprung = list.filter((r) => r.sprung);
+      console.log(`    mimic sprung in ${pct(sprung.length, list.length)}; vault lost after it sprang ${pct(sprung.filter((r) => !r.won).length, sprung.length)}`);
+    }
+  }
+  console.log(`  act ${act} won via`, rates(data.whole));
 }
 
 function report(name, results) {
@@ -378,39 +444,38 @@ function report(name, results) {
   console.log(`  ${name.padEnd(20)} win ${pct(wins.length, results.length).padStart(4)}  rounds ${avg((r) => r.rounds)}  heroes down ${avg((r) => r.downed)}  hp left ${pct(wins.reduce((s, r) => s + r.hpLeft, 0), wins.length)}`);
 }
 
-function main() {
-  const runs = Number(process.argv[2]) || 500;
-  const rng = seeded(Number(process.env.SEED) || 1);
-  if (process.argv[3] === 'act2') return actTwo(runs, rng);
-  if (process.argv[3] === 'act3') return actThree(runs, rng);
-  if (process.argv[3] === 'act4') return actFour(runs, rng);
-  if (process.argv[3] === 'full') return fullRuns(runs, rng);
-  const stats = {};
-  let wholeRuns = {};
-  for (const one of ACT_ONE) {
-    for (const two of ACT_TWO) {
-      const route = [...one, ...two];
-      const name = `${one[1]}${one[2] === 'chapel' ? '' : '+' + one[2]} / ${via(two)}`;
-      let won = 0;
-      for (let i = 0; i < runs; i++) {
-        const res = campaign(route, rng);
-        for (const r of res) {
-          const key = ['vault', 'larder', 'barrow'].includes(r.id) ? `${r.id} (${via(two)})` : r.id;
-          (stats[key] ??= []).push(r);
-        }
-        if (res.length === route.filter((x) => x !== 'chapel' && x !== 'well').length && res.at(-1).won) won++;
-      }
-      wholeRuns[name] = pct(won, runs);
-    }
-  }
-  console.log(`${runs} campaigns per route (seed ${Number(process.env.SEED) || 1})`);
-  for (const [room, list] of Object.entries(stats)) {
-    const lv = [...new Set(list.map((r) => r.level))].join('/');
-    report(`${room} L${lv}`, list);
-    if (room.startsWith('vault')) console.log(`    mimic sprung in ${pct(list.filter((r) => r.sprung).length, list.length)} of vault fights`);
-  }
-  console.log('  whole campaign won:', wholeRuns);
-  console.log('  mimic ambush on a fresh L5 hero:', JSON.stringify(mimicCheck(5, 300)));
+const POOLS = { act2: 60, act3: 40, act4: 40 };
+
+/** Split `runs` over `jobs` worker threads (each with its own seed and a share of the pool). */
+async function inThreads(mode, runs, seed, jobs) {
+  const shares = Array.from({ length: jobs }, (_, i) => Math.floor(runs / jobs) + (i < runs % jobs ? 1 : 0));
+  let offset = 0;
+  const parts = await Promise.all(shares.map((share, i) => {
+    const job = { mode, runs: share, seed: seed + 7919 * (i + 1), pool: Math.max(4, Math.ceil((POOLS[mode] ?? 0) / jobs)), offset };
+    offset += share;
+    return new Promise((resolve, reject) => {
+      const w = new Worker(new URL(import.meta.url), { workerData: job, env: process.env });
+      w.once('message', resolve);
+      w.once('error', reject);
+    });
+  }));
+  return merge(parts);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+async function main() {
+  const runs = Number(process.argv[2]) || 500;
+  const mode = ['act2', 'act3', 'act4', 'full'].includes(process.argv[3]) ? process.argv[3] : 'campaign';
+  const seed = Number(process.env.SEED) || 1;
+  // JOBS=1 plays everything on this thread with one dice stream (the numbers from before threads).
+  const jobs = Math.max(1, Math.min(Number(process.env.JOBS) || availableParallelism(), runs));
+  const data = jobs > 1 ? await inThreads(mode, runs, seed, jobs) : merge([MODES[mode](runs, seeded(seed))]);
+  print(mode, data, runs, seed, jobs);
+  if (mode === 'campaign') console.log('  mimic ambush on a fresh L5 hero:', JSON.stringify(mimicCheck(5, 300)));
+}
+
+if (!isMainThread) {
+  const { mode, runs, seed, pool: size, offset } = workerData;
+  parentPort.postMessage(MODES[mode](runs, seeded(seed), size, offset));
+} else if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
