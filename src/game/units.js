@@ -276,6 +276,56 @@ export const TEMPLATES = {
       { name: 'Corrupting Touch', stat: 'cha', damage: '4d6', reach: 1, addMod: false, rider: { save: 'wis', dc: 13, condition: 'frightened', turns: 2 } },
     ],
   },
+  // --- act four --------------------------------------------------------------
+  // SRD mummy: slow, with a Rotting Fist (2d6+3 bludgeoning and 3d6 necrotic, folded into
+  // one roll here; its curse is left out) and a Dreadful Glare (Dread).
+  y: {
+    name: 'Mummy', cls: 'Mummy', team: 'monsters', color: 0xc8b88a,
+    hp: 58, ac: 11, speed: 4, prof: 2, xp: 700, cr: 3,
+    ai: 'brute',
+    undead: true,
+    castStat: 'wis',
+    spells: ['dread'],
+    slots: { 1: 1 },
+    stats: { str: 16, dex: 8, con: 15, int: 6, wis: 10, cha: 12 },
+    attacks: [{ name: 'Rotting Fist', stat: 'str', damage: '5d6', reach: 1 }],
+  },
+  // SRD wraith: Life Drain without the lowered maximum HP, and no specters of its own.
+  t: {
+    name: 'Wraith', cls: 'Wraith', team: 'monsters', color: 0x4a3a60,
+    hp: 67, ac: 13, speed: 8, prof: 3, xp: 1800, cr: 5,
+    ai: 'brute',
+    undead: true,
+    stats: { str: 6, dex: 16, con: 16, int: 12, wis: 14, cha: 15 },
+    attacks: [{ name: 'Life Drain', stat: 'dex', damage: '4d8', reach: 1 }],
+  },
+  // The SRD knight, fallen to the tomb's lord: sword and shield (no Parry), and javelins.
+  // Living, so Turn Undead does nothing to them.
+  x: {
+    name: 'Fallen Knight', cls: 'Knight', team: 'monsters', color: 0x3a3a48,
+    hp: 52, ac: 18, speed: 6, prof: 2, xp: 700, cr: 3,
+    multiattack: 2,
+    ai: 'brute',
+    stats: { str: 16, dex: 11, con: 14, int: 11, wis: 11, cha: 15 },
+    attacks: [
+      { name: 'Longsword', stat: 'str', damage: '1d10', reach: 1 },
+      { name: 'Javelin', stat: 'str', damage: '1d6', reach: 6, projectile: 'javelin' },
+    ],
+  },
+  // The last boss: an SRD mummy lord, cut down to stand against a level 7–8 party. Two
+  // Rotting Fists and its Dreadful Glare (Dread); no legendary actions or cleric spells.
+  l: {
+    name: 'Nekhet', cls: 'Mummy Lord', team: 'monsters', color: 0xd8b860,
+    hp: 150, ac: 17, speed: 4, prof: 3, xp: 3000, cr: 6,
+    multiattack: 2,
+    ai: 'brute',
+    undead: true,
+    castStat: 'wis',
+    spells: ['dread'],
+    slots: { 1: 3 },
+    stats: { str: 18, dex: 10, con: 17, int: 11, wis: 18, cha: 16 },
+    attacks: [{ name: 'Rotting Fist', stat: 'str', damage: '4d6', reach: 1 }],
+  },
 };
 
 let nextId = 1;
@@ -328,6 +378,8 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     rebukeArmed: false, // Hellish Rebuke on the next enemy that damages it
     luckUsed: false,    // Dark One's Own Luck, once per fight
     colossusUsed: false, // Colossus Slayer, once per turn
+    strikeUsed: false,  // Divine Strike, once per turn
+    deathWard: false,   // Death Ward: the next drop to 0 HP leaves 1 instead
     conditions: {},     // prone / poisoned / frightened (combat.js)
   };
 }
@@ -342,6 +394,8 @@ export const PROGRESSION = {
     4: { hp: 8, stats: { str: 2 }, note: 'Strength 18: +1 to hit and damage' },
     5: { hp: 8, prof: 3, extraAttack: 2, passives: ['extraAttack'], note: 'Extra Attack: two swings per Attack action' },
     6: { hp: 8, stats: { str: 2 }, note: 'Strength 20: +1 to hit and damage' },
+    7: { hp: 8, critRange: 19, passives: ['improvedCritical'], note: 'Improved Critical: weapon hits crit on a 19 or 20' },
+    8: { hp: 16, stats: { con: 2 }, note: 'Constitution 17: +8 hit points' },
   },
   P: {
     4: { hp: 8, stats: { str: 2 }, note: 'Strength 18: +1 to hit and damage' },
@@ -350,6 +404,8 @@ export const PROGRESSION = {
       note: 'Extra Attack, and two 2nd-level slots for bigger Smites',
     },
     6: { hp: 8, passives: ['auraOfProtection'], note: 'Aura of Protection: allies within 10 ft add your CHA to saves' },
+    7: { hp: 8, slots: { 2: 3 }, note: 'A third 2nd-level slot for Smites' },
+    8: { hp: 8, stats: { cha: 2 }, note: 'Charisma 18: a stronger Aura of Protection and spell DC' },
   },
   W: {
     4: { hp: 5, stats: { int: 2 }, slots: { 2: 3 }, note: 'Intelligence 18, a third 2nd-level slot' },
@@ -358,6 +414,8 @@ export const PROGRESSION = {
       hp: 5, slots: { 3: 3 }, sculpt: true, passives: ['sculptSpells'],
       note: 'Sculpt Spells: Fireball, Lightning Bolt and Burning Hands spare the party; a third 3rd-level slot',
     },
+    7: { hp: 5, slots: { 4: 1 }, spells: ['iceStorm'], note: 'Ice Storm and a 4th-level slot' },
+    8: { hp: 5, slots: { 4: 2 }, stats: { int: 2 }, note: 'Intelligence 20 and a second 4th-level slot' },
   },
   K: {
     4: { hp: 7, stats: { cha: 2 }, note: 'Charisma 18: +1 to Eldritch Blast hits and damage, and to your spell DC' },
@@ -366,11 +424,15 @@ export const PROGRESSION = {
       note: 'Eldritch Blast fires two beams, Fireball, and your pact slots become 3rd level',
     },
     6: { hp: 7, passives: ['ownLuck'], note: 'Dark One’s Own Luck: once per room, add 1d10 to a failed save' },
+    7: { hp: 7, slots: { 3: 0, 4: 2 }, note: 'Your pact slots become 4th level' },
+    8: { hp: 7, stats: { cha: 2 }, note: 'Charisma 20: +1 to Eldritch Blast hits and damage, and to your spell DC' },
   },
   R: {
     4: { hp: 6, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
     5: { hp: 6, prof: 3, sneakDice: 3, passives: ['uncannyDodge'], note: 'Sneak Attack 3d6 and Uncanny Dodge' },
     6: { hp: 6, sneakDice: 4, note: 'Sneak Attack 4d6' },
+    7: { hp: 6, passives: ['evasion'], note: 'Evasion: no damage from a DEX save you make, half from one you fail' },
+    8: { hp: 6, stats: { dex: 2 }, ac: 1, note: 'Dexterity 20: +1 to hit, damage and AC' },
   },
   A: {
     4: { hp: 8, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
@@ -379,6 +441,8 @@ export const PROGRESSION = {
       note: 'Extra Attack and Colossus Slayer (+1d8 once per turn on a hurt foe)',
     },
     6: { hp: 8, passives: ['escapeTheHorde'], note: 'Escape the Horde: opportunity attacks against you have disadvantage' },
+    7: { hp: 8, slots: { 2: 3 }, note: 'A third 2nd-level slot for Hunter’s Mark' },
+    8: { hp: 8, stats: { dex: 2 }, ac: 1, note: 'Dexterity 20: +1 to hit, damage and AC' },
   },
   C: {
     4: { hp: 7, stats: { wis: 2 }, slots: { 2: 3 }, note: 'Wisdom 18, a third 2nd-level slot' },
@@ -390,10 +454,15 @@ export const PROGRESSION = {
       hp: 7, slots: { 3: 3 }, channelUses: 2, passives: ['blessedHealer'],
       note: 'Turn Undead twice per fight, Blessed Healer and a third 3rd-level slot',
     },
+    7: { hp: 7, slots: { 4: 1 }, spells: ['deathWard'], note: 'Death Ward and a 4th-level slot' },
+    8: {
+      hp: 7, slots: { 4: 2 }, stats: { wis: 2 }, destroyUndead: 1, passives: ['divineStrike'],
+      note: 'Wisdom 20, Divine Strike (+1d8 on a weapon hit), Destroy Undead up to CR 1 and a second 4th-level slot',
+    },
   },
 };
 
-export const MAX_LEVEL = 6;
+export const MAX_LEVEL = 8;
 
 /** Raise a freshly created unit to `level`. Slots are refilled to the new maximum. */
 export function applyLevel(unit, level) {

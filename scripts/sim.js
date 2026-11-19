@@ -1,6 +1,6 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
-//   node scripts/sim.js [runs] [act2|act3]
+//   node scripts/sim.js [runs] [act2|act3|act4]
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
 // RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
@@ -10,7 +10,7 @@ import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
 import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
-import { newCampaign, completeFight, takeRest, heroUnit, equip, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
+import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, DIFFICULTIES } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 
@@ -106,6 +106,12 @@ function heroOpening(game, u) {
     if (worth && !u.bonusUsed) {
       const t = game.spellTargets(u, 'spiritualWeapon').filter((e) => !e.unaware).sort((a, b) => a.hp - b.hp)[0];
       if (t) game.castSpell(u, 'spiritualWeapon', t);
+    }
+    // Death Ward on the front line (or itself) once something deadly is in sight.
+    if (!u.actionUsed && !heroes.some((h) => h.deathWard) && foes.some((e) => (e.cr ?? 0) >= 3)) {
+      const front = heroes.filter((h) => h.alive && ['F', 'P'].includes(h.code) && !game.spellProblem(u, 'deathWard', h))[0];
+      const who = front ?? (!game.spellProblem(u, 'deathWard', u) ? u : null);
+      if (who) game.castSpell(u, 'deathWard', who);
     }
   }
   if (u.code === 'W' && !u.actionUsed) {
@@ -227,11 +233,11 @@ const pct = (n, d) => `${Math.round((100 * n) / d)}%`;
 
 /** Hand pack gear to whoever it suits: weapons to the fighter then the rogue, the rest to the casters. */
 function equipAll(state) {
-  const order = { weaponPlus1: ['F', 'R'], ringProtection: ['W', 'C', 'R'], cloakProtection: ['W', 'C', 'R'] };
+  const order = { weaponPlus1: ['F', 'R'], weaponPlus2: ['R', 'F', 'C'], ringProtection: ['W', 'C', 'R'], cloakProtection: ['W', 'C', 'R'] };
   for (let i = state.pack.length - 1; i >= 0; i--) {
     const id = state.pack[i];
     if (ITEMS[id]?.kind !== 'gear') continue;
-    const who = (order[id] ?? HERO_CODES).find((c) => !state.party[c].items.includes(id));
+    const who = (order[id] ?? HERO_CODES).find((c) => !equipProblem(state, i, c));
     if (who) state = equip(state, i, who);
   }
   return state;
@@ -243,7 +249,8 @@ const ACT_TWO = [
   ['catacombs', 'vault', 'larder', 'barrow'], ['catacombs', 'well', 'larder', 'barrow'],
 ];
 const ACT_THREE = [['nest', 'gallery', 'throne'], ['nest', 'shrine', 'throne']];
-const REST = new Set(['chapel', 'well', 'shrine']);
+const ACT_FOUR = [['halls', 'armory', 'tomb'], ['halls', 'hearth', 'tomb']];
+const REST = new Set(['chapel', 'well', 'shrine', 'hearth']);
 /** "vault", "well+larder", ...: the part of an act-two route between the catacombs and the barrow. */
 const via = (two) => two.slice(1, -1).join('+');
 
@@ -318,6 +325,34 @@ function actThree(runs, rng) {
   console.log('  act three won via', whole);
 }
 
+/** Act four only, from a pool of real parties that won the throne (rested by its act break). */
+function actFour(runs, rng) {
+  const pool = [];
+  let tries = 0;
+  while (pool.length < 40) {
+    const route = [...ACT_ONE[tries % 3], ...ACT_TWO[tries % 4], ...ACT_THREE[tries % 2]];
+    tries++;
+    const res = campaign(route, rng);
+    if (res.at(-1).id === 'throne' && res.at(-1).won) pool.push(res.at(-1).after);
+  }
+  const levels = pool.map((p) => p.party.F.level);
+  console.log(`  pool: ${pool.length} parties, levels ${[...new Set(levels)].sort().join('/')}, XP ${Math.min(...pool.map((p) => p.xp))}–${Math.max(...pool.map((p) => p.xp))}`);
+  const stats = {};
+  const whole = {};
+  for (const four of ACT_FOUR) {
+    let won = 0;
+    for (let i = 0; i < runs; i++) {
+      const res = campaign(four, rng, pool[i % pool.length]);
+      for (const r of res) (stats[r.id === 'halls' ? r.id : `${r.id} (${four[1]})`] ??= []).push(r);
+      if (res.at(-1).id === 'tomb' && res.at(-1).won) won++;
+    }
+    whole[four[1]] = pct(won, runs);
+  }
+  console.log(`Act four, ${runs} runs per route from 40 parties that won act three`);
+  for (const [room, list] of Object.entries(stats)) report(`${room} L${[...new Set(list.map((r) => r.level))].join('/')}`, list);
+  console.log('  act four won via', whole);
+}
+
 function report(name, results) {
   const wins = results.filter((r) => r.won);
   const avg = (f, list = results) => (list.reduce((s, r) => s + f(r), 0) / Math.max(1, list.length)).toFixed(1);
@@ -329,6 +364,7 @@ function main() {
   const rng = seeded(Number(process.env.SEED) || 1);
   if (process.argv[3] === 'act2') return actTwo(runs, rng);
   if (process.argv[3] === 'act3') return actThree(runs, rng);
+  if (process.argv[3] === 'act4') return actFour(runs, rng);
   const stats = {};
   let wholeRuns = {};
   for (const one of ACT_ONE) {

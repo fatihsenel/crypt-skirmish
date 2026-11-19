@@ -10,7 +10,7 @@ export const SAVE_VERSION = 1;
 export const HERO_CODES = ['F', 'W', 'R', 'C'];
 
 /** Party XP (shared) needed for each level. Heroes start at level 3. */
-export const XP_LEVELS = { 4: 450, 5: 900, 6: 2000 };
+export const XP_LEVELS = { 4: 450, 5: 900, 6: 2000, 7: 9700, 8: 10400 };
 
 /**
  * Chosen for the whole run. Monsters' HP is scaled and their weapon attacks get a bonus
@@ -30,7 +30,8 @@ export const DIFFICULTIES = {
  * (more XP and loot) and face the necromancer without that rest.
  * `boss` draws a crown on the map; `actBreak` gives a long rest after the fight.
  * Act two (after the sanctum) asks the same question once more: the vault or the well.
- * Act three (after the barrow) asks it a last time: the gallery's loot or the shrine's rest.
+ * Act three (after the barrow) asks it again: the gallery's loot or the shrine's rest.
+ * Act four (after the throne) asks it a last time: the armory's loot or the hearth's rest.
  */
 export const NODES = {
   crypt: { kind: 'fight', level: 'crypt', col: 0, row: 1, next: ['warren', 'ossuary'] },
@@ -96,8 +97,28 @@ export const NODES = {
     teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
   },
   throne: {
-    kind: 'fight', level: 'throne', short: 'Throne', col: 10, row: 1, next: [], boss: true,
-    teaser: 'Ysolde the banshee. The end of the road.',
+    kind: 'fight', level: 'throne', short: 'Throne', col: 10, row: 1, next: ['halls'], boss: true,
+    actBreak: true,
+    teaser: 'Ysolde the banshee, the end of the third act. Afterwards the party takes a long rest.',
+  },
+  // Act four: the halls, then the armory's loot or the hearth's rest, then the mummy lord.
+  halls: {
+    kind: 'fight', level: 'halls', short: 'Halls', col: 11, row: 1, next: ['armory', 'hearth'],
+    teaser: 'Mummies, skeletons and a wraith whose touch drains the life from you.',
+  },
+  armory: {
+    kind: 'fight', level: 'armory', short: 'Armory', col: 12, row: 0, next: ['tomb'],
+    teaser: 'Fallen knights in black iron. A Runed Weapon +2, but no rest before the tomb.',
+  },
+  hearth: {
+    kind: 'rest', col: 12, row: 2, next: ['tomb'],
+    name: 'The Ember Hearth', short: 'Hearth', verb: 'Rest at the hearth',
+    intro: 'Embers still glow in the hearth of an old guardroom. The party takes a long rest.',
+    teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
+  },
+  tomb: {
+    kind: 'fight', level: 'tomb', short: 'Tomb', col: 13, row: 1, next: [], boss: true,
+    teaser: 'Nekhet the Mummy Lord. The end of the road.',
   },
 };
 
@@ -341,6 +362,9 @@ export function equipProblem(state, i, code) {
   const id = state.pack[i];
   if (!id || ITEMS[id]?.kind !== 'gear') return 'Nothing to equip';
   if (state.party[code].items.includes(id)) return `${heroName(code, state.party[code])} already has one`;
+  if (id.startsWith('weaponPlus') && state.party[code].items.some((i) => i.startsWith('weaponPlus'))) {
+    return `${heroName(code, state.party[code])} already has a runed weapon`;
+  }
   return null;
 }
 

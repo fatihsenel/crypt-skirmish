@@ -76,6 +76,10 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ node, daily }) => !daily && node === 'barrow',
   },
   {
+    id: 'act-three', name: 'The weeping queen', desc: 'Clear the Throne, the end of act three.',
+    on: 'room', test: ({ node, daily }) => !daily && node === 'throne',
+  },
+  {
     id: 'campaign', name: 'Crypt cleared', desc: 'Win a campaign.',
     on: 'run', test: () => true,
   },

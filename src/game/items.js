@@ -11,6 +11,11 @@ export const ITEMS = {
     desc: '+1 to hit and damage with weapon attacks (not spells).',
     apply: (u) => { u.weaponBonus += 1; },
   },
+  weaponPlus2: {
+    name: 'Runed Weapon +2', kind: 'gear',
+    desc: '+2 to hit and damage with weapon attacks (not spells).',
+    apply: (u) => { u.weaponBonus += 2; },
+  },
   ringProtection: {
     name: 'Ring of Protection', kind: 'gear',
     desc: '+1 AC and +1 to saving throws.',

@@ -39,6 +39,12 @@ export const PATROL_PACE = 3;
 // `turns` counts the victim's own turns: it ticks down at the end of each of them.
 export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained'];
 /** Conditions that simply run out after their `turns`. */
+/** Evasion (a rogue's): no damage on a made DEX save for half, half on a failed one. */
+const hasEvasion = (unit) => !!unit.passives?.includes('evasion');
+const dexSaveDamage = (unit, success, damage) => (hasEvasion(unit)
+  ? (success ? 0 : Math.floor(damage / 2))
+  : (success ? Math.floor(damage / 2) : damage));
+
 const TIMED = ['poisoned', 'frightened', 'restrained'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
@@ -503,6 +509,7 @@ export class Game {
       attacksLeft: 0,
       sneakUsed: false,
       colossusUsed: false,
+      strikeUsed: false,
       interacted: false,
     });
     this.standUp(u);
@@ -576,6 +583,12 @@ export class Game {
     const soaked = Math.min(target.tempHp ?? 0, Math.max(0, amount));
     if (soaked) target.tempHp -= soaked;
     target.hp = Math.max(0, target.hp - (amount - soaked));
+    // Death Ward: the first blow that would drop the warded leaves them on 1 HP instead.
+    if (target.hp <= 0 && target.alive && target.deathWard) {
+      target.hp = 1;
+      target.deathWard = false;
+      this.emit('ward', { unit: target, source });
+    }
     const t = target.team === 'monsters' ? this.tally(source) : null;
     if (t) t.damage += before - target.hp; // only what landed, not overkill
     if (target.hp <= 0 && target.alive) {
@@ -806,7 +819,7 @@ export class Game {
     trap.revealed = true;
     const { d20, total, success } = this.save(unit, 'dex', TRAP_DC);
     const roll = rollExpr(TRAP_DAMAGE, { rng: this.rng });
-    const damage = success ? Math.floor(roll.total / 2) : roll.total;
+    const damage = dexSaveDamage(unit, success, roll.total);
     // Spikes through the boots: fail the save and you go down as well.
     const result = { trap, unit, d20, total, dc: TRAP_DC, success, roll, damage, prone: false };
     this.emit('trap', result);
@@ -1032,7 +1045,7 @@ export class Game {
     const dc = this.spellDC(warlock);
     const save = this.save(foe, 'dex', dc);
     const roll = rollExpr(`${1 + slot}d10`, { rng: this.rng });
-    const damage = save.success ? Math.floor(roll.total / 2) : roll.total;
+    const damage = dexSaveDamage(foe, save.success, roll.total);
     const r = {
       ok: true, kind: 'spell', id: 'hellishRebuke', spell: SPELLS.hellishRebuke,
       caster: warlock, target: foe, slot, dc, save, roll, damage,
@@ -1076,7 +1089,8 @@ export class Game {
     const { d20, rolls } = this.rollD20(mods.mode);
     const toHit = this.toHitBonus(attacker, attack);
     const total = d20 + toHit;
-    const crit = d20 === 20;
+    // Improved Critical: a fighter's weapon crits on 19 too.
+    const crit = d20 >= (isWeapon(attack) && attacker.critRange ? attacker.critRange : 20);
     const fumble = d20 === 1;
     if (crit && this.tally(attacker)) this.tally(attacker).crits++;
     const cover = this.coverBonus(attacker, target);
@@ -1098,6 +1112,7 @@ export class Game {
     let smite = null;
     let mark = null;
     let colossus = null;
+    let strike = null;
     if (hit && attack.damage) { // a web hits for no damage: only its rider matters
       damageRoll = rollExpr(attack.damage, { crit, rng: this.rng });
       damage = Math.max(1, damageRoll.total + this.damageBonus(attacker, attack));
@@ -1118,6 +1133,12 @@ export class Game {
         colossus = rollExpr('1d8', { crit, rng: this.rng });
         damage += colossus.total;
       }
+      // Divine Strike (Life Domain): +1d8 radiant on a weapon hit, once per turn.
+      if (isWeapon(attack) && attacker.passives.includes('divineStrike') && !attacker.strikeUsed) {
+        attacker.strikeUsed = true;
+        strike = rollExpr('1d8', { crit, rng: this.rng });
+        damage += strike.total;
+      }
     }
 
     // Uncanny Dodge: a reaction that halves an attack's damage. Saved for hits that matter.
@@ -1131,7 +1152,7 @@ export class Game {
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
-      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, uncanny, rider: null, rebuke: null,
+      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -1370,7 +1391,7 @@ export class Game {
   areaSaves(victims, dc, damage) {
     return victims.map((v) => {
       const s = this.save(v, 'dex', dc);
-      return { ...s, damage: s.success ? Math.floor(damage / 2) : damage };
+      return { ...s, damage: dexSaveDamage(v, s.success, damage), evasion: hasEvasion(v) };
     });
   }
 
@@ -1426,6 +1447,7 @@ export class Game {
         if (!target.alive || target.team !== caster.team) return 'Choose an ally (or yourself)';
         if ((s.heal || s.pool) && target.hp >= target.maxHp) return `${target.name} is unhurt`;
         if (id === 'shieldOfFaith' && target.faithFrom === caster.id) return `${target.name} already has it`;
+        if (id === 'deathWard' && target.deathWard) return `${target.name} is already warded`;
         if (!inRange(target)) return s.range === 1 ? 'Must touch: stand next to them' : `Out of range (${s.range * 5} ft)`;
         break;
       case 'corpse':
@@ -1605,6 +1627,25 @@ export class Game {
         result.saves = this.areaSaves(victims, dc, roll.total);
         this.emit('spell', result);
         for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        break;
+      }
+      case 'iceStorm': {
+        const tiles = areaTiles(this.grid, target, spell.radius);
+        const hail = rollExpr(`${2 + upcast}d8`, { rng: this.rng });
+        const cold = rollExpr('4d6', { rng: this.rng });
+        const roll = { rolls: [...hail.rolls, ...cold.rolls], bonus: 0, total: hail.total + cold.total };
+        const dc = this.spellDC(caster);
+        const victims = this.blastVictims(caster, tiles);
+        Object.assign(result, { center: { x: target.x, z: target.z }, tiles, roll, dc });
+        result.saves = this.areaSaves(victims, dc, roll.total);
+        this.emit('spell', result);
+        for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        break;
+      }
+      case 'deathWard': {
+        target.deathWard = true;
+        result.target = target;
+        this.emit('spell', result);
         break;
       }
       case 'massHealingWord': {

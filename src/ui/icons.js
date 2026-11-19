@@ -83,6 +83,22 @@ const ICONS = {
     <ellipse cx="9.6" cy="12" rx="1.3" ry="1.8" fill="var(--icon-hole)" stroke="none"/>
     <ellipse cx="14.4" cy="12" rx="1.3" ry="1.8" fill="var(--icon-hole)" stroke="none"/>
     <ellipse cx="12" cy="16.5" rx="1.5" ry="2.2" fill="var(--icon-hole)" stroke="none"/>`),
+  // act four: a bandaged head, a hooded wraith with a scythe, a closed knight's helm, and the
+  // mummy lord's bandaged head under a crown
+  y: svg(`<path stroke="none" d="M12 3c-4.1 0-7 3.1-7 7.2V20h14v-9.8C19 6.1 16.1 3 12 3z"/>
+    <path fill="none" stroke="var(--icon-hole)" stroke-width="1.2" d="M5.5 8.2 18.5 6.8M5.2 12.4 18.8 11M5.2 16.6l13.6-1.2"/>
+    <circle cx="9.3" cy="10" r="1.3" fill="var(--icon-hole)" stroke="none"/>
+    <circle cx="14.7" cy="9.6" r="1.3" fill="var(--icon-hole)" stroke="none"/>`),
+  t: svg(`<path stroke="none" d="M11 2.5C7 2.5 4.5 5.8 4.5 10V22l2-1.6 2 1.6 2-1.6 2 1.6 2-1.6 2 1.6V10c0-4.2-2.5-7.5-6.5-7.5z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M11 7c-2.2 0-3.6 1.8-3.6 4.2 0 1.6.7 3 1.8 3.8h3.6c1.1-.8 1.8-2.2 1.8-3.8C14.6 8.8 13.2 7 11 7z"/>
+    <path fill="none" stroke-width="1.8" d="M20 3v19M20 3c-2.4.2-4.4 1.4-5.5 3.2"/>`),
+  x: svg(`<path stroke="none" d="M12 1.8c-4.6 0-7.5 3.3-7.5 8V20l2.5 2h10l2.5-2V9.8c0-4.7-2.9-8-7.5-8z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M6.5 10.2h11v1.8h-11zM11.1 12h1.8v7h-1.8z"/>`),
+  l: svg(`<path stroke="none" d="M6.5 1.5 8.5 4.5 12 1.5l3.5 3 2-3V6h-11z"/>
+    <path stroke="none" d="M12 6.5c-3.9 0-6.5 2.8-6.5 6.6V22h13v-8.9c0-3.8-2.6-6.6-6.5-6.6z"/>
+    <path fill="none" stroke="var(--icon-hole)" stroke-width="1.1" d="M6 10.5l12-1.2M5.8 14.6 18.2 13.4M5.8 18.6 18.2 17.4"/>
+    <circle cx="9.5" cy="12.2" r="1.2" fill="var(--icon-hole)" stroke="none"/>
+    <circle cx="14.5" cy="11.8" r="1.2" fill="var(--icon-hole)" stroke="none"/>`),
   unknown: svg(`<path fill="none" stroke-width="2.4" d="M8.8 8.6c0-2 1.5-3.4 3.4-3.4 2 0 3.4 1.3 3.4 3.1 0 2.6-3.4 2.8-3.4 5.6"/>
     <circle stroke="none" cx="12.2" cy="18.3" r="1.6"/>`),
 };

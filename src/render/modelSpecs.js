@@ -118,6 +118,27 @@ export const SPECS = {
     file: 'Skeleton_Mage', height: 1.55, tint: 0xe8f0ff, ghost: 0.6,
     clips: { melee: '1H_Melee_Attack_Stab', walk: 'Walking_D_Skeletons' },
   },
+  // Act four: mummies are the clawing skeleton in old linen; the wraith Quaternius's ghost,
+  // dark violet; the fallen knights KayKit's knight in black iron; Nekhet the skeleton mage,
+  // tall and wrapped in gold-stained linen.
+  y: {
+    file: 'Skeleton_Minion', height: 1.3, tint: 0xd8c8a0,
+    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
+  },
+  t: {
+    file: 'monsters/Ghost', height: 1.3, tint: 0x6a5090, ghost: 0.82,
+    clips: { ...QUATERNIUS, idle: 'Flying_Idle', walk: 'Fast_Flying', melee: 'Punch', arrow: 'Punch', javelin: 'Punch', hit: 'HitReact', die: 'Death', dead: 'Death' },
+  },
+  x: {
+    file: 'Knight', height: 1.38,
+    show: ['1H_Sword', 'Round_Shield'],
+    tint: 0x55556a,
+    clips: { melee: '1H_Melee_Attack_Slice_Diagonal' },
+  },
+  l: {
+    file: 'Skeleton_Mage', height: 1.6, tint: 0xf0d890,
+    clips: { melee: '1H_Melee_Attack_Stab', walk: 'Walking_D_Skeletons' },
+  },
 };
 
 export const DEFAULT_CLIPS = {

@@ -3,7 +3,8 @@
 //   '>' stairs down   '%' corpse (a dead goblin, raisable by a necromancer)
 // Spawns: F fighter, W wizard, R rogue, C cleric;
 //         g goblin, s skeleton, o orc, r giant rat, b goblin boss, n necromancer,
-//         u ghoul, w wight. (Mimics hide in chests: see `mimics`.)
+//         u ghoul, w wight, k giant spider, e specter, q banshee,
+//         y mummy, t wraith, x fallen knight, l mummy lord. (Mimics hide in chests: see `mimics`.)
 // `loot` lists the contents of each chest in reading order (item ids from items.js).
 // `mimics` lists chest tiles ('x,z') that are really mimics; give those chests [] loot.
 // `final` marks the last room of the campaign; `outro` is its victory text.
@@ -243,9 +244,7 @@ LEVELS.push(
   {
     id: 'throne',
     name: 'The Weeping Throne',
-    final: true,
     intro: 'A woman in grey weeps on a throne of bones. It was her grief that woke Varek, and she will not let you leave.',
-    outro: 'Ysolde’s wail breaks into silence and the throne room goes still. The crypt is cleansed at last.',
     rows: [
       '################',
       '#F.R..#........#',
@@ -257,6 +256,72 @@ LEVELS.push(
       '#..^..+........#',
       '#.....#.|....|.#',
       '#.$...##.......#',
+      '#.....#......>.#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+  },
+  // --- act four: below the throne, the tomb of the crypt's first lord -------------
+  {
+    id: 'halls',
+    name: 'The Sunken Halls',
+    intro: 'Behind the throne a stair winds down to halls older than the crypt. Bandaged shapes stand in the alcoves, and something darker drifts between them.',
+    rows: [
+      '################',
+      '#F.R..#........#',
+      '#.....#..s..s..#',
+      '#W.C..+...|....#',
+      '#.....#........#',
+      '###+###..y..|..#',
+      '#.....#........#',
+      '#..^..#.|...t..#',
+      '#.$...+........#',
+      '#.....#..s.....#',
+      '#.....#......>.#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+    asleep: ['9,5'], // the mummy stands in its alcove until disturbed
+    patrols: { '12,7': [[12, 2], [9, 9]] },
+  },
+  {
+    id: 'armory',
+    name: 'The Black Armory',
+    intro: 'The knights who once guarded the tomb still keep its armory, their oaths rotted into something else.',
+    rows: [
+      '################',
+      '#F.R..#..x..=..#',
+      '#.....+.....$..#',
+      '#W.C..#..|..|..#',
+      '#.....#.....t..#',
+      '##+#####+###...#',
+      '#......#....x..#',
+      '#..x...+.......#',
+      '#......#.|..|..#',
+      '#.$..^.#...x...#',
+      '#......#.....>.#',
+      '################',
+    ],
+    loot: [['weaponPlus2', 'potion'], ['potion']],
+    patrols: { '12,6': [[13, 9], [9, 7]] },
+  },
+  {
+    id: 'tomb',
+    name: 'The Hollow Tomb',
+    final: true,
+    intro: 'Nekhet built the crypt to hold his court forever. He rises from his sarcophagus, and the dead of his house rise with him.',
+    outro: 'Nekhet crumbles into dust and linen, and nothing below the crypt stirs again. The crypt is cleansed at last.',
+    rows: [
+      '################',
+      '#F.R..#........#',
+      '#.....#..y..s..#',
+      '#W.C..+........#',
+      '#.....#.|....|.#',
+      '###+###........#',
+      '#.....#...l....#',
+      '#..^..+........#',
+      '#.....#.|....|.#',
+      '#.$...#..s..s..#',
       '#.....#......>.#',
       '################',
     ],

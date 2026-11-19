@@ -11,7 +11,7 @@ import { loadSettings, levelGain } from '../game/settings.js';
 const STORAGE_KEY = 'crypt-skirmish:muted';
 const rand = (a, b) => a + Math.random() * (b - a);
 /** Monsters that borrow another's voice: the ghast and the ghosts hiss like ghouls, spiders like rats. */
-const SOUND_ALIAS = { h: 'u', e: 'u', q: 'u', k: 'r' };
+const SOUND_ALIAS = { h: 'u', e: 'u', q: 'u', k: 'r', y: 'u', t: 'u', x: 'w', l: 'w' };
 
 function loadMuted() {
   try {

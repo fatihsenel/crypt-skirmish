@@ -11,7 +11,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![The camp between rooms: the map of the way down, the party and the loot to hand out](docs/screenshots/camp.jpg) |
 | ![The title screen, with difficulty, the daily crypt and achievements](docs/screenshots/title.jpg) | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> |
 
-A party of four fights its way down a crypt on a 5-ft grid, room by room, across three acts.
+A party of four fights its way down a crypt on a 5-ft grid, room by room, across four acts.
 It runs on desktop and on phones.
 
 **Contents:** [The party](#the-party) · [Rules](#rules) · [Monsters](#monsters) ·
@@ -33,8 +33,8 @@ It runs on desktop and on phones.
 | Maela | Cleric | Healing, Sacred Flame, Turn Undead, Spiritual Weapon |
 
 - Pick Paladin, Warlock or Ranger and rename the heroes on the title screen.
-- The party starts at level 3 and reaches level 6. Each level brings new spells, more attacks
-  or more spell slots.
+- The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
+  or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
 - The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
 - The Warlock has two pact slots that come back after every room.
 
@@ -57,8 +57,9 @@ It runs on desktop and on phones.
 
 - Goblins, skeletons, an orc, giant rats, ghouls, a ghast, a mimic, giant spiders and
   specters.
+- Act four: mummies, wraiths and fallen knights.
 - Bosses: **Grukk** the goblin chief, **Morvath** the necromancer (raises the dead),
-  **Varek** the wight and **Ysolde** the banshee.
+  **Varek** the wight, **Ysolde** the banshee and **Nekhet** the mummy lord.
 - Monsters start unaware. They notice heroes they can see, hear fighting nearby and shout to
   wake their allies. Some sleep, and some patrol.
 - Goblins hide after shooting. Monsters that lose sight of a hidden hero go to where they last
@@ -73,20 +74,21 @@ It runs on desktop and on phones.
 
 ## The campaign
 
-- **Three acts**, each a map with forks: choose which room to clear next, and whether to rest
+- **Four acts**, each a map with forks: choose which room to clear next, and whether to rest
   or push on for more XP and loot.
 - Between rooms the party takes a short rest, shares XP and hands out magic items at camp.
 - A lost fight can be retried or skipped by taking another route.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
   on the same turn.
-- Beating Ysolde shows a tally of the run and each hero's stats.
+- Beating Nekhet shows a tally of the run and each hero's stats. A run that ended at Ysolde
+  before act four existed carries on into it.
 
 ## Modes and extras
 
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept.
-- **Achievements:** 20 goals that carry across runs.
+- **Achievements:** 21 goals that carry across runs.
 - **Past runs:** the title screen lists your last 20 runs.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
@@ -145,6 +147,9 @@ A few things differ from the SRD to keep the game simple:
 - A giant spider's bite poisons instead of dealing poison damage, and its web wears off on
   its own.
 - A specter's Life Drain frightens instead of lowering maximum HP. The banshee has no Wail.
+- Mummies' Rotting Fist doesn't curse. The wraith's Life Drain doesn't lower maximum HP and
+  it raises no specters. Nekhet has no legendary actions or cleric spells.
+- The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Hex has no ability-check part and lasts the whole fight, with no concentration.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
@@ -166,8 +171,8 @@ Every push to `main` runs the tests, builds and deploys to GitHub Pages
 (`.github/workflows/pages.yml`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
-4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne). Add
-`&difficulty=hard` or `story`, `&party=5` for another level (3 to 6), `&paladin`, `&ranger` or `&warlock`.
+4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
+12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&paladin`, `&ranger` or `&warlock`.
 This doesn't touch the save.
 
 **Console:** `__debug.autoplay()` lets the AI play the heroes too. `__debug.win()` and
@@ -178,13 +183,14 @@ This doesn't touch the save.
 `scripts/sim.js` plays the campaign without graphics and prints win rates.
 
 - `npm run sim -- 300` plays 300 campaigns down each route.
-- `npm run sim -- 300 act2` or `act3` plays just that act, starting from real parties that
-  finished the act before.
+- `npm run sim -- 300 act2`, `act3` or `act4` plays just that act, starting from real parties
+  that finished the act before.
 - `SEED=n`, `DIFFICULTY=story|hard`, `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
-and about 80% without one.
+and about 80% without one. The Tomb is the same: about 94% after the Hearth and 80% after the
+Armory.
 
 ### Layout
 

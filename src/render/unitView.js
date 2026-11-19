@@ -236,6 +236,7 @@ export class UnitView {
       u.conditions?.restrained && ['restrained', 'Webbed'],
       u.marked && u.alive && (u.marked === 'hex' ? ['marked hexed', 'Hexed'] : ['marked', 'Marked']),
       u.rebukeArmed && u.alive && ['rebuke', 'Rebuke'],
+      u.deathWard && u.alive && ['ward', 'Warded'],
       // A hero's own Stealth roll is theirs to see; a goblin's isn't.
       u.hidden && ['hidden', u.team === 'heroes' ? `Hidden · ${u.hidden}` : 'Hidden'],
       u.asleep ? ['asleep', 'Asleep'] : u.patrol && u.unaware ? ['unaware', 'Patrolling'] : u.unaware && ['unaware', 'Unaware'],

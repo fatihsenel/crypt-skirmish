@@ -425,6 +425,45 @@ export async function fireballFx(scene, from, center, tiles, onBoom) {
   dispose(group);
 }
 
+/** Ice Storm: a cold flash over the point, then hailstones hammer every tile in the radius. */
+export async function iceStormFx(scene, center, tiles, onImpact) {
+  const group = new THREE.Group();
+  scene.add(group);
+  const light = new THREE.PointLight(0x9fd8ff, 0, 14, 1.2);
+  light.position.set(center.x, 2.5, center.z);
+  const cloud = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.25, 24), glow(0xcfe8ff, 0));
+  cloud.position.set(center.x, 3.4, center.z);
+  group.add(light, cloud);
+  const radius = tiles.reduce((r, t) => Math.max(r, Math.hypot(t.x - center.x, t.z - center.z)), 1);
+  const stones = [];
+  for (const t of tiles) {
+    for (let i = 0; i < 2; i++) {
+      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.07 + Math.random() * 0.05, 0), glow([0xffffff, 0xd8f0ff, 0x9fd0ff][(t.x + t.z + i) % 3], 0));
+      m.position.set(t.x + (Math.random() - 0.5) * 0.7, 3.4, t.z + (Math.random() - 0.5) * 0.7);
+      m.userData = { delay: 0.15 + Math.random() * 0.45 };
+      group.add(m);
+      stones.push(m);
+    }
+  }
+  let struck = false;
+  await tween(1300, (t) => {
+    light.intensity = 18 * Math.sin(Math.min(1, t * 1.3) * Math.PI);
+    cloud.scale.set(radius * easeOut(Math.min(1, t * 4)), 1, radius * easeOut(Math.min(1, t * 4)));
+    cloud.material.opacity = 0.35 * Math.sin(Math.min(1, t) * Math.PI);
+    for (const m of stones) {
+      const lt = Math.min(1, Math.max(0, (t - m.userData.delay) / 0.3));
+      m.position.y = 3.4 - lt * lt * 3.3;
+      m.material.opacity = lt > 0 && lt < 1 ? 0.95 : lt >= 1 ? Math.max(0, 0.9 - (t - m.userData.delay - 0.3) * 4) : 0;
+    }
+    if (!struck && t > 0.35) {
+      struck = true;
+      onImpact?.();
+    }
+  }, linear);
+  scene.remove(group);
+  dispose(group);
+}
+
 // --- impact particles -----------------------------------------------------------
 const chipGeo = new THREE.BoxGeometry(1, 1, 1);
 

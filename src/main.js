@@ -21,7 +21,7 @@ import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
 import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
-import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon } from './render/effects.js';
+import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon } from './render/effects.js';
 import { wait, playback } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Camp } from './ui/camp.js';
@@ -511,6 +511,14 @@ function startFight(resume) {
       });
     }
   });
+  game.on('ward', (r) => {
+    hud.logWard(r);
+    // Shown once the blow has landed.
+    wait(500).then(() => {
+      floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, 'Death Ward!', 'heal');
+      view(r.unit)?.updateStatus();
+    });
+  });
   game.on('trap', (r) => {
     if (r.unit.team === 'monsters' && !inView(r.trap)) hud.log('A trap snaps shut somewhere in the dark.', 'sys');
     else hud.logTrap(r);
@@ -969,6 +977,8 @@ function spellPreview(u, id, t) {
       const [n, d] = s.heal;
       return `${s.name} → ${t === u ? 'yourself' : t.name}: heal ${n}d${d}${signed(abilityMod(u.stats[u.castStat]))} (HP ${t.hp}/${t.maxHp})`;
     }
+    case 'deathWard':
+      return `${s.name} → ${t === u ? 'yourself' : t.name}: the next drop to 0 HP leaves 1 instead (${ordinalSlot(u, s.level)}-level slot)`;
     default:
       return `${s.name} → ${t.name}`;
   }
@@ -1054,10 +1064,10 @@ function refreshSpell(u, id) {
       const allies = caught.filter((c) => c.team === u.team);
       const foes = caught.filter((c) => c.team !== u.team);
       hud.hint(
-        `${s.name}: ${s.damage} fire in ${s.radius * 5} ft, DEX save DC ${game.spellDC(u)} for half · ` +
+        `${s.name}: ${s.damage} ${id === 'iceStorm' ? 'hail and cold' : 'fire'} in ${s.radius * 5} ft, DEX save DC ${game.spellDC(u)} for half · ` +
           (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies caught') +
           (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
-            : ` · ⚠ also burns ${allies.map((a) => a.name).join(', ')}!`) : ''),
+            : ` · ⚠ also ${id === 'iceStorm' ? 'pounds' : 'burns'} ${allies.map((a) => a.name).join(', ')}!`) : ''),
         true,
       );
       break;
@@ -1488,6 +1498,28 @@ async function playSpell(r) {
         if (s.damage) hitFx(stage.scene, s.unit);
         return damageReaction(s.unit);
       }));
+      break;
+    case 'iceStorm':
+      await cv.cast(r.center, async () => {
+        sfx.cast();
+        await iceStormFx(stage.scene, r.center, r.tiles, () => {
+          sfx.thunder();
+          stage.shake(0.3, 500);
+        });
+      });
+      await showSaves(r.saves, 'DEX', r.dc);
+      await Promise.all(r.saves.map((s) => {
+        floatText(stage.scene, s.unit, s.success ? (s.damage ? `Save −${s.damage}` : 'Evaded') : `−${s.damage}`, 'crit');
+        if (s.damage) hitFx(stage.scene, s.unit);
+        return damageReaction(s.unit);
+      }));
+      break;
+    case 'deathWard':
+      await cv.cast(r.target, async () => {
+        sfx.radiant();
+        floatText(stage.scene, r.target, 'Death Ward', 'heal');
+        await radiantFx(stage.scene, r.target);
+      });
       break;
     case 'massHealingWord':
       await cv.cast(null, async () => {
@@ -1944,7 +1976,7 @@ window.addEventListener('keydown', (ev) => {
   }
 });
 
-/** A rested party at `level` (3 to 6), for the ?level= test route (&party=5). */
+/** A rested party at `level` (3 to 8), for the ?level= test route (&party=5). */
 const testParty = partyAt;
 
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets

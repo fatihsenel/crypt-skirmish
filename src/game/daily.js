@@ -5,6 +5,7 @@
 // streak.
 
 import { newCampaign, heroUnit } from './campaign.js';
+import { MAX_LEVEL } from './units.js';
 
 export const DAILY_KEY = 'crypt-skirmish:daily';
 const KEEP_DAYS = 60;
@@ -56,7 +57,7 @@ export function dailyPlan(key = dayKey()) {
 
 /** A fresh, rested party at `level` (3 to 6). */
 export function partyAt(state, level) {
-  if (!(level > 3 && level <= 6)) return state;
+  if (!(level > 3 && level <= MAX_LEVEL)) return state;
   for (const [code, rec] of Object.entries(state.party)) {
     const u = heroUnit(code, { ...rec, level });
     Object.assign(rec, { level, hp: u.maxHp, slots: { ...u.slotMax } });

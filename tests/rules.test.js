@@ -1333,7 +1333,7 @@ describe('act two', () => {
     expect(choices(state)).toEqual(['nest']);
   });
 
-  it('act three: the nest, then the gallery or the shrine, then the throne, which ends the campaign', () => {
+  it('act three: the nest, then the gallery or the shrine, then the throne, which ends the act', () => {
     const base = { ...newCampaign(), at: 'nest', cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs', 'well', 'barrow', 'nest'] };
     expect(choices(base)).toEqual(['gallery', 'shrine']);
     expect(choices({ ...base, at: 'gallery', cleared: [...base.cleared, 'gallery'] })).toEqual(['throne']);
@@ -1342,8 +1342,9 @@ describe('act two', () => {
     const game = new Game(levelById('throne'), { party: rested.party });
     expect(game.units.find((u) => u.code === 'q')).toMatchObject({ name: 'Ysolde', undead: true });
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;
-    expect(completeFight(rested, 'throne', game).state.done).toBe(true);
-    expect(LEVELS.filter((l) => l.final).map((l) => l.id)).toEqual(['throne']);
+    const { state, report } = completeFight(rested, 'throne', game);
+    expect([state.done, report.longRest, choices(state)]).toEqual([false, true, ['halls']]);
+    expect(LEVELS.filter((l) => l.final).map((l) => l.id)).toEqual(['tomb']);
   });
 
   it('a save that finished at the barrow before act three carries on, rested', () => {
@@ -1478,10 +1479,10 @@ describe('level 6 and difficulty', () => {
     return s.party;
   };
 
-  it('2000 XP reaches level 6, the new cap', () => {
+  it('2000 XP reaches level 6; 9700 level 7; 10400 level 8, the cap', () => {
     expect(levelForXp(1999)).toBe(5);
     expect(levelForXp(2000)).toBe(6);
-    expect(levelForXp(99999)).toBe(6);
+    expect([levelForXp(9699), levelForXp(9700), levelForXp(10399), levelForXp(10400), levelForXp(99999)]).toEqual([6, 7, 7, 8, 8]);
   });
 
   it('Sculpt Spells: a level-6 Fireball spares the party', () => {
@@ -2136,5 +2137,124 @@ describe('model loading per room', () => {
         }
       }
     }
+  });
+});
+
+describe('act four and levels 7–8', () => {
+  const ACT_THREE = ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs', 'well', 'barrow', 'nest', 'shrine', 'throne'];
+  const levelled = (level, classes = {}) => {
+    const s = newCampaign('normal', {}, classes);
+    for (const code of Object.keys(s.party)) {
+      Object.assign(s.party[code], { level });
+      delete s.party[code].slots;
+      delete s.party[code].hp;
+    }
+    return s.party;
+  };
+  const arena = (rows, level, classes, rng = fixed(0.5)) => {
+    const game = new Game(rows, { party: levelled(level, classes), senses: false, rng });
+    game.start();
+    return game;
+  };
+
+  it('after the throne: the halls, then the armory or the hearth, then the tomb, which ends the campaign', () => {
+    const base = { ...newCampaign(), at: 'halls', cleared: [...ACT_THREE, 'halls'] };
+    expect(choices(base)).toEqual(['armory', 'hearth']);
+    expect(choices({ ...base, at: 'armory', cleared: [...base.cleared, 'armory'] })).toEqual(['tomb']);
+    const rested = takeRest(base, 'hearth');
+    expect(choices(rested)).toEqual(['tomb']);
+    const game = new Game(levelById('tomb'), { party: rested.party });
+    expect(game.units.find((u) => u.code === 'l')).toMatchObject({ name: 'Nekhet', cls: 'Mummy Lord', undead: true });
+    for (const u of game.units) if (u.team === 'monsters') u.alive = false;
+    expect(completeFight(rested, 'tomb', game).state.done).toBe(true);
+  });
+
+  it('a run that ended at the throne before act four carries on, rested', () => {
+    const finished = { ...newCampaign(), at: 'throne', cleared: ACT_THREE, done: true };
+    finished.party.F.hp = 3;
+    const s = parseSave(serialize(finished));
+    expect([s.done, choices(s), s.party.F.hp]).toEqual([false, ['halls'], heroUnit('F', s.party.F).maxHp]);
+  });
+
+  it('the new monsters: mummies and the mummy lord are undead, the fallen knights are not', () => {
+    const game = new Game(levelById('halls'));
+    const codes = game.units.filter((u) => u.team === 'monsters').map((u) => u.code).sort();
+    expect(codes).toEqual(['s', 's', 's', 't', 'y']);
+    const knights = new Game(levelById('armory')).units.filter((u) => u.code === 'x');
+    expect(knights.map((k) => [k.name.replace(/ \d$/, ''), k.ac, k.undead ?? false])).toEqual(Array(4).fill(['Fallen Knight', 18, false]));
+  });
+
+  it('only one runed weapon per hero', () => {
+    const s = { ...newCampaign(), pack: ['weaponPlus1', 'weaponPlus2'] };
+    const one = equip(s, 0, 'F');
+    expect(one.party.F.items).toEqual(['weaponPlus1']);
+    expect(equip(one, 0, 'F').party.F.items).toEqual(['weaponPlus1']);
+    expect(equip(one, 0, 'R').party.R.items).toEqual(['weaponPlus2']);
+  });
+
+  it('Fighter 7: weapon attacks crit on a 19', () => {
+    // 19/20 → d20 19
+    const game = arena(['#####', '#Fg.#', '#####'], 7, {}, fixed(0.9));
+    const [f, g] = game.units;
+    g.hp = g.maxHp = 999;
+    setTurn(game, 0);
+    expect(f.passives).toContain('improvedCritical');
+    const r = game.attack(f, g, f.attacks[0]);
+    expect([r.d20, r.crit]).toEqual([19, true]);
+  });
+
+  it('Rogue 7: Evasion takes no damage from a made DEX save and half from a failed one', () => {
+    // a Warlock's Fireball (a Wizard's would be sculpted around the party)
+    const game = arena(['#########', '#W...R..#', '#########'], 7, { W: 'K' });
+    const [w, r] = game.units;
+    expect(r.passives).toContain('evasion');
+    setTurn(game, 0);
+    const blast = game.castSpell(w, 'fireball', { x: 5, z: 1 });
+    const save = blast.saves.find((s) => s.unit === r);
+    expect(save.damage).toBe(save.success ? 0 : Math.floor(blast.roll.total / 2));
+  });
+
+  it('Wizard 7: Ice Storm from a 4th-level slot, 2d8 + 4d6, DEX save for half', () => {
+    const game = arena(['##########', '#W.....gg#', '##########'], 7);
+    const w = setTurn(game, 0);
+    expect([w.slotMax[4], w.spells.includes('iceStorm')]).toEqual([1, true]);
+    const r = game.castSpell(w, 'iceStorm', { x: 7, z: 1 });
+    expect([r.ok, r.slot, r.roll.rolls.length]).toEqual([true, 4, 6]);
+    expect(r.saves.map((s) => s.unit.code)).toEqual(['g', 'g']);
+  });
+
+  it('Warlock 7: pact slots become 4th level, so Scorching Ray fires five rays', () => {
+    const game = arena(['#########', '#W.....g#', '#########'], 7, { W: 'K' });
+    const [k, g] = game.units;
+    g.hp = g.maxHp = 999;
+    expect([k.slotMax[3], k.slotMax[4], k.slots[4]]).toEqual([0, 2, 2]);
+    setTurn(game, 0);
+    expect(game.castSpell(k, 'scorchingRay', g).rays).toHaveLength(5);
+  });
+
+  it('Cleric 7: Death Ward leaves a warded ally on 1 HP once', () => {
+    const game = arena(['######', '#CF.g#', '######'], 7);
+    const [c, f] = game.units;
+    setTurn(game, 0);
+    expect(game.castSpell(c, 'deathWard', f)).toMatchObject({ ok: true, slot: 4 });
+    expect(game.spellProblem(c, 'deathWard', f)).toBeTruthy();
+    game.applyDamage(f, 500, null);
+    expect([f.hp, f.alive, f.deathWard]).toEqual([1, true, false]);
+    game.applyDamage(f, 500, null);
+    expect(f.alive).toBe(false);
+  });
+
+  it('Cleric 8: Divine Strike adds 1d8 to one weapon hit a turn', () => {
+    const game = arena(['#####', '#Cg.#', '#####'], 8);
+    const [c, g] = game.units;
+    g.hp = g.maxHp = 999;
+    expect([c.destroyUndead, c.stats.wis]).toEqual([1, 20]);
+    setTurn(game, 0);
+    const r = game.attack(c, g, c.attacks[0]);
+    expect(r.strike?.total).toBe(5);
+  });
+
+  it('level 8 tops out: no level 9 from more XP', () => {
+    expect(heroUnit('F', { level: 9 }).level).toBe(8);
   });
 });

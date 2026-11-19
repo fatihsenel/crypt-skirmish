@@ -13,9 +13,14 @@ const who = (u) => `<span class="${u.team}">${esc(u.name)}</span>`;
 const ordinal = (n) => ['', '1st', '2nd', '3rd'][n] ?? `${n}th`;
 const spellLevel = (s) => (s.level ? `${ordinal(s.level)}-level spell` : s.pool ? 'Paladin feature' : 'Cantrip');
 /** The numbers worth seeing at a glance on a spell's card. */
+/** A Warlock casts every spell with its pact slots, so at their level. */
+const pactLevel = (u) => Math.max(0, ...Object.entries(u.slotMax ?? {}).filter(([, n]) => n > 0).map(([l]) => +l));
+const castLevel = (s, u) => (u.pactMagic && s.level ? Math.max(s.level, pactLevel(u)) : s.level);
 function spellChips(s, u) {
   const chips = [];
-  if (s.damage) chips.push(`${s.darts ? `${s.darts} × ` : s.rays ? `${s.rays} × ` : ''}${s.damage} damage`);
+  const up = castLevel(s, u) - s.level;
+  const damage = s.targeting === 'cone' && up ? s.damage.replace(/^(\d+)/, (n) => +n + up) : s.damage;
+  if (s.damage) chips.push(`${s.darts ? `${s.darts + up} × ` : s.rays ? `${s.rays + up} × ` : ''}${damage} damage`);
   if (s.heal) chips.push(`heal ${s.heal[0]}d${s.heal[1]} + WIS`);
   if (s.pool) chips.push(`${u.layOnHands} HP in the pool`);
   if (s.save) chips.push(`${s.save.toUpperCase()} save`);
@@ -134,6 +139,7 @@ export class Hud {
       + (r.smite ? ` incl. <b class="spell">Divine Smite +${r.smite.total} radiant</b> ${dice(r.smite.roll)}${r.target.undead ? ' (undead +1d8)' : ''} <span class="dice">${ordinal(r.smite.slot)}-level slot</span>` : '')
       + (r.mark ? ` incl. <b class="spell">${r.mark.spell === 'hex' ? 'Hex' : 'Hunter’s Mark'} +${r.mark.total}</b> ${dice(r.mark)}` : '')
       + (r.colossus ? ` incl. <b class="sneak">Colossus Slayer +${r.colossus.total}</b> ${dice(r.colossus)}` : '')
+      + (r.strike ? ` incl. <b class="spell">Divine Strike +${r.strike.total} radiant</b> ${dice(r.strike)}` : '')
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '');
     this.log(
       `${tag}${who(r.attacker)} → ${who(r.target)} · ${esc(r.attack.name)}${why}<br> ` +
@@ -187,6 +193,10 @@ export class Hud {
   }
 
   /** Dark One's Blessing: temporary HP from a kill. */
+  logWard({ unit }) {
+    this.log(`<b class="heal">Death Ward</b> holds: ${who(unit)} stays on their feet with 1 HP.`);
+  }
+
   logBlessing({ unit, tempHp }) {
     this.log(`${who(unit)} drinks in the fallen foe's life: <b class="heal">${tempHp} temporary HP</b> <span class="dice">Dark One’s Blessing</span>.`);
   }
@@ -219,6 +229,16 @@ export class Hud {
             (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b>`)).join('<br>')
         : '<span class="miss">The blast catches no one.</span>';
       this.log(`${who(r.caster)} hurls a ${name} <span class="dice">${r.roll.total} fire [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
+    } else if (r.id === 'iceStorm') {
+      const saves = r.saves.length
+        ? r.saves.map((s) => `${who(s.unit)} <span class="dice">DEX ${s.total}</span> ` +
+            (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b>`) +
+            (s.evasion ? ' <span class="dice">Evasion</span>' : '')).join('<br>')
+        : '<span class="miss">The hail strikes no one.</span>';
+      this.log(`${who(r.caster)} calls down an ${name} <span class="dice">${r.roll.total} hail and cold [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
+    } else if (r.id === 'deathWard') {
+      const self = r.target === r.caster ? 'themself' : who(r.target);
+      this.log(`${who(r.caster)} casts ${name} on ${self}: the next blow that would drop them leaves them on 1 HP. ${slot}`);
     } else if (r.id === 'lightningBolt') {
       const saves = r.saves.length
         ? r.saves.map((s) => `${who(s.unit)} <span class="dice">DEX ${s.total}</span> ` +
@@ -477,7 +497,7 @@ export class Hud {
       return button({
         kind: 'spell', id, name: s.name, cls: 'spell',
         sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
-          : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus' : `${s.level ? ordinal(s.level) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
+          : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus' : `${s.level ? ordinal(castLevel(s, u)) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
         tip: {
           kind: `${spellLevel(s)} · ${s.time === 'bonus' ? 'bonus action' : 'action'}`,
           chips: spellChips(s, u),
