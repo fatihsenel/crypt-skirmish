@@ -17,6 +17,7 @@ import { SPELLS, ACTIONS, coneTiles, lineTiles, areaTiles, directionTo } from '.
 import { createStage } from './render/stage.js';
 import { Board } from './render/board.js';
 import { UnitView, shootProjectile, floatText } from './render/unitView.js';
+import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
 import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
@@ -269,12 +270,12 @@ function toggleMusic() {
 }
 hud.setMusic(music.enabled);
 
-// Volumes and the monster-turn speed (the Settings button).
+// Volumes, the monster-turn speed and the dice badge (the Settings button).
 const settings = loadSettings();
 new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
-  if (key === 'speed') return;
+  if (key === 'speed' || key === 'rolls') return;
   unlockAudio();
   sfx.setLevel(key, value);
 });
@@ -1070,10 +1071,16 @@ async function animateAttack(r, at = r.target) {
   const tv = view(target);
   const pos = { x: at.x, z: at.z };
   let reaction = null;
-  // Natural 20s and 1s get the die thrown on screen.
-  if ((r.d20 === 20 || r.d20 === 1) && !unseen(attacker)) {
-    sfx.dice();
-    await d20Fx(stage.scene, attacker, r.d20);
+  // The roll pops up over the attacker (Settings can turn it off; then only natural 20s and
+  // 1s get a die, thrown on the board).
+  if (!unseen(attacker)) {
+    if (settings.rolls) {
+      sfx.dice();
+      await rollBadge(stage.scene, attacker, badgeHeight(attacker), attackRoll(r));
+    } else if (r.d20 === 20 || r.d20 === 1) {
+      sfx.dice();
+      await d20Fx(stage.scene, attacker, r.d20);
+    }
   }
   const onImpact = () => {
     if (attack.projectile === 'fire') fireBurstFx(stage.scene, pos);
@@ -1115,6 +1122,24 @@ async function animateAttack(r, at = r.target) {
   }
   await reaction;
   hud.renderInitiative(game);
+}
+
+/** Just above a unit's name label. */
+const badgeHeight = (unit) => (view(unit)?.model.height ?? 1.6) + 0.2;
+
+/**
+ * Saving throws over everyone in sight who rolled one, all at once. A crowd (three or more)
+ * gets just the die and the result, so the badges don't pile up.
+ */
+function showSaves(saves, stat, dc) {
+  const shown = settings.rolls ? saves.filter((s) => !unseen(s.unit)) : [];
+  if (!shown.length) return Promise.resolve();
+  sfx.dice();
+  return Promise.all(shown.map((s) => {
+    const roll = saveRoll(s, stat, dc);
+    if (shown.length > 2) roll.line = '';
+    return rollBadge(stage.scene, s.unit, badgeHeight(s.unit), roll);
+  }));
 }
 
 const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!' };
@@ -1247,6 +1272,7 @@ async function playAction(unit, r) {
     case 'turnUndead':
       sfx.turnUndead();
       await v.cast(null, () => turnFx(stage.scene, unit, ACTIONS.turnUndead.range));
+      await showSaves(r.saves, 'WIS', r.dc);
       for (const s of r.saves) {
         floatText(stage.scene, s.unit, s.success ? 'Resists' : s.destroyed ? 'Destroyed!' : 'Turned!', s.success ? 'miss' : s.destroyed ? 'crit' : 'spell');
         view(s.unit).updateStatus();
@@ -1314,6 +1340,7 @@ async function playSpell(r) {
         sfx.fireCone();
         await coneFx(stage.scene, caster, r.tiles);
       });
+      await showSaves(r.saves, 'DEX', r.dc);
       await Promise.all(r.saves.map((s) => {
         floatText(stage.scene, s.unit, s.success ? `Save −${s.damage}` : `−${s.damage}`, 'crit');
         if (s.damage) hitFx(stage.scene, s.unit);
@@ -1327,6 +1354,7 @@ async function playSpell(r) {
         stage.shake(0.25, 400);
         await lightningFx(stage.scene, caster, r.tiles);
       });
+      await showSaves(r.saves, 'DEX', r.dc);
       await Promise.all(r.saves.map((s) => {
         floatText(stage.scene, s.unit, s.success ? `Save −${s.damage}` : `−${s.damage}`, 'crit');
         if (s.damage) hitFx(stage.scene, s.unit);
@@ -1364,6 +1392,7 @@ async function playSpell(r) {
           stage.shake(0.45, 650);
         });
       });
+      await showSaves(r.saves, 'DEX', r.dc);
       await Promise.all(r.saves.map((s) => {
         floatText(stage.scene, s.unit, s.success ? `Save −${s.damage}` : `−${s.damage}`, 'crit');
         if (s.damage) hitFx(stage.scene, s.unit);

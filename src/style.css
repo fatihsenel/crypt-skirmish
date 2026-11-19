@@ -528,6 +528,8 @@ kbd {
 #settings .settings-note { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); }
 #settings .speed { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 #settings .speed label { position: relative; }
+#settings .check { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; font-size: 13px; cursor: pointer; }
+#settings .check input { width: 16px; height: 16px; margin: 0; accent-color: var(--gold, #d9b45a); }
 #settings .speed input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 #settings .speed span {
   display: block;
@@ -1025,3 +1027,49 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 @media (max-width: 600px) and (min-height: 521px) {
   #help { top: 116px; }
 }
+
+/* The d20 roll badge over whoever rolls (src/render/rollBadge.js). */
+.roll-badge { pointer-events: none; z-index: 3; width: 0; height: 0; }
+/* The renderer centres the (empty) badge on the point above the name label; the box hangs
+   up from there, so it never covers the label. */
+.roll-in {
+  position: absolute; left: 0; bottom: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transform-origin: 50% 100%; transform: translateX(-50%) scale(0.4);
+}
+.roll-dice { display: flex; gap: 5px; align-items: center; }
+.roll-die { position: relative; width: 42px; height: 42px; transition: transform 60ms linear; }
+.roll-die svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.roll-die .face { fill: #2b2531; stroke: #d9b45a; stroke-width: 2.5; }
+.roll-die .facet { fill: none; stroke: #d9b45a55; stroke-width: 1.5; }
+.roll-die span {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font: 700 17px/1 var(--display, Georgia, serif); color: #f3ead7; padding-top: 1px;
+}
+.roll-die.dropped { opacity: 0.35; }
+.roll-line {
+  font-size: 11.5px; color: #cfc6b8; white-space: nowrap; min-height: 1em;
+  background: #1d1922ee; border: 1px solid #4a4150; border-radius: 6px; padding: 1px 7px;
+  visibility: hidden;
+}
+.roll-result {
+  font-weight: 700; font-size: 14px; letter-spacing: 0.4px; white-space: nowrap;
+  text-shadow: 0 1px 3px #000c; opacity: 0; transform: translateY(4px);
+  transition: opacity 120ms, transform 120ms;
+}
+.roll-badge.landed .roll-line { visibility: visible; }
+.roll-line:empty { display: none; }
+.roll-badge.told .roll-result { opacity: 1; transform: none; }
+.roll-badge.hit .roll-result { color: #f0c674; }
+.roll-badge.crit .face { fill: #5a4318; stroke: #ffd76a; }
+.roll-badge.crit .roll-die span { color: #ffe9a8; }
+.roll-badge.crit .roll-result { color: #ffd76a; font-size: 15px; }
+.roll-badge.miss .face { stroke: #8a7f92; }
+.roll-badge.miss .roll-result { color: #a8a0b1; }
+.roll-badge.fumble .face { fill: #1c191f; stroke: #5d5763; }
+.roll-badge.fumble .roll-die span { color: #8a8290; }
+.roll-badge.fumble .roll-result { color: #a8a0b1; }
+.roll-badge.save .face { stroke: #6fb08b; }
+.roll-badge.save .roll-result { color: #8fd0a8; }
+.roll-badge.fail .roll-result { color: #ff8a7a; }
+.roll-badge .roll-die.dropped .face { fill: #2b2531; stroke: #8a7f92; }

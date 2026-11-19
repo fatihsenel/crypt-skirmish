@@ -188,7 +188,14 @@ its way down a crypt on a 5-ft grid, with SRD 5e-style rules:
   Music button (or N) turns it off; Sound (or M) mutes everything
 - **settings** (the button beside Sound, on the title and camp screens too): a volume
   slider each for music, effects (with the dungeon ambience) and voices, and how fast
-  monster turns play out: Normal, Fast (1.75×) or Fastest (3×). Kept in the browser
+  monster turns play out: Normal, Fast (1.75×) or Fastest (3×), and a switch for the dice
+  badge. Kept in the browser
+- **dice on the board**: every attack roll pops up as a d20 over the attacker, tumbles and
+  lands, with the bonus, total and AC under it and then Hit, Miss or Critical hit. A
+  natural 20 turns gold, a natural 1 grey; with advantage or disadvantage both dice show and
+  the one that doesn't count fades. Saves against Burning Hands, Lightning Bolt, Fireball and
+  Turn Undead show over each target. It speeds up with the monster-turn setting; turned off,
+  only natural 20s and 1s get a die, thrown on the board
 - **enemy reach**: the Threats button (or T) stripes every tile the monsters that know
   about the party could reach and hit on their next turn: red where they could move and
   strike in melee, amber where only their bows, spells or breath reach (with line of sight).
@@ -333,6 +340,7 @@ src/
   ui/hud.js        HTML overlay: initiative, action bar, combat log
   ui/camp.js       title screen and camp: map, party, pack, level-ups
   ui/settings.js   the settings panel: volume sliders and monster-turn speed
+  render/rollBadge.js the d20 badge over attacks and saves
   ui/abilityTip.js the tooltip card over attacks, spells and actions (hover, or long-press)
   ui/tips.js       optional tips for new players, shown once each
   main.js          controller: input → game → animations → HUD; campaign flow and saving
