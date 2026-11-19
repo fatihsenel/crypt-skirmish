@@ -234,6 +234,7 @@ export class UnitView {
       u.conditions?.poisoned && ['poisoned', 'Poisoned'],
       u.conditions?.frightened && ['frightened', 'Frightened'],
       u.conditions?.restrained && ['restrained', 'Webbed'],
+      u.conditions?.rotting && ['rotting', 'Rotting'],
       u.marked && u.alive && (u.marked === 'hex' ? ['marked hexed', 'Hexed'] : ['marked', 'Marked']),
       u.rebukeArmed && u.alive && ['rebuke', 'Rebuke'],
       u.deathWard && u.alive && ['ward', 'Warded'],

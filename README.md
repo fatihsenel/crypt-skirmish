@@ -50,8 +50,8 @@ It runs on desktop and on phones.
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
 - **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove and drinking a potion.
-- **Conditions:** prone, poisoned, frightened and restrained, each shown as a tag on the
-  figure.
+- **Conditions:** prone, poisoned, frightened, restrained and rotting (a mummy's fist: no
+  healing takes for two turns), each shown as a tag on the figure.
 - **Cover:** barrels and crates give +2 AC against attacks that pass over them.
 - **Stealth:** a hidden hero is only found by a monster whose Perception beats their roll.
   Attacking gives you away.
@@ -151,7 +151,8 @@ A few things differ from the SRD to keep the game simple:
 - A giant spider's bite poisons instead of dealing poison damage, and its web wears off on
   its own.
 - A specter's Life Drain frightens instead of lowering maximum HP. The banshee has no Wail.
-- Mummies' Rotting Fist doesn't curse. The wraith's Life Drain doesn't lower maximum HP and
+- Mummy rot is a short curse instead of a lasting one: on a failed CON save (DC 12, Nekhet's
+  DC 16) the target can't regain HP for two of its turns. The wraith's Life Drain doesn't lower maximum HP and
   it raises no specters. Nekhet has no legendary actions or cleric spells. Instead, once a fight at half HP, two
   skeletons rise for him and heroes within 10 ft make a WIS save or are frightened.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
@@ -194,8 +195,9 @@ This doesn't touch the save.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
-and about 80% without one. The Tomb is the same: about 95% after the Hearth and 80% after the
-Armory.
+and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
+Armory. On Hard the Throne drops to about 95% and 50%, and the Tomb to about 75% and 30%.
+Story wins nearly every time.
 
 ### Layout
 

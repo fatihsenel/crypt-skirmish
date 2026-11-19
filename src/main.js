@@ -527,6 +527,7 @@ function startFight(resume) {
   game.on('ice', (r) => {
     if (!r.melted) return;
     board.setIce(r.tiles);
+    sfx.thaw();
     hud.log('The ice from the hailstorm thaws.', 'sys');
   });
   game.on('trap', (r) => {
@@ -1252,7 +1253,7 @@ function showSaves(saves, stat, dc) {
   }));
 }
 
-const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!' };
+const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!' };
 
 function damageReaction(unit) {
   const v = view(unit);
@@ -1514,6 +1515,7 @@ async function playSpell(r) {
         sfx.cast();
         await iceStormFx(stage.scene, r.center, r.tiles, () => {
           sfx.thunder();
+          sfx.freeze();
           stage.shake(0.3, 500);
           board.setIce(game.icyTiles());
         });

@@ -37,7 +37,7 @@ export const PATROL_PACE = 3;
 //   restrained  speed 0; attacks against it have advantage, its own attacks and DEX saves
 //               disadvantage (a spider's web).
 // `turns` counts the victim's own turns: it ticks down at the end of each of them.
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained'];
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting'];
 /** Conditions that simply run out after their `turns`. */
 /** Evasion (a rogue's): no damage on a made DEX save for half, half on a failed one. */
 const hasEvasion = (unit) => !!unit.passives?.includes('evasion');
@@ -45,7 +45,7 @@ const dexSaveDamage = (unit, success, damage) => (hasEvasion(unit)
   ? (success ? 0 : Math.floor(damage / 2))
   : (success ? Math.floor(damage / 2) : damage));
 
-const TIMED = ['poisoned', 'frightened', 'restrained'];
+const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
@@ -669,6 +669,7 @@ export class Game {
   }
 
   heal(target, amount, source = target) {
+    if (this.has(target, 'rotting')) return 0; // mummy rot: no HP back until it wears off
     const before = target.hp;
     target.hp = Math.min(target.maxHp, target.hp + amount);
     const t = this.tally(source);
@@ -1332,6 +1333,7 @@ export class Game {
       if (unit.hp >= unit.maxHp) return 'Already at full HP';
     }
     if (id === 'potion' && unit.hp >= unit.maxHp) return 'Already at full HP';
+    if ((id === 'secondWind' || id === 'potion') && this.has(unit, 'rotting')) return 'Rotting: you can’t regain HP';
     if (id === 'turnUndead') {
       if (unit.channelUsed >= (unit.channelUses ?? 1)) return 'Already used this fight';
       if (!this.turnTargets(unit).length) return 'No undead within 30 ft';
@@ -1482,7 +1484,7 @@ export class Game {
   massHealTargets(caster) {
     const s = SPELLS.massHealingWord;
     return this.living(caster.team)
-      .filter((t) => t.hp < t.maxHp && gridDistance(caster, t) <= s.range
+      .filter((t) => t.hp < t.maxHp && !this.has(t, 'rotting') && gridDistance(caster, t) <= s.range
         && this.grid.lineOfSight(caster.x, caster.z, t.x, t.z))
       .slice(0, 6);
   }
@@ -1529,6 +1531,7 @@ export class Game {
       case 'ally':
         if (!target.alive || target.team !== caster.team) return 'Choose an ally (or yourself)';
         if ((s.heal || s.pool) && target.hp >= target.maxHp) return `${target.name} is unhurt`;
+        if ((s.heal || s.pool) && this.has(target, 'rotting')) return `${target.name} is rotting: no healing takes`;
         if (id === 'shieldOfFaith' && target.faithFrom === caster.id) return `${target.name} already has it`;
         if (id === 'deathWard' && target.deathWard) return `${target.name} is already warded`;
         if (!inRange(target)) return s.range === 1 ? 'Must touch: stand next to them' : `Out of range (${s.range * 5} ft)`;
@@ -1781,7 +1784,7 @@ export class Game {
       }
       case 'layOnHands': {
         result.target = target;
-        const amount = Math.min(caster.layOnHands, target.maxHp - target.hp);
+        const amount = this.has(target, 'rotting') ? 0 : Math.min(caster.layOnHands, target.maxHp - target.hp);
         caster.layOnHands -= amount;
         result.healed = this.heal(target, amount, caster);
         result.left = caster.layOnHands;

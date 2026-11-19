@@ -2289,6 +2289,27 @@ describe('act four and levels 7–8', () => {
     expect(f.alive).toBe(false);
   });
 
+  it('mummy rot: a failed CON save stops healing for two of the target\'s turns', () => {
+    const game = arena(['######', '#CFy.#', '######'], 7);
+    const [c, f, y] = game.units;
+    const rider = y.attacks[0].rider;
+    expect(rider).toMatchObject({ save: 'con', dc: 12, condition: 'rotting' });
+    setTurn(game, 0);
+    game.rng = () => 0; // a natural 1
+    expect(game.applyRider(y, f, rider)).toMatchObject({ success: false, condition: 'rotting' });
+    f.hp = 10;
+    expect(game.heal(f, 8)).toBe(0);
+    expect(f.hp).toBe(10);
+    expect(game.actionProblem(f, 'potion')).toMatch(/Rotting/);
+    expect(game.spellProblem(c, 'healingWord', f)).toMatch(/rotting/);
+    expect(game.massHealTargets(c)).not.toContain(f);
+    game.tickConditions(f);
+    expect(game.has(f, 'rotting')).toBe(true);
+    game.tickConditions(f);
+    expect(game.has(f, 'rotting')).toBe(false);
+    expect(game.heal(f, 8)).toBe(8);
+  });
+
   it('Cleric 8: Divine Strike adds 1d8 to one weapon hit a turn', () => {
     const game = arena(['#####', '#Cg.#', '#####'], 8);
     const [c, g] = game.units;

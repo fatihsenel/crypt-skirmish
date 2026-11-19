@@ -97,6 +97,7 @@ html, body {
 .tag.poisoned, .cond.poisoned { color: #9ad45a; }
 .tag.frightened, .cond.frightened { color: #c79bff; }
 .tag.restrained, .cond.restrained { color: #e8e2d0; }
+.tag.rotting, .cond.rotting { color: #b8a060; }
 .passive-tag.cond { border-color: currentColor; }
 .float-text.cond { font-size: 15px; color: #d6c27a; }
 .float-text.heal { color: var(--heal); }

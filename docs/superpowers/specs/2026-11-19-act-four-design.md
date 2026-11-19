@@ -60,3 +60,9 @@ Exact maps, HP and damage after the simulator, colours, room text.
   95% (Armory / Hearth).
 - Achievements: "Not today" (Death Ward keeps a hero up) and "No rest for the wicked" (win a
   campaign through the Black Armory).
+
+## Follow-up: mummy rot, other difficulties
+- Rotting Fist now carries a short mummy rot: CON save (mummy DC 12, Nekhet DC 16) or no HP
+  regained for two of the target's turns. Normal Tomb: 75% / 94% (was 78% / 95%).
+- Simulator, 300 runs: Story act four 98% / 99%. Hard Tomb 30% / 76% against the Hard Throne's
+  53% / 95%, so the Tomb is the steepest fight on Hard.

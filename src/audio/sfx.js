@@ -514,6 +514,27 @@ class Sfx {
     });
   }
 
+  /** Ice Storm's frost spreading: a dry crackle over a glassy shimmer. */
+  freeze() {
+    this.play((t) => {
+      for (let i = 0; i < 24; i++) this.click(t + 0.15 + (i / 24) * 0.9 + Math.random() * 0.05, rand(3500, 8000), rand(0.03, 0.08));
+      this.noise(t + 0.1, { dur: 1.1, filter: 'highpass', freq: 5000, freqEnd: 8000, gain: 0.08, attack: 0.3 });
+      this.tone(t + 0.2, { type: 'sine', freq: 2093, dur: 0.9, gain: 0.025, attack: 0.2 });
+      this.tone(t + 0.3, { type: 'sine', freq: 3136, dur: 0.8, gain: 0.015, attack: 0.2 });
+    });
+  }
+
+  /** The frost thawing: a few soft drips. */
+  thaw() {
+    this.play((t) => {
+      [0, 0.22, 0.5, 0.71].forEach((d, i) => {
+        const f = [1400, 1150, 1650, 1250][i];
+        this.tone(t + d, { type: 'sine', freq: f, freqEnd: f * 1.6, dur: 0.09, gain: 0.07, attack: 0.003 });
+      });
+      this.noise(t, { dur: 0.9, filter: 'lowpass', freq: 700, gain: 0.05, attack: 0.2 });
+    });
+  }
+
   /** Spiritual Weapon: a ringing chime as the spectral mace strikes. */
   chime() {
     this.play((t) => {
