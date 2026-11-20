@@ -68,7 +68,11 @@ export function createPreview(deps) {
       const atk = selected?.attack ?? game.bestAttack(u, foe);
       if (atk && !game.attackProblem(u, foe, atk)) {
         const m = game.attackMods(u, foe, atk);
-        hud.hint(`${atk.name} → ${foe.name}: ${signed(game.toHitBonus(u, atk))} to hit vs AC ${game.acOf(foe)}, ${atk.damage} damage${modsText(m)}`, true);
+        // A Barbed elite cuts back on a hit: say so, and warn when that would drop the hero.
+        const barbs = game.barbsAgainst(u, foe, atk);
+        const drops = barbs && barbs >= u.hp + (u.tempHp ?? 0);
+        const cut = barbs ? ` · its barbs cut you for ${barbs} on a hit${drops ? ', enough to drop you' : ''}` : '';
+        hud.hint(`${atk.name} → ${foe.name}: ${signed(game.toHitBonus(u, atk))} to hit vs AC ${game.acOf(foe)}, ${atk.damage} damage${modsText(m)}${cut}`, true, { warn: !!drops });
       } else {
         hud.hint(`${foe.name}: ${game.attackProblem(u, foe, atk ?? u.attacks[0])}`);
       }

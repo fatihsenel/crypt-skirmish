@@ -702,7 +702,7 @@ export class Hud {
    * The line above the action bar. `act`: it previews something a click would do; on a
    * touch screen that takes a second tap, so the hint says so.
    */
-  hint(text, act = false) {
+  hint(text, act = false, { warn = false } = {}) {
     if (this.touch && text) {
       text = text.replace(/\bclick\b/g, 'tap').replace(/\bClick\b/g, 'Tap').replace(/ with the mouse/g, '').replace(' · Esc to cancel', '');
       if (act) text += ' · tap again to confirm';
@@ -712,6 +712,7 @@ export class Hud {
     }
     $('#hint').textContent = text;
     $('#hint').classList.toggle('show', !!text);
+    $('#hint').classList.toggle('warn', !!text && warn); // a move that would hurt the hero badly
   }
 
   /** The hint line as shown (what the keyboard cursor reads out). */

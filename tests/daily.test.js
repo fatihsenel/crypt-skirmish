@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, shareText, keepBest, bestFight } from '../src/game/daily.js';
+import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, shareText, keepBest, bestFight, resultFor } from '../src/game/daily.js';
 import { NODES } from '../src/game/campaign.js';
 
 describe('daily crypt', () => {
@@ -54,6 +54,15 @@ describe('daily crypt', () => {
     r = addDaily(r, '2026-11-18', { won: true, rounds: 12, downed: 0, node: 'crypt' });
     expect(r['2026-11-18']).toMatchObject({ won: true, rounds: 9, downed: 1, tries: 3 });
     expect(better({ won: true, rounds: 9, downed: 0 }, { won: true, rounds: 9, downed: 1 })).toBe(true);
+  });
+
+  it('starts afresh when the day’s or week’s room changes (a rules change moved it)', () => {
+    let r = addDaily({}, '2026-11-16', { won: true, rounds: 6, downed: 0, node: 'sanctum' });
+    expect(resultFor(r, '2026-11-16', 'sanctum')).toMatchObject({ rounds: 6 });
+    expect(resultFor(r, '2026-11-16', 'crypt')).toBeNull();
+    expect(resultFor({ '2026-11-16': { won: true, rounds: 6 } }, '2026-11-16', 'crypt')).toMatchObject({ rounds: 6 }); // no room kept: trusted
+    r = addDaily(r, '2026-11-16', { won: false, rounds: 9, downed: 4, node: 'crypt' });
+    expect(r['2026-11-16']).toMatchObject({ won: false, rounds: 9, node: 'crypt', tries: 1 });
   });
 
   it('counts a streak of days won, ending today or yesterday', () => {
@@ -115,6 +124,14 @@ describe('the best daily and weekly fight', () => {
     kept = keepBest(kept, 'daily', '2026-11-20', win(10), fight(3)); // a slower win on a new day still counts
     expect(bestFight(kept, 'daily', '2026-11-20').seed).toBe(3);
     expect(bestFight(kept, 'weekly', '2026-11-16').seed).toBe(2);
+  });
+
+  it('forgets a fight from another room, for the same week', () => {
+    let kept = keepBest({}, 'weekly', '2026-11-16', win(3), { ...fight(1), node: 'sanctum' });
+    expect(bestFight(kept, 'weekly', '2026-11-16', 'crypt')).toBeNull();
+    expect(bestFight(kept, 'weekly', '2026-11-16', 'sanctum').seed).toBe(1);
+    kept = keepBest(kept, 'weekly', '2026-11-16', win(10), fight(2)); // slower, but the week's room now
+    expect(bestFight(kept, 'weekly', '2026-11-16', 'crypt').seed).toBe(2);
   });
 
   it('keeps nothing it couldn’t replay', () => {

@@ -123,6 +123,19 @@ describe('elite monsters', () => {
     expect(swing(fighter, plain, sword).barbs).toBeNull();
   });
 
+  it('say ahead of a swing what the barbs would do', () => {
+    const g = room(0);
+    const [m, plain] = monsters(g);
+    const fighter = g.units.find((u) => u.code === 'F');
+    const sword = fighter.attacks.find((a) => a.reach === 1);
+    const bolt = g.units.find((u) => u.code === 'W').attacks.find((a) => !isMelee(a));
+    g.makeElite(m, 'barbed');
+    expect(g.barbsAgainst(fighter, m, sword)).toBe(3);
+    expect(g.barbsAgainst(fighter, m, bolt)).toBe(0);
+    expect(g.barbsAgainst(fighter, plain, sword)).toBe(0);
+    expect(g.barbsAgainst(m, m, sword)).toBe(0); // not on its own side
+  });
+
   it('can drop the hero who strikes a barbed elite, ending their attacks', () => {
     const g = room(0);
     const [m] = monsters(g);

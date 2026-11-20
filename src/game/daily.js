@@ -80,11 +80,20 @@ export function better(a, b) {
 }
 
 /**
+ * Day or week `key`'s result, if it was for `node`: a rules change can move a week's crypt to
+ * another room, and a result from the old one isn't this one's. A result with no room is trusted.
+ */
+export function resultFor(results, key, node) {
+  const r = results[key];
+  return r && (!node || !r.node || r.node === node) ? r : null;
+}
+
+/**
  * The results with this attempt added: each day keeps its best result and how many tries it
  * took, and only the last KEEP_DAYS days are kept.
  */
 export function addDaily(results, key, attempt) {
-  const prev = results[key];
+  const prev = resultFor(results, key, attempt.node);
   const best = better(attempt, prev) ? attempt : { won: prev.won, rounds: prev.rounds, downed: prev.downed };
   const next = { ...results, [key]: { ...best, node: attempt.node, tries: (prev?.tries ?? 0) + 1 } };
   const days = Object.keys(next).sort().slice(-KEEP_DAYS);
@@ -160,14 +169,15 @@ export const BEST_FIGHTS_KEY = 'crypt-skirmish:best-fights';
  * week's) fight is forgotten.
  */
 export function keepBest(kept, mode, key, attempt, fight) {
-  const prev = kept[mode]?.key === key ? kept[mode] : null;
+  const prev = kept[mode]?.key === key && kept[mode].fight?.node === fight?.node ? kept[mode] : null;
   const rec = watchable(fight);
   if (!attempt.won || !rec || !better(attempt, prev)) return kept;
   return { ...kept, [mode]: { key, won: true, rounds: attempt.rounds, downed: attempt.downed, fight: rec } };
 }
 
-/** The kept fight for `mode` on day or week `key`, or null. */
-export const bestFight = (kept, mode, key) => (kept?.[mode]?.key === key ? kept[mode].fight ?? null : null);
+/** The kept fight for `mode` on day or week `key` (in room `node`, if given), or null. */
+export const bestFight = (kept, mode, key, node) =>
+  (kept?.[mode]?.key === key && (!node || kept[mode].fight?.node === node) ? kept[mode].fight ?? null : null);
 
 export function loadBestFights() {
   try {

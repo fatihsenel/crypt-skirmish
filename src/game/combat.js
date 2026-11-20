@@ -1229,12 +1229,17 @@ export class Game extends Spellcasting {
     return r;
   }
 
+  /** What a hit by `attacker` on `target` with `attack` would cost it in barbs (0: none). */
+  barbsAgainst(attacker, target, attack) {
+    return target.elite === 'barbed' && isMelee(attack) && attacker.team !== target.team ? ELITE_BARBS : 0;
+  }
+
   /**
    * A Barbed elite hit by a melee weapon: the attacker takes ELITE_BARBS piercing damage, no
    * roll (the killing blow too). Returns { unit, target, damage } (already emitted and applied), or null.
    */
   barbs(elite, foe, attack) {
-    if (elite.elite !== 'barbed' || !isMelee(attack) || !foe?.alive || foe.team === elite.team) return null;
+    if (!foe?.alive || !this.barbsAgainst(foe, elite, attack)) return null;
     const r = { unit: elite, target: foe, damage: ELITE_BARBS };
     this.emit('barbs', r);
     this.cause = 'barbs';

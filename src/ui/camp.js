@@ -15,7 +15,7 @@ import { tips } from './tips.js';
 import { announce } from './announce.js';
 import { loadHistory, loadDeepest, deepestLabel } from '../game/history.js';
 import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
-import { dayKey, dailyPlan, loadDaily, streak, bestFight, loadBestFights } from '../game/daily.js';
+import { dayKey, dailyPlan, loadDaily, streak, bestFight, loadBestFights, resultFor } from '../game/daily.js';
 import { weekKey, weeklyPlan, loadWeekly, weekStreak } from '../game/weekly.js';
 import { ELITE_TRAITS } from '../game/combat.js';
 
@@ -208,27 +208,27 @@ export class Camp {
   renderDaily() {
     const plan = dailyPlan(dayKey());
     const results = loadDaily();
-    const today = results[plan.key];
+    const today = resultFor(results, plan.key, plan.node);
     const party = [plan.classes.F ? 'a Paladin' : 'a Fighter', plan.classes.W ? 'a Warlock' : 'a Wizard', plan.classes.R ? 'a Ranger' : 'a Rogue', 'a Cleric'];
     const box = $('#title-daily');
     box.querySelector('.daily-date').textContent = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
     box.querySelector('.daily-room').textContent =
       `${levelById(NODES[plan.node].level).name}, with ${party.slice(0, 3).join(', ')} and ${party[3]} at level ${plan.level}. The same for everyone today.`;
-    const run = streak(results, plan.key);
+    const run = streak(today ? results : { ...results, [plan.key]: null }, plan.key);
     const rounds = (n) => `${n} round${n === 1 ? '' : 's'}`;
     box.querySelector('.daily-result').textContent = today
       ? (today.won ? `Best today: won in ${rounds(today.rounds)}` : `Not won yet today (${today.tries} ${today.tries === 1 ? 'try' : 'tries'})`)
         + (run ? ` · Streak: ${run} day${run === 1 ? '' : 's'}` : '')
       : run ? `Streak: ${run} day${run === 1 ? '' : 's'}. Win today to keep it going.` : 'Not played yet today.';
     $('#title-daily-play').textContent = today?.won ? 'Play it again' : 'Play today’s crypt';
-    this.showBest('daily', plan.key);
+    this.showBest('daily', plan.key, plan.node);
   }
 
   /** This week's elite crypt: the trait, room and party, and the week's best and the streak so far. */
   renderWeekly() {
     const plan = weeklyPlan(weekKey());
     const results = loadWeekly();
-    const week = results[plan.key];
+    const week = resultFor(results, plan.key, plan.node); // not one from before a rules change moved the room
     const trait = ELITE_TRAITS.find((t) => t.id === plan.trait);
     const party = [plan.classes.F ? 'a Paladin' : 'a Fighter', plan.classes.W ? 'a Warlock' : 'a Wizard', plan.classes.R ? 'a Ranger' : 'a Rogue', 'a Cleric'];
     const box = $('#title-weekly');
@@ -241,7 +241,7 @@ export class Camp {
     box.querySelector('.daily-room').textContent =
       `${levelById(NODES[plan.node].level).name} at New Game+ ${plan.tier}, with a ${trait.name} elite. ${party.slice(0, 3).join(', ').replace(/^a/, 'A')} and ${party[3]} at level ${plan.level}.`;
     box.querySelector('.daily-trait').innerHTML = `<b>${esc(trait.name)}:</b> ${esc(trait.desc)}.`;
-    const run = weekStreak(results, plan.key);
+    const run = weekStreak(week ? results : { ...results, [plan.key]: null }, plan.key); // nor in the streak
     const rounds = (n) => `${n} round${n === 1 ? '' : 's'}`;
     const weeks = (n) => `${n} week${n === 1 ? '' : 's'}`;
     box.querySelector('.daily-result').textContent = week
@@ -249,12 +249,12 @@ export class Camp {
         + (run ? ` · Streak: ${weeks(run)}` : '')
       : run ? `Streak: ${weeks(run)}. Win this week to keep it going.` : 'The same for everyone this week. Not played yet.';
     $('#title-weekly-play').textContent = week?.won ? 'Play it again' : 'Play this week’s crypt';
-    this.showBest('weekly', plan.key);
+    this.showBest('weekly', plan.key, plan.node);
   }
 
   /** Watch your best and its links under a daily or weekly box, when its best win was kept. */
-  showBest(mode, key) {
-    const fight = bestFight(loadBestFights(), mode, key);
+  showBest(mode, key, node) {
+    const fight = bestFight(loadBestFights(), mode, key, node);
     this.best = { ...this.best, [mode]: fight };
     $(`#title-${mode}-best`).hidden = !fight;
     if (!fight) return;

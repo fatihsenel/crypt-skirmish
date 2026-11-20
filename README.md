@@ -121,7 +121,8 @@ It runs on desktop and on phones.
   Warded or Barbed. The trait depends on the room and the tier: the camp map marks each room ahead
   with a gold pip, and picking it names the trait. When you first see the elite, a horn
   sounds, its band flares, a toast and the log name the trait, and on a phone the camera brings
-  it into view. Once you have won a campaign, the bestiary lists what each does and how many
+  it into view. Aiming at a Barbed elite, the hint says what its barbs would cut you for, in
+  red when that would drop you. Once you have won a campaign, the bestiary lists what each does and how many
   you've slain. The run summary, its image and Past runs count the elites slain.
 
 ## Modes and extras
@@ -134,6 +135,7 @@ It runs on desktop and on phones.
 - **Weekly elite crypt:** one room a week at New Game+ 3, the same for everyone, with that
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
+  If an update moves the week to another room, its best starts again there.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
