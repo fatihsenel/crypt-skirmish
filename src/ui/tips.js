@@ -137,17 +137,25 @@ export class Tips {
       if (ev.target.closest('.tip-off')) this.setOn(false);
     });
     document.getElementById('app').append(el);
-    // Sit just above the action bar, whatever its height (it changes with each hero).
+    // Sit 12px above the action bar, wherever it is: its height changes with each hero, and on
+    // a phone it's lifted clear of the home bar (safe-area-inset-bottom).
     const bar = document.getElementById('actionbar');
-    const place = () => el.style.setProperty('--above', `${bar.offsetHeight + 26}px`);
-    new ResizeObserver(place).observe(bar);
-    place();
+    const app = document.getElementById('app');
+    this.place = () => {
+      el.style.setProperty('--above', bar.offsetParent // no bar (the camp): near the bottom
+        ? `${Math.round(app.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 12)}px`
+        : 'calc(26px + env(safe-area-inset-bottom))');
+    };
+    new ResizeObserver(this.place).observe(bar);
+    window.addEventListener('resize', this.place);
+    this.place();
     return el;
   }
 
   show(html) {
     const el = this.mount();
     el.querySelector('.tip-text').innerHTML = html;
+    this.place();
     el.classList.add('show');
     this.current = html;
   }
