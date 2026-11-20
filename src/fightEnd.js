@@ -4,6 +4,7 @@
 
 import { ELITE_TRAITS } from './game/combat.js';
 import { levelById } from './game/maps.js';
+import { relicFrom } from './game/items.js';
 import { NODES, completeFight, recordDefeat, runSummary, runShareText } from './game/campaign.js';
 import { fightCheck } from './game/replay.js';
 import { fightRecap, winRecap } from './game/recap.js';
@@ -31,6 +32,9 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
   let summary = null;
   let awards = []; // achievements unlocked by this fight (none on test runs)
   let share = null; // a won campaign's text to share
+  // A boss leaves its relic behind (completeFight adds it to the run).
+  const dropped = won && campaign && !daily && !challenge && NODES[nodeId].boss ? relicFrom(level.id) : null;
+  const relic = dropped && !(campaign.relics ?? []).includes(dropped) ? dropped : null;
   if (won) {
     if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily, met: loadBestiary().length, slain: slainTotal(), eliteKinds: Object.keys(loadElitesSlain()).length });
     if (final) {
@@ -53,7 +57,7 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
   const versus = challenge && challengeText(challenge.theirs, { won, rounds: game.round }, level.name);
   const banner = {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary, awards, daily: dailyResult, challenge: versus, share, replay: !!record, recap: won ? null : fightRecap(game),
+    summary, awards, relic, jar: !!campaign?.relics?.includes('jar') && !daily && !challenge, daily: dailyResult, challenge: versus, share, replay: !!record, recap: won ? null : fightRecap(game),
     win: won && !summary ? winRecap(game) : null,
     ngplus: !!summary && saving && !!campaign?.done,
   };

@@ -89,6 +89,13 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   (only for a hero in no armor), Gauntlets of Ogre Power, an Amulet of Health and a Periapt of
   Proof against Poison. Each hero's button in the pack shows what the item would change for
   them, such as "AC 15 → 17" or "Max HP 35 → 53".
+- **Relics:** each boss leaves one behind. A relic isn't worn: it works for the whole party
+  for the rest of the run, and the camp lists them under Relics.
+  - Morvath's Phylactery: in each fight, the first hero who would drop to 0 HP stays on 1 HP.
+  - Varek's Barrow Horn: the heroes go first in every fight.
+  - Ysolde's Veil: the party starts every fight hidden, until a monster spots them.
+  - Nekhet's Embalming Jar: the rest after each room heals everyone fully (New Game+ only,
+    since Nekhet is the last boss).
 - A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
   each hero fell, which foe hit hardest and who was still standing, with a tip for next time
   (unused potions, archers, a foe to focus). A won room says who led the way, the closest
@@ -114,7 +121,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   before act four existed carries on into it.
 - **New Game+:** after beating Nekhet, go back down with the same heroes from the first room.
   Each one keeps a magic item of your choice from the run. Every win adds a tier (Hard NG+1,
-  NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The title
+  NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The relics
+  come along too. The title
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
   its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift,
@@ -173,6 +181,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Turn order:** portraits along the top, each with its initiative number. Long names
   shrink to fit, like "G. Spider 2" or "R. Mummy". On an upright phone the whole party fits
   across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
+- **Photo mode** (P, or the camera button): the HUD goes and the monsters wait. Drag to turn
+  the view around the hero whose turn it is, right-drag to pan and scroll to zoom (on a phone,
+  one finger turns, two pan and pinch). Save image keeps the picture (on a phone, the share
+  sheet); Done or Esc puts the camera back.
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
@@ -218,6 +230,7 @@ Everything is generated in the browser, with no recordings:
 | Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
 | T | Show or hide enemy reach |
+| P | Photo mode: drag turns, right-drag pans, S saves the image, P or Esc leaves |
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel |
 | L | Open or close the combat log |
@@ -234,6 +247,7 @@ Everything is generated in the browser, with no recordings:
 | Swipe the row of attacks and spells | See the rest; a faded edge means there are more |
 | Tap a portrait or hold a figure | Show the character card |
 | Log button (top right) | Open the combat log |
+| Camera button (top right) | Photo mode: one finger turns, two pan and pinch |
 
 ## House rules
 
@@ -263,6 +277,9 @@ A few things differ from the SRD to keep the game simple:
   trait (regains 5 HP a turn; stays on 1 HP once; one more attack; +10 ft speed; +2 AC and
   no frightened, prone or poisoned; or 3 piercing damage, no roll, to a foe that hits it with
   a melee weapon).
+- Relics are not from the SRD. The Phylactery works like Death Ward on the first hero to drop
+  each fight. The Veil hides the party at passive Stealth (10 + Stealth bonus, 5 less in
+  noisy armor), with no roll.
 
 ## For developers
 
@@ -286,7 +303,7 @@ build (and once with each finger lifted late, as a busy phone sees it) and deplo
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
-12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&seed=7` for the same dice every time.
+12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`), `&seed=7` for the same dice every time.
 This doesn't touch the save.
 
 **See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,
@@ -323,7 +340,7 @@ src/
     dice.js          dice rolling and ability modifiers
     grid.js          map grid, movement, line of sight, fog of war
     units.js         stat blocks, XP values and level-ups
-    items.js         magic items
+    items.js         magic items and the bosses' relics
     abilities.js     actions and spells
     campaign.js      the dungeon map, XP, the pack, rests, New Game+, save data
     maps.js          the rooms as ASCII maps
@@ -377,6 +394,7 @@ src/
   animate.js         plays back resolved attacks, moves, chests, actions and spells
   links.js           copying and opening #watch= and #play= links
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
+  photo.js           photo mode: no HUD, a free camera, Save image
   input.js           picking a tile, the long press, what a click does, the cursor's step and words
   debug.js           window.__debug and the ?victory sample run
   offline.js         registers the offline copy (public/sw.js), hands it the files already loaded, looks for a new deploy

@@ -211,7 +211,7 @@ function playTurn(game, u) {
 
 /** One fight. Returns { won, rounds, downed, state }. */
 export function fight(levelId, campaign, rng) {
-  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER) });
+  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER), relics: campaign.relics ?? [] });
   game.start();
   let turns = 0;
   while (!game.over && turns++ < 600) {

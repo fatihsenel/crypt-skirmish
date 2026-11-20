@@ -78,6 +78,10 @@ server on 5173.
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
   press the action bar's first ten buttons (`pickByNumber` in `hud.js`); R reads `surroundings()`.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
+- Photo mode (`src/photo.js`, P or the camera button) hides the HUD and the board's highlights,
+  centres the view on the current figure and lets the camera turn; Save image renders a frame and
+  reads the canvas back. Monster turns wait for it (`whileAway`), and leaving restores the camera
+  and frustum exactly.
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
@@ -92,6 +96,8 @@ server on 5173.
   apply it through an attack `rider` or a spell's `condition`.
 - **Elite trait:** `ELITE_TRAITS` and `makeElite` in `combat.js`; the bestiary lists them.
 - **Room:** a map in `LEVELS` (`game/maps.js`) and a node in `NODES` (`game/campaign.js`).
+- **Relic:** `RELICS` in `game/items.js` (its `boss` is the room that drops it) and its rule in
+  `Game` (`this.relics`) or `completeFight`. Relics ride in the fight record and links (`rl`).
 - **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
   `scripts/sim.js` if the AI wouldn't use its abilities.
 - **Spell or action:** it needs a case in `playSpell` or `playAction` in `animate.js`;
@@ -101,7 +107,7 @@ server on 5173.
 ## Testing in the browser
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
-  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&paladin`, `&ranger`, `&warlock`,
+  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&relics=veil,horn`, `&paladin`, `&ranger`, `&warlock`,
   `&seed=S` (the same dice every time; `SEED=S npm run touch-check` uses it).
 - `?victory` shows the won-campaign screen for a sample run (Copy result, Save image);
   `&tier=2` makes it a New Game+ run with elites slain.

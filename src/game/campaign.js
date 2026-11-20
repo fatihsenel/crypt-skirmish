@@ -3,7 +3,7 @@
 // function returns a new state; the controller decides when to persist it.
 
 import { TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf } from './units.js';
-import { ITEMS, applyItems } from './items.js';
+import { ITEMS, applyItems, relicFrom, cleanRelics } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
 import { ELITE_TRAITS, eliteTrait } from './combat.js';
@@ -282,7 +282,7 @@ export function newCampaign(difficulty = 'normal', names = {}, classes = {}) {
     const name = cleanName(names[code]);
     if (name) party[code].name = name;
   }
-  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], done: false, difficulty, tier: 0, stats: blankStats() };
+  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], relics: [], done: false, difficulty, tier: 0, stats: blankStats() };
 }
 
 /** The items each hero may carry into New Game+: what they have equipped, if a fresh hero of their class can use it. */
@@ -307,7 +307,8 @@ export function newGamePlus(won, keep = {}) {
     if (won.party[code].name) names[code] = won.party[code].name;
     if (won.party[code].cls) classes[code] = won.party[code].cls;
   }
-  let state = { ...newCampaign(won.difficulty, names, classes), tier: Math.min(MAX_TIER, (won.tier ?? 0) + 1) };
+  // The bosses' relics come along too.
+  let state = { ...newCampaign(won.difficulty, names, classes), tier: Math.min(MAX_TIER, (won.tier ?? 0) + 1), relics: cleanRelics(won.relics) };
   const allowed = heirloomChoices(won);
   for (const code of HERO_CODES) {
     const id = keep[code];
@@ -349,7 +350,8 @@ const clone = (s) => structuredClone(s);
  * Apply a won fight: carry the party out, short rest (regain half the missing HP; the
  * fallen get back up), award XP and level up, and add found loot to the pack. Chests left
  * closed are searched now: items to the pack, potions to whoever carries fewest.
- * Returns { state, report: { xp, total, levelUps: [{ code, name, level, note }], loot, potions } }.
+ * A boss leaves its relic (`report.relic`, the id, or null if the run already has it).
+ * Returns { state, report: { xp, total, levelUps: [{ code, name, level, note }], loot, potions, longRest, relic } }.
  */
 export function completeFight(prev, id, game) {
   const state = clone(prev);
@@ -358,7 +360,8 @@ export function completeFight(prev, id, game) {
     if (!carried[code]) continue;
     const rec = { ...state.party[code], ...carried[code] };
     const max = restedHero(code, rec).maxHp;
-    rec.hp = Math.min(max, rec.hp + Math.ceil((max - rec.hp) / 2));
+    // Nekhet's Embalming Jar makes it a full heal.
+    rec.hp = state.relics?.includes('jar') ? max : Math.min(max, rec.hp + Math.ceil((max - rec.hp) / 2));
     rec.alive = true;
     state.party[code] = rec;
   }
@@ -410,13 +413,18 @@ export function completeFight(prev, id, game) {
     }
   }
   state.pack.push(...loot);
+  // A boss leaves its relic behind (once a run: New Game+ may bring it along already).
+  state.relics = cleanRelics(state.relics);
+  let relic = NODES[id].boss ? relicFrom(NODES[id].level) : null;
+  if (relic && state.relics.includes(relic)) relic = null;
+  if (relic) state.relics = cleanRelics([...state.relics, relic]);
   state.cleared.push(id);
   state.at = id;
   if (NODES[id].next.length === 0) state.done = true;
   // The end of an act: a long rest before the next one (casters would start it empty).
   const longRest = !!NODES[id].actBreak;
   if (longRest) restParty(state);
-  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest } };
+  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest, relic } };
 }
 
 /** Everyone back to full HP and spell slots. */
@@ -519,7 +527,8 @@ function validFight(f) {
     && Array.isArray(f.log) && f.log.every((c) => c && typeof c.type === 'string')
     && (f.check === null || typeof f.check === 'string')
     && Array.isArray(f.explored) && f.explored.every((k) => typeof k === 'string')
-    && Array.isArray(f.seen) && f.seen.every(Number.isInteger);
+    && Array.isArray(f.seen) && f.seen.every(Number.isInteger)
+    && (f.relics === undefined || (Array.isArray(f.relics) && cleanRelics(f.relics).length === f.relics.length));
 }
 
 /** A won run kept for New Game+ (see main.js), or null if it isn't a finished run. */
@@ -541,6 +550,8 @@ export function parseSave(text) {
     if (!Number.isInteger(s.tier) || s.tier < 0) s.tier = 0; // saves from before New Game+
     s.tier = Math.min(s.tier, MAX_TIER);
     s.stats = validStats(s.stats); // saves from before the run tally start a fresh one
+    // Saves from before relics get those of the bosses they've beaten.
+    s.relics = cleanRelics(s.relics ?? s.cleared.map((c) => (NODES[c].boss ? relicFrom(NODES[c].level) : null)));
     for (const code of HERO_CODES) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;

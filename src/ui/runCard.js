@@ -194,7 +194,15 @@ export async function saveRunCard(s, { touch = false } = {}) {
   const canvas = await drawRunCard(s);
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   if (!blob) throw new Error('Could not draw the card');
-  const file = new File([blob], 'crypt-skirmish-run.png', { type: 'image/png' });
+  return saveImage(blob, 'crypt-skirmish-run.png', { touch });
+}
+
+/**
+ * Saves a PNG: the share sheet on a phone, else a download (see saveRunCard). Photo mode
+ * uses it too.
+ */
+export async function saveImage(blob, name, { touch = false } = {}) {
+  const file = new File([blob], name, { type: 'image/png' });
   if (touch && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Crypt Skirmish' });

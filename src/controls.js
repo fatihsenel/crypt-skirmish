@@ -17,7 +17,7 @@ import { announce } from './ui/announce.js';
 export function createControls(deps) {
   const { stage, hud, threats, helpBox } = deps;
   const game = () => deps.game();
-  const heroTurn = () => deps.isHeroTurn() && !deps.busy();
+  const heroTurn = () => deps.isHeroTurn() && !deps.busy() && !deps.photo();
   const hovered = () => deps.hovered();
   const view = (u) => deps.views().get(u.id);
 
@@ -50,7 +50,7 @@ export function createControls(deps) {
   // acts, as before). The press that showed the card isn't a tap.
   const press = longPress(stage.dom, {
     target: (ev) => {
-      if (!game() || game().over) return null;
+      if (!game() || game().over || deps.photo()) return null;
       const t = pickTile(ev);
       return t && deps.visibleUnitAt(t.x, t.z);
     },
@@ -60,7 +60,7 @@ export function createControls(deps) {
   stage.dom.addEventListener('contextmenu', (ev) => ev.pointerType !== 'mouse' && touching && ev.preventDefault());
 
   stage.dom.addEventListener('pointermove', (ev) => {
-    if (ev.pointerType !== 'mouse') return;
+    if (ev.pointerType !== 'mouse' || deps.photo()) return;
     putCursorAway(); // the mouse has the cursor again
     const t = pickForMove(ev);
     if (t?.x === hovered()?.x && t?.z === hovered()?.z) return;

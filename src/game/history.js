@@ -4,6 +4,7 @@
 // (Abandon run at camp, or a new campaign replacing the save).
 
 import { runSummary, nodeName, DIFFICULTIES, MAX_TIER, difficultyLabel } from './campaign.js';
+import { cleanRelics } from './items.js';
 
 export const HISTORY_KEY = 'crypt-skirmish:history';
 export const MAX_RUNS = 20;
@@ -13,7 +14,7 @@ export const LAST_FIGHT_KEY = 'crypt-skirmish:last-fight';
 export const MAX_FIGHT_SIZE = 60000;
 
 /**
- * A fight record as it can be watched again: { node, seed, party, difficulty, tier?, log, result },
+ * A fight record as it can be watched again: { node, seed, party, difficulty, tier?, relics?, log, result },
  * or null when something is missing or it's too big to keep.
  */
 export function watchable(fight) {
@@ -23,6 +24,8 @@ export function watchable(fight) {
     || typeof difficulty !== 'string' || !Array.isArray(log) || !['victory', 'defeat'].includes(result)) return null;
   const kept = { node, seed, party, difficulty, log, result };
   if (Number.isInteger(fight.tier) && fight.tier > 0) kept.tier = fight.tier; // New Game+ (none means 0)
+  const relics = cleanRelics(fight.relics); // the bosses' relics the party had (none means none)
+  if (relics.length) kept.relics = relics;
   if (typeof fight.check === 'string') kept.check = fight.check; // its end, for a link (fightLink.js)
   return JSON.stringify(kept).length <= MAX_FIGHT_SIZE ? kept : null;
 }

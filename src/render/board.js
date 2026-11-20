@@ -716,6 +716,11 @@ export class Board {
     for (const l of this.layers) l.clear();
   }
 
+  /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
+  showOverlays(on) {
+    for (const l of [...this.layers, this.threatMelee, this.threatRanged]) l.material.visible = on;
+  }
+
   dispose() {
     this.group.traverse((o) => {
       o.geometry?.dispose();

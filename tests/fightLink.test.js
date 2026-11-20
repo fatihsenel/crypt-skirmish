@@ -8,8 +8,8 @@ import { NODES, newCampaign, runDifficulty } from '../src/game/campaign.js';
 import { encodeFight, decodeFight, replaysTrue, replayOutcome, challengeText, cleanParty, unpack, fightUrl, linkIn, LINK_VERSION } from '../src/game/fightLink.js';
 
 /** Play a room to the end with the AI choosing the heroes' moves, given as commands like the player's. */
-function playFight(node, seed, party, tier = 0) {
-  const game = new Game(levelById(NODES[node].level), { party, difficulty: runDifficulty('normal', tier), rng: seeded(seed) });
+function playFight(node, seed, party, tier = 0, relics = []) {
+  const game = new Game(levelById(NODES[node].level), { party, difficulty: runDifficulty('normal', tier), rng: seeded(seed), relics });
   const log = [];
   const give = (cmd) => {
     const r = applyCommand(game, cmd);
@@ -37,7 +37,7 @@ function playFight(node, seed, party, tier = 0) {
     }
     if (game.current === u && !game.over) give({ type: 'end' });
   }
-  return { node, seed, party, difficulty: 'normal', ...(tier && { tier }), log, result: game.over, check: fightCheck(game), rounds: game.round };
+  return { node, seed, party, difficulty: 'normal', ...(tier && { tier }), ...(relics.length && { relics }), log, result: game.over, check: fightCheck(game), rounds: game.round };
 }
 
 describe('a fight as a link', () => {
@@ -76,6 +76,17 @@ describe('a fight as a link', () => {
     const { tier, rounds: _r2, ...asZero } = f1;
     expect(tier).toBe(1);
     expect(replaysTrue(asZero)).toBe(false);
+  });
+
+  it('carries the run’s relics, and the fight replays only with them', async () => {
+    const f2 = playFight('crypt', 1234, party, 0, ['phylactery', 'horn', 'veil']);
+    const { rounds: _r, ...sent2 } = f2;
+    expect(await decodeFight(await encodeFight(f2))).toEqual(sent2);
+    expect(replaysTrue(f2)).toBe(true);
+    const { relics, ...without } = f2;
+    expect(relics).toHaveLength(3);
+    expect(replaysTrue(without)).toBe(false);
+    expect(unpack({ v: LINK_VERSION, n: 'crypt', s: 1, d: 'normal', rl: ['crown'], p: party, l: [], r: 'victory', c: 'x' })).toBeNull();
   });
 
   it('refuses broken or unknown links', async () => {

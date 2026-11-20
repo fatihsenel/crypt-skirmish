@@ -271,8 +271,9 @@ export class Hud {
   }
 
   /** Dark One's Blessing: temporary HP from a kill. */
-  logWard({ unit, relentless }) {
-    if (relentless) this.log(`${who(unit)} is <b>Relentless</b>: it stays on its feet with 1 HP.`);
+  logWard({ unit, relentless, relic }) {
+    if (relic) this.log(`<b class="heal">Morvath’s Phylactery</b> holds: ${who(unit)} stays on their feet with 1 HP.`);
+    else if (relentless) this.log(`${who(unit)} is <b>Relentless</b>: it stays on its feet with 1 HP.`);
     else this.log(`<b class="heal">Death Ward</b> holds: ${who(unit)} stays on their feet with 1 HP.`);
   }
 

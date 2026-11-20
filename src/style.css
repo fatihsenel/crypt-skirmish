@@ -136,16 +136,16 @@ html, body {
   display: flex;
   gap: 6px;
   padding: 6px;
-  max-width: calc(100% - 400px); /* clear of the help box and the sound button */
+  max-width: calc(100% - 472px); /* centred, clear of the five icon buttons on the right */
   overflow-x: auto;
   scrollbar-width: none;
 }
 @media (min-width: 1401px) {
-  #initiative { max-width: calc(100% - 840px); } /* clear of the labelled buttons on the right */
+  #initiative { max-width: calc(100% - 936px); } /* clear of the labelled buttons on the right */
 }
 @media (max-width: 900px) {
-  /* Left-aligned, stopping short of the five icon buttons on the right. */
-  #initiative { max-width: calc(100% - 248px); left: 12px; transform: none; }
+  /* Left-aligned, stopping short of the six icon buttons on the right. */
+  #initiative { max-width: calc(100% - 292px); left: 12px; transform: none; }
 }
 @media (max-width: 600px) and (min-height: 521px) {
   /* An upright phone: too narrow for both on one line, so the portraits get their own row
@@ -528,7 +528,7 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   gap: 6px;
   z-index: 22; /* above the title and camp screens, so sound and settings work there too */
 }
-#sound, #music, #settings-toggle, #threats-toggle {
+#sound, #music, #settings-toggle, #threats-toggle, #photo-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -704,6 +704,8 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
 @media (max-height: 520px) { #banner .banner-emblem, #banner .banner-logo { height: 80px; } }
 #banner[data-result='defeat'] h1 { color: var(--monster); }
 #banner p { margin: 0 auto 18px; color: var(--muted); max-width: 420px; }
+#banner p.banner-relic { color: var(--ink); padding: 8px 12px; border: 1px solid var(--panel-edge); border-radius: 8px; }
+#banner p.banner-relic b, b.relic { color: var(--gold); }
 #banner-recap[hidden] { display: none; }
 #banner-recap {
   margin: -6px auto 18px; padding: 10px 14px; max-width: 420px; text-align: left; font-size: 13px; color: #d8cfc0;
@@ -1060,7 +1062,9 @@ b.loot { color: var(--gold); }
 .camp-head h2 { margin: 0; font: 700 26px var(--display); color: var(--gold); }
 .camp-foot { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
 .camp-foot button { font-size: 12px; color: var(--muted); }
-#camp-pack-box[hidden] { display: none; }
+#camp-pack-box[hidden], #camp-relics-box[hidden] { display: none; }
+.relic-item { padding: 6px 10px; margin-bottom: 6px; border-radius: 8px; border: 1px solid var(--panel-edge); }
+.relic-item small { display: block; color: var(--muted); }
 
 /* New Game+: one heirloom per hero. */
 #history-deepest { margin: 2px 0 10px; font-size: 13px; color: var(--gold); }
@@ -1229,9 +1233,10 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
   #camp-party { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6px; }
 }
 /* The fight HUD steps back while the title or camp is up. */
-#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle),
-#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle) { visibility: hidden; }
-#app:has(#title:not([hidden])) #threats-toggle, #app:has(#camp:not([hidden])) #threats-toggle { display: none; } /* no gap in the row */
+#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle),
+#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle) { visibility: hidden; }
+#app:has(#title:not([hidden])) :is(#threats-toggle, #photo-toggle),
+#app:has(#camp:not([hidden])) :is(#threats-toggle, #photo-toggle) { display: none; } /* no gap in the row */
 
 /* Shown while a fight waits for the character models to finish downloading. */
 #loading {
@@ -1367,6 +1372,26 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 /* watching a finished fight again */
 body.replaying #actionbar, body.replaying #undo { display: none; }
 #replay-bar[hidden] { display: none; }
+
+/* photo mode (photo.js): only the board and the photo bar */
+body.photo #app > :not(#stage, #photo-bar, #announce),
+body.photo #stage .labels { visibility: hidden; }
+body.photo #stage canvas { cursor: grab; }
+body.photo #stage canvas:active { cursor: grabbing; }
+#photo-bar[hidden] { display: none; }
+#photo-bar {
+  position: absolute;
+  left: 50%; bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
+  width: max-content; max-width: calc(100% - 24px); box-sizing: border-box;
+  padding: 8px 12px;
+  background: var(--panel); border: 1px solid var(--gold); border-radius: 12px;
+  z-index: 30;
+}
+.photo-hint { font-size: 12px; color: var(--muted); }
+body.touch .photo-hint.mouse-only, body:not(.touch) .photo-hint.touch-only { display: none; }
+body.touch #photo-bar button { min-height: 44px; }
 #replay-bar {
   position: absolute;
   left: 50%; bottom: calc(14px + env(safe-area-inset-bottom));

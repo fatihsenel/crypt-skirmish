@@ -83,8 +83,9 @@ export class Game extends Spellcasting {
    * @param party  hero state from the previous level, keyed by hero slot (F W R C)
    */
   /** senses: false makes every monster aware from the start (the old behaviour). */
-  constructor(level, { rng = Math.random, party = null, senses = true, difficulty = null } = {}) {
+  constructor(level, { rng = Math.random, party = null, senses = true, difficulty = null, relics = [] } = {}) {
     super();
+    this.relics = [...relics]; // the run's boss relics (items.js RELICS)
     const rows = Array.isArray(level) ? level : level.rows;
     // Every die rolled and every event (but a plain step) is counted, so a move that rolled
     // nothing and set nothing off can be taken back exactly (see undoMove).
@@ -525,14 +526,20 @@ export class Game extends Spellcasting {
       u.initRoll = rollDice(1, 20, this.rng).total;
       u.initiative = u.initRoll + abilityMod(u.stats.dex);
     }
+    // Varek's Barrow Horn: the heroes go first, each side in its own initiative order.
+    const first = (u) => (this.relics.includes('horn') && u.team === 'heroes' ? 0 : 1);
     this.order = this.living().sort(
-      (a, b) => b.initiative - a.initiative || b.stats.dex - a.stats.dex,
+      (a, b) => first(a) - first(b) || b.initiative - a.initiative || b.stats.dex - a.stats.dex,
     );
     this.emit('initiative', { order: this.order });
     this.round = 1;
     this.turn = 0;
     this.emit('round', { round: 1 });
     this.revealTraps();
+    // Ysolde's Veil: the party starts hidden, at passive Stealth (5 less in noisy armour).
+    if (this.relics.includes('veil')) {
+      for (const h of this.living('heroes')) h.hidden = Math.max(1, 10 + this.stealthBonus(h) - (h.noisyArmor ? 5 : 0));
+    }
     this.updateAwareness();
     this.beginTurn();
   }
@@ -649,6 +656,13 @@ export class Game extends Spellcasting {
       const saved = this.tally(target);
       if (saved) saved.warded = (saved.warded ?? 0) + 1;
       this.emit('ward', { unit: target, source, ...(target.elite === 'relentless' && { relentless: true }) });
+    }
+    // Morvath's Phylactery: once a fight, the first hero who would drop stays on 1 HP.
+    if (target.hp <= 0 && target.alive && target.team === 'heroes' && !target.corpse
+      && this.relics.includes('phylactery') && !this.phylacteryUsed) {
+      target.hp = 1;
+      this.phylacteryUsed = true;
+      this.emit('ward', { unit: target, source, relic: 'phylactery' });
     }
     const t = target.team === 'monsters' ? this.tally(source) : null;
     if (t) t.damage += before - target.hp; // only what landed, not overkill

@@ -111,6 +111,7 @@
               <li><kbd>T</kbd>Threats</li>
               <li><kbd>Z</kbd>Undo move</li>
               <li><kbd>R</kbd>Read out</li>
+              <li><kbd>P</kbd>Photo mode</li>
               <li><kbd>H</kbd><kbd>?</kbd>This panel</li>
             </ul>
           </div>
@@ -122,6 +123,7 @@
               <dt><kbd>Hold</kbd></dt><dd>What a button or figure is</dd>
               <dt><kbd>Tap a tag</kbd></dt><dd>What it does</dd>
               <dt><kbd>Swipe</kbd></dt><dd>More buttons past a faded edge</dd>
+              <dt><kbd>Camera</kbd></dt><dd>Photo mode: turn, pan, save</dd>
             </dl>
           </div>
           <h3>On the board</h3>
@@ -151,6 +153,13 @@
           <path d="M8 9h6M8 12.5h6M8 16h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
         </svg>
         <span>Log</span>
+      </button>
+      <button id="photo-toggle" type="button" aria-pressed="false" data-tip="Photo mode" data-desc="Hide the HUD, turn the camera and save a picture" data-key="P">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M4 8h3l1.5-2h7L17 8h3v11H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          <circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8" />
+        </svg>
+        <span>Photo</span>
       </button>
       <button id="music" type="button" aria-pressed="true" data-tip="Music" data-desc="Turn the music on or off" data-key="N">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -209,6 +218,12 @@
       <div id="announce" class="sr-only" aria-live="polite" aria-relevant="additions"></div>
       <div id="loading" role="status" hidden>Gathering the party…</div>
 
+      <div id="photo-bar" hidden role="group" aria-label="Photo mode">
+        <span class="photo-hint mouse-only">Drag to turn · right-drag to pan · scroll to zoom</span>
+        <span class="photo-hint touch-only">One finger turns · two pan and pinch</span>
+        <button id="photo-save" type="button" class="primary">Save image</button>
+        <button id="photo-done" type="button">Done</button>
+      </div>
       <div id="replay-bar" hidden role="group" aria-label="Replay">
         <span id="replay-label">Replay</span>
         <button id="replay-pause" type="button" title="Space">Pause</button>
@@ -222,6 +237,7 @@
           <div id="banner-emblem" hidden><img class="banner-emblem" src="/boot-logo.jpg" alt="" width="340" height="296" /></div>
           <h1 id="banner-title"></h1>
           <p id="banner-text"></p>
+          <p id="banner-relic" class="banner-relic" hidden></p>
           <div id="banner-recap" hidden></div>
           <ul id="banner-awards" hidden></ul>
           <div id="banner-stats" hidden></div>
@@ -376,6 +392,10 @@
               <div id="camp-pack-box">
                 <h3 class="sub">Pack</h3>
                 <div id="camp-pack"></div>
+              </div>
+              <div id="camp-relics-box" hidden>
+                <h3 class="sub">Relics</h3>
+                <div id="camp-relics"></div>
               </div>
             </div>
           </div>

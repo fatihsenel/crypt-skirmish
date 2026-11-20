@@ -38,6 +38,8 @@ import { createLinks } from './links.js';
 import { createThreats } from './threats.js';
 import { createAnimations } from './animate.js';
 import { createControls } from './controls.js';
+import { createPhotoMode } from './photo.js';
+import { cleanRelics, RELICS } from './game/items.js';
 import { createPreview } from './preview.js';
 import { settleFight } from './fightEnd.js';
 import { announce } from './ui/announce.js';
@@ -271,7 +273,7 @@ function startChallenge(rec, theirs) {
   saving = false;
   daily = null;
   challenge = { rec, theirs };
-  campaign = { ...newCampaign(rec.difficulty), party: structuredClone(rec.party), ...(rec.tier && { tier: rec.tier }) };
+  campaign = { ...newCampaign(rec.difficulty), party: structuredClone(rec.party), ...(rec.tier && { tier: rec.tier }), relics: [...(rec.relics ?? [])] };
   nodeId = rec.node;
   camp.hide();
   newGame();
@@ -618,9 +620,11 @@ function startFight(resume, watch = null) {
   const party = watch?.party ?? campaign.party;
   const difficulty = watch?.difficulty ?? campaign.difficulty;
   const tier = (watch ? watch.tier : campaign.tier) ?? 0; // New Game+
-  game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed) });
-  fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [] };
-  if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), log: resume ? [...resume.log] : [] };
+  // A saved fight keeps the relics it began with (none for one saved before relics).
+  const relics = (watch ? watch.relics : resume ? resume.relics : campaign.relics) ?? [];
+  game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed), relics });
+  fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
+  if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };
   feats = { maxHit: 0, sneaks: 0, stayDown: false };
   game.on('attack', (r) => {
     if (r.attacker.team !== 'heroes' || !r.hit) return;
@@ -682,6 +686,9 @@ function startFight(resume, watch = null) {
       hud.log(`<span class="${u.team}">${u.name}</span> <span class="dice">d20 ${u.initRoll} ${signed(u.initiative - u.initRoll)} = ${u.initiative}</span>`);
     }
     if (lurking) hud.log(`<span class="monsters">Something</span> stirs beyond your sight…`, 'sys');
+    // The run's relics that change how a fight starts.
+    if (game.relics.includes('horn')) hud.log(`<b class="relic">${RELICS.horn.name}</b> sounds: the heroes go first.`, 'sys');
+    if (game.relics.includes('veil')) hud.log(`<b class="relic">${RELICS.veil.name}</b> hides the party.`, 'sys');
     // New Game+ 2 and deeper: the elite's trait is named once it's seen (the vision ticker).
     const elite = game.units.find((u) => u.elite && u.alive);
     if (elite && unseen(elite)) hud.log('Something strong lurks here: an <b>elite</b>.', 'sys');
@@ -720,7 +727,7 @@ function startFight(resume, watch = null) {
     hud.logWard(r);
     // Shown once the blow has landed.
     wait(500).then(() => {
-      floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, r.relentless ? 'Relentless!' : 'Death Ward!', r.relentless ? 'warn' : 'heal');
+      floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, r.relic ? 'Phylactery!' : r.relentless ? 'Relentless!' : 'Death Ward!', r.relentless ? 'warn' : 'heal');
       view(r.unit)?.updateStatus();
     });
   });
@@ -1068,19 +1075,21 @@ async function checkGameOver() {
 
 // --- turns ------------------------------------------------------------------
 /**
- * While the game is out of sight (another tab or app, a locked screen), monsters wait to take
- * their turn, and their next step, until it's back, so the player sees what they do. Null (no
- * wait) while it shows.
+ * While the game is out of sight (another tab or app, a locked screen) or in photo mode,
+ * monsters wait to take their turn, and their next step, until it's back, so the player sees
+ * what they do. Null (no wait) while it shows.
  */
 function whileAway() {
-  if (!document.hidden) return null;
+  const away = () => document.hidden || photo.active;
+  if (!away()) return null;
   return new Promise((resolve) => {
     const back = () => {
-      if (document.hidden) return;
+      if (away()) return;
       document.removeEventListener('visibilitychange', back);
       setTimeout(resolve, 400); // a moment to take in the board first
     };
     document.addEventListener('visibilitychange', back);
+    photo.onLeave(back);
   });
 }
 
@@ -1381,7 +1390,18 @@ const controls = createControls({
   hovered: () => hovered, setHovered: (t) => { hovered = t; },
   selected: () => selected, setSelected: (s) => { selected = s; },
   isHeroTurn, refresh, heroCommand, endHeroTurn, undoMove, endReplay, keepInView,
-  toggleSound, toggleMusic, visibleUnitAt, spellTargetAt,
+  toggleSound, toggleMusic, visibleUnitAt, spellTargetAt, photo: () => photo.active,
+});
+// Photo mode (P): no HUD, a free camera and Save image. Monster turns wait for it (whileAway).
+const photo = createPhotoMode(stage, {
+  canEnter: () => !!game && !!board && !camp.open && document.getElementById('title').hidden,
+  board: () => board,
+  views: () => views,
+  focus: () => { // the figure whose turn it is, if it can be seen (a hidden one stays hidden)
+    const c = game?.current;
+    return c?.alive && visibleUnitAt(c.x, c.z) === c ? c : null;
+  },
+  touch: () => hud.touch,
 });
 /** ?victory: the won-campaign screen for a made-up run (see debug.js). Nothing is saved or recorded. */
 function showSampleVictory() {
@@ -1423,6 +1443,7 @@ if (levelParam >= 1 && levelParam <= LEVELS.length) {
     const d = q.get('difficulty'); // e.g. &difficulty=hard
     campaign = partyAt(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('warlock') && { W: 'K' }), ...(q.has('ranger') && { R: 'A' }) }), Number(q.get('party')));
     campaign.tier = Math.max(0, Math.min(99, Math.floor(Number(q.get('tier')) || 0))); // &tier=2: New Game+
+    campaign.relics = cleanRelics((q.get('relics') ?? '').split(',')); // &relics=veil,horn
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
     loadModels(roomFiles(nodeId, campaign.party)).then(() => loadModels(allFiles())); // this room first

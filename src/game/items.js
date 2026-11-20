@@ -63,3 +63,34 @@ export function applyItems(unit, items = []) {
   for (const id of items) ITEMS[id]?.apply?.(unit);
   return unit;
 }
+
+// Relics: each boss leaves one behind. A relic isn't worn: it works for the whole party for
+// the rest of the run (and into New Game+). `boss` is the room (level id) that drops it.
+export const RELICS = {
+  phylactery: {
+    name: 'Morvath’s Phylactery', boss: 'sanctum',
+    desc: 'In each fight, the first hero who would drop to 0 HP stays on 1 HP instead.',
+  },
+  horn: {
+    name: 'Varek’s Barrow Horn', boss: 'barrow',
+    desc: 'The heroes take the top of the turn order in every fight.',
+  },
+  veil: {
+    name: 'Ysolde’s Veil', boss: 'throne',
+    desc: 'The party starts every fight hidden (passive Stealth), until a monster spots them.',
+  },
+  jar: {
+    name: 'Nekhet’s Embalming Jar', boss: 'tomb',
+    desc: 'The short rest after a room heals every hero fully, not half.',
+  },
+};
+
+/** The relic a boss room (level id) leaves behind, or null. */
+export function relicFrom(levelId) {
+  return Object.keys(RELICS).find((id) => RELICS[id].boss === levelId) ?? null;
+}
+
+/** A list of relic ids kept to known ones, each once, in table order. */
+export function cleanRelics(list) {
+  return Array.isArray(list) ? Object.keys(RELICS).filter((id) => list.includes(id)) : [];
+}

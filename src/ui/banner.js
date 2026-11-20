@@ -3,6 +3,7 @@
 // and Save image. The Watch, link and New Game+ buttons are wired up in main.js.
 
 import { saveRunCard } from './runCard.js';
+import { RELICS } from '../game/items.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -17,7 +18,7 @@ export class EndBanner {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  show(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], daily = null, challenge = null, share = null, recap = null, win = null, replay = false, ngplus = false }) {
+  show(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], relic = null, jar = false, daily = null, challenge = null, share = null, recap = null, win = null, replay = false, ngplus = false }) {
     this.renderSummary(summary);
     this.renderRecap(recap, win);
     this.cardSummary = summary;
@@ -36,7 +37,9 @@ export class EndBanner {
     const won = result === 'victory';
     const rest = longRest
       ? 'takes a long rest before going deeper (full HP and spell slots)'
-      : 'catches its breath (short rest: regain half your missing HP)';
+      : jar
+        ? 'catches its breath (short rest, with the Embalming Jar: full HP)'
+        : 'catches its breath (short rest: regain half your missing HP)';
     $('#banner-title').textContent = won ? (final ? 'Victory' : 'Room cleared') : 'Defeat';
     $('#banner-emblem').hidden = won && !final; // the skull laughs or mocks there (bannerSkull in main.js)
     $('#banner-text').textContent = won
@@ -44,6 +47,10 @@ export class EndBanner {
         ? summary ? outro : `${outro} Won after ${rounds}. Well fought! (+${xp} XP)`
         : `${level} is quiet after ${rounds}. The party shares ${xp} XP and ${rest}.`
       : `Your party has fallen in ${level}. Try the room again as you entered it, or go back to the map and pick another way.`;
+    // A boss's relic: named under the result, with what it does.
+    $('#banner-relic').hidden = !relic;
+    $('#banner').setAttribute('aria-describedby', relic ? 'banner-text banner-relic' : 'banner-text');
+    if (relic) $('#banner-relic').innerHTML = `Relic found: <b>${RELICS[relic].name}</b>. ${RELICS[relic].desc}`;
     $('#next').hidden = !won || final;
     $('#to-map').hidden = won;
     $('#restart').textContent = won ? 'New campaign' : 'Try again';

@@ -8,7 +8,7 @@ import {
   cleanName, roomElite,
 } from '../game/campaign.js';
 import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
-import { ITEMS } from '../game/items.js';
+import { ITEMS, RELICS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
@@ -336,6 +336,10 @@ export class Camp {
     $('#camp-party').innerHTML = this.partyHtml(state);
     $('#camp-pack').innerHTML = this.packHtml(state);
     $('#camp-pack-box').hidden = !state.pack.length; // nothing to hand out
+    const relics = state.relics ?? [];
+    $('#camp-relics-box').hidden = !relics.length;
+    $('#camp-relics').innerHTML = relics.map((id) =>
+      `<div class="relic-item"><b class="relic">${esc(RELICS[id].name)}</b><small>${esc(RELICS[id].desc)}</small></div>`).join('');
     $('#camp-new').textContent = 'Abandon run';
     Bestiary.label($('#camp-bestiary'));
     const returned = had?.includes('data-unequip') && document.querySelector('#camp-pack .pack-item:last-child [data-equip]:not([disabled])');
@@ -379,7 +383,8 @@ export class Camp {
       ];
       const parts = [`<p>Room cleared: <b>+${report.xp} XP</b>. ${report.longRest
         ? 'Long rest: full HP and every spell slot back.'
-        : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
+        : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: full HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
+      if (report.relic) parts.push(`<p>Relic found: <b class="relic">${esc(RELICS[report.relic].name)}</b>. ${esc(RELICS[report.relic].desc)}</p>`);
       if (report.levelUps.length) {
         parts.push(`<div class="levelups"><b>Level up!</b><ul>${report.levelUps.map((l) =>
           `<li><b>${esc(l.name)}</b> reaches level ${l.level}: ${esc(l.note)}</li>`).join('')}</ul></div>`);
