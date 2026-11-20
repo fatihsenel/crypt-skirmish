@@ -19,11 +19,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const profile = mkdtempSync(join(tmpdir(), 'crypt-touch-'));
 const chrome = spawn(CHROME, [`--headless=new`, `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
-  '--no-first-run', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...(process.env.CI ? ['--no-sandbox'] : []),
-  'about:blank'], { stdio: 'ignore' });
+  '--no-first-run', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
+  ...(process.env.CI ? ['--no-sandbox', '--disable-dev-shm-usage'] : []),
+  'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+let chromeLog = '';
+chrome.stderr.on('data', (d) => { chromeLog = (chromeLog + d).slice(-4000); });
+let exited = null;
+chrome.on('exit', (code, signal) => { exited = signal ?? code; });
+chrome.on('error', (err) => { exited = err.message; });
 let ws;
 const done = (ok, text) => {
   console.log(text);
+  if (!ok && chromeLog) console.log(`Chrome's output:\n${chromeLog}`);
   ws?.close();
   chrome.kill();
   setTimeout(() => rmSync(profile, { recursive: true, force: true }), 500);
@@ -31,10 +38,13 @@ const done = (ok, text) => {
 };
 
 let targets;
-for (let i = 0; i < 40 && !targets; i++) {
+for (let i = 0; i < 120 && !targets && exited === null; i++) { // up to 30 s on a cold CI machine
   try { targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json(); } catch { await sleep(250); }
 }
-if (!targets) done(false, `FAIL: Chrome didn't start (${CHROME})`);
+if (!targets) {
+  done(false, `FAIL: Chrome didn't start (${CHROME}${exited !== null ? `, exited: ${exited}` : ''})`);
+  await new Promise(() => {}); // done() exits
+}
 ws = new WebSocket(targets.find((t) => t.type === 'page').webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener('open', r, { once: true }));
 let id = 0;
