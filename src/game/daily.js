@@ -42,7 +42,7 @@ export function prevDay(key) {
 }
 
 /** A 32-bit hash of a string (FNV-1a, then mixed), so neighbouring dates land far apart. */
-function hash(text) {
+export function hash(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);

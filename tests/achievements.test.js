@@ -97,6 +97,11 @@ describe('newer achievements', () => {
     state.stats.heroes = { F: { downed: 1 } };
     expect(ids(earned('run', { state }, {}))).toEqual(['no-rest', 'campaign']);
   });
+  it('rewards a weekly elite crypt won', () => {
+    expect(ids(earned('weekly', { streak: 1 }, {}))).toEqual(['weekly']);
+    expect(ids(earned('weekly', { streak: 2 }, { weekly: 1 }))).toEqual([]);
+  });
+
   it('rewards daily wins and a three-day streak', () => {
     expect(ids(earned('daily', { streak: 1 }, {}))).toEqual(['daily']);
     expect(ids(earned('daily', { streak: 3 }, { daily: 1 }))).toEqual(['daily-streak']);

@@ -9,7 +9,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | | |
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
-| ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: continue or start a campaign, the daily crypt, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
+| ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: continue or start a campaign, the daily and weekly elite crypts, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
 | ![The bestiary: monster cards with a line of lore and how many were slain, and the Elites section with each trait and how many you've slain](docs/screenshots/bestiary.jpg) | ![A won New Game+ 2 campaign: the run's facts, 13 elites slain by trait, and each hero's damage, kills, crits, healing and falls](docs/screenshots/victory.jpg) |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
@@ -130,7 +130,10 @@ It runs on desktop and on phones.
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button.
-- **Achievements:** 30 goals that carry across runs. Open them from the title screen.
+- **Weekly elite crypt:** one room a week at New Game+ 3, the same for everyone, with that
+  week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
+  keeps your best result and a streak of weeks won, and has a Copy result.
+- **Achievements:** 31 goals that carry across runs. Open them from the title screen.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
@@ -287,6 +290,7 @@ src/
     achievements.js  achievements and their checks
     bestiary.js      which monsters you've met and slain, and what they did to you
     daily.js         the daily crypt
+    weekly.js        the weekly elite crypt
     settings.js      settings kept in the browser
   render/            three.js only
     stage.js         renderer, camera, lights, screen shake, labels kept apart
@@ -302,6 +306,7 @@ src/
   audio/             sfx.js, music.js, voices.js (all procedural)
   ui/
     hud.js           initiative, action bar, combat log
+    replayBar.js     the replay bar: pause, next turn, speed and their keys
     runCard.js       the won campaign drawn as a picture to save
     camp.js          title screen and camp
     heirlooms.js     New Game+: the item each hero keeps
@@ -314,6 +319,8 @@ src/
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
   main.js            controller: input → game → animations → HUD
+  links.js           copying and opening #watch= and #play= links
+  debug.js           window.__debug and the ?victory sample run
 tests/               Vitest rules and replay tests
 scripts/
   sim.js             headless balance simulator

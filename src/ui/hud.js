@@ -735,17 +735,21 @@ export class Hud {
     $('#banner').hidden = false;
   }
 
-  /** The daily crypt's ending: the result, the day's best and the streak; try again or leave. */
+  /**
+   * The daily crypt's ending (or the weekly elite crypt's, `d.weekly`): the result, the day's
+   * or week's best and the streak; try again or leave.
+   */
   dailyBanner(d, level) {
     const rounds = (n) => `${n} round${n === 1 ? '' : 's'}`;
     const fell = (n) => (n === 0 ? 'nobody fell' : `${n} hero${n === 1 ? '' : 'es'} fell`);
     const best = d.best.won ? `won in ${rounds(d.best.rounds)}, ${fell(d.best.downed)}` : 'not won yet';
-    $('#banner-title').textContent = d.won ? 'Daily crypt won' : 'Defeat';
+    const unit = d.weekly ? 'week' : 'day';
+    $('#banner-title').textContent = d.won ? (d.weekly ? 'Weekly elite crypt won' : 'Daily crypt won') : 'Defeat';
     $('#banner-text').textContent = (d.won
       ? `${level} is quiet after ${rounds(d.rounds)}, and ${fell(d.downed)}.`
-      : `Your party has fallen in ${level}. Today’s crypt can be tried as often as you like.`)
-      + ` Best today: ${best} (try ${d.best.tries}).`
-      + (d.streak > 0 ? ` Streak: ${d.streak} day${d.streak === 1 ? '' : 's'}.` : '');
+      : `Your party has fallen in ${level}. ${d.weekly ? 'This week’s' : 'Today’s'} crypt can be tried as often as you like.`)
+      + ` Best ${d.weekly ? 'this week' : 'today'}: ${best} (try ${d.best.tries}).`
+      + (d.streak > 0 ? ` Streak: ${d.streak} ${unit}${d.streak === 1 ? '' : 's'}.` : '');
     $('#next').hidden = true;
     $('#restart').hidden = false;
     $('#restart').textContent = 'Try again';

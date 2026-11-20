@@ -28,12 +28,12 @@ server on 5173.
   (`replay.js`). Anything that changes the dice order makes old saves fall back to camp.
   The end banner's Watch replay plays the same record back (`startReplay` in `main.js`), and
   Past runs keep each run's last one (`history.js`). `#watch=` links carry the same record
-  (`fightLink.js`) and are replayed headlessly first, so a rules change refuses old links.
+  (`fightLink.js`, copied and opened by `links.js`) and are replayed headlessly first, so a rules change refuses old links.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`).
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).
 
 ## Adding content
 
@@ -55,7 +55,7 @@ server on 5173.
   `&tier=2` makes it a New Game+ run with elites slain.
 - `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.
-- `window.__debug` in the console: `command({type:'move', x, z})`,
+- `window.__debug` in the console (set up in `debug.js`): `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
   `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `threats()`.
 - Back up the `crypt-skirmish:*` localStorage keys before a scripted test and restore them

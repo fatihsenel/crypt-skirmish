@@ -8,6 +8,7 @@ import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { reachedNewGamePlus, loadDeepest, loadHistory } from '../game/history.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { Overlay } from './overlay.js';
+import { loadWeekly } from '../game/weekly.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -61,9 +62,10 @@ export class Bestiary {
     $('#bestiary-deadliest').innerHTML = worst.length
       ? `<b>Deadliest foes:</b> ${worst.map((h) => `${esc(name(h.code))} (${hurtText(h)})`).join(', ')}`
       : '';
-    // New Game+ 2 and deeper: what an elite can be, shown once New Game+ is open.
-    const elites = reachedNewGamePlus(loadDeepest(), loadHistory());
+    // New Game+ 2 and deeper: what an elite can be, shown once New Game+ is open or a weekly
+    // elite crypt has been tried.
     const eliteSlain = loadElitesSlain();
+    const elites = reachedNewGamePlus(loadDeepest(), loadHistory()) || Object.keys(loadWeekly()).length > 0;
     $('#bestiary-elites').hidden = !elites;
     $('#bestiary-elites').innerHTML = !elites ? '' : `<h3 class="sub">Elites</h3>
       <p class="muted">From New Game+ 2, the strongest monster in each room is an elite with one of these traits. It wears a gold band.</p>

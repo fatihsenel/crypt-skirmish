@@ -1,7 +1,8 @@
 // Achievements: goals that last across runs, kept in the browser. Each is checked when a room
 // is won (`room`: the fight that just ended, its node, and `feats` main.js tallied from the
 // fight's attacks), when a campaign is won (`run`: the finished campaign), or when the daily
-// crypt is won (`daily`: the daily win streak, today included), and unlocks once. A room's
+// crypt is won (`daily`: the daily win streak, today included) or the weekly elite crypt
+// (`weekly`: its streak of weeks), and unlocks once. A room's
 // check also gets the bestiary: `met` (kinds met), `slain` (monsters slain, all runs) and
 // `eliteKinds` (elite traits slain at least once, all runs).
 // Pure checks here; main.js stores and shows them.
@@ -145,6 +146,10 @@ export const ACHIEVEMENTS = [
   {
     id: 'daily-streak', name: 'Creature of habit', desc: 'Win the daily crypt 3 days in a row.',
     on: 'daily', test: ({ streak }) => streak >= 3,
+  },
+  {
+    id: 'weekly', name: 'Elite of the week', desc: 'Win a weekly elite crypt.',
+    on: 'weekly', test: () => true,
   },
 ];
 
