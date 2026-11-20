@@ -71,7 +71,7 @@ class Music {
     }
     this.next = c.currentTime + 0.1;
     this.timer = setInterval(() => this.schedule(), 60);
-    this.apply(2.5);
+    this.apply(1.2); // quick enough that the first tap is heard
   }
 
   setEnabled(on) {

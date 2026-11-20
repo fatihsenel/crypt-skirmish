@@ -176,8 +176,8 @@ Everything is generated in the browser, with no recordings:
   darker layers in boss rooms.
 - Sound effects and dungeon ambience.
 - Voices: every character shouts, chants and grunts in a made-up language.
-- Sound starts with your first tap or key press. On an iPhone it plays in silent mode too,
-  like a video does (iOS 17 and later); the Sound button mutes it.
+- Sound starts with your first tap or key press, with a low toll. On an iPhone it plays in
+  silent mode too, like a video does (iOS 17 and later); the Sound button mutes it.
 - With reduced motion (the Motion setting, or the system's when it's on System), the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
   dice don't wobble, and the title's skull holds still.

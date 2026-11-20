@@ -29,6 +29,7 @@ class Sfx {
     /** Each kind of sound's own level (0..1), under the mute switch: see setLevel. */
     this.levels = (({ music, effects, voices }) => ({ music, effects, voices }))(loadSettings());
     this.ambientOn = false;
+    this.woke = false; // the first-tap toll has played
   }
 
   // --- setup ----------------------------------------------------------------
@@ -74,7 +75,13 @@ class Sfx {
     // 'interrupted' is Safari's after a call or the app going to the background.
     // Called from a gesture: wake it, with a silent blip started inside the gesture itself
     // (some iPhones only wake for that, even when the context says it's running).
-    this.ctx.resume().catch(() => {});
+    // The first time it runs, a low toll answers the tap: the music and the hum fade in, so
+    // without it a first tap seems to do nothing.
+    this.ctx.resume().then(() => {
+      if (this.woke || !this.ready) return;
+      this.woke = true;
+      this.wake();
+    }, () => {});
     const blip = this.ctx.createBufferSource();
     blip.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
     blip.connect(this.ctx.destination);
@@ -665,6 +672,15 @@ class Sfx {
     this.play((t) => this.click(t, 1800, 0.08));
   }
 
+  /** The crypt waking: a low stone toll, the answer to the first tap. */
+  wake() {
+    this.play((t) => {
+      this.tone(t, { type: 'sine', freq: 98, dur: 1.6, gain: 0.22, attack: 0.01 });
+      this.tone(t, { type: 'sine', freq: 196.5, dur: 1.1, gain: 0.08, attack: 0.01 });
+      this.noise(t, { dur: 0.12, filter: 'lowpass', freq: 500, gain: 0.18 });
+    });
+  }
+
   /** The title skull's moves, when it's clicked: gape, chatter, twitch, laugh, lunge, gutter. */
   skull(move) {
     this.play((t) => {
@@ -724,7 +740,7 @@ class Sfx {
     const c = this.ctx;
     const amb = c.createGain();
     amb.gain.value = 0.0001;
-    amb.gain.exponentialRampToValueAtTime(1, c.currentTime + 3);
+    amb.gain.exponentialRampToValueAtTime(1, c.currentTime + 1.2);
     amb.connect(this.ambLevel);
 
     for (const f of [55, 55.6, 82.4]) {
