@@ -172,7 +172,10 @@ Everything is generated in the browser, with no recordings:
   dice don't wobble.
 - Screen readers hear the combat log as it happens (even with the log panel closed), whose
   turn it is, and what the keyboard cursor rests on with what Enter would do there. R reads
-  out the board around the hero, and the number keys say what they picked.
+  out the board around the hero, and the number keys say what they picked. At camp they hear
+  how the last room went, which room is next, each room on the map, and items handed out.
+- The title, camp and New Game+ work from the keyboard alone: Tab to a room on the map, Enter
+  to choose it, and focus stays where it was when the camp redraws.
 
 ## Controls
 
@@ -254,7 +257,7 @@ build and deploys to GitHub Pages (`.github/workflows/pages.yml`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
-12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`.
+12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&seed=7` for the same dice every time.
 This doesn't touch the save.
 
 **See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,
@@ -321,7 +324,7 @@ src/
   audio/             sfx.js, music.js, voices.js (all procedural)
   ui/
     hud.js           initiative, action bar, combat log
-    announce.js      what a screen reader hears: log lines, turns, the keyboard cursor
+    announce.js      what a screen reader hears: log lines, turns, the keyboard cursor, camp news
     replayBar.js     the replay bar: pause, next turn, speed and their keys
     runCard.js       the won campaign drawn as a picture to save
     camp.js          title screen and camp
@@ -337,6 +340,7 @@ src/
     tips.js          tips for new players
   main.js            controller: game → animations → HUD
   controls.js        mouse, touch and keyboard: the arrow-key cursor and the shortcut keys
+  preview.js         what a click on the hovered tile would do: the path, the odds, a spell's blast
   fightEnd.js        a finished fight's records: runs, achievements, dailies, the end banner's facts
   animate.js         plays back resolved attacks, moves, chests, actions and spells
   links.js           copying and opening #watch= and #play= links

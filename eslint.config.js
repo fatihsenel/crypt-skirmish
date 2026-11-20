@@ -11,6 +11,7 @@ export default [
       'no-unused-vars': ['error', { args: 'none', caughtErrors: 'none', ignoreRestSiblings: true }],
       'no-unreachable': 'error',
       'no-dupe-keys': 'error',
+      'no-dupe-class-members': 'error', // a method named like a getter replaces it
       'no-self-assign': 'error',
     },
   },

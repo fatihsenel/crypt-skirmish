@@ -44,7 +44,10 @@ server on 5173.
   second tap (`enterStep`). Screen readers hear log lines, turns and the cursor's tile
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
   press the action bar's first ten buttons (`pickByNumber` in `hud.js`); R reads `surroundings()`.
+  What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
+  The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
+  control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
   `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).
 
@@ -65,14 +68,15 @@ server on 5173.
 ## Testing in the browser
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
-  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&paladin`, `&ranger`, `&warlock`.
+  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&paladin`, `&ranger`, `&warlock`,
+  `&seed=S` (the same dice every time; `SEED=S npm run touch-check` uses it).
 - `?victory` shows the won-campaign screen for a sample run (Copy result, Save image);
   `&tier=2` makes it a New Game+ run with elites slain.
 - `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.
 - `window.__debug` in the console (set up in `debug.js`): `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
-  `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `threats()`.
+  `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`.
 - Back up the `crypt-skirmish:*` localStorage keys before a scripted test and restore them
   afterwards. The browser pane is the user's real profile.
 - Check phones too: 375×812 and 812×375. Touch shows its own controls (tap to preview, tap

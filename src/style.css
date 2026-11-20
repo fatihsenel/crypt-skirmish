@@ -829,7 +829,7 @@ b.loot { color: var(--gold); }
 #title .names summary { cursor: pointer; padding: 4px 0; }
 #title .names summary:hover { color: #e6cf98; }
 #title .names .name-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
-#title .names label { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+#title .names .name-slot { display: flex; flex-direction: column; gap: 4px; text-align: left; }
 #title .names small { font-size: 12px; color: #d8cfc0; }
 #title .names .cls-pick {
   display: inline-flex; align-self: flex-start; border: 1px solid #c9b07a66; border-radius: 6px; overflow: hidden;

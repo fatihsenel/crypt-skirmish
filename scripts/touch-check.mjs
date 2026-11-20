@@ -5,7 +5,8 @@
 //   npm run touch-check
 // Env: URL (default http://localhost:5173/; the deploy workflow checks the preview build at
 // http://localhost:4173/crypt-skirmish/), CHROME (the Chrome binary; the macOS default), SLOW
-// (a CPU slowdown factor, like 6, to try it the way a slow CI machine runs).
+// (a CPU slowdown factor, like 6, to try it the way a slow CI machine runs), SEED (the fight's
+// dice, for the same fight every time).
 // On CI (CI set) Chrome runs without its sandbox, which the Linux runners don't allow.
 
 import { spawn } from 'node:child_process';
@@ -72,7 +73,7 @@ try {
   if (process.env.SLOW) await send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) }); // to mimic CI
   await send('Page.navigate', { url: URL_BASE }); await sleep(2000);
   await ev(`localStorage.setItem('crypt-skirmish:tips', JSON.stringify({ on: false, seen: [] })); 1`);
-  await send('Page.navigate', { url: `${URL_BASE}?level=1` });
+  await send('Page.navigate', { url: `${URL_BASE}?level=1${process.env.SEED ? `&seed=${process.env.SEED}` : ''}` });
   // The room is up once the game exists (slow on a software-rendered CI machine).
   let up = false;
   for (let t0 = Date.now(); !up && Date.now() - t0 < 60000; await sleep(500)) {
@@ -81,7 +82,8 @@ try {
   if (!up) throw new Error('the room never loaded');
 
   // A hero's turn ready for input (End turn enabled: not busy with the turn's opening), the
-  // camera at rest on the hero, then a free tile two or more steps away, on screen, clear of the HUD.
+  // camera at rest on the hero, then a free tile two or more steps away, on screen, clear of the HUD
+  // and not hidden behind a figure (a tap there picks the figure).
   const pick = await ev(`(async () => {
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const g = __debug.game();
@@ -96,8 +98,9 @@ try {
     }
     const steps = (t) => Math.abs(t.x - u.x) + Math.abs(t.z - u.z);
     const onScreen = (t) => { const p = __debug.tileToScreen(t.x, t.z); return p.x > 40 && p.x < innerWidth - 40 && p.y > 170 && p.y < innerHeight - 260; };
+    const reached = (t) => { const p = __debug.tileToScreen(t.x, t.z); const h = __debug.pickAt(p.x, p.y); return h?.x === t.x && h?.z === t.z; }; // not behind a figure
     const t = g.destinations(u)
-      .filter(t => steps(t) >= 2 && onScreen(t) && !g.units.some(o => o.alive && Math.abs(o.x - t.x) + Math.abs(o.z - t.z) < 2))
+      .filter(t => steps(t) >= 2 && onScreen(t) && reached(t) && !g.units.some(o => o.alive && Math.abs(o.x - t.x) + Math.abs(o.z - t.z) < 2))
       .sort((a, b) => steps(a) - steps(b))[0];
     return t && { name: u.name, from: [u.x, u.z], to: [t.x, t.z] };
   })()`);

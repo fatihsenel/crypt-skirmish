@@ -12,6 +12,7 @@ import { ITEMS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
+import { announce } from './announce.js';
 import { loadHistory, loadDeepest, deepestLabel } from '../game/history.js';
 import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
 import { dayKey, dailyPlan, loadDaily, streak, bestFight, loadBestFights } from '../game/daily.js';
@@ -43,6 +44,18 @@ const CLASS_BLURB = {
   R: 'Rogue: Sneak Attack, hides as a bonus action and slips past monsters unseen, spots traps.',
   A: 'Ranger: a longbow with Archery, Hunter’s Mark for extra damage on one foe, spots traps. Extra Attack and Colossus Slayer at level 5.',
 };
+
+/** A selector for a camp control that a redraw replaces, to focus its new copy (null: leave focus). */
+function focusKey(el) {
+  if (!el?.closest?.('#camp')) return null;
+  for (const a of ['data-node', 'data-enter', 'data-equip', 'data-unequip']) {
+    if (el.hasAttribute(a)) return `#camp [${a}="${el.getAttribute(a)}"]`;
+  }
+  return el.id ? `#${el.id}` : null;
+}
+
+/** The name field's spoken label: "Fighter's name (Brannoc if left blank)". */
+const nameLabel = (cls) => `${TEMPLATES[cls].cls}’s name (${TEMPLATES[cls].name} if left blank)`;
 
 export class Camp {
   constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus }) {
@@ -138,12 +151,13 @@ export class Camp {
     grid.innerHTML = HERO_CODES.map((code) => {
       const options = CLASS_CHOICES[code];
       const head = options.length > 1
-        ? `<span class="cls-pick" role="group" aria-label="Class">${options.map((c) => `
+        ? `<span class="cls-pick" role="group" aria-label="${options.map((c) => TEMPLATES[c].cls).join(' or ')}">${options.map((c) => `
             <button type="button" data-slot="${code}" data-cls="${c}" title="${esc(CLASS_BLURB[c])}"
               aria-pressed="${c === code}">${esc(TEMPLATES[c].cls)}</button>`).join('')}</span>`
         : `<small>${esc(TEMPLATES[code].cls)}</small>`;
-      return `<label>${head}
-      <input type="text" data-code="${code}" maxlength="14" placeholder="${esc(TEMPLATES[code].name)}" autocomplete="off" spellcheck="false"></label>`;
+      // A div, not a label: a label would name (and click) the first class button.
+      return `<div class="name-slot">${head}
+      <input type="text" data-code="${code}" maxlength="14" placeholder="${esc(TEMPLATES[code].name)}" aria-label="${esc(nameLabel(code))}" autocomplete="off" spellcheck="false"></div>`;
     }).join('');
   }
 
@@ -153,7 +167,9 @@ export class Camp {
     for (const b of document.querySelectorAll(`#title-names [data-slot="${slot}"]`)) {
       b.setAttribute('aria-pressed', String(b.dataset.cls === cls));
     }
-    document.querySelector(`#title-names input[data-code="${slot}"]`).placeholder = TEMPLATES[cls].name;
+    const input = document.querySelector(`#title-names input[data-code="${slot}"]`);
+    input.placeholder = TEMPLATES[cls].name;
+    input.setAttribute('aria-label', nameLabel(cls));
   }
 
   /** `won`: a won run kept for New Game+ (offered until a new campaign starts). */
@@ -181,6 +197,11 @@ export class Camp {
     this.best = {};
     this.renderDaily();
     this.renderWeekly();
+    // Back from a run: focus was on something now hidden. (Not on page load, where a ring
+    // would show for the mouse too.)
+    if (document.activeElement !== document.body && !document.activeElement?.checkVisibility?.()) {
+      (save ? $('#title-continue') : won ? $('#title-ngplus') : $('#title-new')).focus();
+    }
   }
 
   /** Today's crypt: which room, the party, and the day's best result and the streak so far. */
@@ -297,6 +318,7 @@ export class Camp {
   // --- camp -------------------------------------------------------------------
   /** report: from completeFight ({ xp, levelUps, loot }), { rest: id }, or null. */
   show(state, report = this.report) {
+    const had = focusKey(document.activeElement); // the redraw replaces it: put focus back after
     this.state = state;
     this.report = report;
     const options = choices(state);
@@ -316,6 +338,25 @@ export class Camp {
     $('#camp-pack-box').hidden = !state.pack.length; // nothing to hand out
     $('#camp-new').textContent = 'Abandon run';
     Bestiary.label($('#camp-bestiary'));
+    const returned = had?.includes('data-unequip') && document.querySelector('#camp-pack .pack-item:last-child [data-equip]:not([disabled])');
+    if (had) (document.querySelector(had) ?? (returned || this.firstControl()))?.focus();
+  }
+
+  /** Back at camp after a room (or at the start of a run): focus on the way on, and say what happened. */
+  arrive(state, report) {
+    this.show(state, report);
+    this.firstControl()?.focus();
+    const lvl = levelForXp(state.xp);
+    const next = XP_LEVELS[lvl + 1];
+    const news = [...$('#camp-report').children].filter((e) => !e.classList.contains('xp'))
+      .map((e) => e.textContent.replace(/\s+/g, ' ').trim()).join(' ');
+    announce(`Camp. Party level ${lvl}, ${state.xp}${next ? ` of ${next}` : ''} XP. ${news}`
+      + (this.selected ? ` Next: ${nodeName(this.selected)}.` : ''));
+  }
+
+  /** Where focus goes when the camp opens or a focused control is gone: the way on, or the pack. */
+  firstControl() {
+    return document.querySelector('#camp-room [data-enter], #camp-pack [data-equip]:not([disabled]), #camp-new');
   }
 
   reportHtml(state, report) {
@@ -370,7 +411,12 @@ export class Camp {
       const label = n.short ?? nodeName(id).replace(/^The /, '');
       const elite = cleared.has(id) ? null : roomElite(id, state.tier); // New Game+ 2 and deeper
       const r = kind === 'boss' ? 21 : 18;
-      return `<g class="${cls}" data-node="${id}" transform="translate(${p.x} ${p.y})" ${state_ === 'available' ? 'tabindex="0" role="button"' : ''}>
+      const spoken = `${nodeName(id)}, ${kind === 'rest' ? 'a rest' : kind === 'boss' ? 'the boss room' : 'a room'}`
+        + `${{ cleared: ', cleared', available: ', open', locked: '' }[state_]}${id === state.at ? ', the party is here' : ''}`
+        + `${elite ? `, elite: ${elite.name}` : ''}`;
+      const role = state_ === 'available'
+        ? `tabindex="0" role="button" aria-pressed="${id === this.selected}"` : 'role="img"';
+      return `<g class="${cls}" data-node="${id}" transform="translate(${p.x} ${p.y})" ${role} aria-label="${esc(spoken)}">
         <title>${esc(nodeName(id))}${elite ? ` · Elite: ${esc(elite.name)}` : ''}</title>
         <circle r="${r}" />
         <g class="glyph">${GLYPH[kind]}</g>
@@ -379,7 +425,7 @@ export class Camp {
         <text y="${kind === 'boss' ? 38 : 34}">${esc(label)}</text>
       </g>`;
     }).join('');
-    return `<svg viewBox="0 0 ${MAP_W} 248" role="img" aria-label="Dungeon map">${edges}${nodes}</svg>`;
+    return `<svg viewBox="0 0 ${MAP_W} 248" role="group" aria-label="Dungeon map">${edges}${nodes}</svg>`;
   }
 
   roomHtml(state) {
@@ -436,6 +482,8 @@ export class Camp {
     if (node && node.classList.contains('available')) {
       this.selected = node.dataset.node;
       this.show(this.state);
+      const elite = roomElite(this.selected, this.state.tier);
+      announce(`${nodeName(this.selected)} chosen.${elite ? ` Elite here: ${elite.name}.` : ''} Its button is below the map.`);
       return;
     }
     const b = ev.target.closest('button');
@@ -443,14 +491,18 @@ export class Camp {
     if (b.dataset.enter) this.h.onEnter(b.dataset.enter);
     else if (b.dataset.equip) {
       const [i, code] = b.dataset.equip.split(':');
+      const what = `${ITEMS[this.state.pack[i]].name} given to ${heroUnit(code, this.state.party[code]).name}.`;
       this.h.onEquip(Number(i), code);
+      announce(what);
     } else if (b.dataset.unequip) {
       const [code, i] = b.dataset.unequip.split(':');
+      const what = `${ITEMS[this.state.party[code].items[i]].name} back in the pack.`;
       this.h.onUnequip(code, Number(i));
+      announce(what);
     } else if (b.id === 'camp-new') {
       if (!this.confirmNew) {
         this.confirmNew = true;
-        b.textContent = 'Click again to abandon this run';
+        b.textContent = 'Press again to abandon this run';
         return;
       }
       this.h.onNewCampaign();

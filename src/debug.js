@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { newCampaign, runSummary, runShareText } from './game/campaign.js';
 import { levelById } from './game/maps.js';
 import { partyAt } from './game/daily.js';
+import { tileFromEvent } from './input.js';
 
 /**
  * ?victory: the banner arguments for the won-campaign screen of a made-up run, to try Save
@@ -71,6 +72,11 @@ export function installDebug(app) {
       const v = new THREE.Vector3(x, 0, z).project(app.stage.camera);
       const r = app.stage.dom.getBoundingClientRect();
       return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+    },
+    /** The tile a click or tap at (x, y) picks: a figure in front of a tile takes its taps. */
+    pickAt(x, y) {
+      if (!app.game()) return null;
+      return tileFromEvent({ clientX: x, clientY: y }, { stage: app.stage, views: app.views(), board: app.board(), game: app.game() });
     },
   };
 }

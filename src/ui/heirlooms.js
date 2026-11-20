@@ -38,7 +38,7 @@ export class Heirlooms {
         ? items.map((id, i) => `<label title="${esc(ITEMS[id].desc ?? '')}"><input type="radio" name="${code}" value="${esc(id)}"${i === 0 ? ' checked' : ''} /> ${esc(ITEMS[id].name)}</label>`).join('')
           + `<label class="muted"><input type="radio" name="${code}" value="" /> Nothing</label>`
         : '<span class="muted">No magic items to keep</span>';
-      return `<li><div class="who"><b>${esc(heroName(code, rec))}</b> <span class="muted">${esc(TEMPLATES[classOf(code, rec)].cls)}</span></div><div class="keep">${pick}</div></li>`;
+      return `<li><div class="who"><b>${esc(heroName(code, rec))}</b> <span class="muted">${esc(TEMPLATES[classOf(code, rec)].cls)}</span></div><div class="keep"${items.length ? ` role="radiogroup" aria-label="What ${esc(heroName(code, rec))} keeps"` : ''}>${pick}</div></li>`;
     }).join('');
     $('#heirlooms-go').textContent = `Go back down (NG+${tier})`;
     this.panel.open(opener);
