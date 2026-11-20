@@ -21,8 +21,8 @@ server on 5173.
 
 - **`src/game/` is pure rules:** no three.js, no DOM. It is unit-tested in `tests/` and run
   headlessly by `scripts/sim.js`. Keep it that way.
-- The rules engine (`Game` in `combat.js`) resolves everything instantly and emits events
-  (`attack`, `move`, `spell`, `death`, …). `move()` returns steps. `src/main.js` turns them
+- The rules engine (`Game` in `combat.js`, built on `Spellcasting` in `spells.js`) resolves
+  everything instantly and emits events (`attack`, `move`, `spell`, `death`, …). `move()` returns steps. `src/main.js` turns them
   into HUD updates, and `src/animate.js` into animations and sound.
 - **Randomness in rules goes through `this.rng`** (or a passed-in `rng`), never
   `Math.random`. Fights are saved as a seed plus the heroes' commands and replayed on load
@@ -31,8 +31,11 @@ server on 5173.
   Past runs keep each run's last one (`history.js`). `#watch=` links carry the same record
   (`fightLink.js`, copied and opened by `links.js`) and are replayed headlessly first, so a rules change refuses old links.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
-  they follow the monster-turn speed setting (`playback.rate`). `calm()` there is the
-  system's reduced-motion setting: no shake, no camera pans, no drifting text.
+  they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
+  motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):
+  no shake, no camera pans, no drifting text.
+- Arrow keys move a board cursor (`stepTile` in `input.js`) that reuses the hover tile;
+  Enter acts there through the same `actAt` as a click.
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
   `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).

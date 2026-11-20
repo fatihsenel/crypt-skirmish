@@ -22,7 +22,7 @@ import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
 import { spiritWeapon } from './render/effects.js';
-import { wait, playback, calm } from './render/tween.js';
+import { wait, playback, calm, setMotion, onSystemMotion } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { fightRecap, winRecap } from './game/recap.js';
 import { Camp } from './ui/camp.js';
@@ -41,7 +41,7 @@ import { unlock } from './game/achievements.js';
 import { createLinks } from './links.js';
 import { createThreats, listNames } from './threats.js';
 import { createAnimations } from './animate.js';
-import { tileFromEvent, figureRect, longPress, tileCommand } from './input.js';
+import { tileFromEvent, figureRect, longPress, tileCommand, stepTile, ARROWS } from './input.js';
 import { installDebug, sampleVictory } from './debug.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed, replayKey } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText, recordBestFight } from './game/daily.js';
@@ -368,9 +368,17 @@ for (const b of document.querySelectorAll('.bestiary-open')) b.addEventListener(
 
 const settings = loadSettings();
 document.body.classList.toggle('colorblind', settings.colorblind);
+/** The Motion setting, for the animations (calm in tween.js) and the page's CSS (data-motion). */
+function applyMotion() {
+  setMotion(settings.motion);
+  document.documentElement.dataset.motion = calm() ? 'reduce' : 'full';
+}
+applyMotion();
+onSystemMotion(applyMotion);
 new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
+  if (key === 'motion') return applyMotion();
   if (key === 'colorblind') {
     board?.setThreatColors(value);
     document.body.classList.toggle('colorblind', value);
@@ -1584,6 +1592,7 @@ stage.dom.addEventListener('contextmenu', (ev) => ev.pointerType !== 'mouse' && 
 
 stage.dom.addEventListener('pointermove', (ev) => {
   if (ev.pointerType !== 'mouse') return;
+  keyCursor = false; // the mouse has the cursor again
   const t = pickTile(ev);
   if (t?.x === hovered?.x && t?.z === hovered?.z) return;
   hovered = t;
@@ -1614,18 +1623,51 @@ stage.dom.addEventListener('click', (ev) => {
     refresh();
     return;
   }
+  actAt(t);
+});
+
+/** What a click (or Enter on the keyboard cursor) on tile `t` does: act, or say why not. */
+function actAt(t) {
   const r = tileCommand(game, game.current, t, selected, { unitAt: visibleUnitAt, spellTarget: spellTargetAt });
   if (r?.toast) hud.toast(r.toast);
   else if (r?.cmd) heroCommand(r.cmd);
-});
+}
+
+// The keyboard cursor: the arrow keys move the hovered tile (starting on the hero whose turn
+// it is) and show what a click there would do; Enter does it. The mouse takes it back.
+let keyCursor = false;
+const screenOf = (x, z) => {
+  const v = new THREE.Vector3(x, 0, z).project(stage.camera);
+  return { x: v.x, y: -v.y * (stage.dom.clientHeight / Math.max(1, stage.dom.clientWidth)) };
+};
+function moveCursor(dir) {
+  const hero = game.current?.team === 'heroes' ? game.current : game.living('heroes')[0];
+  if (!hero) return;
+  hovered = keyCursor && hovered ? stepTile(game.grid, hovered, dir, screenOf) : { x: hero.x, z: hero.z };
+  keyCursor = true;
+  keepInView(hovered); // a phone with a keyboard: don't let it walk off screen
+  const who = visibleUnitAt(hovered.x, hovered.z);
+  hud.hoverUnit(game, who, () => unitRect(who));
+  if (isHeroTurn() && !busy) refresh();
+  else board.hover.set([hovered]);
+}
 
 window.addEventListener('keydown', (ev) => {
   if (ev.target instanceof HTMLInputElement) return; // typing a hero's name
   if (replay && replayKey(replay, ev, game?.round ?? 0, endReplay)) return;
-  if (ev.code === 'Space' || ev.code === 'Enter') {
-    if (ev.target instanceof HTMLButtonElement) return;
+  if (ARROWS[ev.code] && game && board && !game.over && !replay && !camp.open && !ev.altKey && !ev.metaKey && !ev.ctrlKey) {
+    if (ev.target.closest?.('#settings, #log, #help, .overlay')) return; // scrolling or picking there
     ev.preventDefault();
-    endHeroTurn();
+    moveCursor(ARROWS[ev.code]);
+    return;
+  }
+  if (ev.code === 'Space' || ev.code === 'Enter') {
+    if (ev.target instanceof HTMLButtonElement || ev.target instanceof HTMLElement && ev.target.closest('summary')) return;
+    ev.preventDefault();
+    // Enter acts on the keyboard cursor's tile; Space (or Enter without the cursor) ends the turn.
+    if (ev.code === 'Enter' && keyCursor && hovered) {
+      if (isHeroTurn() && !busy) actAt(hovered);
+    } else endHeroTurn();
   }
   if (ev.code === 'KeyZ' && !ev.altKey) {
     ev.preventDefault();
@@ -1637,8 +1679,14 @@ window.addEventListener('keydown', (ev) => {
   if (ev.code === 'KeyH' || ev.key === '?') helpBox.open = !helpBox.open;
   if (ev.code === 'KeyL' && game) hud.toggleLog();
   if (ev.code === 'Escape') {
+    if (!selected && keyCursor) { // nothing to cancel: put the keyboard cursor away
+      keyCursor = false;
+      hovered = null;
+      hud.hoverUnit(game, null);
+    }
     selected = null;
     if (isHeroTurn() && !busy) refresh();
+    else board?.hover.clear();
   }
 });
 

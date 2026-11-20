@@ -15,6 +15,17 @@ describe('reduced motion', () => {
     expect((await tweenWith(false)).calm()).toBe(false);
   });
 
+  it('lets the Motion setting override the system', async () => {
+    const calmSystem = await tweenWith(true);
+    calmSystem.setMotion('full');
+    expect(calmSystem.calm()).toBe(false);
+    const busySystem = await tweenWith(false);
+    busySystem.setMotion('reduce');
+    expect(busySystem.calm()).toBe(true);
+    busySystem.setMotion('system');
+    expect(busySystem.calm()).toBe(false);
+  });
+
   it('counts as off where there is no matchMedia (tests, the simulator)', async () => {
     vi.resetModules();
     vi.stubGlobal('matchMedia', undefined);

@@ -5,11 +5,22 @@
 export const playback = { rate: 1 };
 
 const reduce = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+let motion = 'system'; // the Motion setting: 'system', 'reduce' or 'full'
+
+/** Use the Motion setting (see game/settings.js). */
+export function setMotion(pref) {
+  motion = pref;
+}
+
+/** Call `fn` when the system's reduced-motion setting changes. */
+export const onSystemMotion = (fn) => reduce?.addEventListener?.('change', fn);
+
 /**
- * The system asks for less motion: no screen shake, camera pans jump, floating text fades
- * where it appears, dice don't wobble. Figures still walk and swing; that's the game itself.
+ * Less motion (the Motion setting, or the system's when it follows that): no screen shake,
+ * camera pans jump, floating text fades where it appears, dice don't wobble. Figures still
+ * walk and swing; that's the game itself.
  */
-export const calm = () => !!reduce?.matches;
+export const calm = () => motion === 'reduce' || (motion === 'system' && !!reduce?.matches);
 
 export const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 export const easeOut = (t) => 1 - Math.pow(1 - t, 3);

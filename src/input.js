@@ -133,3 +133,37 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
   }
   return { cmd: { type: 'move', x: t.x, z: t.z } };
 }
+
+/** Arrow keys as directions on screen (y grows downward). */
+export const ARROWS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+
+/**
+ * The keyboard cursor's next tile from `from`, one step toward screen direction `dir` ([dx, dy]):
+ * of the eight neighbours that aren't walls, the one whose screen offset points most nearly
+ * that way (the board is seen at an angle, so "up" isn't one grid axis). `toScreen(x, z)` gives
+ * a tile's screen position. Stays put when nothing lies roughly that way.
+ */
+export function stepTile(grid, from, dir, toScreen) {
+  const o = toScreen(from.x, from.z);
+  let best = null;
+  let bestScore = 0.4; // within about 65° of the arrow: around a wall, but never backwards
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      const x = from.x + dx;
+      const z = from.z + dz;
+      if ((!dx && !dz) || !grid.inBounds(x, z) || grid.isWall(x, z)) continue;
+      const p = toScreen(x, z);
+      const vx = p.x - o.x;
+      const vy = p.y - o.y;
+      const len = Math.hypot(vx, vy);
+      if (!len) continue;
+      // Straight neighbours win a near tie with diagonals, so tapping one arrow walks a line.
+      const score = (vx * dir[0] + vy * dir[1]) / len + (dx && dz ? 0 : 0.02);
+      if (score > bestScore) {
+        bestScore = score;
+        best = { x, z };
+      }
+    }
+  }
+  return best ?? from;
+}

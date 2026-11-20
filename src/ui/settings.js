@@ -1,5 +1,5 @@
 // The settings panel: a volume slider for music, effects and voices, and the monster-turn
-// speed, and the dice: whether the player throws their own and whether rolls show. Opened from the Settings button beside Log, Music and Sound; every change
+// speed, the dice (whether the player throws their own and whether rolls show), motion and colours. Opened from the Settings button beside Log, Music and Sound; every change
 // applies at once and goes to onChange(key, value).
 
 const $ = (sel) => document.querySelector(sel);
@@ -16,9 +16,9 @@ export class SettingsPanel {
         onChange(input.name, Number(input.value) / 100);
       });
     }
-    for (const radio of this.box.querySelectorAll('input[name=speed]')) {
-      radio.checked = radio.value === settings.speed;
-      radio.addEventListener('change', () => radio.checked && onChange('speed', radio.value));
+    for (const radio of this.box.querySelectorAll('input[type=radio]')) {
+      radio.checked = radio.value === settings[radio.name];
+      radio.addEventListener('change', () => radio.checked && onChange(radio.name, radio.value));
     }
     for (const box of this.box.querySelectorAll('input[type=checkbox]')) {
       box.checked = settings[box.name];

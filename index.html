@@ -98,9 +98,10 @@
             <dt class="mouse"><kbd>Click</kbd></dt><dd class="mouse">Move, attack, or open a chest beside you</dd>
             <dt class="mouse"><kbd>Right-drag</kbd></dt><dd class="mouse">Pan the view</dd>
             <dt class="mouse"><kbd>Wheel</kbd></dt><dd class="mouse">Zoom</dd>
+            <dt class="mouse"><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></dt><dd class="mouse">Move a cursor over the board, from your hero; <kbd>Enter</kbd> acts there</dd>
             <dt class="mouse"><kbd>Space</kbd> <kbd>Enter</kbd></dt><dd class="mouse">Throw your die, or end the turn</dd>
             <dt class="mouse"><kbd>Z</kbd></dt><dd class="mouse">Undo a move that rolled no dice and found nothing new</dd>
-            <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Cancel attack or spell</dd>
+            <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Cancel attack or spell, then put the cursor away</dd>
             <dt class="mouse"><kbd>T</kbd></dt><dd class="mouse">Show where monsters can reach (hover a portrait: just that one)</dd>
             <dt class="mouse"><kbd>M</kbd> <kbd>N</kbd></dt><dd class="mouse">Sound / music on or off</dd>
             <dt class="mouse"><kbd>L</kbd></dt><dd class="mouse">Combat log</dd>
@@ -184,6 +185,13 @@
         <h3>Dice</h3>
         <label class="check"><input type="checkbox" name="throwDice" /><span>Roll your heroes’ attacks yourself</span></label>
         <label class="check"><input type="checkbox" name="rolls" /><span>Show monsters’ and saving rolls</span></label>
+        <h3 id="motion-head">Motion</h3>
+        <div class="speed" role="radiogroup" aria-labelledby="motion-head">
+          <label><input type="radio" name="motion" value="system" /><span>System</span></label>
+          <label><input type="radio" name="motion" value="reduce" /><span>Reduced</span></label>
+          <label><input type="radio" name="motion" value="full" /><span>Full</span></label>
+        </div>
+        <p class="settings-note">Reduced: no screen shake or camera sweeps, and numbers fade in place.</p>
         <h3>Colours</h3>
         <label class="check"><input type="checkbox" name="colorblind" /><span>Colour-blind friendly enemy reach (purple and yellow)</span></label>
         <button id="settings-close" type="button">Done</button>

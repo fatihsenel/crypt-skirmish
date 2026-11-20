@@ -934,9 +934,10 @@ b.loot { color: var(--gold); }
   #banner-awards small { display: none; }
 }
 @keyframes award-in { from { opacity: 0; transform: translateY(6px) scale(0.96); } }
-@media (prefers-reduced-motion: reduce) { #banner-awards li { animation: none; } }
-/* Reduced motion: the toast and tooltips fade without sliding. */
-@media (prefers-reduced-motion: reduce) { #toast, #tip { transition: opacity 0.2s, visibility 0.2s; } }
+/* Reduced motion (the Motion setting, or the system's; main.js sets data-motion): no award pop,
+   and the toast and tooltips fade without sliding. */
+[data-motion=reduce] #banner-awards li { animation: none; }
+[data-motion=reduce] #toast, [data-motion=reduce] #tip { transition: opacity 0.2s, visibility 0.2s; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
@@ -1247,7 +1248,7 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 .roll-badge.waiting .roll-die span { font-size: 21px; }
 .roll-badge.waiting .roll-die .face { stroke: #ffd76a; }
 @keyframes roll-pulse { from { transform: rotate(-8deg) scale(0.96); } to { transform: rotate(8deg) scale(1.06); } }
-@media (prefers-reduced-motion: reduce) { .roll-badge.waiting .roll-die { animation: none; } }
+[data-motion=reduce] .roll-badge.waiting .roll-die { animation: none; }
 .roll-badge.told .roll-result { opacity: 1; transform: none; }
 .roll-badge.hit .roll-result { color: #f0c674; }
 .roll-badge.crit .face { fill: #5a4318; stroke: #ffd76a; }

@@ -156,8 +156,8 @@ It runs on desktop and on phones.
   shrink to fit, like "G. Spider 2" or "R. Mummy".
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
-- **Settings:** volume for music, effects and voices, monster turn speed, the dice options and
-  colour-blind friendly enemy reach.
+- **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
+  motion (System, Reduced or Full) and colour-blind friendly enemy reach.
 
 ## Sound
 
@@ -167,8 +167,9 @@ Everything is generated in the browser, with no recordings:
   darker layers in boss rooms.
 - Sound effects and dungeon ambience.
 - Voices: every character shouts, chants and grunts in a made-up language.
-- With reduced motion turned on in the system, the screen doesn't shake, the camera jumps
-  instead of panning, floating numbers fade in place and the dice don't wobble.
+- With reduced motion (the Motion setting, or the system's when it's on System), the screen
+  doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
+  dice don't wobble.
 
 ## Controls
 
@@ -179,8 +180,10 @@ Everything is generated in the browser, with no recordings:
 | Attack / spell / action buttons | Pick a specific attack, spell or action |
 | Click a chest | Open it when standing next to it |
 | Right-drag / wheel | Pan / zoom |
+| Arrow keys | Move a cursor over the board, starting at your hero |
+| Enter on the cursor | Act there, like a click: move, attack or cast |
 | Space or Enter | End turn (or throw the die when it's waiting) |
-| Esc | Cancel the selected attack or spell |
+| Esc | Cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
 | T | Show or hide enemy reach |
 | M / N | Sound / music on or off |
@@ -286,7 +289,8 @@ src/
     abilities.js     actions and spells
     campaign.js      the dungeon map, XP, the pack, rests, New Game+, save data
     maps.js          the rooms as ASCII maps
-    combat.js        Game: turns, movement, attacks, spells, events
+    combat.js        Game: turns, movement, attacks, events
+    spells.js        spell slots, targeting, saves and casting (Game builds on it)
     ai.js            monster brains
     replay.js        fight saves: commands replayed from a seed
     recap.js         a fight told back: who fell to what and a tip, or who led a win
