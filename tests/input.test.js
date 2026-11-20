@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Game } from '../src/game/combat.js';
-import { tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings } from '../src/input.js';
+import { tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings, floorBehind } from '../src/input.js';
 
 function setTurn(game, i) {
   game.order = [game.units[i], ...game.units.filter((_, j) => j !== i)];
@@ -39,6 +39,34 @@ describe('a click on a tile', () => {
     const f = setTurn(game, 0);
     expect(tileCommand(game, f, { x: 1, z: 1 }, { kind: 'shove' }, helpers(game))).toEqual({ toast: 'Click an enemy next to you' });
     expect(tileCommand(game, f, { x: 2, z: 1 }, { kind: 'shove' }, helpers(game))).toEqual({ cmd: { type: 'shove', target: 1 } });
+  });
+});
+
+describe('a click on a party member standing in front of a tile', () => {
+  // F and W are heroes, g a goblin far off. The figure clicked stands in front of a tile.
+  const setup = () => {
+    const game = new Game(['##########', '#F.W....g#', '#........#', '##########'], { senses: false });
+    game.start();
+    const f = setTurn(game, 0);
+    const [, w, g] = game.units;
+    return { game, f, w, g };
+  };
+
+  it('goes to the free tile behind an ally when the hero can walk there', () => {
+    const { game, w } = setup();
+    expect(floorBehind(game, w, { x: 4, z: 2 })).toEqual({ x: 4, z: 2 });
+  });
+
+  it('keeps the figure when the tile behind is taken, out of reach, or the figure is the hero or a foe', () => {
+    const { game, f, w, g } = setup();
+    expect(floorBehind(game, w, { x: 8, z: 1 })).toBeNull(); // the goblin's tile
+    expect(floorBehind(game, w, { x: 3, z: 1 })).toBeNull(); // the ally's own tile
+    f.movesLeft = 0;
+    expect(floorBehind(game, w, { x: 4, z: 2 })).toBeNull(); // no movement left
+    f.movesLeft = 6;
+    expect(floorBehind(game, f, { x: 2, z: 2 })).toBeNull(); // the hero: the card, not a move
+    expect(floorBehind(game, g, { x: 7, z: 2 })).toBeNull(); // a foe: an attack
+    expect(floorBehind(game, w, null)).toBeNull(); // nothing under the pointer
   });
 });
 

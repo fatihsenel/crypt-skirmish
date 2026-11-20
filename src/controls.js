@@ -22,6 +22,10 @@ export function createControls(deps) {
   const view = (u) => deps.views().get(u.id);
 
   const pickTile = (ev) => tileFromEvent(ev, { stage, views: deps.views(), board: deps.board(), game: game() });
+  // Moving (a hero's turn, nothing picked from the action bar): a party member in front of a
+  // tile the hero can walk to lets the click through. A long press still finds the figure.
+  const pickForMove = (ev) => tileFromEvent(ev, { stage, views: deps.views(), board: deps.board(), game: game() },
+    { throughAllies: heroTurn() && !deps.selected() });
   const unitRect = (u) => figureRect(stage, u, view(u));
 
   // A finger has no hover: the first tap on a tile shows what would happen there (the path,
@@ -57,11 +61,13 @@ export function createControls(deps) {
   stage.dom.addEventListener('pointermove', (ev) => {
     if (ev.pointerType !== 'mouse') return;
     putCursorAway(); // the mouse has the cursor again
-    const t = pickTile(ev);
+    const t = pickForMove(ev);
     if (t?.x === hovered()?.x && t?.z === hovered()?.z) return;
     deps.setHovered(t);
-    // The character card for a figure the mouse rests on, whoever's turn it is.
-    const who = game() && t && !game().over ? deps.visibleUnitAt(t.x, t.z) : null;
+    // The character card for a figure the mouse rests on, whoever's turn it is (an ally's
+    // too when the move preview looks through them).
+    const f = game() && !game().over ? pickTile(ev) : null;
+    const who = f ? deps.visibleUnitAt(f.x, f.z) : null;
     hud.hoverUnit(game(), who, () => unitRect(who));
     if (heroTurn()) deps.refresh();
   });
@@ -80,7 +86,7 @@ export function createControls(deps) {
     if (press.consume()) return; // the long press that showed a card
     if (!heroTurn()) return;
     if (downAt && Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y) > 10) return; // a drag
-    const t = pickTile(ev);
+    const t = pickForMove(ev);
     if (!t) return;
     if (touching && (t.x !== hovered()?.x || t.z !== hovered()?.z)) {
       deps.setHovered(t);

@@ -9,6 +9,7 @@
 
 import { NODES, HERO_CODES } from './campaign.js';
 import { classOf } from './units.js';
+import { ELITE_TRAITS } from './combat.js';
 
 export const ACHIEVEMENTS_KEY = 'crypt-skirmish:achievements';
 
@@ -103,8 +104,8 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ feats }) => !!feats?.stayDown,
   },
   {
-    id: 'elite-hunter', name: 'Trophy hunter', desc: 'Slay an elite of each of the five traits, counted across runs.',
-    on: 'room', test: ({ eliteKinds }) => (eliteKinds ?? 0) >= 5,
+    id: 'elite-hunter', name: 'Trophy hunter', desc: 'Slay an elite of every trait, counted across runs.',
+    on: 'room', test: ({ eliteKinds }) => (eliteKinds ?? 0) >= ELITE_TRAITS.length,
   },
   {
     id: 'no-rest', name: 'No rest for the wicked', desc: 'Win a campaign through the Black Armory, skipping the Ember Hearth.',

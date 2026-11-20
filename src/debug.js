@@ -23,7 +23,7 @@ export function sampleVictory(search) {
     heroes: { F: tally(612, 31, 9, 0, 2), W: tally(540, 22, 1, 0, 1), R: tally(488, 19, 6, 0, 0), C: tally(301, 9, 2, 356, 1) },
   };
   run.tier = Math.max(0, Math.min(99, Math.floor(Number(new URLSearchParams(search).get('tier')) || 0)));
-  if (run.tier >= 2) run.stats.elites = { regenerating: 3, relentless: 4, frenzied: 2, swift: 2, warded: 2 };
+  if (run.tier >= 2) run.stats.elites = { regenerating: 3, relentless: 4, frenzied: 2, swift: 2, warded: 2, barbed: 1 };
   const summary = runSummary(run);
   const tomb = levelById('tomb');
   return ['victory', { round: 9, level: tomb.name, final: true, xp: 0, outro: tomb.outro, summary, share: runShareText(summary) }];
@@ -73,10 +73,11 @@ export function installDebug(app) {
       const r = app.stage.dom.getBoundingClientRect();
       return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
     },
-    /** The tile a click or tap at (x, y) picks: a figure in front of a tile takes its taps. */
+    /** The tile a click or tap at (x, y) picks when moving: a foe in front of a tile takes its taps. */
     pickAt(x, y) {
       if (!app.game()) return null;
-      return tileFromEvent({ clientX: x, clientY: y }, { stage: app.stage, views: app.views(), board: app.board(), game: app.game() });
+      return tileFromEvent({ clientX: x, clientY: y }, { stage: app.stage, views: app.views(), board: app.board(), game: app.game() },
+        { throughAllies: true });
     },
   };
 }

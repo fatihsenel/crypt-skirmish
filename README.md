@@ -117,8 +117,8 @@ It runs on desktop and on phones.
   NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The title
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
-  its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift
-  or Warded. The trait depends on the room and the tier: the camp map marks each room ahead
+  its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift,
+  Warded or Barbed. The trait depends on the room and the tier: the camp map marks each room ahead
   with a gold pip, and picking it names the trait. When you first see the elite, a horn
   sounds, its band flares, a toast and the log name the trait, and on a phone the camera brings
   it into view. Once you have won a campaign, the bestiary lists what each does and how many
@@ -181,7 +181,7 @@ Everything is generated in the browser, with no recordings:
 
 | Mouse and keyboard | Action |
 | --- | --- |
-| Click a tile | Move (blue = reachable, red dots = provokes an opportunity attack) |
+| Click a tile | Move (blue = reachable, red dots = provokes an opportunity attack); a party member standing in front of a reachable tile doesn't block the click |
 | Click an enemy | Attack with the best weapon in range |
 | Attack / spell / action buttons | Pick a specific attack, spell or action |
 | Click a chest | Open it when standing next to it |
@@ -234,8 +234,9 @@ A few things differ from the SRD to keep the game simple:
 - New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the
   difficulty's), and from the first tier their weapon attack and damage rolls get +1.
 - Elites (NG+2 and deeper) are not from the SRD: the room's monster worth the most XP gets a
-  trait (regains 5 HP a turn; stays on 1 HP once; one more attack; +10 ft speed; or +2 AC and
-  no frightened, prone or poisoned).
+  trait (regains 5 HP a turn; stays on 1 HP once; one more attack; +10 ft speed; +2 AC and
+  no frightened, prone or poisoned; or 3 piercing damage, no roll, to a foe that hits it with
+  a melee weapon).
 
 ## For developers
 
@@ -252,7 +253,7 @@ npm run build    # production bundle in dist/
 npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
 
-Every push to `main` runs lint and the tests, builds, runs the touch check against the
+Every push to `main` runs lint and the tests, builds, runs the touch check on three fixed fights against the
 build and deploys to GitHub Pages (`.github/workflows/pages.yml`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,

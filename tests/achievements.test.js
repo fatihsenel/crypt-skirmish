@@ -25,8 +25,8 @@ describe('achievements', () => {
     expect(got(fight({ units: [{ team: 'monsters', alive: false }] }))).toEqual([]);
     expect(got(fight({ units: [{ team: 'monsters', elite: 'swift', alive: false }] }))).toEqual(['elite']);
     expect(got(fight(), { feats: { stayDown: true } })).toEqual(['stay-down']);
-    expect(got(fight(), { eliteKinds: 4 })).toEqual([]);
-    expect(got(fight(), { eliteKinds: 5 })).toEqual(['elite-hunter']);
+    expect(got(fight(), { eliteKinds: 5 })).toEqual([]);
+    expect(got(fight(), { eliteKinds: 6 })).toEqual(['elite-hunter']);
   });
 
   it('a first room win earns only the first-room one', () => {

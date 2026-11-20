@@ -36,3 +36,16 @@ export function seeded(seed) {
 export const abilityMod =(score) => Math.floor((score - 10) / 2);
 
 export const signed = (n) => (n >= 0 ? `+${n}` : `${n}`);
+
+/** A 32-bit hash of a string (FNV-1a, then mixed), so neighbouring dates land far apart. */
+export function hash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= h >>> 15;
+  h = Math.imul(h, 2246822507);
+  h ^= h >>> 13;
+  return h >>> 0;
+}

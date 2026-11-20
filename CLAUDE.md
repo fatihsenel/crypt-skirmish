@@ -12,7 +12,7 @@ npm test               # Vitest, run before every commit
 npm run lint           # ESLint: undefined names and unused code, run before every commit
 npm run sim -- 300     # headless balance check, run after changing monsters, spells or rooms
 npm run touch-check    # phone taps in headless Chrome (dev server on 5173), after changing input;
-                       # the deploy runs it against the build too
+                       # the deploy runs it against the build on seeds 3, 1 and 5
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 ```
 
@@ -41,7 +41,8 @@ server on 5173.
   no shake, no camera pans, no drifting text.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
-  second tap (`enterStep`). Screen readers hear log lines, turns and the cursor's tile
+  second tap (`enterStep`). A move click on a party member picks the free tile behind it
+  (`floorBehind`). Screen readers hear log lines, turns and the cursor's tile
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
   press the action bar's first ten buttons (`pickByNumber` in `hud.js`); R reads `surroundings()`.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.

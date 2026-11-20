@@ -10,11 +10,26 @@ const raycaster = new THREE.Raycaster();
 const ndc = new THREE.Vector2();
 
 /**
+ * A click on a party member's figure that stands in front of an empty tile: the tile behind,
+ * when the hero whose turn it is can walk there, so tall figures don't block moves. Null to
+ * keep the figure (the hero themself, a foe, a tile taken or out of reach). `floor` is the
+ * tile on the ground under the pointer.
+ */
+export function floorBehind(game, figure, floor) {
+  const u = game.current;
+  if (!u || !floor || figure === u || figure.team !== u.team) return null;
+  if (game.unitAt(floor.x, floor.z)) return null;
+  return game.destinations(u).some((t) => t.x === floor.x && t.z === floor.z) ? { x: floor.x, z: floor.z } : null;
+}
+
+/**
  * The tile under a pointer event, or null. Clicking a figure's body (or a chest) picks its
  * tile, even though it overlaps tiles behind it; the nearest object under the pointer wins.
  * Hidden things (monsters out of sight, chests in unexplored rooms) can't be picked.
+ * `throughAllies`: a party member's figure in front of a tile the hero can walk to gives way
+ * to that tile (see floorBehind); for moving, not for picking an ally.
  */
-export function tileFromEvent(ev, { stage, views, board, game }) {
+export function tileFromEvent(ev, { stage, views, board, game }, { throughAllies = false } = {}) {
   const r = stage.dom.getBoundingClientRect();
   ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
   raycaster.setFromCamera(ndc, stage.camera);
@@ -26,9 +41,13 @@ export function tileFromEvent(ev, { stage, views, board, game }) {
     while (o && o.userData.unitId === undefined && !o.userData.tile) o = o.parent;
     if (o?.userData.tile) return { ...o.userData.tile };
     const u = game.units.find((x) => x.id === o?.userData.unitId);
-    if (u) return { x: u.x, z: u.z };
+    if (u) return (throughAllies && floorBehind(game, u, floorTile(game, board))) || { x: u.x, z: u.z };
   }
+  return floorTile(game, board);
+}
 
+/** The floor tile where the raycaster's ray meets the ground, or null (a wall, off the map). */
+function floorTile(game, board) {
   const hit = raycaster.intersectObject(board.pickPlane)[0];
   if (!hit) return null;
   const x = Math.round(hit.point.x);

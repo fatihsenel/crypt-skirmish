@@ -261,6 +261,11 @@ export class Hud {
     else this.log(`<b class="heal">Death Ward</b> holds: ${who(unit)} stays on their feet with 1 HP.`);
   }
 
+  /** A Barbed elite's spines bite the foe that struck it in melee. */
+  logBarbs({ unit, target, damage }) {
+    this.log(`${who(target)} is cut by ${who(unit)}’s barbs for <b>${damage}</b> damage.`);
+  }
+
   /** A regenerating elite's wounds close at the start of its turn. */
   logRegen({ unit, amount }) {
     this.log(`${who(unit)} regenerates ${amount} HP.`);

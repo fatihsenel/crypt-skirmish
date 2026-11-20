@@ -2,7 +2,7 @@
 // features (doors, traps, chests); spells are in spells.js. Knows nothing about three.js; the controller
 // animates the results it returns.
 
-import { rollDice, rollExpr, abilityMod } from './dice.js';
+import { rollDice, rollExpr, abilityMod, hash } from './dice.js';
 import { Grid, key, gridDistance, pathFrom } from './grid.js';
 import { createUnit, applyLevel, classOf, TEMPLATES } from './units.js';
 import { applyItems } from './items.js';
@@ -61,14 +61,17 @@ export const ELITE_TRAITS = [
   { id: 'frenzied', name: 'Frenzied', desc: 'makes one more attack with each Attack action' },
   { id: 'swift', name: 'Swift', desc: 'moves 10 ft farther' },
   { id: 'warded', name: 'Warded', desc: '+2 AC; can’t be frightened, knocked prone or poisoned' },
+  { id: 'barbed', name: 'Barbed', desc: 'a foe that hits it with a melee weapon takes 3 piercing damage' },
 ];
 export const ELITE_REGEN = 5;
+export const ELITE_BARBS = 3;
 
-/** The elite's trait in the room `levelId` at New Game+ `tier`. */
+/**
+ * The elite's trait in the room `levelId` at New Game+ `tier`: it moves on one trait a tier.
+ * The hash gives every trait a room at each tier, and a weekly room at New Game+ 3 (weekly.js).
+ */
 export function eliteTrait(levelId, tier) {
-  let hash = 0;
-  for (const ch of String(levelId)) hash += ch.charCodeAt(0);
-  return ELITE_TRAITS[(tier + hash) % ELITE_TRAITS.length];
+  return ELITE_TRAITS[(tier + hash(String(levelId))) % ELITE_TRAITS.length];
 }
 
 export class Game extends Spellcasting {
@@ -1226,6 +1229,20 @@ export class Game extends Spellcasting {
     return r;
   }
 
+  /**
+   * A Barbed elite hit by a melee weapon: the attacker takes ELITE_BARBS piercing damage, no
+   * roll (the killing blow too). Returns { unit, target, damage } (already emitted and applied), or null.
+   */
+  barbs(elite, foe, attack) {
+    if (elite.elite !== 'barbed' || !isMelee(attack) || !foe?.alive || foe.team === elite.team) return null;
+    const r = { unit: elite, target: foe, damage: ELITE_BARBS };
+    this.emit('barbs', r);
+    this.cause = 'barbs';
+    this.via = 'melee';
+    this.applyDamage(foe, r.damage, elite);
+    return r;
+  }
+
   /** Hunter's Mark (weapon hits) or Hex (any hit) on this target: the extra roll, or null. */
   markDamage(attacker, target, attack, crit) {
     const m = attacker.mark;
@@ -1322,7 +1339,7 @@ export class Game extends Spellcasting {
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
-      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null,
+      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -1335,6 +1352,7 @@ export class Game extends Spellcasting {
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
       if (damage) result.rebuke = this.rebuke(target, attacker);
+      result.barbs = this.barbs(target, attacker, attack);
     }
     this.alert(target, 'hurt'); // a miss gives you away too
     this.noise(attacker);

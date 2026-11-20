@@ -683,6 +683,7 @@ function startFight(resume, watch = null) {
       view(r.unit)?.updateStatus();
     });
   });
+  game.on('barbs', (r) => hud.logBarbs(r)); // shown by playBarbs in animate.js
   game.on('regen', (r) => {
     if (unseen(r.unit)) return; // out of sight: nothing to see
     hud.logRegen(r);

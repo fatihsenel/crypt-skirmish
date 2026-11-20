@@ -98,7 +98,16 @@ export function createAnimations(app) {
     }
     await reaction;
     if (r.rebuke) await playRebuke(r.rebuke);
+    if (r.barbs) await playBarbs(r.barbs);
     hud.renderInitiative(app.game());
+  }
+
+  /** A Barbed elite's spines cut the foe that struck it in melee. */
+  async function playBarbs({ target, damage }) {
+    floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, `Barbs −${damage}`, 'crit');
+    hitFx(stage.scene, target);
+    view(target)?.updateHp();
+    await damageReaction(target);
   }
 
   /** Hellish Rebuke: the hurt warlock answers with flames around the attacker. */

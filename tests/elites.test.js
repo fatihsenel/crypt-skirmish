@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Game, ELITE_TRAITS, eliteTrait } from '../src/game/combat.js';
+import { Game, ELITE_TRAITS, eliteTrait, isMelee } from '../src/game/combat.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign, runDifficulty, completeFight, recordDefeat, runSummary, runShareText, roomElite } from '../src/game/campaign.js';
@@ -37,8 +37,8 @@ describe('elite monsters', () => {
     expect(eliteTrait('x', 2)).not.toBe(eliteTrait('x', 3)); // the trait moves on with the tier
   });
 
-  it('have five traits', () => {
-    expect(ELITE_TRAITS.map((t) => t.id)).toEqual(['regenerating', 'relentless', 'frenzied', 'swift', 'warded']);
+  it('have six traits', () => {
+    expect(ELITE_TRAITS.map((t) => t.id)).toEqual(['regenerating', 'relentless', 'frenzied', 'swift', 'warded', 'barbed']);
   });
 
   it('get what their trait says', () => {
@@ -90,6 +90,53 @@ describe('elite monsters', () => {
     expect(m.alive).toBe(false);
   });
 
+  it('cut a foe that hits them with a melee weapon when barbed, by 3 and no roll', () => {
+    const g = room(0);
+    const [m] = monsters(g);
+    const fighter = g.units.find((u) => u.code === 'F');
+    const wizard = g.units.find((u) => u.code === 'W');
+    g.makeElite(m, 'barbed');
+    m.hp = m.maxHp = 500;
+    fighter.x = m.x + 1; fighter.z = m.z;
+    const swing = (who, foe, a) => { who.actionUsed = false; return g.attack(who, foe, a); }; // a fresh action each time
+    const seen = [];
+    g.on('barbs', (r) => seen.push(r));
+    const sword = fighter.attacks.find((a) => a.reach === 1);
+    g.rng = () => 0.99; // every swing hits
+    const hp = fighter.hp;
+    const r = swing(fighter, m, sword);
+    expect(r.hit).toBe(true);
+    expect(r.barbs).toEqual({ unit: m, target: fighter, damage: 3 });
+    expect(fighter.hp).toBe(hp - 3);
+    expect(seen).toHaveLength(1);
+    expect(g.blows.at(-1)).toMatchObject({ to: fighter.name, by: m.name, how: 'barbs', via: 'melee', damage: 3 });
+    // A miss, a spell attack or a ranged one: no barbs.
+    g.rng = () => 0;
+    expect(swing(fighter, m, sword).barbs).toBeNull();
+    g.rng = () => 0.99;
+    const bolt = wizard.attacks.find((a) => !isMelee(a));
+    wizard.x = m.x - 1; wizard.z = m.z;
+    expect(swing(wizard, m, bolt).barbs).toBeNull();
+    // Nor from an ordinary monster.
+    const [, plain] = monsters(g);
+    fighter.x = plain.x + 1; fighter.z = plain.z;
+    expect(swing(fighter, plain, sword).barbs).toBeNull();
+  });
+
+  it('can drop the hero who strikes a barbed elite, ending their attacks', () => {
+    const g = room(0);
+    const [m] = monsters(g);
+    const fighter = g.units.find((u) => u.code === 'F');
+    g.makeElite(m, 'barbed');
+    m.hp = m.maxHp = 500;
+    fighter.x = m.x + 1; fighter.z = m.z;
+    fighter.hp = 2;
+    g.rng = () => 0.99;
+    const r = g.attack(fighter, m, fighter.attacks.find((a) => a.reach === 1));
+    expect(r.barbs.damage).toBe(3);
+    expect(fighter.alive).toBe(false);
+  });
+
   it('can’t be shoved prone or knocked down by a trap when warded', () => {
     const g = room(0);
     const [m] = monsters(g);
@@ -114,14 +161,14 @@ describe('elites in the run summary', () => {
 
   it('counts the elites slain in won rooms, by trait', () => {
     let state = { ...newCampaign(), tier: 4 };
-    state = won(state, 'crypt', 4); // the crypt's NG+4 elite is Relentless
-    expect(state.stats.elites).toEqual({ relentless: 1 });
+    state = won(state, 'crypt', 4); // the crypt's NG+4 elite is Barbed
+    expect(state.stats.elites).toEqual({ barbed: 1 });
     state = won(state, 'crypt', 4);
     state = won(state, 'sanctum', 2); // the sanctum's NG+2 elite is Regenerating
-    expect(state.stats.elites).toEqual({ relentless: 2, regenerating: 1 });
+    expect(state.stats.elites).toEqual({ barbed: 2, regenerating: 1 });
     const s = runSummary(state);
     expect(s.eliteCount).toBe(3);
-    expect(s.elites).toEqual([{ id: 'regenerating', name: 'Regenerating', count: 1 }, { id: 'relentless', name: 'Relentless', count: 2 }]);
+    expect(s.elites).toEqual([{ id: 'regenerating', name: 'Regenerating', count: 1 }, { id: 'barbed', name: 'Barbed', count: 2 }]);
     expect(runShareText(s).split('\n')[1]).toMatch(/, 3 elites slain$/);
     expect(runRecord(state, 'won', 1).elites).toBe(3);
   });
@@ -142,7 +189,7 @@ describe('elites in the run summary', () => {
 describe('elites on the camp map', () => {
   it('names the trait each fight room will have, from New Game+ 2', () => {
     expect(roomElite('crypt', 1)).toBeNull();
-    expect(roomElite('crypt', 4).id).toBe('relentless');
+    expect(roomElite('crypt', 4).id).toBe('barbed');
     expect(roomElite('sanctum', 2).id).toBe('regenerating');
     const rest = Object.keys(NODES).find((id) => NODES[id].kind === 'rest');
     expect(roomElite(rest, 3)).toBeNull();

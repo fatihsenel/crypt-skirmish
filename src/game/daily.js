@@ -7,6 +7,9 @@
 import { newCampaign, heroUnit } from './campaign.js';
 import { MAX_LEVEL } from './units.js';
 import { watchable } from './history.js';
+import { hash } from './dice.js';
+
+export { hash };
 
 export const DAILY_KEY = 'crypt-skirmish:daily';
 const KEEP_DAYS = 60;
@@ -40,19 +43,6 @@ export function dayKey(date = new Date()) {
 export function prevDay(key) {
   const [y, m, d] = key.split('-').map(Number);
   return dayKey(new Date(y, m - 1, d - 1));
-}
-
-/** A 32-bit hash of a string (FNV-1a, then mixed), so neighbouring dates land far apart. */
-export function hash(text) {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) {
-    h ^= text.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  h ^= h >>> 15;
-  h = Math.imul(h, 2246822507);
-  h ^= h >>> 13;
-  return h >>> 0;
 }
 
 /** Today's crypt (or any day's): room, party level, class swaps and dice seed. */
