@@ -12,7 +12,8 @@ npm test               # Vitest, run before every commit
 npm run lint           # ESLint: undefined names and unused code, run before every commit
 npm run sim -- 300     # headless balance check, run after changing monsters, spells or rooms
 npm run touch-check    # phone taps in headless Chrome (dev server on 5173), after changing input;
-                       # the deploy runs it against the build on seeds 3, 1 and 5
+                       # the deploy runs it against the build on seeds 3, 1 and 5, and
+                       # SEED=3 LATE=700 (a late lift must still be a tap)
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 ```
 

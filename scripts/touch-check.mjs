@@ -6,7 +6,8 @@
 // Env: URL (default http://localhost:5173/; the deploy workflow checks the preview build at
 // http://localhost:4173/crypt-skirmish/), CHROME (the Chrome binary; the macOS default), SLOW
 // (a CPU slowdown factor, like 6, to try it the way a slow CI machine runs), SEED (the fight's
-// dice, for the same fight every time).
+// dice, for the same fight every time), LATE (ms before each lift is sent, still stamped 60 ms
+// after the touch: a page too busy to see it sooner), VERBOSE (print the events on a pass too).
 // On CI (CI set) Chrome runs without its sandbox, which the Linux runners don't allow.
 
 import { spawn } from 'node:child_process';
@@ -53,9 +54,13 @@ await new Promise((r) => ws.addEventListener('open', r, { once: true }));
 let id = 0;
 const waiting = new Map();
 const pageErrors = []; // shown with a failure
+const inFlight = new Map(); // requests the page is still waiting on: requestId → url
 ws.addEventListener('message', (e) => {
   const m = JSON.parse(e.data);
   if (m.id && waiting.has(m.id)) { waiting.get(m.id)(m); waiting.delete(m.id); }
+  if (m.method === 'Network.requestWillBeSent') inFlight.set(m.params.requestId, m.params.request.url.split('/').pop() + '@' + Math.round(m.params.timestamp * 1000));
+  if (m.method === 'Network.loadingFinished' || m.method === 'Network.loadingFailed') inFlight.delete(m.params.requestId);
+  if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') pageErrors.push(`${m.params.entry.source}: ${m.params.entry.text} ${m.params.entry.url ?? ''}`);
   if (m.method === 'Runtime.exceptionThrown') pageErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text);
   if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') pageErrors.push(m.params.args.map((a) => a.value ?? a.description).join(' '));
 });
@@ -65,20 +70,28 @@ const ev = async (expression) => {
   if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description ?? 'page error');
   return r.result?.result?.value;
 };
+// A 60 ms tap. Both touches carry their own time, as a phone's do: Chrome answers the first
+// only once a busy page has handled it, and stamping the lift after that wait would make a
+// slow page see a long press.
+// LATE=ms sends the lift that late (still stamped 60 ms in), as a page too busy to see it sooner would.
 const tap = async ({ x, y }) => {
-  await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-  await sleep(60);
-  await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  const t = Date.now() / 1000;
+  const down = send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }], timestamp: t });
+  await sleep(Number(process.env.LATE) || 60);
+  await Promise.all([down, send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: t + 0.06 })]);
   await sleep(700);
 };
 
 try {
   await send('Runtime.enable');
+  await send('Network.enable');
+  await send('Log.enable'); // what the browser itself reports, like a module script that failed to load
   await send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   if (process.env.SLOW) await send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) }); // to mimic CI
   await send('Page.navigate', { url: URL_BASE }); await sleep(2000);
   await ev(`localStorage.setItem('crypt-skirmish:tips', JSON.stringify({ on: false, seen: [] })); 1`);
+  inFlight.clear(); // the title page's own requests go with it
   await send('Page.navigate', { url: `${URL_BASE}?level=1${process.env.SEED ? `&seed=${process.env.SEED}` : ''}` });
   // The room is up once the game exists (slow on a software-rendered CI machine).
   let up = false;
@@ -86,11 +99,17 @@ try {
     up = await ev('!!window.__debug?.game()').catch(() => false); // false while the page swaps
   }
   if (!up) {
-    const where = await ev(`location.href + (document.getElementById('boot')?.classList.contains('done') ? ''
+    const where = await ev(`location.href + ' [' + document.readyState + ', main ' + (window.__debug ? 'ran' : 'not run') + ', up ' + Math.round(performance.now()) + ' ms]' + (document.getElementById('boot')?.classList.contains('done') ? ''
       : ' (boot screen still up: "' + document.getElementById('boot').textContent.replace(/\\s+/g, ' ').trim() + '", '
         + performance.getEntriesByType('resource').length + ' files loaded: '
         + performance.getEntriesByType('resource').map(r => r.name.split('/').pop() + (r.responseEnd ? '' : ' (pending)')).join(', ') + ')')`).catch(() => '?');
-    throw new Error(`the room never loaded at ${where}`);
+    // The main script, imported again: the same module, so its own error, or a hang if it's
+    // still running; "finished" after "main not run" means the page's own tag never ran it.
+    const main = await ev(`(async () => { const src = document.querySelector('script[type=module]')?.src;
+      const r = await Promise.race([import(src).then(() => 'finished', (e) => 'failed: ' + (e?.stack ?? e)),
+        new Promise((ok) => setTimeout(() => ok('still evaluating'), 3000))]);
+      return r + (document.querySelector('canvas') ? ', canvas up' : ', no canvas'); })()`).catch((e) => 'import probe: ' + e.message);
+    throw new Error(`the room never loaded at ${where}; the main script imported now: ${main}; still waiting on ${inFlight.size ? [...inFlight.values()].join(', ') : 'nothing'}`);
   }
 
   // A hero's turn ready for input (End turn enabled: not busy with the turn's opening), the
@@ -124,7 +143,7 @@ try {
   const at = (t) => ev(`__debug.tileToScreen(${t[0]}, ${t[1]})`);
   const state = () => ev(`(() => { const u = __debug.game().units.find(u => u.name === ${JSON.stringify(pick.name)});
     return { at: [u.x, u.z], hint: document.getElementById('hint').textContent, touch: document.body.classList.contains('touch'),
-      card: !document.getElementById('unit-tip').hidden }; })()`);
+      card: !document.getElementById('unit-tip').hidden && document.querySelector('#unit-tip .tip-head b')?.textContent }; })()`);
   const until = async (ok, ms) => { // poll: a slow CI machine takes a while to draw and move
     let s;
     for (let t0 = Date.now(); !ok(s = await state()) && Date.now() - t0 < ms;) await sleep(250);
@@ -135,9 +154,11 @@ try {
   // On a failure, say what was under the finger and which events reached the page.
   await ev(`window.__touchLog = []; for (const type of ['pointerdown', 'pointerup', 'click'])
     addEventListener(type, (e) => __touchLog.push(type + ':' + e.pointerType + '@' + (e.target.id || e.target.tagName)
+      + ' t' + Math.round(e.timeStamp) + ' run' + Math.round(performance.now())
       + (type === 'click' ? ' ' + Math.round(e.clientX) + ',' + Math.round(e.clientY) + ' picks ' + JSON.stringify(__debug.pickAt(e.clientX, e.clientY)) : '')), true); 1`);
   const p1 = await at(pick.to);
   const under = await ev(`(() => { const e = document.elementFromPoint(${p1.x}, ${p1.y}); return e && (e.id || e.tagName) + (e.className ? '.' + e.className : ''); })()`);
+  const before = await state();
   await tap(p1);
   const first = await until(isPreview, 5000);
   await tap(await at(pick.to)); // aim afresh: the camera may have eased since
@@ -146,7 +167,8 @@ try {
   const moved = String(second.at) === String(pick.to);
   done(previewed && moved, previewed && moved
     ? `PASS: ${pick.name}'s first tap previewed ("${first.hint}"), the second moved them to ${pick.to}`
-    : `FAIL: ${JSON.stringify({ pick, tap: p1, under, first, second, events: await ev('__touchLog'),
+      + (process.env.VERBOSE ? `\n${JSON.stringify(await ev('__touchLog'))}` : '')
+    : `FAIL: ${JSON.stringify({ pick, tap: p1, under, before, first, second, events: await ev('__touchLog'),
       ready: await ev(`!document.getElementById('end-turn').disabled`), pickNow: await ev(`__debug.pickAt(${p1.x}, ${p1.y})`),
       current: await ev('__debug.game().current?.name') })}${pageErrors.length ? `\nPage errors:\n${pageErrors.slice(-10).join('\n')}` : ''}`);
 } catch (err) {

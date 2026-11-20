@@ -254,7 +254,7 @@ npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
 
 Every push to `main` runs lint and the tests, builds, runs the touch check on three fixed fights against the
-build and deploys to GitHub Pages (`.github/workflows/pages.yml`).
+build (and once with each finger lifted late, as a busy phone sees it) and deploys to GitHub Pages (`.github/workflows/pages.yml`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
