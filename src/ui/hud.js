@@ -612,7 +612,26 @@ export class Hud {
       });
     });
 
-    return group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts);
+    const html = group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts);
+    // The first nine buttons answer the number keys, in the order shown (see pickByNumber).
+    let n = 0;
+    return html.replace(/<button type="button" class="ability[^>]*>/g, (tag) => (++n > 9 ? tag
+      : `${tag.slice(0, -1)} aria-keyshortcuts="${n}"><kbd class="key" aria-hidden="true">${n}</kbd>`));
+  }
+
+  /**
+   * Number key `n`: press the action bar's nth button. Returns what to read out (its name,
+   * and why not when it can't be used), or null when there's no such button.
+   */
+  pickByNumber(n) {
+    const b = document.querySelectorAll('#attacks button.ability')[n - 1];
+    if (!b) return null;
+    const name = b.querySelector('span').textContent;
+    if (b.disabled) return `${name}: ${b.getAttribute('aria-description') || 'not now'}`;
+    const was = b.classList.contains('selected');
+    b.click(); // the bar is drawn afresh: look again for what's picked
+    const picked = document.querySelector('#attacks button.ability.selected span')?.textContent === name;
+    return picked ? `${name} picked` : was ? `${name} put away` : name;
   }
 
   /** How to use a targeted ability, for a mouse or a finger. */
@@ -682,7 +701,10 @@ export class Hud {
     if (this.touch && text) {
       text = text.replace(/\bclick\b/g, 'tap').replace(/\bClick\b/g, 'Tap').replace(/ with the mouse/g, '').replace(' · Esc to cancel', '');
       if (act) text += ' · tap again to confirm';
-    } else if (this.keys && text && act) text += this.armed ? ' · Enter again to confirm' : ' · Enter to choose';
+    } else if (this.keys && text) { // the keyboard: the cursor picks, Enter confirms
+      text = text.replace(/\bclick\b/g, 'pick').replace(/\bClick\b/g, 'Pick').replace(/ with the mouse/g, '');
+      if (act) text += this.armed ? ' · Enter again to confirm' : ' · Enter to choose';
+    }
     $('#hint').textContent = text;
     $('#hint').classList.toggle('show', !!text);
   }

@@ -189,3 +189,20 @@ export function tileSummary(game, t, { unitAt, explored }) {
 export function enterStep(armed, t, r) {
   return !r?.cmd || armed === key(t.x, t.z) ? 'act' : 'arm';
 }
+
+/**
+ * The board around hero `u` in words, for a screen reader (the R key): the hero's HP and
+ * movement, the enemies `seen(unit)` allows, nearest first, with whether `u` can attack each
+ * now (in range), and the heroes who are down.
+ */
+export function surroundings(game, u, { seen }) {
+  const parts = [`${u.name}: ${u.hp} of ${u.maxHp} HP, ${u.movesLeft * 5} ft of movement.`];
+  const foes = game.enemiesOf(u).filter((e) => e.alive && seen(e))
+    .sort((a, b) => gridDistance(u, a) - gridDistance(u, b));
+  parts.push(foes.length
+    ? `Enemies in sight: ${foes.map((e) => `${e.name}, ${gridDistance(u, e) * 5} ft, ${e.hp} of ${e.maxHp} HP${game.bestAttack(u, e) ? ', in range' : ''}`).join('; ')}.`
+    : 'No enemies in sight.');
+  const down = game.units.filter((h) => h.team === u.team && !h.alive);
+  if (down.length) parts.push(`Down: ${down.map((h) => h.name).join(', ')}.`);
+  return parts.join(' ');
+}

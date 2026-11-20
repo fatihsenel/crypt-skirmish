@@ -334,6 +334,13 @@ button.ability {
   white-space: nowrap;
 }
 button.ability small { color: var(--muted); font-size: 10.5px; }
+/* The number key for a button (see pickByNumber); a finger has no keys. */
+body:not(.touch) button.ability { position: relative; padding-right: 19px; }
+button.ability .key {
+  position: absolute; top: 4px; right: 6px;
+  font: 600 9px/1 inherit; color: var(--muted); opacity: 0.7;
+}
+body.touch button.ability .key { display: none; }
 button.ability.selected { border-color: var(--gold); background: rgba(217, 180, 90, 0.18); }
 button.ability.spell { border-color: rgba(176, 124, 255, 0.35); }
 button.ability.spell.selected { border-color: var(--spell); background: rgba(176, 124, 255, 0.2); }

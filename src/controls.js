@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { key } from './game/grid.js';
-import { tileFromEvent, figureRect, longPress, tileCommand, stepTile, ARROWS, tileSummary, enterStep } from './input.js';
+import { tileFromEvent, figureRect, longPress, tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings } from './input.js';
 import { replayKey } from './ui/replayBar.js';
 import { announce } from './ui/announce.js';
 
@@ -154,10 +154,30 @@ export function createControls(deps) {
     if (ev.target instanceof HTMLInputElement) return; // typing a hero's name
     const replay = deps.replay();
     if (replay && replayKey(replay, ev, game()?.round ?? 0, deps.endReplay)) return;
-    if (ARROWS[ev.code] && boardKeys() && !ev.altKey && !ev.metaKey && !ev.ctrlKey) {
+    const plain = !ev.altKey && !ev.metaKey && !ev.ctrlKey;
+    if (ARROWS[ev.code] && boardKeys() && plain) {
       if (ev.target.closest?.('#settings, #log, #help, .overlay')) return; // scrolling or picking there
       ev.preventDefault();
       moveCursor(ARROWS[ev.code]);
+      return;
+    }
+    // 1-9: the action bar's buttons, in order (an attack, a spell or an action).
+    const digit = /^(?:Digit|Numpad)([1-9])$/.exec(ev.code);
+    if (digit && boardKeys() && plain && heroTurn()) {
+      if (ev.target.closest?.('#settings, .overlay')) return;
+      ev.preventDefault();
+      armed = null; // what Enter does has changed: pick the tile afresh
+      hud.armed = false;
+      hud.keys = true; // a keyboard player: hints say pick, not click
+      const said = hud.pickByNumber(Number(digit[1]));
+      if (said) announce([said, hud.hintText()].filter(Boolean).join('. '));
+      return;
+    }
+    // R: read out the board around the hero whose turn it is.
+    if (ev.code === 'KeyR' && boardKeys() && plain) {
+      const g = game();
+      const hero = g.current?.team === 'heroes' ? g.current : g.living('heroes')[0];
+      if (hero) announce(surroundings(g, hero, { seen: (u) => !!deps.visibleUnitAt(u.x, u.z) }));
       return;
     }
     if (ev.code === 'Space' || ev.code === 'Enter') {

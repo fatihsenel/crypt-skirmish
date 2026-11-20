@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Game } from '../src/game/combat.js';
-import { tileCommand, stepTile, ARROWS, tileSummary, enterStep } from '../src/input.js';
+import { tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings } from '../src/input.js';
 
 function setTurn(game, i) {
   game.order = [game.units[i], ...game.units.filter((_, j) => j !== i)];
@@ -89,5 +89,32 @@ describe('Enter on the keyboard cursor', () => {
   it('says at once why a tile cannot be used', () => {
     expect(enterStep(null, { x: 3, z: 1 }, { toast: 'Too far' })).toBe('act');
     expect(enterStep(null, { x: 3, z: 1 }, null)).toBe('act');
+  });
+});
+
+describe('reading out the surroundings', () => {
+  it('gives the hero, then enemies in sight nearest first, and fallen allies', () => {
+    const game = new Game(['##########', '#F.g....g#', '#C.......#', '##########'], { senses: false });
+    game.start();
+    const f = setTurn(game, 0);
+    const [near, far] = game.units.filter((u) => u.team === 'monsters').sort((a, b) => a.x - b.x);
+    const c = game.units.find((u) => u.team === 'heroes' && u !== f);
+    c.hp = 0;
+    c.alive = false;
+    const text = surroundings(game, f, { seen: () => true });
+    const reach = (e) => (game.bestAttack(f, e) ? ', in range' : '');
+    expect(text).toBe(`${f.name}: ${f.hp} of ${f.maxHp} HP, ${f.movesLeft * 5} ft of movement. `
+      + `Enemies in sight: ${near.name}, 10 ft, ${near.hp} of ${near.maxHp} HP${reach(near)}; `
+      + `${far.name}, 35 ft, ${far.hp} of ${far.maxHp} HP${reach(far)}. `
+      + `Down: ${c.name}.`);
+  });
+
+  it('says when no enemy is in sight, and marks one the hero can attack now', () => {
+    const game = new Game(['#####', '#Fg.#', '#####'], { senses: false });
+    game.start();
+    const f = setTurn(game, 0);
+    const g = game.units[1];
+    expect(surroundings(game, f, { seen: () => false })).toMatch(/No enemies in sight\.$/);
+    expect(surroundings(game, f, { seen: () => true })).toContain(`${g.name}, 5 ft, ${g.hp} of ${g.maxHp} HP, in range`);
   });
 });

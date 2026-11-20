@@ -171,7 +171,8 @@ Everything is generated in the browser, with no recordings:
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
   dice don't wobble.
 - Screen readers hear the combat log as it happens (even with the log panel closed), whose
-  turn it is, and what the keyboard cursor rests on with what Enter would do there.
+  turn it is, and what the keyboard cursor rests on with what Enter would do there. R reads
+  out the board around the hero, and the number keys say what they picked.
 
 ## Controls
 
@@ -184,6 +185,8 @@ Everything is generated in the browser, with no recordings:
 | Right-drag / wheel | Pan / zoom |
 | Arrow keys | Move a cursor over the board, starting at your hero |
 | Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
+| 1–9 | Pick the action bar's buttons in order (attacks, spells, actions); the number shows on each |
+| R | Read out the hero, enemies in sight (distance, HP, in range) and who's down |
 | Space or Enter | End turn (or throw the die when it's waiting) |
 | Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
@@ -241,6 +244,7 @@ npm run dev      # http://localhost:5173
 npm test         # rules unit tests (Vitest)
 npm run lint     # ESLint: undefined names and unused code
 npm run sim      # balance check: plays whole campaigns headlessly
+npm run touch-check  # headless Chrome taps on a phone: first tap previews, second acts
 npm run build    # production bundle in dist/
 npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
@@ -341,6 +345,7 @@ src/
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
   sim.js             headless balance simulator
+  touch-check.mjs    real touch taps in headless Chrome against the dev server
   trim-models.js     strips unused animation clips from the models
   compress-models.js meshopt-compresses every .glb (npm run models)
 ```
