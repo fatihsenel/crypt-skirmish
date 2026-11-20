@@ -4,7 +4,8 @@
 //   npm run dev        (in another terminal, port 5173)
 //   npm run touch-check
 // Env: URL (default http://localhost:5173/; the deploy workflow checks the preview build at
-// http://localhost:4173/crypt-skirmish/), CHROME (the Chrome binary; the macOS default).
+// http://localhost:4173/crypt-skirmish/), CHROME (the Chrome binary; the macOS default), SLOW
+// (a CPU slowdown factor, like 6, to try it the way a slow CI machine runs).
 // On CI (CI set) Chrome runs without its sandbox, which the Linux runners don't allow.
 
 import { spawn } from 'node:child_process';
@@ -30,7 +31,6 @@ chrome.on('error', (err) => { exited = err.message; });
 let ws;
 const done = (ok, text) => {
   console.log(text);
-  if (!ok && chromeLog) console.log(`Chrome's output:\n${chromeLog}`);
   ws?.close();
   chrome.kill();
   setTimeout(() => rmSync(profile, { recursive: true, force: true }), 500);
@@ -42,7 +42,7 @@ for (let i = 0; i < 120 && !targets && exited === null; i++) { // up to 30 s on 
   try { targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json(); } catch { await sleep(250); }
 }
 if (!targets) {
-  done(false, `FAIL: Chrome didn't start (${CHROME}${exited !== null ? `, exited: ${exited}` : ''})`);
+  done(false, `FAIL: Chrome didn't start (${CHROME}${exited !== null ? `, exited: ${exited}` : ''})\nChrome's output:\n${chromeLog}`);
   await new Promise(() => {}); // done() exits
 }
 ws = new WebSocket(targets.find((t) => t.type === 'page').webSocketDebuggerUrl);
@@ -69,6 +69,7 @@ const tap = async ({ x, y }) => {
 try {
   await send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  if (process.env.SLOW) await send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) }); // to mimic CI
   await send('Page.navigate', { url: URL_BASE }); await sleep(2000);
   await ev(`localStorage.setItem('crypt-skirmish:tips', JSON.stringify({ on: false, seen: [] })); 1`);
   await send('Page.navigate', { url: `${URL_BASE}?level=1` });
@@ -78,14 +79,21 @@ try {
     up = await ev('!!window.__debug?.game()').catch(() => false); // false while the page swaps
   }
   if (!up) throw new Error('the room never loaded');
-  await sleep(4000); // the fight's opening: initiative, the first turn's camera move
 
-  // A hero's turn, then a free tile two or more steps away that's on screen, clear of the HUD.
+  // A hero's turn ready for input (End turn enabled: not busy with the turn's opening), the
+  // camera at rest on the hero, then a free tile two or more steps away, on screen, clear of the HUD.
   const pick = await ev(`(async () => {
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     const g = __debug.game();
-    for (let i = 0; i < 60 && g.current?.team !== 'heroes'; i++) await new Promise(r => setTimeout(r, 500));
-    await new Promise(r => setTimeout(r, 2500)); // the camera settles on the hero
+    const ready = () => g.current?.team === 'heroes' && !document.getElementById('end-turn').disabled;
+    for (let t0 = Date.now(); !ready() && Date.now() - t0 < 90000;) await sleep(250);
+    if (!ready()) return null;
     const u = g.current;
+    for (let i = 0, last = null; i < 40; i++, await sleep(400)) { // until the camera stops easing
+      const p = __debug.tileToScreen(u.x, u.z);
+      if (last && Math.hypot(p.x - last.x, p.y - last.y) < 0.5) break;
+      last = p;
+    }
     const steps = (t) => Math.abs(t.x - u.x) + Math.abs(t.z - u.z);
     const onScreen = (t) => { const p = __debug.tileToScreen(t.x, t.z); return p.x > 40 && p.x < innerWidth - 40 && p.y > 170 && p.y < innerHeight - 260; };
     const t = g.destinations(u)
@@ -93,17 +101,22 @@ try {
       .sort((a, b) => steps(a) - steps(b))[0];
     return t && { name: u.name, from: [u.x, u.z], to: [t.x, t.z] };
   })()`);
-  if (!pick) throw new Error('no free tile on screen to tap');
+  if (!pick) throw new Error('no hero turn ready for input, or no free tile on screen to tap');
   const at = (t) => ev(`__debug.tileToScreen(${t[0]}, ${t[1]})`);
   const state = () => ev(`(() => { const u = __debug.game().units.find(u => u.name === ${JSON.stringify(pick.name)});
     return { at: [u.x, u.z], hint: document.getElementById('hint').textContent, touch: document.body.classList.contains('touch') }; })()`);
+  const until = async (ok, ms) => { // poll: a slow CI machine takes a while to draw and move
+    let s;
+    for (let t0 = Date.now(); !ok(s = await state()) && Date.now() - t0 < ms;) await sleep(250);
+    return s;
+  };
+  const isPreview = (s) => /tap again to confirm/.test(s.hint);
 
   await tap(await at(pick.to));
-  const first = await state();
+  const first = await until(isPreview, 5000);
   await tap(await at(pick.to)); // aim afresh: the camera may have eased since
-  await sleep(2500);
-  const second = await state();
-  const previewed = first.touch && String(first.at) === String(pick.from) && /tap again to confirm/.test(first.hint);
+  const second = await until((s) => String(s.at) === String(pick.to), 15000);
+  const previewed = first.touch && String(first.at) === String(pick.from) && isPreview(first);
   const moved = String(second.at) === String(pick.to);
   done(previewed && moved, previewed && moved
     ? `PASS: ${pick.name}'s first tap previewed ("${first.hint}"), the second moved them to ${pick.to}`
