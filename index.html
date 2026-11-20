@@ -238,7 +238,11 @@
                 <h2 id="daily-head">Daily crypt <span class="daily-date"></span></h2>
                 <p class="daily-room"></p>
                 <p class="daily-result"></p>
-                <button id="title-daily-watch" type="button" class="daily-watch" hidden>Watch your best</button>
+                <div id="title-daily-best" class="daily-best" hidden>
+                  <button id="title-daily-watch" type="button" class="daily-watch">Watch your best</button>
+                  <button type="button" class="daily-link" data-best="daily" data-kind="watch">Copy link</button>
+                  <button type="button" class="daily-link" data-best="daily" data-kind="play" title="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
+                </div>
               </div>
               <button id="title-daily-play" type="button">Play today’s crypt</button>
             </section>
@@ -248,7 +252,11 @@
                 <p class="daily-room"></p>
                 <p class="daily-trait"></p>
                 <p class="daily-result"></p>
-                <button id="title-weekly-watch" type="button" class="daily-watch" hidden>Watch your best</button>
+                <div id="title-weekly-best" class="daily-best" hidden>
+                  <button id="title-weekly-watch" type="button" class="daily-watch">Watch your best</button>
+                  <button type="button" class="daily-link" data-best="weekly" data-kind="watch">Copy link</button>
+                  <button type="button" class="daily-link" data-best="weekly" data-kind="play" title="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
+                </div>
               </div>
               <button id="title-weekly-play" type="button">Play this week’s crypt</button>
             </section>

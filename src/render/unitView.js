@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { tween, wait, easeOut, easeInOut, linear } from './tween.js';
+import { tween, wait, easeOut, easeInOut, linear, calm } from './tween.js';
 import { buildModel } from './models.js';
 import { buildGltfModel } from './gltfModels.js';
 import { sfx } from '../audio/sfx.js';
@@ -588,8 +588,9 @@ export function floatText(scene, at, text, cls) {
   const obj = new CSS2DObject(el);
   obj.position.set(at.x, 1.4, at.z);
   scene.add(obj);
+  const still = calm();
   tween(1100, (t) => {
-    obj.position.y = 1.4 + t * 0.9;
+    obj.position.y = 1.4 + (still ? 0.3 : t * 0.9); // reduced motion: fades in place
     el.style.opacity = String(t < 0.6 ? 1 : 1 - (t - 0.6) / 0.4);
   }, easeOut).then(() => scene.remove(obj));
 }

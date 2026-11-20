@@ -62,6 +62,10 @@ export class Camp {
       if (b?.id === 'title-ngplus') this.h.onNewGamePlus(b);
       if (b?.id === 'title-daily-play') this.h.onDaily();
       if (b?.id === 'title-weekly-play') this.h.onWeekly();
+      if (b?.dataset.best) {
+        const fight = this.best?.[b.dataset.best];
+        if (fight) this.h.onShareFight(fight, b, b.dataset.kind);
+      }
       if (b?.id === 'title-daily-watch' || b?.id === 'title-weekly-watch') {
         const fight = this.best?.[b.id === 'title-daily-watch' ? 'daily' : 'weekly'];
         if (fight) this.h.onWatch(fight);
@@ -227,13 +231,18 @@ export class Camp {
     this.showBest('weekly', plan.key);
   }
 
-  /** The Watch your best button under a daily or weekly box, when its best win was kept. */
+  /** Watch your best and its links under a daily or weekly box, when its best win was kept. */
   showBest(mode, key) {
     const fight = bestFight(loadBestFights(), mode, key);
     this.best = { ...this.best, [mode]: fight };
-    const b = $(`#title-${mode}-watch`);
-    b.hidden = !fight;
-    if (fight) b.setAttribute('aria-label', `Watch your best ${mode === 'daily' ? 'daily' : 'weekly'} fight again`);
+    $(`#title-${mode}-best`).hidden = !fight;
+    if (!fight) return;
+    $(`#title-${mode}-watch`).setAttribute('aria-label', `Watch your best ${mode} fight again`);
+    // A link needs how the fight ended (kept since links began); an older fight just can't be shared.
+    for (const b of $(`#title-${mode}-best`).querySelectorAll('.daily-link')) {
+      b.hidden = !fight.check;
+      b.setAttribute('aria-label', `${b.dataset.kind === 'play' ? 'Copy a challenge link to' : 'Copy a replay link to'} your best ${mode} fight`);
+    }
   }
 
   /** Every achievement: unlocked ones in gold with the date, the rest dimmed, as goals. */

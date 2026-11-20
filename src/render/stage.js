@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { calm } from './tween.js';
 
 export function createStage(container, { width, height }) {
   const center = new THREE.Vector3((width - 1) / 2, 0, (height - 1) / 2);
@@ -88,9 +89,8 @@ export function createStage(container, { width, height }) {
   let shakeEnd = 0;
   let shakeLen = 1;
   const jitter = new THREE.Vector3();
-  const still = matchMedia('(prefers-reduced-motion: reduce)');
   const shake = (amp = 0.25, ms = 350) => {
-    if (still.matches) return; // the system asks for less motion: no shaking
+    if (calm()) return; // the system asks for less motion: no shaking
     shakeAmp = Math.max(shakeAmp * Math.max(0, (shakeEnd - clock.elapsedTime) / shakeLen), amp);
     shakeLen = ms / 1000;
     shakeEnd = clock.elapsedTime + shakeLen;

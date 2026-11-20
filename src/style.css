@@ -856,7 +856,12 @@ b.loot { color: var(--gold); }
 #title .daily p { margin: 3px 0 0; font-size: 12.5px; color: #d8cfc0; }
 #title .daily .daily-result { color: #a99f90; }
 #title .daily button { flex: none; padding: 8px 14px; }
-#title .daily .daily-watch { margin-top: 6px; padding: 4px 10px; font-size: 12px; }
+#title .daily-best { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 6px; }
+#title .daily-best[hidden] { display: none; }
+#title .daily .daily-watch { padding: 4px 10px; font-size: 12px; }
+#title .daily .daily-link { padding: 4px 0; font-size: 12px; background: none; border: 0; color: var(--gold); text-decoration: underline; text-underline-offset: 3px; }
+#title .daily .daily-link[hidden] { display: none; }
+@media (max-width: 520px) { #title .daily-best { justify-content: center; } }
 #title .daily .daily-watch::before { content: '▶ '; font-size: 10px; }
 /* The weekly elite crypt: the elite's gold, and tucked under the daily. */
 #title .daily.weekly { margin-top: -4px; border-color: #ffd36b55; background: #ffd36b10; }
@@ -930,6 +935,8 @@ b.loot { color: var(--gold); }
 }
 @keyframes award-in { from { opacity: 0; transform: translateY(6px) scale(0.96); } }
 @media (prefers-reduced-motion: reduce) { #banner-awards li { animation: none; } }
+/* Reduced motion: the toast and tooltips fade without sliding. */
+@media (prefers-reduced-motion: reduce) { #toast, #tip { transition: opacity 0.2s, visibility 0.2s; } }
 .sr-only {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }

@@ -4,6 +4,13 @@
  */
 export const playback = { rate: 1 };
 
+const reduce = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+/**
+ * The system asks for less motion: no screen shake, camera pans jump, floating text fades
+ * where it appears, dice don't wobble. Figures still walk and swing; that's the game itself.
+ */
+export const calm = () => !!reduce?.matches;
+
 export const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 export const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 export const linear = (t) => t;

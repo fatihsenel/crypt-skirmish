@@ -5,7 +5,7 @@
 // animations, so the monster-turn speed setting speeds it up too.
 
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { tween, wait, linear } from './tween.js';
+import { tween, wait, linear, calm } from './tween.js';
 
 const TUMBLE = 380;
 const LINGER = 1150;
@@ -52,13 +52,14 @@ export async function rollBadge(scene, at, height, { rolls, d20, line, result, t
 
   // Pop in while tumbling: each face shows a random number until the dice land.
   let last = -1;
+  const still = calm(); // reduced motion: the numbers still tumble, the dice don't wobble
   await tween(TUMBLE, (t) => {
     if (!prompt) box.style.transform = `translateX(-50%) scale(${Math.min(1, 0.4 + t * 2.4)})`;
     const step = Math.floor(t * 8);
     if (step !== last && t < 1) {
       last = step;
       for (const n of nums) n.textContent = 1 + Math.floor(Math.random() * 20);
-      for (const d of dice) d.style.transform = `rotate(${step % 2 ? -16 : 16}deg)`;
+      if (!still) for (const d of dice) d.style.transform = `rotate(${step % 2 ? -16 : 16}deg)`;
     }
   }, linear);
 

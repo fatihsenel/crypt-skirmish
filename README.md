@@ -130,7 +130,7 @@ It runs on desktop and on phones.
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button. Watch your best replays the day's fastest win from
-  the title.
+  the title, and its Copy link and Copy challenge link share it.
 - **Weekly elite crypt:** one room a week at New Game+ 3, the same for everyone, with that
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
@@ -167,7 +167,8 @@ Everything is generated in the browser, with no recordings:
   darker layers in boss rooms.
 - Sound effects and dungeon ambience.
 - Voices: every character shouts, chants and grunts in a made-up language.
-- With reduced motion turned on in the system, the screen doesn't shake on crits and blasts.
+- With reduced motion turned on in the system, the screen doesn't shake, the camera jumps
+  instead of panning, floating numbers fade in place and the dice don't wobble.
 
 ## Controls
 
@@ -319,6 +320,7 @@ src/
     unitTip.js       the character card over figures and portraits
     unitCard.js      the character card's text
     bestiary.js      the bestiary screen and its lore
+    banner.js        the end-of-fight banner: result, recap, run summary, Copy result, Save image
     overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
@@ -328,7 +330,7 @@ src/
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
   input.js           picking a tile, the long press, and what a click on a tile does
   debug.js           window.__debug and the ?victory sample run
-tests/               Vitest rules, replay and input tests
+tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
   sim.js             headless balance simulator
   trim-models.js     strips unused animation clips from the models

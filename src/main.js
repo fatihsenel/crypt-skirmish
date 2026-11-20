@@ -22,7 +22,7 @@ import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
 import { spiritWeapon } from './render/effects.js';
-import { wait, playback } from './render/tween.js';
+import { wait, playback, calm } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { fightRecap, winRecap } from './game/recap.js';
 import { Camp } from './ui/camp.js';
@@ -166,7 +166,7 @@ const camp = new Camp({
   onDaily: () => startDaily(),
   onWeekly: () => startDaily(true),
   onWatch: (f) => watchFromTitle(f),
-  onShareFight: (f, button) => links.copy(f, button),
+  onShareFight: (f, button, kind) => links.copy(f, button, kind),
   onNewGamePlus: (button) => {
     const won = loadWonRun();
     if (won) heirlooms.open(won, button);
@@ -790,6 +790,11 @@ function keepInView(unit) {
   if (!from || !to) return;
   const shift = to.sub(from);
   const ticket = ++panTween;
+  if (calm()) { // reduced motion: jump there
+    stage.controls.target.add(shift);
+    cam.position.add(shift);
+    return;
+  }
   const start = performance.now();
   let done = 0;
   const step = (now) => {

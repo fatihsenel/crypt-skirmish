@@ -31,7 +31,8 @@ server on 5173.
   Past runs keep each run's last one (`history.js`). `#watch=` links carry the same record
   (`fightLink.js`, copied and opened by `links.js`) and are replayed headlessly first, so a rules change refuses old links.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
-  they follow the monster-turn speed setting (`playback.rate`).
+  they follow the monster-turn speed setting (`playback.rate`). `calm()` there is the
+  system's reduced-motion setting: no shake, no camera pans, no drifting text.
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
   `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).
@@ -46,6 +47,8 @@ server on 5173.
 - **Room:** a map in `LEVELS` (`game/maps.js`) and a node in `NODES` (`game/campaign.js`).
 - **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
   `scripts/sim.js` if the AI wouldn't use its abilities.
+- **Spell or action:** it needs a case in `playSpell` or `playAction` in `animate.js`;
+  `tests/animate.test.js` fails until it has one.
 - Rules that differ from the SRD go in the README's House rules section.
 
 ## Testing in the browser
