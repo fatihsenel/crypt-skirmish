@@ -112,7 +112,12 @@ try {
   };
   const isPreview = (s) => /tap again to confirm/.test(s.hint);
 
-  await tap(await at(pick.to));
+  // On a failure, say what was under the finger and which events reached the page.
+  await ev(`window.__touchLog = []; for (const type of ['pointerdown', 'pointerup', 'click'])
+    addEventListener(type, (e) => __touchLog.push(type + ':' + e.pointerType + '@' + (e.target.id || e.target.tagName)), true); 1`);
+  const p1 = await at(pick.to);
+  const under = await ev(`(() => { const e = document.elementFromPoint(${p1.x}, ${p1.y}); return e && (e.id || e.tagName) + (e.className ? '.' + e.className : ''); })()`);
+  await tap(p1);
   const first = await until(isPreview, 5000);
   await tap(await at(pick.to)); // aim afresh: the camera may have eased since
   const second = await until((s) => String(s.at) === String(pick.to), 15000);
@@ -120,7 +125,8 @@ try {
   const moved = String(second.at) === String(pick.to);
   done(previewed && moved, previewed && moved
     ? `PASS: ${pick.name}'s first tap previewed ("${first.hint}"), the second moved them to ${pick.to}`
-    : `FAIL: ${JSON.stringify({ pick, first, second })}`);
+    : `FAIL: ${JSON.stringify({ pick, tap: p1, under, first, second, events: await ev('__touchLog'),
+      ready: await ev(`!document.getElementById('end-turn').disabled`) })}`);
 } catch (err) {
   done(false, `FAIL: ${err.message}`);
 }
