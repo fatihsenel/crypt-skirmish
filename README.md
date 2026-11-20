@@ -9,7 +9,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | | |
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
-| ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: the 3D skull in its crypt doorway, a new campaign, the daily and weekly elite crypts, and links to achievements and the bestiary](docs/screenshots/title.jpg) |
+| ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: the 3D skull in its crypt doorway, a saved run to continue, the daily and weekly elite crypts, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
 | ![The bestiary: monster cards with a line of lore and how many were slain, and the Elites section with each trait and how many you've slain](docs/screenshots/bestiary.jpg) | ![A won New Game+ 2 campaign: the skull laughing over the run's facts, 13 elites slain by trait, and each hero's damage, kills, crits, healing and falls](docs/screenshots/victory.jpg) |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
@@ -138,9 +138,9 @@ It runs on desktop and on phones.
   If an update moves the week to another room, its best starts again there.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
 - **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
-  follow the pointer. Click or tap it (or press K) to play its moves in turn, each with its own
-  sound: gape, chatter, cocked head, laugh, lunge and the torch guttering. A faint glow behind
-  it pulses until the first click. It laughs on the won-campaign screen and chatters at you
+  follow the pointer and flare at the title's buttons. Click or tap it (or press K) to play its
+  moves in turn, each with its own sound: gape, chatter, cocked head, laugh, lunge and the
+  torch guttering. A faint glow behind it pulses until the first click. It laughs on the won-campaign screen and chatters at you
   after a defeat, and a still of it shows while the game loads and on the saved run card. With
   Data Saver on or on a 2G connection the title keeps the flat emblem.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how

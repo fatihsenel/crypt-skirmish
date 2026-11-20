@@ -16,8 +16,9 @@ const poked = () => { try { return localStorage.getItem(POKED_KEY) === '1'; } ca
 
 /**
  * Swap `img` (the flat emblem) for the 3D logo once it has loaded. Keeps the image on any
- * failure and resolves to null then; otherwise to `{ poke(move?) }`, which plays the next
- * move (or the named one) with its sound. `hint`: pulse a glow until the skull is clicked.
+ * failure and resolves to null then; otherwise to `{ poke(move?), glance() }`: poke plays the
+ * next move (or the named one) with its sound, glance makes its eyes flare for a moment.
+ * `hint`: pulse a glow until the skull is clicked.
  */
 export async function mountTitleLogo(img, { className = 'title-logo', hint = true } = {}) {
   const canvas = document.createElement('canvas');
@@ -88,6 +89,7 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
     }
   };
   canvas.addEventListener('click', (e) => { if (onSkull(e)) poke(); });
+  const glance = () => { if (!calm()) anim.glance(); };
   // The embers in its sockets follow the pointer around the page (and drift back when it leaves).
   addEventListener('pointermove', (e) => {
     const r = canvas.getBoundingClientRect();
@@ -102,7 +104,7 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
     last = performance.now();
     R.setAnimationLoop(e.isIntersecting ? frame : null);
   }).observe(canvas);
-  return { poke };
+  return { poke, glance };
 }
 
 function buildScene(scene, env) {
@@ -297,7 +299,7 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) 
   let t = 0;
   // Now and then: a chatter, a slow gape, a cocked head, or the torch guttering. A click adds
   // a laugh and a lunge, and plays the moves in turn.
-  const ev = { chatter: 0, gape: 0, twitch: 0, tilt: 0, flare: 0, gutter: 0, laugh: 0, lunge: 0, next: 2.5 };
+  const ev = { chatter: 0, gape: 0, twitch: 0, tilt: 0, flare: 0, gutter: 0, laugh: 0, lunge: 0, glance: 0, next: 2.5 };
   const since = (at) => (at ? t - at : 99);
   const schedule = () => {
     const r = Math.random();
@@ -344,7 +346,8 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) 
     torch.intensity = still ? 40 : (38 + Math.sin(t * 13) * 3 + Math.sin(t * 7.3) * 4 + Math.random() * 3) * gutter;
 
     // The eyes and the crystal pulse, and flare with the chatter and in the dark.
-    const f = since(ev.flare), flare = !still && f < 1.4 ? Math.exp(-f * 2.5) * 3 : lurch * 2.5;
+    const f = since(ev.flare), gl = since(ev.glance);
+    const flare = still ? 0 : (f < 1.4 ? Math.exp(-f * 2.5) * 3 : lurch * 2.5) + (gl < 1.2 ? Math.exp(-gl * 3) * 2.2 : 0);
     const p = still ? 1 : 0.65 + 0.35 * Math.sin(t * 2);
     cold.intensity = 8 * p + flare * 10;
     const ease = still ? 1 : Math.min(1, dt * 5);
@@ -379,6 +382,8 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) 
 
   pose.hint = false;
   pose.look = { x: 0, y: 0 }; // the pointer, -1 to 1 each way from the skull
+  /** A short, soft flare of the eyes (the pointer or focus reaching a title button). */
+  pose.glance = () => { if (since(ev.glance) > 0.5) ev.glance = t; };
   /** Play the next move (or `name`) now, hold off the random ones for a moment, and return its name. */
   pose.poke = (name) => {
     if (!MOVES.includes(name)) name = MOVES[move++ % MOVES.length];

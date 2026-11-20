@@ -195,20 +195,42 @@ try {
     }
   }
 
-  if (wanted.includes('title')) { // with today's daily and this week's crypt won, as a returning player sees it
-    for (const button of ['title-daily-play', 'title-weekly-play']) {
-      await openWithLogo(URL_BASE, 'title-logo');
-      await ev(`document.getElementById('${button}').click(), 1`);
-      await until(`!!window.__debug?.game() && document.getElementById('title').hidden`, `the ${button} room`);
+  if (wanted.includes('title')) { // as a returning player sees it: a run to continue, two past ones, the daily and weekly won
+    const winRoom = async (what) => {
+      await until(`!!window.__debug?.game() && document.getElementById('title').hidden && document.getElementById('camp').hidden`, what);
       await sleep(3000);
       await ev('window.__debug.win(), 1');
       await until(`!document.getElementById('banner').hidden`, 'the end banner');
       await sleep(1500); // the records saved
+    };
+    // Three campaigns of one, two and three rooms: starting each one over the last puts that
+    // one in Past runs, and the third stays to continue.
+    for (const rooms of [1, 2, 3]) {
+      await openWithLogo(URL_BASE, 'title-logo');
+      await ev(`document.getElementById('title-new').click(), document.getElementById('setup-start').click(), 1`);
+      for (let r = 0; r < rooms; r++) {
+        await until(`!document.getElementById('camp').hidden`, 'the camp');
+        await sleep(800);
+        await ev(`(() => {
+          if (!document.querySelector('#camp button[data-enter]')) document.querySelector('#camp [data-node].available')?.click();
+          document.querySelector('#camp button[data-enter]').click();
+          return 1;
+        })()`);
+        await winRoom(`room ${r + 1} of run ${rooms}`);
+        await ev(`document.getElementById('next').click(), 1`);
+      }
+      await until(`!document.getElementById('camp').hidden`, 'the camp');
+      await sleep(1000);
+    }
+    for (const button of ['title-daily-play', 'title-weekly-play']) {
+      await openWithLogo(URL_BASE, 'title-logo');
+      await ev(`document.getElementById('${button}').click(), 1`);
+      await winRoom(`the ${button} room`);
     }
     await openWithLogo(URL_BASE, 'title-logo');
-    await size(1200, 918);
+    await size(1200, 975);
     await sleep(5000);
-    await encode(await shot(1200, 918), [{ file: 'docs/screenshots/title.jpg', w: 800, h: 612, type: 'jpeg', quality: 0.88 }]);
+    await encode(await shot(1200, 975), [{ file: 'docs/screenshots/title.jpg', w: 800, h: 650, type: 'jpeg', quality: 0.88 }]);
   }
 
   if (wanted.includes('victory')) { // a won New Game+ 2 run (the ?victory sample)

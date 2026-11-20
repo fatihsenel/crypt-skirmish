@@ -45,7 +45,7 @@ server on 5173.
   `emblem.svg` once the skull in `public/models/skull/` loads, and draws only while the title
   is on screen. Without WebGL, with Data Saver or on 2G the flat emblem stays. Clicking the
   skull (or K) plays its moves in turn with `sfx.skull(move)`; a glow hints at it until the first
-  click; its eyes follow the pointer (`pose.look`). The end banner mounts a second one that
+  click; its eyes follow the pointer (`pose.look`) and flare at the title's buttons (`glance`). The end banner mounts a second one that
   laughs at the won campaign and chatters after a defeat (`bannerSkull` in `main.js`).
   `public/boot-logo.jpg` (the boot screen, the run card), the app icons, `og-image.jpg` and the
   title and victory screenshots are stills of it: `npm run stills` re-renders them.

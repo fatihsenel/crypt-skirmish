@@ -211,6 +211,15 @@ function bannerSkull(move) {
   bannerSkull.mounting.then((l) => { bannerLogo = l; setTimeout(() => l?.poke(move), 900); });
 }
 
+// The title's skull glances at a button as the pointer or the keyboard focus reaches it.
+const titleEl = document.getElementById('title');
+const onButton = (ev) => {
+  const b = ev.target.closest?.('button');
+  if (b && ev.relatedTarget?.closest?.('button') !== b) titleLogo?.glance();
+};
+titleEl.addEventListener('pointerover', onButton);
+titleEl.addEventListener('focusin', onButton);
+
 // K: the skull on the title (or the end banner) plays its next move.
 window.addEventListener('keydown', (ev) => {
   if (ev.code !== 'KeyK' || ev.repeat || ev.altKey || ev.metaKey || ev.ctrlKey || replay) return;
