@@ -10,6 +10,7 @@
     "test": "vitest run",
     "sim": "node scripts/sim.js",
     "touch-check": "node scripts/touch-check.mjs",
+    "stills": "vite build && node scripts/stills.mjs",
     "models": "node scripts/compress-models.js",
     "lint": "eslint ."
   },

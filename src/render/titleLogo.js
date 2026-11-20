@@ -88,6 +88,15 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
     }
   };
   canvas.addEventListener('click', (e) => { if (onSkull(e)) poke(); });
+  // The embers in its sockets follow the pointer around the page (and drift back when it leaves).
+  addEventListener('pointermove', (e) => {
+    const r = canvas.getBoundingClientRect();
+    if (!r.width) return;
+    const cx = r.left + r.width * 0.5, cy = r.top + r.height * 0.42;
+    anim.look.x = Math.max(-1, Math.min(1, (e.clientX - cx) / (innerWidth * 0.35)));
+    anim.look.y = Math.max(-1, Math.min(1, (cy - e.clientY) / (innerHeight * 0.35)));
+  });
+  document.documentElement.addEventListener('pointerleave', () => { anim.look.x = anim.look.y = 0; });
   // Draw only while the title is showing.
   new IntersectionObserver(([e]) => {
     last = performance.now();
@@ -301,6 +310,7 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) 
 
   const MOVES = ['gape', 'chatter', 'twitch', 'laugh', 'lunge', 'gutter'];
   let move = 0;
+  const gaze = { x: 0, y: 0 }; // where the eyes look now, easing towards pose.look
 
   const pose = (dt, still) => {
     t += dt;
@@ -337,9 +347,15 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) 
     const f = since(ev.flare), flare = !still && f < 1.4 ? Math.exp(-f * 2.5) * 3 : lurch * 2.5;
     const p = still ? 1 : 0.65 + 0.35 * Math.sin(t * 2);
     cold.intensity = 8 * p + flare * 10;
+    const ease = still ? 1 : Math.min(1, dt * 5);
+    gaze.x += ((still ? 0 : pose.look.x) - gaze.x) * ease;
+    gaze.y += ((still ? 0 : pose.look.y) - gaze.y) * ease;
     for (const e of eyes) {
       e.material.emissiveIntensity = 0.3 + 0.5 * p + flare * 2;
       e.scale.setScalar(1 + flare * 0.6);
+      e.userData.x ??= e.position.x;
+      e.position.x = e.userData.x + gaze.x * 0.065;
+      e.position.y = 0.05 + gaze.y * 0.045;
     }
     orb.material.emissiveIntensity = 0.5 + 0.6 * p + flare;
     halo.material.opacity = pose.hint && !still ? 0.6 * Math.max(0, Math.sin(t * 1.6)) ** 2 : 0;
@@ -362,6 +378,7 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) 
   };
 
   pose.hint = false;
+  pose.look = { x: 0, y: 0 }; // the pointer, -1 to 1 each way from the skull
   /** Play the next move (or `name`) now, hold off the random ones for a moment, and return its name. */
   pose.poke = (name) => {
     if (!MOVES.includes(name)) name = MOVES[move++ % MOVES.length];

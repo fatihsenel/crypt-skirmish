@@ -137,11 +137,12 @@ It runs on desktop and on phones.
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
   If an update moves the week to another room, its best starts again there.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
-- **The title's skull** gapes, chatters and twitches on its own. Click or tap it (or press K)
-  to play its moves in turn, each with its own sound: gape, chatter, cocked head, laugh, lunge
-  and the torch guttering. A faint glow behind it pulses until the first click. It laughs on
-  the won-campaign screen too, and a still of it shows while the game loads and on the saved
-  run card. With Data Saver on or on a 2G connection the title keeps the flat emblem.
+- **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
+  follow the pointer. Click or tap it (or press K) to play its moves in turn, each with its own
+  sound: gape, chatter, cocked head, laugh, lunge and the torch guttering. A faint glow behind
+  it pulses until the first click. It laughs on the won-campaign screen and chatters at you
+  after a defeat, and a still of it shows while the game loads and on the saved run card. With
+  Data Saver on or on a 2G connection the title keeps the flat emblem.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
@@ -204,7 +205,7 @@ Everything is generated in the browser, with no recordings:
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel |
 | L | Open or close the combat log |
-| K | On the title or the won-campaign screen: the skull plays its next move |
+| K | On the title, or a defeat or the won campaign: the skull plays its next move |
 | Tab / Esc in a panel | Tab stays inside the panel; Esc closes it |
 
 | Touch | Action |
@@ -257,6 +258,7 @@ npm test         # rules unit tests (Vitest)
 npm run lint     # ESLint: undefined names and unused code
 npm run sim      # balance check: plays whole campaigns headlessly
 npm run touch-check  # headless Chrome taps on a phone: first tap previews, second acts
+npm run stills   # re-renders the icons, link preview, boot still and README shots of the 3D emblem
 npm run build    # production bundle in dist/
 npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
@@ -361,6 +363,7 @@ tests/               Vitest rules, replay and input tests, and a check that ever
 scripts/
   sim.js             headless balance simulator
   touch-check.mjs    real touch taps in headless Chrome against the dev server (URL= for another)
+  stills.mjs         stills of the 3D emblem and the README shots that show it (npm run stills)
   trim-models.js     strips unused animation clips from the models
   compress-models.js meshopt-compresses every .glb (npm run models)
 ```

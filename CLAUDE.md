@@ -14,6 +14,7 @@ npm run sim -- 300     # headless balance check, run after changing monsters, sp
 npm run touch-check    # phone taps in headless Chrome (dev server on 5173), after changing input;
                        # the deploy runs it against the build on seeds 3, 1 and 5, and
                        # SEED=3 LATE=700 (a late lift must still be a tap)
+npm run stills         # re-render the 3D emblem's stills and README shots, after changing it
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 ```
 
@@ -44,9 +45,10 @@ server on 5173.
   `emblem.svg` once the skull in `public/models/skull/` loads, and draws only while the title
   is on screen. Without WebGL, with Data Saver or on 2G the flat emblem stays. Clicking the
   skull (or K) plays its moves in turn with `sfx.skull(move)`; a glow hints at it until the first
-  click. The won-campaign banner mounts a second one that laughs (`victorySkull` in `main.js`).
-  `public/boot-logo.jpg` (the boot screen, the run card), the app icons and `og-image.jpg` are
-  stills of it: re-render them if the emblem changes.
+  click; its eyes follow the pointer (`pose.look`). The end banner mounts a second one that
+  laughs at the won campaign and chatters after a defeat (`bannerSkull` in `main.js`).
+  `public/boot-logo.jpg` (the boot screen, the run card), the app icons, `og-image.jpg` and the
+  title and victory screenshots are stills of it: `npm run stills` re-renders them.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it
