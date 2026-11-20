@@ -36,6 +36,9 @@ class Sfx {
     if (!this.ctx) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
+      // On an iPhone, Web Audio is "ambient" by default: the silent switch mutes it. As playback
+      // it sounds like a video's would (Safari 17+; elsewhere navigator.audioSession is absent).
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* keep the default */ }
       const c = (this.ctx = new Ctx());
 
       this.master = c.createGain();
@@ -68,7 +71,15 @@ class Sfx {
 
       this.noiseBuf = this.makeNoise(2);
     }
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    // 'interrupted' is Safari's after a call or the app going to the background.
+    if (this.ctx.state !== 'running') {
+      this.ctx.resume().catch(() => {});
+      // Older iPhones only wake the context for a sound started inside the gesture itself.
+      const blip = this.ctx.createBufferSource();
+      blip.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      blip.connect(this.ctx.destination);
+      blip.start();
+    }
     this.startAmbient();
   }
 

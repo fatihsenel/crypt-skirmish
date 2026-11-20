@@ -370,13 +370,16 @@ new ResizeObserver(() => {
   if (h - $actionbar.getBoundingClientRect().top > barRoom + 4) stage.fit();
 }).observe($actionbar);
 
-// Audio may only start after a user gesture.
+// Audio may only start after a user gesture. Safari on a phone takes the end of a tap, not its
+// start, so listen for both, and keep listening: a call or the app going to the background
+// stops it again.
 const unlockAudio = () => {
   sfx.unlock();
   music.start();
 };
-window.addEventListener('pointerdown', unlockAudio);
-window.addEventListener('keydown', unlockAudio);
+for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
+  window.addEventListener(type, () => { if (!sfx.ready) unlockAudio(); }, { capture: true, passive: true });
+}
 
 function toggleSound() {
   sfx.unlock();

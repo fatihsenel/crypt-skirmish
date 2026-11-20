@@ -176,6 +176,8 @@ Everything is generated in the browser, with no recordings:
   darker layers in boss rooms.
 - Sound effects and dungeon ambience.
 - Voices: every character shouts, chants and grunts in a made-up language.
+- Sound starts with your first tap or key press. On an iPhone it plays in silent mode too,
+  like a video does (iOS 17 and later); the Sound button mutes it.
 - With reduced motion (the Motion setting, or the system's when it's on System), the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
   dice don't wobble, and the title's skull holds still.
@@ -258,7 +260,7 @@ npm run dev      # http://localhost:5173
 npm test         # rules unit tests (Vitest)
 npm run lint     # ESLint: undefined names and unused code
 npm run sim      # balance check: plays whole campaigns headlessly
-npm run touch-check  # headless Chrome taps on a phone: first tap previews, second acts
+npm run touch-check  # headless Chrome on a phone: first tap previews, second acts; the layout fits
 npm run stills   # re-renders the icons, link preview, boot still and README shots of the 3D emblem
 npm run build    # production bundle in dist/
 npm run preview  # http://localhost:4173/crypt-skirmish/
@@ -363,7 +365,7 @@ src/
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
   sim.js             headless balance simulator
-  touch-check.mjs    real touch taps in headless Chrome against the dev server (URL= for another)
+  touch-check.mjs    real touch taps and a phone layout check in headless Chrome (URL= for another server)
   stills.mjs         stills of the 3D emblem and the README shots that show it (npm run stills)
   trim-models.js     strips unused animation clips from the models
   compress-models.js meshopt-compresses every .glb (npm run models)

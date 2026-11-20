@@ -1,6 +1,8 @@
 // Touch check: on a phone the first tap on a tile previews the move and the second does it.
 // Starts a headless Chrome with a throwaway profile, emulates a 375×812 touch phone, opens
-// ?level=1 on the dev server and taps a reachable tile twice with real touch events.
+// ?level=1 on the dev server and taps a reachable tile twice with real touch events. Then it
+// checks the phone layout: nothing wider than the screen, no label spilling out of its button,
+// and after a win, no hint left showing and the banner's buttons in an even grid.
 //   npm run dev        (in another terminal, port 5173)
 //   npm run touch-check
 // Env: URL (default http://localhost:5173/; the deploy workflow checks the preview build at
@@ -166,8 +168,40 @@ try {
   const second = await until((s) => String(s.at) === String(pick.to), 15000);
   const previewed = first.touch && String(first.at) === String(pick.from) && isPreview(first);
   const moved = String(second.at) === String(pick.to);
-  done(previewed && moved, previewed && moved
-    ? `PASS: ${pick.name}'s first tap previewed ("${first.hint}"), the second moved them to ${pick.to}`
+
+  // The phone layout: the fight, then the end banner over a tap's preview (a hint left from the
+  // last tap showed through it once, and its buttons wrapped into ragged rows).
+  const layout = (where) => ev(`(() => {
+    const out = [], W = innerWidth, shown = (e) => e.offsetParent && getComputedStyle(e).visibility !== 'hidden';
+    if (document.documentElement.scrollWidth > W) out.push('${where}: the page scrolls sideways');
+    for (const b of document.querySelectorAll('button')) if (shown(b) && b.scrollWidth > b.clientWidth + 1) out.push('${where}: "' + b.textContent.trim().slice(0, 30) + '" spills out of its button');
+    return out; })()`);
+  const problems = moved ? await layout('the fight') : [];
+  if (moved) {
+    // Once the walk is over, one tap on another free tile: a preview on the hint line.
+    for (let t0 = Date.now(); await ev(`document.getElementById('end-turn').disabled`) && Date.now() - t0 < 15000;) await sleep(250);
+    await sleep(1000); // the camera follows the walk
+    const next = await ev(`(() => { const g = __debug.game(), u = g.current;
+      const t = g.destinations(u).find((t) => { const p = __debug.tileToScreen(t.x, t.z), h = __debug.pickAt(p.x, p.y);
+        return p.x > 40 && p.x < innerWidth - 40 && p.y > 170 && p.y < innerHeight - 260 && h?.x === t.x && h?.z === t.z; });
+      return t && [t.x, t.z]; })()`);
+    if (next) await tap(await at(next));
+    const back = next ? await until(isPreview, 5000) : null;
+    if (!back || !isPreview(back)) problems.push(`no preview to test the banner over (${next ? `a tap at ${next} showed "${back.hint}"` : 'no free tile on screen'})`);
+    await ev(`__debug.win(); new Promise(r => setTimeout(r, 2500))`);
+    problems.push(...await layout('the banner'), ...await ev(`(() => {
+      const out = [], hint = document.getElementById('hint');
+      if (hint.classList.contains('show')) out.push('the banner: the hint line still shows "' + hint.textContent + '"');
+      const bs = [...document.querySelectorAll('#banner .banner-buttons > button')].filter(b => !b.hidden).map(b => b.getBoundingClientRect());
+      const rows = Object.values(Object.groupBy(bs, (r) => Math.round(r.top)));
+      for (const row of rows) if (row.length > 1 && Math.max(...row.map(r => r.width)) - Math.min(...row.map(r => r.width)) > 1) out.push('the banner: buttons of different widths in a row');
+      if (rows.length > 1 && Math.abs(rows[0][0].left - rows.at(-1)[0].left) > 1) out.push('the banner: button rows start at different places');
+      return out; })()`));
+  }
+  done(previewed && moved && !problems.length, previewed && moved && !problems.length
+    ? `PASS: ${pick.name}'s first tap previewed ("${first.hint}"), the second moved them to ${pick.to}; the layout fits`
+      + (process.env.VERBOSE ? `\n${JSON.stringify(await ev('__touchLog'))}` : '')
+    : problems.length && previewed && moved ? `FAIL: the phone layout: ${problems.join('; ')}`
       + (process.env.VERBOSE ? `\n${JSON.stringify(await ev('__touchLog'))}` : '')
     : `FAIL: ${JSON.stringify({ pick, tap: p1, under, before, first, second, events: await ev('__touchLog'),
       ready: await ev(`!document.getElementById('end-turn').disabled`), pickNow: await ev(`__debug.pickAt(${p1.x}, ${p1.y})`),

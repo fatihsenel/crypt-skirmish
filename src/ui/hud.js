@@ -734,6 +734,7 @@ export class Hud {
 
   /** End-of-fight banner (see banner.js). `final`: the last room of the campaign. */
   banner(result, opts) {
+    this.hint(''); // a last tap's preview would show through the card
     this.end.show(result, opts);
   }
 
