@@ -2,6 +2,8 @@
 // Starts a headless Chrome with a throwaway profile, emulates a 375×812 touch phone, opens
 // ?level=1 on the dev server and taps a reachable tile twice with real touch events. Then it
 // checks the phone layout: the title's card clear of the corner buttons and in line with them,
+// the fixed controls clear of each other, four portraits across the turn order, a banner's card
+// below the corner buttons,
 // nothing wider than the screen, no label spilling out of its button,
 // and after a win, no hint left showing and the banner's buttons in an even grid.
 //   npm run dev        (in another terminal, port 5173)
@@ -185,6 +187,19 @@ try {
     const out = [], W = innerWidth, shown = (e) => e.offsetParent && getComputedStyle(e).visibility !== 'hidden';
     if (document.documentElement.scrollWidth > W) out.push('${where}: the page scrolls sideways');
     for (const b of document.querySelectorAll('button')) if (shown(b) && b.scrollWidth > b.clientWidth + 1) out.push('${where}: "' + b.textContent.trim().slice(0, 30) + '" spills out of its button');
+    // The fixed controls clear of each other.
+    const fixed = ['#audio', '#initiative', '#help', '#actionbar', '#hint', '#tip'].map((s) => document.querySelector(s)).filter((e) => e && shown(e) && getComputedStyle(e).visibility !== 'hidden' && +getComputedStyle(e).opacity > 0);
+    for (let i = 0; i < fixed.length; i++) for (let j = i + 1; j < fixed.length; j++) {
+      if (fixed[i].contains(fixed[j]) || fixed[j].contains(fixed[i])) continue; // the hint line is part of the action bar
+      const a = fixed[i].getBoundingClientRect(), c = fixed[j].getBoundingClientRect();
+      if (Math.min(a.right, c.right) - Math.max(a.left, c.left) > 2 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 2) out.push('${where}: #' + fixed[i].id + ' runs into #' + fixed[j].id);
+    }
+    // The whole party in the turn order (more past them scroll).
+    const bar = document.getElementById('initiative'), chips = [...bar.children];
+    if (chips.length >= 4 && chips[0].offsetWidth * 4 + 3 * parseFloat(getComputedStyle(bar).columnGap) > bar.clientWidth + 1) out.push('${where}: four portraits do not fit across the turn order');
+    // A banner's card starts below the corner buttons.
+    const card = document.querySelector('#banner:not([hidden]) .card');
+    if (card && card.getBoundingClientRect().top < document.getElementById('audio').getBoundingClientRect().bottom) out.push('${where}: the card starts under the sound and settings buttons');
     return out; })()`);
   const problems = [...titleProblems, ...(moved ? await layout('the fight') : [])];
   if (moved) {

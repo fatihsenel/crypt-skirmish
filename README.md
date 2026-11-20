@@ -167,7 +167,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   yellow for colour-blind players.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does.
 - **Turn order:** portraits along the top, each with its initiative number. Long names
-  shrink to fit, like "G. Spider 2" or "R. Mummy".
+  shrink to fit, like "G. Spider 2" or "R. Mummy". On an upright phone the whole party fits
+  across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,

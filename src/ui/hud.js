@@ -86,7 +86,8 @@ export class Hud {
       if (chip) this.showUnitTip(chip, 'below', true);
     });
     $('#initiative').addEventListener('pointerleave', (ev) => ev.pointerType === 'mouse' && this.unitTip.hide());
-    $('#initiative').addEventListener('scroll', () => this.unitTip.hide(), { passive: true });
+    $('#initiative').addEventListener('scroll', () => { this.unitTip.hide(); this.markOverflow(); }, { passive: true });
+    window.addEventListener('resize', () => this.markOverflow());
     $('#initiative').addEventListener('click', (ev) => {
       const chip = chipOf(ev);
       if (!this.touch || !chip) return;
@@ -453,6 +454,14 @@ export class Hud {
     const bar = $('#initiative');
     const cur = bar.querySelector('.current');
     if (cur) bar.scrollLeft = cur.offsetLeft - bar.clientWidth / 2 + cur.clientWidth / 2;
+    this.markOverflow();
+  }
+
+  /** Fades the turn order's edge where more portraits are scrolled out of sight (style.css). */
+  markOverflow() {
+    const bar = $('#initiative');
+    bar.classList.toggle('more-left', bar.scrollLeft > 2);
+    bar.classList.toggle('more-right', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2);
   }
 
   renderActionBar(game, { selected, busy }) {
