@@ -371,14 +371,22 @@ new ResizeObserver(() => {
 }).observe($actionbar);
 
 // Audio may only start after a user gesture. Safari on a phone takes the end of a tap, not its
-// start, so listen for both, and keep listening: a call or the app going to the background
-// stops it again.
+// start: a context made on touch-down says it's running yet stays silent. So start it on the
+// end of a tap, a click or a key, and for the first few of those kick it again the way the
+// Sound button does (wake it, then set the volume afresh); after that only when it has
+// stopped (a call, or the app going to the background).
 const unlockAudio = () => {
   sfx.unlock();
   music.start();
 };
-for (const type of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown']) {
-  window.addEventListener(type, () => { if (!sfx.ready) unlockAudio(); }, { capture: true, passive: true });
+let audioKicks = 0;
+for (const type of ['pointerup', 'touchend', 'click', 'keydown']) {
+  window.addEventListener(type, () => {
+    if (sfx.ready && audioKicks >= 4) return;
+    audioKicks++;
+    unlockAudio();
+    sfx.setMuted(sfx.muted);
+  }, { capture: true, passive: true });
 }
 
 function toggleSound() {

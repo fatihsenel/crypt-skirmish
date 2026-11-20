@@ -72,14 +72,13 @@ class Sfx {
       this.noiseBuf = this.makeNoise(2);
     }
     // 'interrupted' is Safari's after a call or the app going to the background.
-    if (this.ctx.state !== 'running') {
-      this.ctx.resume().catch(() => {});
-      // Older iPhones only wake the context for a sound started inside the gesture itself.
-      const blip = this.ctx.createBufferSource();
-      blip.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
-      blip.connect(this.ctx.destination);
-      blip.start();
-    }
+    // Called from a gesture: wake it, with a silent blip started inside the gesture itself
+    // (some iPhones only wake for that, even when the context says it's running).
+    this.ctx.resume().catch(() => {});
+    const blip = this.ctx.createBufferSource();
+    blip.buffer = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+    blip.connect(this.ctx.destination);
+    blip.start();
     this.startAmbient();
   }
 
