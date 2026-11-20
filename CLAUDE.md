@@ -39,7 +39,10 @@ server on 5173.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
   motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):
-  no shake, no camera pans, no drifting text.
+  no shake, no camera pans, no drifting text, and a still title logo.
+- The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces the flat
+  `emblem.svg` once the skull in `public/models/skull/` loads, and draws only while the title
+  is on screen. Without WebGL the flat emblem stays.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it

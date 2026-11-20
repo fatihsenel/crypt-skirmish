@@ -1,0 +1,3 @@
+"Human Skull" by CDmir, from OpenGameArt (https://opengameart.org/sites/default/files/skull-obj.zip).
+License: CC0 1.0 (public domain dedication).
+Changes: textures resized, the jaw and lower teeth split into their own object, numbers rounded.

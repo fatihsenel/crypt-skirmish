@@ -192,6 +192,9 @@ const camp = new Camp({
   },
 });
 
+// The 3D emblem loads on its own and replaces the flat one when it's ready.
+import('./render/titleLogo.js').then((m) => m.mountTitleLogo(document.querySelector('#title .title-emblem'))).catch(() => {});
+
 function startCampaign(difficulty, names, classes) {
   sfx.ui();
   saving = true;

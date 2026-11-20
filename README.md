@@ -137,6 +137,8 @@ It runs on desktop and on phones.
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
   If an update moves the week to another room, its best starts again there.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
+- **The title's skull** gapes, chatters and twitches on its own. Click or tap it to play its
+  moves in turn: gape, chatter, cocked head, laugh, lunge and the torch guttering.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
@@ -171,7 +173,7 @@ Everything is generated in the browser, with no recordings:
 - Voices: every character shouts, chants and grunts in a made-up language.
 - With reduced motion (the Motion setting, or the system's when it's on System), the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
-  dice don't wobble.
+  dice don't wobble, and the title's skull holds still.
 - Screen readers hear the combat log as it happens (even with the log panel closed), whose
   turn it is, and what the keyboard cursor rests on with what Enter would do there. R reads
   out the board around the hero, and the number keys say what they picked. At camp they hear
@@ -324,6 +326,7 @@ src/
     effects.js       spell effects, hit particles
     rollBadge.js     the d20 badge over attacks and saves
     tween.js         promise-based tweening and playback speed
+    titleLogo.js     the title's 3D emblem: the skull, its jaw, the mist and wisps
   audio/             sfx.js, music.js, voices.js (all procedural)
   ui/
     hud.js           initiative, action bar, combat log
@@ -374,6 +377,8 @@ back the original file from git history, then trim and compress again.
   via Poly Pizza.
 - **Dungeon tiles and props:** KayKit Dungeon Remastered by Kay Lousberg, CC0.
 - **Logo and icons:** drawn for the game as SVG. The lettering uses Cinzel from Google Fonts.
+  The title's 3D skull is "Human Skull" by CDmir on OpenGameArt, CC0; the doorway, sword and
+  staff around it are built in code.
 - License files are in `public/models`. If a model fails to load, the game falls back to a
   simple procedural figure.
 
