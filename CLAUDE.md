@@ -41,14 +41,15 @@ server on 5173.
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
   motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):
   no shake, no camera pans, no drifting text, and a still title logo.
-- The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces the flat
-  `emblem.svg` once the skull in `public/models/skull/` loads, and draws only while the title
-  is on screen. Without WebGL, with Data Saver or on 2G the flat emblem stays. Clicking the
-  skull (or K) plays its moves in turn with `sfx.skull(move)`; a glow hints at it until the first
-  click; its eyes follow the pointer (`pose.look`) and flare at the title's buttons (`glance`). The end banner mounts a second one that
-  laughs at the won campaign and chatters after a defeat (`bannerSkull` in `main.js`).
-  `public/boot-logo.jpg` (the boot screen, the run card), the app icons, `og-image.jpg` and the
-  title and victory screenshots are stills of it: `npm run stills` re-renders them.
+- The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still
+  (the same size) once the skull in `public/models/skull/` loads, and draws only while the title
+  is on screen. Without WebGL, with Data Saver or on 2G its still (`boot-logo.jpg`) stays.
+  Clicking the skull (or K) plays its moves in turn with `sfx.skull(move)`; a glow hints at it
+  until the first click; its eyes follow the pointer (`pose.look`) and flare at the title's
+  buttons (`glance`). The end banner mounts a second one that laughs at the won campaign and
+  chatters after a defeat (`bannerSkull` in `main.js`). `public/boot-logo.jpg` (the boot screen,
+  the run card), the app icons, `og-image.jpg` and the title and victory screenshots are stills
+  of it: `npm run stills` re-renders them.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it

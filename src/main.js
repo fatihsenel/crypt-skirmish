@@ -192,8 +192,9 @@ const camp = new Camp({
   },
 });
 
-// The 3D emblem loads on its own and replaces the flat one when it's ready. With Data Saver
-// on, or on a 2G connection, the flat one stays and the skull isn't downloaded.
+// The 3D emblem loads on its own and replaces its still (the same size, so nothing jumps) when
+// it's ready. With Data Saver on, or on a 2G connection, the still stays and the skull isn't
+// downloaded.
 const slowLink = ((c) => !!c && (c.saveData || /2g/.test(c.effectiveType ?? '')))(navigator.connection);
 const logoModule = () => import('./render/titleLogo.js');
 let titleLogo = null, bannerLogo = null;

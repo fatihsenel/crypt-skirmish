@@ -690,10 +690,10 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
 /* The won campaign's skull: a still at first, then the 3D emblem (victorySkull in main.js). */
 #banner-emblem { margin: -12px auto -2px; }
 #banner-emblem[hidden] { display: none; }
-#banner .banner-emblem { display: block; width: 130px; height: auto; margin: 0 auto;
-  -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent); mask-image: radial-gradient(closest-side, #000 72%, transparent); }
-#banner .banner-logo { display: block; height: clamp(90px, 15vh, 150px); aspect-ratio: 1.15; max-width: 100%; margin: 0 auto; animation: logo-in 0.8s ease-out; }
-@media (max-height: 520px) { #banner .banner-emblem { width: 92px; } #banner .banner-logo { height: 80px; } }
+/* The still and the 3D canvas that replaces it share one size, so the swap doesn't show. */
+#banner .banner-emblem, #banner .banner-logo { display: block; height: clamp(90px, 15vh, 150px); width: auto; aspect-ratio: 1.15; max-width: 100%; margin: 0 auto; }
+#banner .banner-emblem { -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent); mask-image: radial-gradient(closest-side, #000 72%, transparent); }
+@media (max-height: 520px) { #banner .banner-emblem, #banner .banner-logo { height: 80px; } }
 @media (max-width: 520px) { #banner-emblem { margin-top: 16px; } } /* below the corner buttons */
 #banner[data-result='defeat'] h1 { color: var(--monster); }
 #banner p { margin: 0 0 18px; color: var(--muted); max-width: 420px; }
@@ -854,12 +854,11 @@ b.loot { color: var(--gold); }
   background: rgba(10, 8, 12, 0.78); border: 1px solid #c9b07a33; border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
-#title .title-emblem { display: block; width: auto; height: clamp(84px, 16vh, 150px); margin: 0 auto 4px; filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6)); }
-@media (max-height: 520px) { #title .title-emblem { height: 64px; } }
-/* The 3D emblem (render/titleLogo.js): wider than the flat one, for the sway and the mist. */
-#title .title-logo { display: block; height: clamp(130px, 26vh, 240px); aspect-ratio: 1.15; max-width: 100%; margin: -6px auto -2px; animation: logo-in 0.8s ease-out; }
-@media (max-height: 520px) { #title .title-logo { height: 96px; } }
-@keyframes logo-in { from { opacity: 0; } }
+/* The emblem: a still of it (the boot screen's), then the 3D one (render/titleLogo.js) in its
+   place once that loads. One size for both, so the swap doesn't show. */
+#title .title-emblem, #title .title-logo { display: block; height: clamp(130px, 26vh, 240px); width: auto; aspect-ratio: 1.15; max-width: 100%; margin: -6px auto -2px; }
+#title .title-emblem { -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent); mask-image: radial-gradient(closest-side, #000 72%, transparent); }
+@media (max-height: 520px) { #title .title-emblem, #title .title-logo { height: 96px; } }
 #title h1 { margin: 0; font: 700 clamp(36px, 7vw, 64px) var(--display); color: var(--gold); letter-spacing: 0.04em; }
 #title .tagline { margin: 6px 0 26px; color: var(--ink); opacity: 0.85; }
 #title .difficulty { border: 0; margin: 14px 0 6px; padding: 0; }

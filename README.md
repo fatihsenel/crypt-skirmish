@@ -138,11 +138,12 @@ It runs on desktop and on phones.
   If an update moves the week to another room, its best starts again there.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
 - **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
-  follow the pointer and flare at the title's buttons. Click or tap it (or press K) to play its
-  moves in turn, each with its own sound: gape, chatter, cocked head, laugh, lunge and the
-  torch guttering. A faint glow behind it pulses until the first click. It laughs on the won-campaign screen and chatters at you
-  after a defeat, and a still of it shows while the game loads and on the saved run card. With
-  Data Saver on or on a 2G connection the title keeps the flat emblem.
+  follow the pointer (on a phone, your taps) and flare at the title's buttons. Click or tap it
+  (or press K) to play its moves in turn, each with its own sound: gape, chatter, cocked head,
+  laugh, lunge and the torch guttering. A faint glow behind it pulses until the first click.
+  It laughs on the won-campaign screen and chatters at you after a defeat, and a still of it
+  shows while the game loads and on the saved run card. With Data Saver on or on a 2G
+  connection the title keeps a still of it.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
@@ -384,9 +385,9 @@ back the original file from git history, then trim and compress again.
   via Poly Pizza.
 - **Dungeon tiles and props:** KayKit Dungeon Remastered by Kay Lousberg, CC0.
 - **Logo and icons:** the flat emblem and the favicon are drawn for the game as SVG. The
-  lettering uses Cinzel from Google Fonts. The title's 3D skull is "Human Skull" by CDmir on OpenGameArt, CC0; the doorway, sword and
-  staff around it are built in code. The app icons, the link preview and the loading screen's
-  emblem are stills of it.
+  lettering uses Cinzel from Google Fonts. The title's 3D skull is "Human Skull" by CDmir on
+  OpenGameArt, CC0; the doorway, sword and staff around it are built in code. The app icons,
+  the link preview and the loading screen's emblem are stills of it.
 - License files are in `public/models`. If a model fails to load, the game falls back to a
   simple procedural figure.
 

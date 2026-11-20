@@ -1,5 +1,5 @@
 // The 3D emblem: a skull over a crossed sword and staff in a crypt doorway, with mist on the
-// steps. It replaces a flat emblem once the skull has loaded, and only draws while it is on
+// steps. It replaces a still of itself once the skull has loaded, and only draws while it is on
 // screen. The title has one, and the won-campaign screen another. Reduced motion holds it still.
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
@@ -15,7 +15,7 @@ const POKED_KEY = 'crypt-skirmish:skull-poked';
 const poked = () => { try { return localStorage.getItem(POKED_KEY) === '1'; } catch { return true; } };
 
 /**
- * Swap `img` (the flat emblem) for the 3D logo once it has loaded. Keeps the image on any
+ * Swap `img` (a still of the emblem, the same size) for the 3D logo once it has loaded. Keeps the image on any
  * failure and resolves to null then; otherwise to `{ poke(move?), glance() }`: poke plays the
  * next move (or the named one) with its sound, glance makes its eyes flare for a moment.
  * `hint`: pulse a glow until the skull is clicked.
@@ -28,7 +28,7 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
   try {
     R = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
   } catch {
-    return null; // No WebGL: the flat emblem stays.
+    return null; // No WebGL: the still stays.
   }
   R.setClearColor(0x000000, 0);
   R.toneMapping = THREE.ACESFilmicToneMapping;
@@ -90,15 +90,24 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
   };
   canvas.addEventListener('click', (e) => { if (onSkull(e)) poke(); });
   const glance = () => { if (!calm()) anim.glance(); };
-  // The embers in its sockets follow the pointer around the page (and drift back when it leaves).
-  addEventListener('pointermove', (e) => {
+  // The embers in its sockets follow the mouse around the page (and drift back when it leaves).
+  // On a touch screen they look at each tap or drag, and drift back two seconds after.
+  let lookBack = 0;
+  const lookAt = (e) => {
     const r = canvas.getBoundingClientRect();
     if (!r.width) return;
     const cx = r.left + r.width * 0.5, cy = r.top + r.height * 0.42;
     anim.look.x = Math.max(-1, Math.min(1, (e.clientX - cx) / (innerWidth * 0.35)));
     anim.look.y = Math.max(-1, Math.min(1, (cy - e.clientY) / (innerHeight * 0.35)));
+    if (e.pointerType === 'mouse') return;
+    clearTimeout(lookBack);
+    lookBack = setTimeout(() => { anim.look.x = anim.look.y = 0; }, 2000);
+  };
+  addEventListener('pointermove', lookAt);
+  addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') lookAt(e); });
+  document.documentElement.addEventListener('pointerleave', (e) => {
+    if (e.pointerType === 'mouse') anim.look.x = anim.look.y = 0; // a finger leaving is just a lift
   });
-  document.documentElement.addEventListener('pointerleave', () => { anim.look.x = anim.look.y = 0; });
   // Draw only while the title is showing.
   new IntersectionObserver(([e]) => {
     last = performance.now();
