@@ -15,7 +15,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
 
 A party of four fights its way down a crypt on a 5-ft grid, room by room, across four acts.
-It runs on desktop and on phones.
+It runs on desktop and on phones, and once it has loaded it plays offline too.
 
 **Contents:** [The party](#the-party) · [Rules](#rules) · [Monsters](#monsters) ·
 [The dungeon](#the-dungeon) · [The campaign](#the-campaign) · [Modes and extras](#modes-and-extras) ·
@@ -263,10 +263,11 @@ npm run sim      # balance check: plays whole campaigns headlessly
 npm run touch-check  # headless Chrome on a phone: first tap previews, second acts; the layout fits
 npm run stills   # re-renders the icons, link preview, boot still and README shots of the 3D emblem
 npm run build    # production bundle in dist/
+npm run size-check  # the first screen's download stays within its budget (after a build)
 npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
 
-Every push to `main` runs lint and the tests, builds, runs the touch check on three fixed fights against the
+Every push to `main` runs lint and the tests, builds, checks the first screen's size, runs the touch check on three fixed fights against the
 build (and once with each finger lifted late, as a busy phone sees it) and deploys to GitHub Pages (`.github/workflows/pages.yml`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
@@ -362,6 +363,7 @@ src/
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
   input.js           picking a tile, the long press, what a click does, the cursor's step and words
   debug.js           window.__debug and the ?victory sample run
+  offline.js         registers the offline copy (public/sw.js) and hands it the files already loaded
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
   sim.js             headless balance simulator
@@ -369,6 +371,9 @@ scripts/
   stills.mjs         stills of the 3D emblem and the README shots that show it (npm run stills)
   trim-models.js     strips unused animation clips from the models
   compress-models.js meshopt-compresses every .glb (npm run models)
+  skull-glb.mjs      converts the title skull's OBJ scan to public/models/skull/skull.glb
+  size-check.mjs     gzipped size of the title's code and of the skull against a budget
+public/sw.js         the offline copy: pages from the network first, everything else saved
 ```
 
 The rules engine resolves everything instantly and emits events (`attack`, `move`, `spell`,
@@ -379,6 +384,11 @@ Models load room by room, so a fight only waits for its own figures. They are tr
 clips the game uses and meshopt-compressed (about 1.1 MB of characters). To add a clip, bring
 back the original file from git history, then trim and compress again.
 
+The title comes up as soon as its code is in (about 315 kB gzipped). The skull loads next
+(about 220 kB), then the dungeon tiles and the figures. Once a production build has loaded, a
+service worker keeps a copy of everything it fetched, the Google fonts too, so the game opens
+without a signal; a new deploy shows up on the next visit online.
+
 ## Credits
 
 - **Characters:** KayKit Adventurers and KayKit Skeletons by Kay Lousberg
@@ -388,7 +398,7 @@ back the original file from git history, then trim and compress again.
 - **Dungeon tiles and props:** KayKit Dungeon Remastered by Kay Lousberg, CC0.
 - **Logo and icons:** the flat emblem and the favicon are drawn for the game as SVG. The
   lettering uses Cinzel from Google Fonts. The title's 3D skull is "Human Skull" by CDmir on
-  OpenGameArt, CC0; the doorway, sword and staff around it are built in code. The app icons,
+  OpenGameArt, CC0, converted to glTF; the doorway, sword and staff around it are built in code. The app icons,
   the link preview and the loading screen's emblem are stills of it.
 - License files are in `public/models`. If a model fails to load, the game falls back to a
   simple procedural figure.

@@ -17,6 +17,8 @@ npm run touch-check    # phone taps and layout in headless Chrome (dev server on
                        # SEED=3 LATE=700 (a late lift must still be a tap)
 npm run stills         # re-render the 3D emblem's stills and README shots, after changing it
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
+npm run size-check     # after a build: the title's code and the skull, gzipped, within budget;
+                       # the deploy runs it
 ```
 
 The `dnd-dev` entry in `.claude/launch.json` uses port 5179. Don't use it: run the dev
@@ -50,7 +52,14 @@ server on 5173.
   buttons (`glance`). The end banner mounts a second one that laughs at the won campaign and
   chatters after a defeat (`bannerSkull` in `main.js`). `public/boot-logo.jpg` (the boot screen,
   the run card), the app icons, `og-image.jpg` and the title and victory screenshots are stills
-  of it: `npm run stills` re-renders them.
+  of it: `npm run stills` re-renders them. The skull is `skull.glb` (from its OBJ scan by
+  `scripts/skull-glb.mjs`), and the figures and tiles wait for it, up to 6 s, on the title.
+- Production builds register `public/sw.js` (`src/offline.js`), an offline copy: pages from the
+  network first (4 s), hashed `assets/` from the cache, everything else from the cache and
+  refreshed behind it. The page posts the files it loaded before the worker ran; the worker
+  saves the Latin font files from the saved Google Fonts stylesheet itself. Change `CACHE` in
+  `sw.js` to drop every saved file. The dev server never registers it; test it on
+  `npm run preview` in a throwaway headless Chrome, not the browser pane's profile.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it

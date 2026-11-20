@@ -43,6 +43,7 @@ import { createPreview } from './preview.js';
 import { settleFight } from './fightEnd.js';
 import { announce } from './ui/announce.js';
 import { installDebug, sampleVictory } from './debug.js';
+import { saveLoaded } from './offline.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, loadDaily } from './game/daily.js';
 import { weekKey, weeklyPlan, weeklyCampaign } from './game/weekly.js';
@@ -198,7 +199,8 @@ const camp = new Camp({
 const slowLink = ((c) => !!c && (c.saveData || /2g/.test(c.effectiveType ?? '')))(navigator.connection);
 const logoModule = () => import('./render/titleLogo.js');
 let titleLogo = null, bannerLogo = null;
-if (!slowLink) logoModule().then((m) => m.mountTitleLogo(document.querySelector('#title .title-emblem'))).then((l) => { titleLogo = l; }).catch(() => {});
+// Settles once the skull is up (or has failed): the title's figure downloads wait for it.
+const titleLogoUp = slowLink ? Promise.resolve() : logoModule().then((m) => m.mountTitleLogo(document.querySelector('#title .title-emblem'))).then((l) => { titleLogo = l; }).catch(() => {});
 
 /**
  * The end banner's skull (the won campaign and every defeat): a second 3D emblem, mounted the
@@ -1423,14 +1425,16 @@ if (levelParam >= 1 && levelParam <= LEVELS.length) {
     const save = loadSave();
     camp.showTitle(save, loadWonRun());
     links.open(location.hash); // a #watch= replay or #play= challenge
-    // While the title is up: the figures for the room the player is most likely to enter
-    // next (the saved fight, the rooms open from the saved camp, or the first room), then
-    // every other model.
+    // While the title is up, once its skull is in (at most 6 s: on mobile data the two would
+    // share the line and the skull would come last): the figures for the room the player is
+    // most likely to enter next (the saved fight, the rooms open from the saved camp, or the
+    // first room), then every other model. A fight started sooner asks for its own at once.
     let next = [START_NODE];
     if (save?.fight) next = [save.fight.node];
     else if (save) next = choices(save).filter((id) => NODES[id].kind === 'fight');
     const first = [...new Set(next.flatMap((id) => roomFiles(id, save?.party ?? null)))];
-    loadModels(first).then(() => loadModels(allFiles()));
+    Promise.race([titleLogoUp, new Promise((r) => setTimeout(r, 6000))])
+      .then(() => loadModels(first)).then(() => loadModels(allFiles())).then(saveLoaded); // all in: keep them offline
   }
   hideBoot();
 }

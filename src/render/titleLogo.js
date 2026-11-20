@@ -2,7 +2,7 @@
 // steps. It replaces a still of itself once the skull has loaded, and only draws while it is on
 // screen. The title has one, and the won-campaign screen another. Reduced motion holds it still.
 import * as THREE from 'three';
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { calm } from './tween.js';
 import { sfx } from '../audio/sfx.js';
@@ -269,8 +269,8 @@ function buildScene(scene, env) {
 
 async function loadSkull(parts) {
   const tl = new THREE.TextureLoader();
-  const [obj, map, normalMap, aoMap] = await Promise.all([
-    new OBJLoader().loadAsync(`${BASE}skull.obj`),
+  const [{ scene: obj }, map, normalMap, aoMap] = await Promise.all([
+    new GLTFLoader().loadAsync(`${BASE}skull.glb`), // from the scan's OBJ: scripts/skull-glb.mjs
     tl.loadAsync(`${BASE}color.jpg`), tl.loadAsync(`${BASE}normal.jpg`), tl.loadAsync(`${BASE}ao.jpg`),
   ]);
   map.colorSpace = THREE.SRGBColorSpace;

@@ -27,6 +27,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      - run: npm run size-check
       # On a phone the first tap on a tile previews and the second acts: check it with real
       # touch events in headless Chrome against the build, before it goes live.
       - name: Touch check

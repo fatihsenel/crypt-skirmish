@@ -12,7 +12,8 @@
     "touch-check": "node scripts/touch-check.mjs",
     "stills": "vite build && node scripts/stills.mjs",
     "models": "node scripts/compress-models.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "size-check": "node scripts/size-check.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"
