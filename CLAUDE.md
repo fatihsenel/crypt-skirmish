@@ -11,7 +11,8 @@ npm run dev            # dev server, use http://localhost:5173
 npm test               # Vitest, run before every commit
 npm run lint           # ESLint: undefined names and unused code, run before every commit
 npm run sim -- 300     # headless balance check, run after changing monsters, spells or rooms
-npm run touch-check    # phone taps in headless Chrome (dev server on 5173), after changing input
+npm run touch-check    # phone taps in headless Chrome (dev server on 5173), after changing input;
+                       # the deploy runs it against the build too
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 ```
 
@@ -22,6 +23,9 @@ server on 5173.
 
 - **`src/game/` is pure rules:** no three.js, no DOM. It is unit-tested in `tests/` and run
   headlessly by `scripts/sim.js`. Keep it that way.
+- The title shows as soon as the code is in; the dungeon tiles load behind it, and `newGame`
+  and `startReplay` wait for them (`kit` in `main.js`). A finished fight is settled in
+  `fightEnd.js` (`settleFight`): records, achievements, dailies and the banner's facts.
 - The rules engine (`Game` in `combat.js`, built on `Spellcasting` in `spells.js`) resolves
   everything instantly and emits events (`attack`, `move`, `spell`, `death`, …). `move()` returns steps. `src/main.js` turns them
   into HUD updates, and `src/animate.js` into animations and sound.
@@ -38,8 +42,8 @@ server on 5173.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). Screen readers hear log lines, turns and the cursor's tile
-  through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 press
-  the action bar's buttons (`pickByNumber` in `hud.js`); R reads `surroundings()`.
+  through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
+  press the action bar's first ten buttons (`pickByNumber` in `hud.js`); R reads `surroundings()`.
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
   `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).

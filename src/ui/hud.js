@@ -613,14 +613,14 @@ export class Hud {
     });
 
     const html = group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts);
-    // The first nine buttons answer the number keys, in the order shown (see pickByNumber).
+    // The first ten buttons answer the number keys 1-9 and 0, in the order shown (see pickByNumber).
     let n = 0;
-    return html.replace(/<button type="button" class="ability[^>]*>/g, (tag) => (++n > 9 ? tag
-      : `${tag.slice(0, -1)} aria-keyshortcuts="${n}"><kbd class="key" aria-hidden="true">${n}</kbd>`));
+    return html.replace(/<button type="button" class="ability[^>]*>/g, (tag) => (++n > 10 ? tag
+      : `${tag.slice(0, -1)} aria-keyshortcuts="${n % 10}"><kbd class="key" aria-hidden="true">${n % 10}</kbd>`));
   }
 
   /**
-   * Number key `n`: press the action bar's nth button. Returns what to read out (its name,
+   * Number key `n` (1-10, 10 for the 0 key): press the action bar's nth button. Returns what to read out (its name,
    * and why not when it can't be used), or null when there's no such button.
    */
   pickByNumber(n) {

@@ -8,7 +8,7 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
-  recordDefeat, runSummary, runShareText, choices, START_NODE, runDifficulty, newGamePlus, parseWonRun,
+  choices, START_NODE, runDifficulty, newGamePlus, parseWonRun,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
@@ -24,10 +24,9 @@ import { preloadDungeon } from './render/dungeonKit.js';
 import { spiritWeapon } from './render/effects.js';
 import { wait, playback, calm, setMotion, onSystemMotion } from './render/tween.js';
 import { Hud } from './ui/hud.js';
-import { fightRecap, winRecap } from './game/recap.js';
 import { Camp } from './ui/camp.js';
 import { Bestiary } from './ui/bestiary.js';
-import { meet, metBefore, slay, loadBestiary, slainTotal, recordBlows, slayElite, loadElitesSlain } from './game/bestiary.js';
+import { meet, metBefore, slay, slayElite } from './game/bestiary.js';
 import { TEMPLATES } from './game/units.js';
 import { sfx } from './audio/sfx.js';
 import { music } from './audio/music.js';
@@ -35,18 +34,17 @@ import { loadSettings, saveSettings, SPEEDS } from './game/settings.js';
 import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { tips } from './ui/tips.js';
-import { recordRun, loadHistory, saveLastFight, clearLastFight } from './game/history.js';
-import { challengeText } from './game/fightLink.js';
-import { unlock } from './game/achievements.js';
+import { recordRun, loadHistory, clearLastFight } from './game/history.js';
 import { createLinks } from './links.js';
 import { createThreats, listNames } from './threats.js';
 import { createAnimations } from './animate.js';
 import { createControls } from './controls.js';
+import { settleFight } from './fightEnd.js';
 import { announce } from './ui/announce.js';
 import { installDebug, sampleVictory } from './debug.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
-import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText, recordBestFight } from './game/daily.js';
-import { weekKey, weeklyPlan, weeklyCampaign, recordWeekly, weekStreak, weeklyShareText } from './game/weekly.js';
+import { dayKey, dailyPlan, dailyCampaign, partyAt, loadDaily } from './game/daily.js';
+import { weekKey, weeklyPlan, weeklyCampaign } from './game/weekly.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -541,14 +539,14 @@ function clearSpiritWeapon(id) {
 function newGame(resume = null) {
   const files = roomFiles(nodeId, campaign.party);
   const ticket = ++fightTicket;
-  if (modelsSettled(files)) {
+  if (kitLoaded && modelsSettled(files)) {
     $loading.hidden = true;
     startFight(resume);
     return;
   }
-  // This room's figures are still downloading (a first visit, straight in): wait for them.
+  // This room's figures (or the dungeon tiles) are still downloading: wait for them.
   $loading.hidden = false;
-  loadModels(files).then(() => {
+  Promise.all([loadModels(files), kit]).then(() => {
     if (ticket !== fightTicket) return; // another fight was asked for meanwhile
     $loading.hidden = true;
     startFight(resume);
@@ -1219,63 +1217,17 @@ async function checkGameOver() {
     endReplay();
     return true;
   }
-  recordBlows(game.blows); // the bestiary's deadliest foes
-  if (record) Object.assign(record, { result: game.over, check: fightCheck(game) }); // how it ended, for a link
-  if (saving && record) saveLastFight({ ...record, log: [...record.log] }); // kept with the run when it ends
+  const end = settleFight({ game, nodeId, campaign, record, daily, challenge, saving, feats, store: { writeSave, clearSave, setWonRun } });
+  campaign = end.campaign;
   hud.renderActionBar(game, { selected: null, busy: false });
-  const level = levelById(NODES[nodeId].level);
-  const final = !!level.final && !challenge; // a linked fight is one room, not the campaign's end
-  let summary = null;
-  let awards = []; // achievements unlocked by this fight (none on test runs)
-  let share = null; // a won campaign's text to share
   if (game.over === 'victory') {
     sfx.victory();
-    if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily, met: loadBestiary().length, slain: slainTotal(), eliteKinds: Object.keys(loadElitesSlain()).length });
-    if (!final) {
+    if (!end.final) {
       board.lightStairs();
       setTimeout(() => sfx.stairs(), 900);
-    } else {
-      // The campaign is won: record it, and the next visit starts fresh.
-      campaign = completeFight(campaign, nodeId, game).state;
-      if (saving) {
-        recordRun(campaign, 'won');
-        awards.push(...unlock('run', { state: campaign }));
-      }
-      clearSave();
-      if (saving) setWonRun(campaign); // for New Game+, even after a reload
-      summary = runSummary(campaign);
-      if (saving) share = runShareText(summary);
     }
-  } else {
-    sfx.defeat();
-    if (campaign) {
-      campaign = recordDefeat(campaign, game);
-      writeSave(campaign);
-    }
-  }
-  let dailyResult = null;
-  if (daily) {
-    const attempt = { won: game.over === 'victory', rounds: game.round, downed: Object.values(game.stats).reduce((n, h) => n + (h.downed ?? 0), 0), node: nodeId };
-    const { weekly } = daily;
-    const results = weekly ? recordWeekly(daily.key, attempt) : recordDaily(daily.key, attempt);
-    const run = weekly ? weekStreak(results, daily.key) : streak(results, daily.key);
-    if (record) recordBestFight(weekly ? 'weekly' : 'daily', daily.key, attempt, record); // to watch from the title
-    if (attempt.won) awards.push(...unlock(weekly ? 'weekly' : 'daily', { streak: run }));
-    // A won daily can be shared: a mark per hero, a skull if they fell at any point.
-    const marks = game.units.filter((u) => u.team === 'heroes').map((u) => (game.stats[u.slot]?.downed ? 'fell' : 'up'));
-    const result = { key: daily.key, room: level.name, level: daily.level, rounds: game.round, marks, streak: run };
-    const share = attempt.won && (weekly
-      ? weeklyShareText({ ...result, trait: ELITE_TRAITS.find((t) => t.id === daily.trait).name })
-      : shareText(result));
-    dailyResult = { ...attempt, best: results[daily.key], streak: run, share, weekly: !!weekly };
-  }
-  const versus = challenge && challengeText(challenge.theirs, { won: game.over === 'victory', rounds: game.round }, level.name);
-  hud.banner(game.over, {
-    round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
-    summary, awards, daily: dailyResult, challenge: versus, share, replay: !!record, recap: game.over === 'defeat' ? fightRecap(game) : null,
-    win: game.over === 'victory' && !summary ? winRecap(game) : null,
-    ngplus: !!summary && saving && !!campaign?.done,
-  });
+  } else sfx.defeat();
+  hud.banner(game.over, end.banner);
   return true;
 }
 
@@ -1335,7 +1287,13 @@ function startReplay(rec = record, { fromTitle = false, link = false } = {}) {
   tips.hide(); // nothing to do while watching
   document.body.classList.add('replaying');
   $replayBar.hidden = false;
-  startFight(null, rec);
+  if (kitLoaded) return void startFight(null, rec);
+  // From the title before the dungeon tiles are in (a #watch= link, say): wait for them.
+  $loading.hidden = false;
+  kit.then(() => {
+    $loading.hidden = true;
+    if (replay?.rec === rec && !game) startFight(null, rec);
+  });
 }
 
 /** Past runs → Watch the last fight: the room's figures first, then the replay; Exit goes back to the title. */
@@ -1594,16 +1552,21 @@ function hideBoot() {
   $boot.classList.add('done');
   setTimeout(() => $boot.remove(), 600);
 }
+// The title is plain HTML over a backdrop room, so it shows as soon as the code is here; the
+// dungeon tiles (~600 kB) follow, the backdrop is rebuilt from them, and fights wait for
+// them (see newGame and startReplay). Only ?level= waits behind the boot screen.
+let kitLoaded = false;
+const kit = preloadDungeon(bootProgress).then(() => { kitLoaded = true; });
 showBackdrop();
-preloadDungeon(bootProgress).then(() => {
-  // rebuild the backdrop from the tile kit now that it's here
-  if (!game) {
-    stage.scene.remove(board.group);
-    board.dispose();
-    showBackdrop();
-  }
-  const levelParam = Number(new URLSearchParams(location.search).get('level'));
-  if (levelParam >= 1 && levelParam <= LEVELS.length) {
+kit.then(() => {
+  if (game) return;
+  stage.scene.remove(board.group);
+  board.dispose();
+  showBackdrop();
+});
+const levelParam = Number(new URLSearchParams(location.search).get('level'));
+if (levelParam >= 1 && levelParam <= LEVELS.length) {
+  kit.then(() => {
     saving = false;
     const q = new URLSearchParams(location.search);
     const d = q.get('difficulty'); // e.g. &difficulty=hard
@@ -1612,7 +1575,10 @@ preloadDungeon(bootProgress).then(() => {
     nodeId = LEVELS[levelParam - 1].id;
     newGame();
     loadModels(roomFiles(nodeId, campaign.party)).then(() => loadModels(allFiles())); // this room first
-  } else if (new URLSearchParams(location.search).has('victory')) {
+    hideBoot();
+  });
+} else {
+  if (new URLSearchParams(location.search).has('victory')) {
     showSampleVictory();
   } else {
     const save = loadSave();
@@ -1628,7 +1594,7 @@ preloadDungeon(bootProgress).then(() => {
     loadModels(first).then(() => loadModels(allFiles()));
   }
   hideBoot();
-});
+}
 
 // Handy for debugging in the console (see debug.js).
 installDebug({

@@ -3,7 +3,9 @@
 // ?level=1 on the dev server and taps a reachable tile twice with real touch events.
 //   npm run dev        (in another terminal, port 5173)
 //   npm run touch-check
-// Env: URL (default http://localhost:5173/), CHROME (the Chrome binary; the macOS default).
+// Env: URL (default http://localhost:5173/; the deploy workflow checks the preview build at
+// http://localhost:4173/crypt-skirmish/), CHROME (the Chrome binary; the macOS default).
+// On CI (CI set) Chrome runs without its sandbox, which the Linux runners don't allow.
 
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -17,7 +19,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const profile = mkdtempSync(join(tmpdir(), 'crypt-touch-'));
 const chrome = spawn(CHROME, [`--headless=new`, `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
-  '--no-first-run', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', 'about:blank'], { stdio: 'ignore' });
+  '--no-first-run', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...(process.env.CI ? ['--no-sandbox'] : []),
+  'about:blank'], { stdio: 'ignore' });
 let ws;
 const done = (ok, text) => {
   console.log(text);
@@ -58,7 +61,14 @@ try {
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   await send('Page.navigate', { url: URL_BASE }); await sleep(2000);
   await ev(`localStorage.setItem('crypt-skirmish:tips', JSON.stringify({ on: false, seen: [] })); 1`);
-  await send('Page.navigate', { url: `${URL_BASE}?level=1` }); await sleep(7000);
+  await send('Page.navigate', { url: `${URL_BASE}?level=1` });
+  // The room is up once the game exists (slow on a software-rendered CI machine).
+  let up = false;
+  for (let t0 = Date.now(); !up && Date.now() - t0 < 60000; await sleep(500)) {
+    up = await ev('!!window.__debug?.game()').catch(() => false); // false while the page swaps
+  }
+  if (!up) throw new Error('the room never loaded');
+  await sleep(4000); // the fight's opening: initiative, the first turn's camera move
 
   // A hero's turn, then a free tile two or more steps away that's on screen, clear of the HUD.
   const pick = await ev(`(async () => {

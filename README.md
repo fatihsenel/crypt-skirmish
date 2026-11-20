@@ -185,7 +185,7 @@ Everything is generated in the browser, with no recordings:
 | Right-drag / wheel | Pan / zoom |
 | Arrow keys | Move a cursor over the board, starting at your hero |
 | Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
-| 1–9 | Pick the action bar's buttons in order (attacks, spells, actions); the number shows on each |
+| 1–9, 0 | Pick the action bar's first ten buttons in order (attacks, spells, actions); the number shows on each |
 | R | Read out the hero, enemies in sight (distance, HP, in range) and who's down |
 | Space or Enter | End turn (or throw the die when it's waiting) |
 | Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
@@ -249,8 +249,8 @@ npm run build    # production bundle in dist/
 npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
 
-Every push to `main` runs lint and the tests, builds and deploys to GitHub Pages
-(`.github/workflows/pages.yml`).
+Every push to `main` runs lint and the tests, builds, runs the touch check against the
+build and deploys to GitHub Pages (`.github/workflows/pages.yml`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
@@ -337,6 +337,7 @@ src/
     tips.js          tips for new players
   main.js            controller: game → animations → HUD
   controls.js        mouse, touch and keyboard: the arrow-key cursor and the shortcut keys
+  fightEnd.js        a finished fight's records: runs, achievements, dailies, the end banner's facts
   animate.js         plays back resolved attacks, moves, chests, actions and spells
   links.js           copying and opening #watch= and #play= links
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
@@ -345,7 +346,7 @@ src/
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
   sim.js             headless balance simulator
-  touch-check.mjs    real touch taps in headless Chrome against the dev server
+  touch-check.mjs    real touch taps in headless Chrome against the dev server (URL= for another)
   trim-models.js     strips unused animation clips from the models
   compress-models.js meshopt-compresses every .glb (npm run models)
 ```

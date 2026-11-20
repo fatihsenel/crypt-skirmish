@@ -161,15 +161,15 @@ export function createControls(deps) {
       moveCursor(ARROWS[ev.code]);
       return;
     }
-    // 1-9: the action bar's buttons, in order (an attack, a spell or an action).
-    const digit = /^(?:Digit|Numpad)([1-9])$/.exec(ev.code);
+    // 1-9 and 0: the action bar's first ten buttons, in order (an attack, a spell or an action).
+    const digit = /^(?:Digit|Numpad)([0-9])$/.exec(ev.code);
     if (digit && boardKeys() && plain && heroTurn()) {
       if (ev.target.closest?.('#settings, .overlay')) return;
       ev.preventDefault();
       armed = null; // what Enter does has changed: pick the tile afresh
       hud.armed = false;
       hud.keys = true; // a keyboard player: hints say pick, not click
-      const said = hud.pickByNumber(Number(digit[1]));
+      const said = hud.pickByNumber(Number(digit[1]) || 10);
       if (said) announce([said, hud.hintText()].filter(Boolean).join('. '));
       return;
     }

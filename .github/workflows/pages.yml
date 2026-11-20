@@ -27,6 +27,16 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      # On a phone the first tap on a tile previews and the second acts: check it with real
+      # touch events in headless Chrome against the build, before it goes live.
+      - name: Touch check
+        run: |
+          npx vite preview --port 4173 --strictPort &
+          for i in $(seq 30); do curl -sf -o /dev/null http://localhost:4173/crypt-skirmish/ && break; sleep 1; done
+          npm run touch-check
+        env:
+          URL: http://localhost:4173/crypt-skirmish/
+          CHROME: google-chrome
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
