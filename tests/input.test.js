@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Game } from '../src/game/combat.js';
-import { tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings, floorBehind } from '../src/input.js';
+import { tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings, floorBehind, longPress } from '../src/input.js';
 
 function setTurn(game, i) {
   game.order = [game.units[i], ...game.units.filter((_, j) => j !== i)];
@@ -144,5 +144,51 @@ describe('reading out the surroundings', () => {
     const g = game.units[1];
     expect(surroundings(game, f, { seen: () => false })).toMatch(/No enemies in sight\.$/);
     expect(surroundings(game, f, { seen: () => true })).toContain(`${g.name}, 5 ft, ${g.hp} of ${g.maxHp} HP, in range`);
+  });
+});
+
+describe('a long press on a figure', () => {
+  const setup = () => {
+    const on = {};
+    const dom = { addEventListener: (type, fn) => (on[type] ??= []).push(fn) };
+    const fire = (type, ev) => on[type]?.forEach((fn) => fn(ev));
+    const seen = [];
+    const press = longPress(dom, { target: () => 'Maela', show: (who) => seen.push(`show ${who}`), hide: () => seen.push('hide') });
+    const down = (t) => press.start({ pointerType: 'touch', clientX: 10, clientY: 10, timeStamp: t });
+    return { press, fire, seen, down };
+  };
+
+  it('shows the card once the finger has stayed down, and that press isn’t a tap', () => {
+    vi.useFakeTimers();
+    const { press, fire, seen, down } = setup();
+    down(0);
+    vi.advanceTimersByTime(500);
+    fire('pointerup', { timeStamp: 600 });
+    expect(seen).toEqual(['show Maela']);
+    expect(press.consume()).toBe(true);
+    expect(press.consume()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('takes back a card the timer showed before a quick lift got through (a busy page): a tap', () => {
+    vi.useFakeTimers();
+    const { press, fire, seen, down } = setup();
+    down(0);
+    vi.advanceTimersByTime(500); // the lift, 60 ms in, is handled late
+    fire('pointerup', { timeStamp: 60 });
+    expect(seen).toEqual(['show Maela', 'hide']);
+    expect(press.consume()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it('shows nothing for a quick tap', () => {
+    vi.useFakeTimers();
+    const { press, fire, seen, down } = setup();
+    down(0);
+    fire('pointerup', { timeStamp: 60 });
+    vi.advanceTimersByTime(500);
+    expect(seen).toEqual([]);
+    expect(press.consume()).toBe(false);
+    vi.useRealTimers();
   });
 });

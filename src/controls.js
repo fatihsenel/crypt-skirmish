@@ -55,6 +55,7 @@ export function createControls(deps) {
       return t && deps.visibleUnitAt(t.x, t.z);
     },
     show: (who) => hud.showUnitCard(game(), who, unitRect(who)),
+    hide: () => hud.hoverUnit(game(), null),
   });
   stage.dom.addEventListener('contextmenu', (ev) => ev.pointerType !== 'mouse' && touching && ev.preventDefault());
 

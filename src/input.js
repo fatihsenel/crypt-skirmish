@@ -71,12 +71,15 @@ const LONG_PRESS = 450;
 
 /**
  * On a touch screen a long press on a figure shows its character card: `target(ev)` names
- * the figure under a press (or null), `show(unit)` shows its card. `consume()` is true once
- * after a press that showed a card, so that press isn't taken for a tap.
+ * the figure under a press (or null), `show(unit)` shows its card and `hide()` takes it back.
+ * `consume()` is true once after a press that showed a card, so that press isn't taken for a tap.
+ * A busy page can run the timer before a quick lift gets through: the lift's own time says it
+ * was a tap after all, and the card goes again.
  */
-export function longPress(dom, { target, show }) {
+export function longPress(dom, { target, show, hide }) {
   let press = null;
   let shown = false;
+  let downAt = 0; // when the finger went down (the event's own time)
   const cancel = () => {
     if (press) clearTimeout(press.timer);
     press = null;
@@ -87,6 +90,7 @@ export function longPress(dom, { target, show }) {
     if (ev.pointerType === 'mouse') return;
     const who = target(ev);
     if (!who) return;
+    downAt = ev.timeStamp;
     press = { x: ev.clientX, y: ev.clientY, timer: setTimeout(() => {
       press = null;
       shown = true;
@@ -96,7 +100,14 @@ export function longPress(dom, { target, show }) {
   dom.addEventListener('pointermove', (ev) => {
     if (press && Math.hypot(ev.clientX - press.x, ev.clientY - press.y) > 10) cancel();
   });
-  for (const type of ['pointerup', 'pointercancel']) dom.addEventListener(type, cancel);
+  dom.addEventListener('pointerup', (ev) => {
+    if (shown && ev.timeStamp - downAt < LONG_PRESS) {
+      shown = false;
+      hide?.();
+    }
+    cancel();
+  });
+  dom.addEventListener('pointercancel', cancel);
   return {
     start,
     consume() {
