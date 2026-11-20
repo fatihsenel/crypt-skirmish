@@ -4,7 +4,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 
-const BUDGET = { title: 340, skull: 240 }; // kB
+const BUDGET = { title: 80, skull: 240 }; // kB
 const dist = new URL('../dist/', import.meta.url);
 const gz = (path) => gzipSync(readFileSync(new URL(path, dist)), { level: 9 }).length;
 const html = readFileSync(new URL('index.html', dist), 'utf8');

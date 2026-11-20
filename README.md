@@ -152,6 +152,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   again or copy as a link. Your deepest win (such as Hard NG+2) is kept and shown above them.
 - **Tips for new players:** short hints the first time something matters. They can be turned
   off.
+- **Offline and on your Home Screen:** once everything has loaded, the foot of the title says
+  "Saved for offline play", and the game then opens without a signal ("No signal: playing the
+  saved copy"). On an iPhone it says how to add it to the Home Screen (Share, then Add to Home
+  Screen); in Chrome or Edge it has an Install button. × hides that tip. When a new version
+  is out, the title offers to reload into it.
 
 ## Interface
 
@@ -354,6 +359,8 @@ src/
     overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
+    appStatus.js     the title's line about offline play, installing and a new version
+  boot.js            the entry: the title and the saves, before three.js and main.js load
   main.js            controller: game → animations → HUD
   controls.js        mouse, touch and keyboard: the arrow-key cursor and the shortcut keys
   preview.js         what a click on the hovered tile would do: the path, the odds, a spell's blast
@@ -363,7 +370,7 @@ src/
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
   input.js           picking a tile, the long press, what a click does, the cursor's step and words
   debug.js           window.__debug and the ?victory sample run
-  offline.js         registers the offline copy (public/sw.js) and hands it the files already loaded
+  offline.js         registers the offline copy (public/sw.js), hands it the files already loaded, looks for a new deploy
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
   sim.js             headless balance simulator
@@ -384,10 +391,12 @@ Models load room by room, so a fight only waits for its own figures. They are tr
 clips the game uses and meshopt-compressed (about 1.1 MB of characters). To add a clip, bring
 back the original file from git history, then trim and compress again.
 
-The title comes up as soon as its code is in (about 315 kB gzipped). The skull loads next
-(about 220 kB), then the dungeon tiles and the figures. Once a production build has loaded, a
-service worker keeps a copy of everything it fetched, the Google fonts too, so the game opens
-without a signal; a new deploy shows up on the next visit online.
+The title is plain HTML, and `boot.js` puts it up before three.js and the rest of the game
+arrive: about 65 kB gzipped. A press on it waits for `main.js`. The skull loads next (about
+220 kB), then three.js and the game, the dungeon tiles and the figures. Once a production
+build has loaded, a service worker keeps a copy of everything it fetched, the Google fonts
+too, so the game opens without a signal; a new deploy shows up on the next visit online, and
+an open title offers it.
 
 ## Credits
 

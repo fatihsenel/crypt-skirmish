@@ -1,14 +1,14 @@
 // Controller: wires the rules engine (game/) to the renderer (render/) and HUD (ui/).
 // The engine resolves everything instantly; animate.js plays the results back as animations.
 
-import './style.css';
+import { camp, later, loadSave, loadWonRun, hideBoot, SAVE_KEY, WON_KEY } from './boot.js';
 import * as THREE from 'three';
 import { Game, ELITE_TRAITS } from './game/combat.js';
 import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
-  NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
-  choices, START_NODE, runDifficulty, newGamePlus, parseWonRun,
+  NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize,
+  choices, START_NODE, runDifficulty, newGamePlus,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
@@ -24,7 +24,6 @@ import { preloadDungeon } from './render/dungeonKit.js';
 import { spiritWeapon } from './render/effects.js';
 import { wait, playback, calm, setMotion, onSystemMotion } from './render/tween.js';
 import { Hud } from './ui/hud.js';
-import { Camp } from './ui/camp.js';
 import { Bestiary } from './ui/bestiary.js';
 import { meet, metBefore, slay, slayElite } from './game/bestiary.js';
 import { TEMPLATES } from './game/units.js';
@@ -55,22 +54,13 @@ const stage = createStage(document.getElementById('stage'), {
 });
 
 // --- campaign & saves ---------------------------------------------------------
-const SAVE_KEY = 'crypt-skirmish.save';
 // Storage can be blocked (private windows, sandboxed previews); the game still runs.
-// Test runs (?level=, __debug.level) never touch the save.
+// Test runs (?level=, __debug.level) never touch the save. loadSave is in boot.js.
 let saving = true;
-function loadSave() {
-  try { return parseSave(localStorage.getItem(SAVE_KEY)); } catch { return null; }
-}
 function writeSave(state) {
   if (!saving) return;
   try { localStorage.setItem(SAVE_KEY, serialize(state)); } catch { /* not saved */ }
 }
-/** The last won campaign, kept so New Game+ can start from it until a new campaign does. */
-const WON_KEY = 'crypt-skirmish:won-run';
-const loadWonRun = () => {
-  try { return parseWonRun(localStorage.getItem(WON_KEY)); } catch { return null; }
-};
 function setWonRun(state) {
   try {
     if (state) localStorage.setItem(WON_KEY, serialize(state));
@@ -152,7 +142,8 @@ const hud = new Hud({
   onToggleSound: () => toggleSound(),
 });
 
-const camp = new Camp({
+// The camp itself is made in boot.js, which put the title up before this file arrived.
+Object.assign(later, {
   onEnter: (id) => enterRoom(id),
   onEquip: (i, code) => {
     sfx.chest();
@@ -1388,11 +1379,6 @@ function bootProgress(done, total) {
   $boot.querySelector('.boot-fill').style.width = `${Math.round(10 + (90 * done) / total)}%`;
   $boot.querySelector('.boot-status').textContent = `Laying the crypt stones… ${done}/${total}`;
 }
-function hideBoot() {
-  if (!$boot) return;
-  $boot.classList.add('done');
-  setTimeout(() => $boot.remove(), 600);
-}
 // The title is plain HTML over a backdrop room, so it shows as soon as the code is here; the
 // dungeon tiles (~600 kB) follow, the backdrop is rebuilt from them, and fights wait for
 // them (see newGame and startReplay). Only ?level= waits behind the boot screen.
@@ -1422,8 +1408,7 @@ if (levelParam >= 1 && levelParam <= LEVELS.length) {
   if (new URLSearchParams(location.search).has('victory')) {
     showSampleVictory();
   } else {
-    const save = loadSave();
-    camp.showTitle(save, loadWonRun());
+    const save = loadSave(); // the title is up already (boot.js)
     links.open(location.hash); // a #watch= replay or #play= challenge
     // While the title is up, once its skull is in (at most 6 s: on mobile data the two would
     // share the line and the skull would come last): the figures for the room the player is
@@ -1434,7 +1419,7 @@ if (levelParam >= 1 && levelParam <= LEVELS.length) {
     else if (save) next = choices(save).filter((id) => NODES[id].kind === 'fight');
     const first = [...new Set(next.flatMap((id) => roomFiles(id, save?.party ?? null)))];
     Promise.race([titleLogoUp, new Promise((r) => setTimeout(r, 6000))])
-      .then(() => loadModels(first)).then(() => loadModels(allFiles())).then(saveLoaded); // all in: keep them offline
+      .then(() => loadModels(first)).then(() => loadModels(allFiles())).then(() => saveLoaded(true)); // all in: keep them offline
   }
   hideBoot();
 }

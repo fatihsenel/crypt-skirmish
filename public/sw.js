@@ -56,7 +56,8 @@ async function savedFirst(event, refresh) {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  if (request.method !== 'GET' || request.headers.has('range')) return;
+  // no-store: the page asking for the newest deploy (src/offline.js), straight from the network.
+  if (request.method !== 'GET' || request.headers.has('range') || request.cache === 'no-store') return;
   const url = new URL(request.url);
   if (request.mode === 'navigate' && url.origin === SCOPE.origin) return event.respondWith(page(event));
   if (isAsset(url)) return event.respondWith(savedFirst(event, false));
@@ -85,11 +86,14 @@ self.addEventListener('message', (event) => {
       const req = new Request(url.href, { mode: url.origin === SCOPE.origin ? 'same-origin' : 'cors' }); // fonts are fetched with CORS
       await save(req, await fetch(req));
     };
+    let missed = 0;
     for (const u of urls) {
       try {
         await keep(u);
         if (u.startsWith('https://fonts.googleapis.com/')) for (const f of await fontFiles(cache, u)) await keep(f);
-      } catch { /* offline now: it'll be saved next time it's fetched */ }
+      } catch { missed++; /* offline now: it'll be saved next time it's fetched */ }
     }
+    // Once the page has sent everything (all) and it's all in, the title says so.
+    if (event.data.all && !missed) event.source?.postMessage({ saved: true });
   })());
 });

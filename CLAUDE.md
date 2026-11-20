@@ -28,8 +28,11 @@ server on 5173.
 
 - **`src/game/` is pure rules:** no three.js, no DOM. It is unit-tested in `tests/` and run
   headlessly by `scripts/sim.js`. Keep it that way.
-- The title shows as soon as the code is in; the dungeon tiles load behind it, and `newGame`
-  and `startReplay` wait for them (`kit` in `main.js`). A finished fight is settled in
+- `src/boot.js` is the entry: it makes the `Camp` and shows the title before three.js and
+  `main.js` arrive, so it must not import three.js or `render/` (`npm run size-check` fails if
+  the title's code grows past 80 kB). The camp's handlers are filled in by `main.js`
+  (`later`); a press before then waits for it. The dungeon tiles load behind the title, and
+  `newGame` and `startReplay` wait for them (`kit` in `main.js`). A finished fight is settled in
   `fightEnd.js` (`settleFight`): records, achievements, dailies and the banner's facts.
 - The rules engine (`Game` in `combat.js`, built on `Spellcasting` in `spells.js`) resolves
   everything instantly and emits events (`attack`, `move`, `spell`, `death`, …). `move()` returns steps. `src/main.js` turns them
@@ -53,12 +56,15 @@ server on 5173.
   chatters after a defeat (`bannerSkull` in `main.js`). `public/boot-logo.jpg` (the boot screen,
   the run card), the app icons, `og-image.jpg` and the title and victory screenshots are stills
   of it: `npm run stills` re-renders them. The skull is `skull.glb` (from its OBJ scan by
-  `scripts/skull-glb.mjs`), and the figures and tiles wait for it, up to 6 s, on the title.
+  `scripts/skull-glb.mjs`), and the figures wait for it, up to 6 s, on the title.
 - Production builds register `public/sw.js` (`src/offline.js`), an offline copy: pages from the
   network first (4 s), hashed `assets/` from the cache, everything else from the cache and
   refreshed behind it. The page posts the files it loaded before the worker ran; the worker
   saves the Latin font files from the saved Google Fonts stylesheet itself. Change `CACHE` in
-  `sw.js` to drop every saved file. The dev server never registers it; test it on
+  `sw.js` to drop every saved file. When the page has sent everything, the worker answers and
+  the title's foot says it's saved (`ui/appStatus.js`, with the install tip, the no-signal line
+  and a new deploy found by fetching the page with `no-store`, which the worker passes by).
+  The dev server never registers it, so that line never shows there; test it on
   `npm run preview` in a throwaway headless Chrome, not the browser pane's profile.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
@@ -71,7 +77,7 @@ server on 5173.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, `skull-poked`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, …).
 
 ## Adding content
 

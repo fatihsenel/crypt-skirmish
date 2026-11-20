@@ -283,6 +283,11 @@
               <button id="title-achievements" type="button">Achievements</button>
               <button id="title-bestiary" type="button" class="bestiary-open">Bestiary</button>
             </nav>
+            <p id="title-app" class="title-app muted" role="status" hidden>
+              <span class="title-app-text"></span>
+              <button id="title-app-act" type="button" class="title-app-act" hidden></button>
+              <button id="title-app-close" type="button" class="title-app-close" aria-label="Hide this tip" hidden>×</button>
+            </p>
           </div>
           <section id="title-setup" hidden aria-labelledby="setup-head">
             <h2 id="setup-head">New campaign</h2>
@@ -379,6 +384,6 @@
         </div>
       </section>
     </div>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/boot.js"></script>
   </body>
 </html>
