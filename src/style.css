@@ -687,6 +687,14 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   border-radius: 14px;
 }
 #banner h1 { margin: 0 0 6px; font: 700 40px var(--display); color: var(--gold); }
+/* The won campaign's skull: a still at first, then the 3D emblem (victorySkull in main.js). */
+#banner-emblem { margin: -12px auto -2px; }
+#banner-emblem[hidden] { display: none; }
+#banner .banner-emblem { display: block; width: 130px; height: auto; margin: 0 auto;
+  -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent); mask-image: radial-gradient(closest-side, #000 72%, transparent); }
+#banner .banner-logo { display: block; height: clamp(90px, 15vh, 150px); aspect-ratio: 1.15; max-width: 100%; margin: 0 auto; animation: logo-in 0.8s ease-out; }
+@media (max-height: 520px) { #banner .banner-emblem { width: 92px; } #banner .banner-logo { height: 80px; } }
+@media (max-width: 520px) { #banner-emblem { margin-top: 16px; } } /* below the corner buttons */
 #banner[data-result='defeat'] h1 { color: var(--monster); }
 #banner p { margin: 0 0 18px; color: var(--muted); max-width: 420px; }
 #banner-recap[hidden] { display: none; }

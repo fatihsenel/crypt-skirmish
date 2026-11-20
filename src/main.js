@@ -195,7 +195,27 @@ const camp = new Camp({
 // The 3D emblem loads on its own and replaces the flat one when it's ready. With Data Saver
 // on, or on a 2G connection, the flat one stays and the skull isn't downloaded.
 const slowLink = ((c) => !!c && (c.saveData || /2g/.test(c.effectiveType ?? '')))(navigator.connection);
-if (!slowLink) import('./render/titleLogo.js').then((m) => m.mountTitleLogo(document.querySelector('#title .title-emblem'))).catch(() => {});
+const logoModule = () => import('./render/titleLogo.js');
+let titleLogo = null, victoryLogo = null;
+if (!slowLink) logoModule().then((m) => m.mountTitleLogo(document.querySelector('#title .title-emblem'))).then((l) => { titleLogo = l; }).catch(() => {});
+
+/** The won-campaign screen's skull: a second 3D emblem, mounted the first time, that laughs. */
+function victorySkull() {
+  if (slowLink) return;
+  const laugh = (l) => { victoryLogo = l; setTimeout(() => l?.poke('laugh'), 900); };
+  victorySkull.mounting ??= logoModule()
+    .then((m) => m.mountTitleLogo(document.querySelector('#banner-emblem img'), { className: 'banner-logo', hint: false }))
+    .catch(() => null);
+  victorySkull.mounting.then(laugh);
+}
+
+// K: the skull on the title (or the won-campaign screen) plays its next move.
+window.addEventListener('keydown', (ev) => {
+  if (ev.code !== 'KeyK' || ev.repeat || ev.altKey || ev.metaKey || ev.ctrlKey || replay) return;
+  if (ev.target instanceof HTMLInputElement) return; // typing a hero's name
+  if (!document.getElementById('title').hidden) titleLogo?.poke();
+  else if (!document.getElementById('banner-emblem').hidden) victoryLogo?.poke();
+});
 
 function startCampaign(difficulty, names, classes) {
   sfx.ui();
@@ -1013,6 +1033,7 @@ async function checkGameOver() {
   hud.renderActionBar(game, { selected: null, busy: false });
   if (game.over === 'victory') {
     sfx.victory();
+    if (end.final) victorySkull();
     if (!end.final) {
       board.lightStairs();
       setTimeout(() => sfx.stairs(), 900);
@@ -1323,6 +1344,7 @@ const controls = createControls({
 function showSampleVictory() {
   saving = false;
   hud.banner(...sampleVictory(location.search));
+  victorySkull();
 }
 
 // ?level=3 jumps straight into a room with a fresh party (handy for testing); &party=5 sets

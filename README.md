@@ -9,8 +9,8 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | | |
 | --- | --- |
 | ![Hovering Burning Hands shows what the spell does](docs/screenshots/tooltip.jpg) | ![Nekhet's character card in the Hollow Tomb: HP, AC, his Rotting Fist and what happens at half HP](docs/screenshots/card.jpg) |
-| ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: continue or start a campaign, the daily and weekly elite crypts, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
-| ![The bestiary: monster cards with a line of lore and how many were slain, and the Elites section with each trait and how many you've slain](docs/screenshots/bestiary.jpg) | ![A won New Game+ 2 campaign: the run's facts, 13 elites slain by trait, and each hero's damage, kills, crits, healing and falls](docs/screenshots/victory.jpg) |
+| ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: the 3D skull in its crypt doorway, a new campaign, the daily and weekly elite crypts, and links to achievements and the bestiary](docs/screenshots/title.jpg) |
+| ![The bestiary: monster cards with a line of lore and how many were slain, and the Elites section with each trait and how many you've slain](docs/screenshots/bestiary.jpg) | ![A won New Game+ 2 campaign: the skull laughing over the run's facts, 13 elites slain by trait, and each hero's damage, kills, crits, healing and falls](docs/screenshots/victory.jpg) |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
 
@@ -137,10 +137,11 @@ It runs on desktop and on phones.
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
   If an update moves the week to another room, its best starts again there.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
-- **The title's skull** gapes, chatters and twitches on its own. Click or tap it to play its
-  moves in turn, each with its own sound: gape, chatter, cocked head, laugh, lunge and the
-  torch guttering. A faint glow behind it pulses until the first click. With Data Saver on or
-  on a 2G connection the title keeps the flat emblem.
+- **The title's skull** gapes, chatters and twitches on its own. Click or tap it (or press K)
+  to play its moves in turn, each with its own sound: gape, chatter, cocked head, laugh, lunge
+  and the torch guttering. A faint glow behind it pulses until the first click. It laughs on
+  the won-campaign screen too, and a still of it shows while the game loads and on the saved
+  run card. With Data Saver on or on a 2G connection the title keeps the flat emblem.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
@@ -203,6 +204,7 @@ Everything is generated in the browser, with no recordings:
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel |
 | L | Open or close the combat log |
+| K | On the title or the won-campaign screen: the skull plays its next move |
 | Tab / Esc in a panel | Tab stays inside the panel; Esc closes it |
 
 | Touch | Action |
@@ -328,7 +330,7 @@ src/
     effects.js       spell effects, hit particles
     rollBadge.js     the d20 badge over attacks and saves
     tween.js         promise-based tweening and playback speed
-    titleLogo.js     the title's 3D emblem: the skull, its jaw, the mist and wisps
+    titleLogo.js     the 3D emblem (title and won campaign): the skull, its jaw, the mist and wisps
   audio/             sfx.js, music.js, voices.js (all procedural)
   ui/
     hud.js           initiative, action bar, combat log
@@ -378,9 +380,10 @@ back the original file from git history, then trim and compress again.
 - **Monsters:** the orc, specters, giant rats and spiders by Quaternius (quaternius.com), CC0,
   via Poly Pizza.
 - **Dungeon tiles and props:** KayKit Dungeon Remastered by Kay Lousberg, CC0.
-- **Logo and icons:** drawn for the game as SVG. The lettering uses Cinzel from Google Fonts.
-  The title's 3D skull is "Human Skull" by CDmir on OpenGameArt, CC0; the doorway, sword and
-  staff around it are built in code.
+- **Logo and icons:** the flat emblem and the favicon are drawn for the game as SVG. The
+  lettering uses Cinzel from Google Fonts. The title's 3D skull is "Human Skull" by CDmir on OpenGameArt, CC0; the doorway, sword and
+  staff around it are built in code. The app icons, the link preview and the loading screen's
+  emblem are stills of it.
 - License files are in `public/models`. If a model fails to load, the game falls back to a
   simple procedural figure.
 

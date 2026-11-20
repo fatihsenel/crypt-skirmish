@@ -43,12 +43,31 @@ function loadImage(src) {
   });
 }
 
+/** `img` on a canvas of its own, fading out towards its edges. */
+function feather(img) {
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  const r = Math.min(c.width, c.height) / 2;
+  const fade = g.createRadialGradient(c.width / 2, c.height / 2, r * 0.72, c.width / 2, c.height / 2, r);
+  fade.addColorStop(0, '#000');
+  fade.addColorStop(1, '#0000');
+  g.globalCompositeOperation = 'destination-in';
+  g.fillStyle = fade;
+  g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
 /** The card as a canvas. `s` is runSummary(state). */
 export async function drawRunCard(s, { date = new Date() } = {}) {
   try {
     await Promise.all([`700 56px ${DISPLAY}`, `600 20px ${BODY}`, `400 20px ${BODY}`].map((f) => document.fonts.load(f)));
   } catch { /* fall back to the system fonts */ }
-  const emblem = await loadImage(`${import.meta.env.BASE_URL}emblem.svg`);
+  // The 3D emblem's still (the boot screen's), feathered into the card; the flat one if it fails.
+  const still = await loadImage(`${import.meta.env.BASE_URL}boot-logo.jpg`);
+  const emblem = still ? feather(still) : await loadImage(`${import.meta.env.BASE_URL}emblem.svg`);
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -71,7 +90,10 @@ export async function drawRunCard(s, { date = new Date() } = {}) {
   // Title block.
   const left = 60;
   let tx = left;
-  if (emblem) {
+  if (still) {
+    ctx.drawImage(emblem, left - 16, 36, 160, 139);
+    tx = left + 150;
+  } else if (emblem) {
     ctx.drawImage(emblem, left, 44, 96, 124);
     tx = left + 120;
   }

@@ -1,6 +1,6 @@
-// The title screen's 3D emblem: a skull over a crossed sword and staff in a crypt doorway,
-// with mist on the steps. It replaces the flat emblem once the skull has loaded, and only
-// draws while the title is on screen. Reduced motion holds it still.
+// The 3D emblem: a skull over a crossed sword and staff in a crypt doorway, with mist on the
+// steps. It replaces a flat emblem once the skull has loaded, and only draws while it is on
+// screen. The title has one, and the won-campaign screen another. Reduced motion holds it still.
 import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -14,16 +14,20 @@ const easeIn = (x) => x * x * x;
 const POKED_KEY = 'crypt-skirmish:skull-poked';
 const poked = () => { try { return localStorage.getItem(POKED_KEY) === '1'; } catch { return true; } };
 
-/** Swap `img` (the flat emblem) for the 3D logo once it has loaded. Keeps the image on any failure. */
-export async function mountTitleLogo(img) {
+/**
+ * Swap `img` (the flat emblem) for the 3D logo once it has loaded. Keeps the image on any
+ * failure and resolves to null then; otherwise to `{ poke(move?) }`, which plays the next
+ * move (or the named one) with its sound. `hint`: pulse a glow until the skull is clicked.
+ */
+export async function mountTitleLogo(img, { className = 'title-logo', hint = true } = {}) {
   const canvas = document.createElement('canvas');
-  canvas.className = 'title-logo';
+  canvas.className = className;
   canvas.setAttribute('aria-hidden', 'true');
   let R;
   try {
     R = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
   } catch {
-    return; // No WebGL: the flat emblem stays.
+    return null; // No WebGL: the flat emblem stays.
   }
   R.setClearColor(0x000000, 0);
   R.toneMapping = THREE.ACESFilmicToneMapping;
@@ -38,7 +42,7 @@ export async function mountTitleLogo(img) {
     await loadSkull(parts);
   } catch {
     R.dispose();
-    return;
+    return null;
   }
 
   img.replaceWith(canvas);
@@ -74,20 +78,22 @@ export async function mountTitleLogo(img) {
     return ray.intersectObject(parts.skull, true).length > 0;
   };
   canvas.addEventListener('pointermove', (e) => { canvas.style.cursor = !calm() && onSkull(e) ? 'pointer' : ''; });
-  anim.hint = !poked();
-  canvas.addEventListener('click', (e) => {
-    if (calm() || !onSkull(e)) return;
-    sfx.skull(anim.poke());
+  anim.hint = hint && !poked();
+  const poke = (move) => {
+    if (calm()) return;
+    sfx.skull(anim.poke(move));
     if (anim.hint) {
       anim.hint = false;
       try { localStorage.setItem(POKED_KEY, '1'); } catch { /* the hint just comes back next visit */ }
     }
-  });
+  };
+  canvas.addEventListener('click', (e) => { if (onSkull(e)) poke(); });
   // Draw only while the title is showing.
   new IntersectionObserver(([e]) => {
     last = performance.now();
     R.setAnimationLoop(e.isIntersecting ? frame : null);
   }).observe(canvas);
+  return { poke };
 }
 
 function buildScene(scene, env) {
@@ -356,9 +362,9 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) 
   };
 
   pose.hint = false;
-  /** Play the next move now, hold off the random ones for a moment, and return its name. */
-  pose.poke = () => {
-    const name = MOVES[move++ % MOVES.length];
+  /** Play the next move (or `name`) now, hold off the random ones for a moment, and return its name. */
+  pose.poke = (name) => {
+    if (!MOVES.includes(name)) name = MOVES[move++ % MOVES.length];
     ev[name] = t;
     if (name === 'twitch') ev.tilt = (move % 4 < 2 ? -1 : 1) * 0.28;
     if (name === 'chatter' || name === 'gutter' || name === 'laugh') ev.flare = t;

@@ -23,7 +23,7 @@
     <meta property="og:image" content="https://fatihsenel.github.io/crypt-skirmish/og-image.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="The Crypt Skirmish emblem, a skull in a gold-edged crypt doorway, beside the game's name" />
+    <meta property="og:image:alt" content="The Crypt Skirmish emblem in 3D, a skull before a crossed sword and staff in a gold-edged crypt doorway, beside the game's name" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://fatihsenel.github.io/crypt-skirmish/og-image.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -39,7 +39,9 @@
       }
       #boot.done { opacity: 0; pointer-events: none; }
       #boot .boot-card { width: min(320px, calc(100vw - 32px)); text-align: center; }
-      #boot .boot-emblem { display: block; width: 104px; height: auto; margin: 0 auto 10px; }
+      #boot .boot-emblem { display: block; width: 170px; height: auto; margin: 0 auto 6px;
+        -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent);
+        mask-image: radial-gradient(closest-side, #000 72%, transparent); }
       #boot h1 {
         margin: 0 0 22px; font: 700 clamp(30px, 8vw, 48px) Cinzel, Georgia, serif;
         color: #d9b45a; letter-spacing: 0.04em;
@@ -56,7 +58,7 @@
   <body>
     <div id="boot" role="status" aria-live="polite">
       <div class="boot-card">
-        <img class="boot-emblem" src="/emblem.svg" alt="" width="340" height="440" />
+        <img class="boot-emblem" src="/boot-logo.jpg" alt="" width="340" height="296" />
         <h1>Crypt Skirmish</h1>
         <div class="boot-bar"><div class="boot-fill"></div></div>
         <p class="boot-status">Opening the crypt…</p>
@@ -216,6 +218,7 @@
       </div>
       <div id="banner" hidden role="dialog" aria-labelledby="banner-title" aria-describedby="banner-text">
         <div class="card" tabindex="-1">
+          <div id="banner-emblem" hidden><img class="banner-emblem" src="/boot-logo.jpg" alt="" width="340" height="296" /></div>
           <h1 id="banner-title"></h1>
           <p id="banner-text"></p>
           <div id="banner-recap" hidden></div>

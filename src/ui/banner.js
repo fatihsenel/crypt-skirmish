@@ -38,6 +38,7 @@ export class EndBanner {
       ? 'takes a long rest before going deeper (full HP and spell slots)'
       : 'catches its breath (short rest: regain half your missing HP)';
     $('#banner-title').textContent = won ? (final ? 'Victory' : 'Room cleared') : 'Defeat';
+    $('#banner-emblem').hidden = !(won && final); // the skull laughs there (victorySkull in main.js)
     $('#banner-text').textContent = won
       ? final
         ? summary ? outro : `${outro} Won after ${rounds}. Well fought! (+${xp} XP)`

@@ -43,7 +43,10 @@ server on 5173.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces the flat
   `emblem.svg` once the skull in `public/models/skull/` loads, and draws only while the title
   is on screen. Without WebGL, with Data Saver or on 2G the flat emblem stays. Clicking the
-  skull plays its moves in turn with `sfx.skull(move)`; a glow hints at it until the first click.
+  skull (or K) plays its moves in turn with `sfx.skull(move)`; a glow hints at it until the first
+  click. The won-campaign banner mounts a second one that laughs (`victorySkull` in `main.js`).
+  `public/boot-logo.jpg` (the boot screen, the run card), the app icons and `og-image.jpg` are
+  stills of it: re-render them if the emblem changes.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it
