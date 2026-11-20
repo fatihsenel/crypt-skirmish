@@ -1,7 +1,8 @@
 // Touch check: on a phone the first tap on a tile previews the move and the second does it.
 // Starts a headless Chrome with a throwaway profile, emulates a 375×812 touch phone, opens
 // ?level=1 on the dev server and taps a reachable tile twice with real touch events. Then it
-// checks the phone layout: nothing wider than the screen, no label spilling out of its button,
+// checks the phone layout: the title's card clear of the corner buttons and in line with them,
+// nothing wider than the screen, no label spilling out of its button,
 // and after a win, no hint left showing and the banner's buttons in an even grid.
 //   npm run dev        (in another terminal, port 5173)
 //   npm run touch-check
@@ -93,6 +94,15 @@ try {
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   if (process.env.SLOW) await send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) }); // to mimic CI
   await send('Page.navigate', { url: URL_BASE }); await sleep(2000);
+  // The title: its card starts below the Music, Sound and Settings row and lines up with it
+  // (they overlapped its corner once).
+  const titleProblems = await ev(`(() => {
+    const a = document.getElementById('audio').getBoundingClientRect(), c = document.querySelector('#title .card').getBoundingClientRect();
+    if (document.getElementById('title').hidden) return ['the title never showed'];
+    const out = [];
+    if (c.top < a.bottom) out.push('the title: the card starts under the sound and settings buttons');
+    if (Math.abs(c.right - a.right) > 1) out.push('the title: the card ends ' + Math.round(c.right - a.right) + ' px from the right edge of the buttons');
+    return out; })()`);
   await ev(`localStorage.setItem('crypt-skirmish:tips', JSON.stringify({ on: false, seen: [] })); 1`);
   inFlight.clear(); // the title page's own requests go with it
   await send('Page.navigate', { url: `${URL_BASE}?level=1${process.env.SEED ? `&seed=${process.env.SEED}` : ''}` });
@@ -176,7 +186,7 @@ try {
     if (document.documentElement.scrollWidth > W) out.push('${where}: the page scrolls sideways');
     for (const b of document.querySelectorAll('button')) if (shown(b) && b.scrollWidth > b.clientWidth + 1) out.push('${where}: "' + b.textContent.trim().slice(0, 30) + '" spills out of its button');
     return out; })()`);
-  const problems = moved ? await layout('the fight') : [];
+  const problems = [...titleProblems, ...(moved ? await layout('the fight') : [])];
   if (moved) {
     // Once the walk is over, one tap on another free tile: a preview on the hint line.
     for (let t0 = Date.now(); await ev(`document.getElementById('end-turn').disabled`) && Date.now() - t0 < 15000;) await sleep(250);

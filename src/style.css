@@ -859,6 +859,11 @@ b.loot { color: var(--gold); }
   background: rgba(10, 8, 12, 0.78); border: 1px solid #c9b07a33; border-radius: 14px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
 }
+/* A small screen: the card starts below the Music, Sound and Settings row (#audio, 12px
+   from the top and right, 34px tall) instead of under it, as the camp's does, and on a phone
+   its edges line up with the row's. */
+@media (max-width: 760px), (max-height: 520px) { #title { padding-top: 58px; } }
+@media (max-width: 560px) { #title .card { max-width: calc(100vw - 24px); } }
 /* The emblem: a still of it (the boot screen's), then the 3D one (render/titleLogo.js) in its
    place once that loads. One size for both, so the swap doesn't show. */
 #title .title-emblem, #title .title-logo { display: block; height: clamp(130px, 26vh, 240px); width: auto; aspect-ratio: 1.15; max-width: 100%; margin: -6px auto -2px; }
@@ -1201,6 +1206,9 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 
 @media (max-width: 760px), (max-height: 520px) {
   #camp { padding-top: 58px; } /* clear the sound and settings buttons */
+}
+@media (max-width: 560px) {
+  #camp { padding-left: 12px; padding-right: 12px; } /* edges in line with those buttons */
 }
 @media (max-width: 760px) {
   .camp-grid { grid-template-columns: 1fr; gap: 8px; }
