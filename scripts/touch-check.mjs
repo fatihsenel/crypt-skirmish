@@ -37,7 +37,8 @@ const done = async (ok, text) => {
   chrome.kill();
   // Wait for Chrome to close (up to 5 s) before the next run starts one, then tidy up.
   for (let i = 0; i < 50 && exited === null; i++) await sleep(100);
-  rmSync(profile, { recursive: true, force: true });
+  // Chrome's helpers can still be writing to the profile; a failed tidy-up never fails the check.
+  try { rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* left in tmp */ }
   process.exit(ok ? 0 : 1);
 };
 
