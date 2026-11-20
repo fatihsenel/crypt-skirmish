@@ -12,7 +12,8 @@
 // http://localhost:4173/crypt-skirmish/), CHROME (the Chrome binary; the macOS default), SLOW
 // (a CPU slowdown factor, like 6, to try it the way a slow CI machine runs), SEED (the fight's
 // dice, for the same fight every time), LATE (ms before each lift is sent, still stamped 60 ms
-// after the touch: a page too busy to see it sooner), VERBOSE (print the events on a pass too).
+// after the touch: a page too busy to see it sooner), SIDEWAYS (the phone on its side, 812×375,
+// with the notch on the left), VERBOSE (print the events on a pass too).
 // On CI (CI set) Chrome runs without its sandbox, which the Linux runners don't allow.
 
 import { spawn } from 'node:child_process';
@@ -24,6 +25,8 @@ const URL_BASE = process.env.URL ?? 'http://localhost:5173/';
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9300 + Math.floor(Math.random() * 500); // a fresh port: an earlier run's Chrome may still be closing
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const SIDEWAYS = !!process.env.SIDEWAYS;
+const [W, H] = SIDEWAYS ? [812, 375] : [375, 812];
 
 const profile = mkdtempSync(join(tmpdir(), 'crypt-touch-'));
 const chrome = spawn(CHROME, [`--headless=new`, `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
@@ -80,6 +83,12 @@ const ev = async (expression) => {
 // only once a busy page has handled it, and stamping the lift after that wait would make a
 // slow page see a long press.
 // LATE=ms sends the lift that late (still stamped 60 ms in), as a page too busy to see it sooner would.
+// Where a tile can be tapped: upright, a fixed band clear of the turn order and the action bar
+// (the fixed seeds' taps depend on it); sideways, between the two bars as they are laid out.
+const ON_SCREEN = SIDEWAYS
+  ? `p.x > 60 && p.x < innerWidth - 60 && p.y > document.getElementById('initiative').getBoundingClientRect().bottom + 24
+      && p.y < document.getElementById('actionbar').getBoundingClientRect().top - 24`
+  : 'p.x > 40 && p.x < innerWidth - 40 && p.y > 170 && p.y < innerHeight - 260';
 const tap = async ({ x, y }) => {
   const t = Date.now() / 1000;
   const down = send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }], timestamp: t });
@@ -92,7 +101,9 @@ try {
   await send('Runtime.enable');
   await send('Network.enable');
   await send('Log.enable'); // what the browser itself reports, like a module script that failed to load
-  await send('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true });
+  await send('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 2, mobile: true });
+  // The notch and the home bar, where this Chrome can emulate them (an older one just skips it).
+  await send('Emulation.setSafeAreaInsetsOverride', { insets: SIDEWAYS ? { top: 0, left: 47, right: 47, bottom: 21 } : { top: 47, left: 0, right: 0, bottom: 34 } });
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   if (process.env.SLOW) await send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.SLOW) }); // to mimic CI
   await send('Page.navigate', { url: URL_BASE }); await sleep(2000);
@@ -103,7 +114,7 @@ try {
     if (document.getElementById('title').hidden) return ['the title never showed'];
     const out = [];
     if (c.top < a.bottom) out.push('the title: the card starts under the sound and settings buttons');
-    if (Math.abs(c.right - a.right) > 1) out.push('the title: the card ends ' + Math.round(c.right - a.right) + ' px from the right edge of the buttons');
+    if (!${SIDEWAYS} && Math.abs(c.right - a.right) > 1) out.push('the title: the card ends ' + Math.round(c.right - a.right) + ' px from the right edge of the buttons');
     return out; })()`);
   await ev(`localStorage.setItem('crypt-skirmish:tips', JSON.stringify({ on: false, seen: [] })); 1`);
   inFlight.clear(); // the title page's own requests go with it
@@ -147,7 +158,7 @@ try {
       last = p;
     }
     const steps = (t) => Math.abs(t.x - u.x) + Math.abs(t.z - u.z);
-    const onScreen = (t) => { const p = __debug.tileToScreen(t.x, t.z); return p.x > 40 && p.x < innerWidth - 40 && p.y > 170 && p.y < innerHeight - 260; };
+    const onScreen = (t) => { const p = __debug.tileToScreen(t.x, t.z); return ${ON_SCREEN}; };
     const reached = (t) => { const p = __debug.tileToScreen(t.x, t.z); const h = __debug.pickAt(p.x, p.y); return h?.x === t.x && h?.z === t.z; }; // not behind a figure
     const t = g.destinations(u)
       .filter(t => steps(t) >= 2 && onScreen(t) && reached(t) && !g.units.some(o => o.alive && Math.abs(o.x - t.x) + Math.abs(o.z - t.z) < 2))
@@ -196,7 +207,7 @@ try {
     }
     // The whole party in the turn order (more past them scroll).
     const bar = document.getElementById('initiative'), chips = [...bar.children];
-    if (chips.length >= 4 && chips[0].offsetWidth * 4 + 3 * parseFloat(getComputedStyle(bar).columnGap) > bar.clientWidth + 1) out.push('${where}: four portraits do not fit across the turn order');
+    if (!${SIDEWAYS} && chips.length >= 4 && chips[0].offsetWidth * 4 + 3 * parseFloat(getComputedStyle(bar).columnGap) > bar.clientWidth + 1) out.push('${where}: four portraits do not fit across the turn order');
     // A banner's card starts below the corner buttons.
     const card = document.querySelector('#banner:not([hidden]) .card');
     if (card && card.getBoundingClientRect().top < document.getElementById('audio').getBoundingClientRect().bottom) out.push('${where}: the card starts under the sound and settings buttons');
@@ -208,7 +219,7 @@ try {
     await sleep(1000); // the camera follows the walk
     const next = await ev(`(() => { const g = __debug.game(), u = g.current;
       const t = g.destinations(u).find((t) => { const p = __debug.tileToScreen(t.x, t.z), h = __debug.pickAt(p.x, p.y);
-        return p.x > 40 && p.x < innerWidth - 40 && p.y > 170 && p.y < innerHeight - 260 && h?.x === t.x && h?.z === t.z; });
+        return ${ON_SCREEN} && h?.x === t.x && h?.z === t.z; });
       return t && [t.x, t.z]; })()`);
     if (next) await tap(await at(next));
     const back = next ? await until(isPreview, 5000) : null;
@@ -219,12 +230,13 @@ try {
       if (hint.classList.contains('show')) out.push('the banner: the hint line still shows "' + hint.textContent + '"');
       const bs = [...document.querySelectorAll('#banner .banner-buttons > button')].filter(b => !b.hidden).map(b => b.getBoundingClientRect());
       const rows = Object.values(Object.groupBy(bs, (r) => Math.round(r.top)));
-      for (const row of rows) if (row.length > 1 && Math.max(...row.map(r => r.width)) - Math.min(...row.map(r => r.width)) > 1) out.push('the banner: buttons of different widths in a row');
+      // Wrapped into rows (upright): an even grid. On one row (sideways) each keeps its own width.
+      if (rows.length > 1) for (const row of rows) if (row.length > 1 && Math.max(...row.map(r => r.width)) - Math.min(...row.map(r => r.width)) > 1) out.push('the banner: buttons of different widths in a row');
       if (rows.length > 1 && Math.abs(rows[0][0].left - rows.at(-1)[0].left) > 1) out.push('the banner: button rows start at different places');
       return out; })()`));
   }
   done(previewed && moved && !problems.length, previewed && moved && !problems.length
-    ? `PASS: ${pick.name}'s first tap previewed ("${first.hint}"), the second moved them to ${pick.to}; the layout fits`
+    ? `PASS${SIDEWAYS ? ' (sideways)' : ''}: ${pick.name}'s first tap previewed ("${first.hint}"), the second moved them to ${pick.to}; the layout fits`
       + (process.env.VERBOSE ? `\n${JSON.stringify(await ev('__touchLog'))}` : '')
     : problems.length && previewed && moved ? `FAIL: the phone layout: ${problems.join('; ')}`
       + (process.env.VERBOSE ? `\n${JSON.stringify(await ev('__touchLog'))}` : '')

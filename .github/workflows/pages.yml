@@ -35,11 +35,13 @@ jobs:
           npx vite preview --port 4173 --strictPort &
           for i in $(seq 30); do curl -sf -o /dev/null http://localhost:4173/crypt-skirmish/ && break; sleep 1; done
           # Fixed fights: 3 has Brannoc move through Maela's figure, 1 Ilsa and 5 Wren first.
-          # The last lifts each finger 700 ms late, as a busy page sees it: still a tap, not
-          # a long press on Maela. Every run goes ahead even after one fails.
+          # Then one lifts each finger 700 ms late, as a busy page sees it (still a tap, not a
+          # long press on Maela), and one turns the phone on its side. Every run goes ahead even
+          # after one fails.
           fail=0
           for seed in 3 1 5; do SEED=$seed npm run touch-check || fail=1; done
           SEED=3 LATE=700 npm run touch-check || fail=1
+          SEED=3 SIDEWAYS=1 npm run touch-check || fail=1
           exit $fail
         env:
           URL: http://localhost:4173/crypt-skirmish/

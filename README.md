@@ -189,7 +189,8 @@ Everything is generated in the browser, with no recordings:
 - Sound starts with your first tap or key press, with a low toll. On an iPhone it plays in
   silent mode too, like a video does (iOS 17 and later); the Sound button mutes it.
 - It goes quiet while the game is in the background (another tab or app, a locked screen)
-  and picks up when you come back.
+  and picks up when you come back. The monsters wait for you too: their turn plays out once
+  you're back, so you see what they do.
 - With reduced motion (the Motion setting, or the system's when it's on System), the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
   dice don't wobble, and the title's skull holds still.
@@ -382,7 +383,7 @@ src/
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
   sim.js             headless balance simulator
-  touch-check.mjs    real touch taps and a phone layout check in headless Chrome (URL= for another server)
+  touch-check.mjs    real touch taps and a phone layout check in headless Chrome (URL= for another server, SIDEWAYS=1 on its side)
   stills.mjs         stills of the 3D emblem and the README shots that show it (npm run stills)
   trim-models.js     strips unused animation clips from the models
   compress-models.js meshopt-compresses every .glb (npm run models)

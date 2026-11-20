@@ -821,6 +821,7 @@ let panTween = 0;
 function keepInView(unit) {
   if (Math.min(window.innerWidth, window.innerHeight) >= 600) return;
   const cam = stage.camera;
+  cam.updateMatrixWorld(); // it may have moved since the last frame drew
   const w = window.innerWidth;
   const h = window.innerHeight;
   const { top, bottom, right } = hudInsets(w, h);
@@ -1066,6 +1067,23 @@ async function checkGameOver() {
 }
 
 // --- turns ------------------------------------------------------------------
+/**
+ * While the game is out of sight (another tab or app, a locked screen), monsters wait to take
+ * their turn, and their next step, until it's back, so the player sees what they do. Null (no
+ * wait) while it shows.
+ */
+function whileAway() {
+  if (!document.hidden) return null;
+  return new Promise((resolve) => {
+    const back = () => {
+      if (document.hidden) return;
+      document.removeEventListener('visibilitychange', back);
+      setTimeout(resolve, 400); // a moment to take in the board first
+    };
+    document.addEventListener('visibilitychange', back);
+  });
+}
+
 async function runMonsterTurn(unit) {
   const g = game; // a restart or level change mid-turn abandons this turn
   busy = true;
@@ -1075,6 +1093,8 @@ async function runMonsterTurn(unit) {
   try {
     // Monsters out of sight act quickly: nothing to watch.
     const pace = (ms) => wait(unit.team === 'monsters' && (unseen(unit) || unit.unaware) ? ms / 4 : ms);
+    await whileAway();
+    if (game !== g) return;
     await pace(450);
 
     for (const { step, result } of monsterTurn(g, unit)) {
@@ -1089,6 +1109,7 @@ async function runMonsterTurn(unit) {
       hud.renderActionBar(game, { selected, busy });
       await pace(180);
       await replayGate();
+      await whileAway();
       if (game !== g) return;
     }
 

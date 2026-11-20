@@ -703,7 +703,7 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
 #banner .banner-emblem { -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent); mask-image: radial-gradient(closest-side, #000 72%, transparent); }
 @media (max-height: 520px) { #banner .banner-emblem, #banner .banner-logo { height: 80px; } }
 #banner[data-result='defeat'] h1 { color: var(--monster); }
-#banner p { margin: 0 0 18px; color: var(--muted); max-width: 420px; }
+#banner p { margin: 0 auto 18px; color: var(--muted); max-width: 420px; }
 #banner-recap[hidden] { display: none; }
 #banner-recap {
   margin: -6px auto 18px; padding: 10px 14px; max-width: 420px; text-align: left; font-size: 13px; color: #d8cfc0;

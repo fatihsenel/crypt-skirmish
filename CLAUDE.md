@@ -13,8 +13,9 @@ npm run lint           # ESLint: undefined names and unused code, run before eve
 npm run sim -- 300     # headless balance check, run after changing monsters, spells or rooms
 npm run touch-check    # phone taps and layout in headless Chrome (dev server on 5173), after
                        # changing input or the HUD and overlays;
-                       # the deploy runs it against the build on seeds 3, 1 and 5, and
-                       # SEED=3 LATE=700 (a late lift must still be a tap)
+                       # the deploy runs it against the build on seeds 3, 1 and 5,
+                       # SEED=3 LATE=700 (a late lift must still be a tap) and
+                       # SEED=3 SIDEWAYS=1 (the phone on its side, 812×375)
 npm run stills         # re-render the 3D emblem's stills and README shots, after changing it
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 npm run size-check     # after a build: the title's code and the skull, gzipped, within budget;
@@ -109,6 +110,8 @@ server on 5173.
 - `window.__debug` in the console (set up in `debug.js`): `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
   `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`.
+- Monster turns wait while the page is hidden (`whileAway` in `main.js`): script fights in a
+  showing tab or headless Chrome, or they stall.
 - Back up the `crypt-skirmish:*` localStorage keys before a scripted test and restore them
   afterwards. The browser pane is the user's real profile.
 - Check phones too: 375×812 and 812×375. Touch shows its own controls (tap to preview, tap
