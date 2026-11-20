@@ -16,6 +16,7 @@ export function createStage(container, { width, height }) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.autoUpdate = false; // redrawn while something moves, see draw()
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   container.appendChild(renderer.domElement);
 
@@ -52,7 +53,7 @@ export function createStage(container, { width, height }) {
   sun.position.copy(center).add(new THREE.Vector3(-6, 16, 9));
   sun.target.position.copy(center);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.setScalar(coarse ? 1024 : 2048); // a third cheaper per frame on a phone
   Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 50 });
   sun.shadow.bias = -0.0005;
   scene.add(sun, sun.target);
@@ -99,7 +100,12 @@ export function createStage(container, { width, height }) {
     shakeLen = ms / 1000;
     shakeEnd = clock.elapsedTime + shakeLen;
   };
-  const draw = () => {
+  // Redrawing the shadows is over half of a frame's work. Every frame while something moves;
+  // when all is still, every SHADOW_EVERY-th idle frame, so idle figures' shadows keep up.
+  const SHADOW_EVERY = 4;
+  let stillFrames = 0;
+  const draw = (moving) => {
+    renderer.shadowMap.needsUpdate = moving || ++stillFrames % SHADOW_EVERY === 0;
     const dt = clock.getDelta();
     const t = clock.elapsedTime;
     for (const fn of tickers) fn(t, dt);
@@ -126,7 +132,7 @@ export function createStage(container, { width, height }) {
   const later = () => { timer = setTimeout(() => requestAnimationFrame(idle), IDLE_MS); };
   const idle = () => {
     if (looping) return;
-    draw();
+    draw(false);
     if (animating()) start();
     else later();
   };
@@ -135,7 +141,7 @@ export function createStage(container, { width, height }) {
     clearTimeout(timer);
     looping = true;
     renderer.setAnimationLoop(() => {
-      draw();
+      draw(true);
       if (animating()) return;
       renderer.setAnimationLoop(null);
       looping = false;

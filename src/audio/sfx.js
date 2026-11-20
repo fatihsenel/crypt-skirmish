@@ -41,6 +41,18 @@ class Sfx {
       // it sounds like a video's would (Safari 17+; elsewhere navigator.audioSession is absent).
       try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* keep the default */ }
       const c = (this.ctx = new Ctx());
+      // Silent in the background (another tab or app, a locked screen), back on return. If the
+      // browser won't resume without a tap (Safari), the next tap does it (main.js).
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          if (c.state !== 'running') return;
+          this.away = true;
+          c.suspend().catch(() => {});
+        } else if (this.away) {
+          this.away = false;
+          c.resume().catch(() => {});
+        }
+      });
 
       this.master = c.createGain();
       this.master.gain.value = this.muted ? 0 : this.volume;

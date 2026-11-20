@@ -51,10 +51,15 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
 
   const coarse = matchMedia('(pointer: coarse)');
   const anim = animator(parts);
-  let last = performance.now(), skip = false, stillDrawn = false, w = 0, h = 0;
+  // 30fps on phones and tablets; left alone for REST_MS (no pointer, key or move), 20fps, since
+  // only the mist and the bob are moving then. Any touch brings it back.
+  const REST_MS = 15000;
+  let last = performance.now(), n = 0, stirred = last, stillDrawn = false, w = 0, h = 0;
+  const stir = () => { stirred = performance.now(); };
+  for (const type of ['pointermove', 'pointerdown', 'keydown']) addEventListener(type, stir, { passive: true });
   const frame = (now) => {
     const dt = Math.min(0.1, (now - last) / 1000);
-    if (coarse.matches && (skip = !skip)) return; // 30fps on phones and tablets
+    if (++n % (now - stirred > REST_MS ? 3 : coarse.matches ? 2 : 1)) return;
     last = now;
     const cw = canvas.clientWidth, ch = canvas.clientHeight;
     if (cw !== w || ch !== h) {
@@ -81,6 +86,7 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
   canvas.addEventListener('pointermove', (e) => { canvas.style.cursor = !calm() && onSkull(e) ? 'pointer' : ''; });
   anim.hint = hint && !poked();
   const poke = (move) => {
+    stir();
     if (calm()) return;
     sfx.skull(anim.poke(move));
     if (anim.hint) {
@@ -89,7 +95,7 @@ export async function mountTitleLogo(img, { className = 'title-logo', hint = tru
     }
   };
   canvas.addEventListener('click', (e) => { if (onSkull(e)) poke(); });
-  const glance = () => { if (!calm()) anim.glance(); };
+  const glance = () => { stir(); if (!calm()) anim.glance(); };
   // The embers in its sockets follow the mouse around the page (and drift back when it leaves).
   // On a touch screen they look at each tap or drag, and drift back two seconds after.
   let lookBack = 0;

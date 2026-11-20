@@ -159,7 +159,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   is out, the title offers to reload into it.
 - **Easy on phone batteries:** the board is drawn at full speed only while something moves
   or you touch the screen; the rest of the time a few frames a second keep the torches
-  flickering. Phones draw it at 1.5 pixels per point.
+  flickering, and the shadows are redrawn less often. Phones draw it at 1.5 pixels per point
+  with a smaller shadow map. The title's skull slows down when left alone for 15 seconds.
 
 ## Interface
 
@@ -187,6 +188,8 @@ Everything is generated in the browser, with no recordings:
 - Voices: every character shouts, chants and grunts in a made-up language.
 - Sound starts with your first tap or key press, with a low toll. On an iPhone it plays in
   silent mode too, like a video does (iOS 17 and later); the Sound button mutes it.
+- It goes quiet while the game is in the background (another tab or app, a locked screen)
+  and picks up when you come back.
 - With reduced motion (the Motion setting, or the system's when it's on System), the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
   dice don't wobble, and the title's skull holds still.
