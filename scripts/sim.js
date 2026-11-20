@@ -11,7 +11,7 @@ import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
 import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
-import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, DIFFICULTIES, runDifficulty, newGamePlus } from '../src/game/campaign.js';
+import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, runDifficulty, newGamePlus } from '../src/game/campaign.js';
 import { ITEMS } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';

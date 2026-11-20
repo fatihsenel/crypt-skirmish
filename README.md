@@ -133,7 +133,7 @@ It runs on desktop and on phones.
 - **Weekly elite crypt:** one room a week at New Game+ 3, the same for everyone, with that
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
   keeps your best result and a streak of weeks won, and has a Copy result.
-- **Achievements:** 31 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 32 goals that carry across runs. Open them from the title screen.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
@@ -230,6 +230,7 @@ A few things differ from the SRD to keep the game simple:
 npm install
 npm run dev      # http://localhost:5173
 npm test         # rules unit tests (Vitest)
+npm run lint     # ESLint: undefined names and unused code
 npm run sim      # balance check: plays whole campaigns headlessly
 npm run build    # production bundle in dist/
 npm run preview  # http://localhost:4173/crypt-skirmish/
@@ -320,8 +321,10 @@ src/
     tips.js          tips for new players
   main.js            controller: input → game → animations → HUD
   links.js           copying and opening #watch= and #play= links
+  threats.js         threat zones: the T toggle and a monster's reach from its portrait
+  input.js           picking a tile, the long press, and what a click on a tile does
   debug.js           window.__debug and the ?victory sample run
-tests/               Vitest rules and replay tests
+tests/               Vitest rules, replay and input tests
 scripts/
   sim.js             headless balance simulator
   trim-models.js     strips unused animation clips from the models

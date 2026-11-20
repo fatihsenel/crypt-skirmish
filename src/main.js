@@ -8,11 +8,11 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize, parseSave,
-  recordDefeat, runSummary, runShareText, heroUnit, choices, START_NODE, runDifficulty, newGamePlus, parseWonRun,
+  recordDefeat, runSummary, runShareText, choices, START_NODE, runDifficulty, newGamePlus, parseWonRun,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
-import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed, unitRef, targetRef } from './game/replay.js';
-import { key, pathFrom, gridDistance } from './game/grid.js';
+import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
+import { key, pathFrom } from './game/grid.js';
 import { signed, abilityMod, seeded } from './game/dice.js';
 import { SPELLS, ACTIONS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { createStage } from './render/stage.js';
@@ -41,6 +41,8 @@ import { recordRun, loadHistory, saveLastFight, clearLastFight } from './game/hi
 import { challengeText } from './game/fightLink.js';
 import { unlock } from './game/achievements.js';
 import { createLinks } from './links.js';
+import { createThreats, listNames } from './threats.js';
+import { tileFromEvent, figureRect, longPress, tileCommand } from './input.js';
 import { installDebug, sampleVictory } from './debug.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed, replayKey } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText } from './game/daily.js';
@@ -730,6 +732,8 @@ function frameParty() {
   settle(3);
 }
 
+const raycaster = new THREE.Raycaster(); // finding the ground under a point of the screen
+
 /** Centre the view on a tile at a zoom level, in the middle of the area the HUD leaves free. */
 function lookAt(x, z, zoom) {
   const cam = stage.camera;
@@ -950,108 +954,10 @@ function modsText(m) {
 }
 
 // --- threat zones: where the monsters in sight could strike next turn ------------------
-const THREATS_KEY = 'crypt-skirmish:threats';
-let threatsOn = false;
-try {
-  threatsOn = localStorage.getItem(THREATS_KEY) === '1';
-} catch {
-  /* storage unavailable: starts off */
-}
-let threatFocus = null; // a monster whose portrait is hovered (or tapped): just its zone
-let threatCache = { sig: '', melee: [], ranged: [] };
-const $threats = document.getElementById('threats-toggle');
-$threats.setAttribute('aria-pressed', String(threatsOn));
-
-function toggleThreats(on = !threatsOn) {
-  threatsOn = on;
-  $threats.setAttribute('aria-pressed', String(on));
-  try {
-    localStorage.setItem(THREATS_KEY, on ? '1' : '0');
-  } catch {
-    /* storage unavailable: just this session */
-  }
-  if (game && board) refresh();
-}
-$threats.addEventListener('click', () => toggleThreats());
-
-/** The monsters whose zones show: the focused one, or (toggle on) every one in sight. */
-function threatSources() {
-  if (threatFocus) return threatFocus.alive && !unseen(threatFocus) ? [threatFocus] : [];
-  if (!threatsOn) return [];
-  return game.units.filter((m) => m.team === 'monsters' && m.alive && !m.hidden && !unseen(m));
-}
-
-/** Threat tiles for the hero whose turn it is (they're the one about to move, so not in the way). */
-function threatTiles() {
-  const u = game.current;
-  const sources = threatSources();
-  const sig = [game.round, u?.id, threatFocus?.id ?? '', ...game.units.map((m) =>
-    `${m.id}:${m.x},${m.z}:${m.alive ? 1 : 0}${m.unaware ? 'u' : ''}${m.turned ? 't' : ''}${Object.keys(m.conditions ?? {}).join('')}`),
-  ...sources.map((m) => m.id)].join('|');
-  if (sig === threatCache.sig) return threatCache;
-  const melee = new Set();
-  const ranged = new Set();
-  for (const m of sources) {
-    const t = game.threatOf(m, { ignore: u?.team === 'heroes' ? u : null });
-    t.melee.forEach((k) => melee.add(k));
-    t.ranged.forEach((k) => ranged.add(k));
-  }
-  const tiles = (set) => [...set].map((k) => k.split(',').map(Number)).map(([x, z]) => ({ x, z }))
-    .filter((t) => board.isExplored(t.x, t.z));
-  threatCache = { sig, melee: tiles(melee), ranged: tiles([...ranged].filter((k) => !melee.has(k))) };
-  return threatCache;
-}
-
-function drawThreats() {
-  const show = game && !game.over && isHeroTurn() && !busy && (threatsOn || threatFocus);
-  if (!show) {
-    board.threatMelee.clear();
-    board.threatRanged.clear();
-    return;
-  }
-  const { melee, ranged } = threatTiles();
-  board.threatMelee.set(melee);
-  board.threatRanged.set(ranged);
-}
-
-/** "A", "A and B", "A, B and C", or "4 monsters". */
-const listNames = (names) => (names.length > 3 ? `${names.length} monsters`
-  : names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0]);
-
-/** The monsters in sight that could strike a hero standing on (x, z) next turn. */
-function threatsAt(x, z) {
-  const u = game.current;
-  return game.units.filter((m) => m.team === 'monsters' && m.alive && !m.hidden && !unseen(m)
-    && game.threatOf(m, { ignore: u }).melee.has(key(x, z)));
-}
-
-// Hovering a monster's portrait shows just its reach; on a touch screen, tapping does.
-const $initiative = document.getElementById('initiative');
-const portraitUnit = (ev) => {
-  const id = Number(ev.target.closest('[data-unit]')?.dataset.unit);
-  const m = game?.units.find((x) => x.id === id);
-  return m?.team === 'monsters' && m.alive && !unseen(m) ? m : null;
-};
-$initiative.addEventListener('pointerover', (ev) => {
-  if (ev.pointerType !== 'mouse' || !game) return;
-  const m = portraitUnit(ev);
-  if (m === threatFocus) return;
-  threatFocus = m;
-  if (board) refresh();
+const threats = createThreats({
+  game: () => game, board: () => board, unseen, showing: () => isHeroTurn() && !busy, refresh,
 });
-$initiative.addEventListener('pointerleave', (ev) => {
-  if (ev.pointerType !== 'mouse' || !threatFocus) return;
-  threatFocus = null;
-  if (board) refresh();
-});
-window.addEventListener('pointerdown', (ev) => {
-  if (ev.pointerType === 'mouse' || !game || !board) return;
-  const m = $initiative.contains(ev.target) ? portraitUnit(ev) : null;
-  const next = m && m !== threatFocus ? m : null; // tap it again (or anything else) to clear
-  if (next === threatFocus) return;
-  threatFocus = next;
-  refresh();
-});
+const drawThreats = () => threats.draw();
 
 function refresh() {
   hud.renderActionBar(game, { selected, busy });
@@ -1101,7 +1007,7 @@ function refresh() {
     board.danger.set(danger);
     const who = game.provokers(u, path).map((f) => f.name);
     if (who.length) tips.notice('provoke', { touch: touching });
-    const reachers = threatsOn || threatFocus ? threatsAt(hovered.x, hovered.z).map((m) => m.name) : [];
+    const reachers = threats.active ? threats.at(hovered.x, hovered.z).map((m) => m.name) : [];
     hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
       + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : ''), true);
   }
@@ -1120,8 +1026,6 @@ function refreshShove(u) {
   hud.hint(why ? `${foe.name}: ${why}`
     : `Shove → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and it is knocked prone`, !why);
 }
-
-const UNIT_TARGETING = ['enemy', 'ally', 'corpse'];
 
 /** The unit on a tile, unless it's a monster lurking out of sight. */
 function visibleUnitAt(x, z) {
@@ -2234,33 +2138,8 @@ function choose(choice) {
 }
 
 // --- input ----------------------------------------------------------------
-const raycaster = new THREE.Raycaster();
-const ndc = new THREE.Vector2();
-
-function tileFromEvent(ev) {
-  const r = stage.dom.getBoundingClientRect();
-  ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
-  raycaster.setFromCamera(ndc, stage.camera);
-
-  // Clicking a figure's body (or a chest) selects its tile, even though it overlaps
-  // tiles behind it. The nearest object under the mouse wins.
-  // Hidden things (monsters out of sight, chests in unexplored rooms) can't be picked.
-  const figures = [...views.values()].filter((v) => v.unit.alive && v.group.visible).map((v) => v.group);
-  const hitObj = raycaster.intersectObjects([...figures, ...board.pickables.filter((p) => p.visible)], true)[0];
-  if (hitObj) {
-    let o = hitObj.object;
-    while (o && o.userData.unitId === undefined && !o.userData.tile) o = o.parent;
-    if (o?.userData.tile) return { ...o.userData.tile };
-    const u = game.units.find((x) => x.id === o?.userData.unitId);
-    if (u) return { x: u.x, z: u.z };
-  }
-
-  const hit = raycaster.intersectObject(board.pickPlane)[0];
-  if (!hit) return null;
-  const x = Math.round(hit.point.x);
-  const z = Math.round(hit.point.z);
-  return game.grid.inBounds(x, z) && !game.grid.isWall(x, z) ? { x, z } : null;
-}
+const pickTile = (ev) => tileFromEvent(ev, { stage, views, board, game });
+const unitRect = (u) => figureRect(stage, u, view(u));
 
 // A finger has no hover: the first tap on a tile shows what would happen there (the path,
 // the odds, the blast), and a second tap on the same tile does it. Dragging pans the view.
@@ -2277,57 +2156,29 @@ window.addEventListener('pointerdown', (ev) => {
 }, { capture: true });
 stage.dom.addEventListener('pointerdown', (ev) => {
   downAt = { x: ev.clientX, y: ev.clientY };
-  startPress(ev);
+  press.start(ev);
 });
 
 // On a touch screen a long press on a figure shows its character card (a tap previews and
 // acts, as before). The press that showed the card isn't a tap.
-const LONG_PRESS = 450;
-let press = null;
-let pressShown = false;
-function startPress(ev) {
-  cancelPress();
-  pressShown = false;
-  if (ev.pointerType === 'mouse' || !game || game.over) return;
-  const t = tileFromEvent(ev);
-  const who = t && visibleUnitAt(t.x, t.z);
-  if (!who) return;
-  press = { x: ev.clientX, y: ev.clientY, timer: setTimeout(() => {
-    press = null;
-    pressShown = true;
-    hud.showUnitCard(game, who, figureRect(who));
-  }, LONG_PRESS) };
-}
-function cancelPress() {
-  if (press) clearTimeout(press.timer);
-  press = null;
-}
-stage.dom.addEventListener('pointermove', (ev) => {
-  if (press && Math.hypot(ev.clientX - press.x, ev.clientY - press.y) > 10) cancelPress();
+const press = longPress(stage.dom, {
+  target: (ev) => {
+    if (!game || game.over) return null;
+    const t = pickTile(ev);
+    return t && visibleUnitAt(t.x, t.z);
+  },
+  show: (who) => hud.showUnitCard(game, who, unitRect(who)),
 });
-for (const type of ['pointerup', 'pointercancel']) stage.dom.addEventListener(type, cancelPress);
 stage.dom.addEventListener('contextmenu', (ev) => ev.pointerType !== 'mouse' && touching && ev.preventDefault());
-
-/** Where a figure stands on screen: from the top of its label down to its tile. */
-function figureRect(u) {
-  const label = view(u)?.label.element.getBoundingClientRect();
-  const v = new THREE.Vector3(u.x, 0, u.z).project(stage.camera);
-  const box = stage.dom.getBoundingClientRect();
-  const x = box.left + ((v.x + 1) / 2) * box.width;
-  const y = box.top + ((1 - v.y) / 2) * box.height;
-  const top = label?.height ? label.top : y - 60;
-  const half = Math.max(24, (label?.width ?? 0) / 2);
-  return new DOMRect(x - half, top, half * 2, y - top);
-}
 
 stage.dom.addEventListener('pointermove', (ev) => {
   if (ev.pointerType !== 'mouse') return;
-  const t = tileFromEvent(ev);
+  const t = pickTile(ev);
   if (t?.x === hovered?.x && t?.z === hovered?.z) return;
   hovered = t;
   // The character card for a figure the mouse rests on, whoever's turn it is.
   const who = game && t && !game.over ? visibleUnitAt(t.x, t.z) : null;
-  hud.hoverUnit(game, who, () => figureRect(who));
+  hud.hoverUnit(game, who, () => unitRect(who));
   if (isHeroTurn() && !busy) refresh();
 });
 
@@ -2342,78 +2193,19 @@ for (const type of ['pointerdown', 'wheel']) {
 }
 
 stage.dom.addEventListener('click', (ev) => {
-  if (pressShown) return void (pressShown = false); // the long press that showed a card
+  if (press.consume()) return; // the long press that showed a card
   if (!isHeroTurn() || busy) return;
   if (downAt && Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y) > 10) return; // a drag
-  const t = tileFromEvent(ev);
+  const t = pickTile(ev);
   if (!t) return;
   if (touching && (t.x !== hovered?.x || t.z !== hovered?.z)) {
     hovered = t;
     refresh();
     return;
   }
-  const u = game.current;
-  const other = visibleUnitAt(t.x, t.z);
-
-  if (selected?.kind === 'spell') {
-    const id = selected.id;
-    const s = SPELLS[id];
-    const target = UNIT_TARGETING.includes(s.targeting) ? spellTargetAt(t, s) : t;
-    if (!target) {
-      hud.toast(`Click ${s.targeting === 'ally' ? 'an ally' : 'a target'}`);
-      return;
-    }
-    const why = game.spellProblem(u, id, target);
-    if (why) {
-      hud.toast(why);
-      return;
-    }
-    heroCommand({ type: 'spell', id, ...targetRef(game, target) });
-    return;
-  }
-
-  if (selected?.kind === 'shove') {
-    if (!other || other.team === u.team) {
-      hud.toast('Click an enemy next to you');
-      return;
-    }
-    const why = game.shoveProblem(u, other);
-    if (why) {
-      hud.toast(why);
-      return;
-    }
-    heroCommand({ type: 'shove', target: unitRef(game, other) });
-    return;
-  }
-
-  if (other && other.team !== u.team) {
-    const atk = selected?.attack ?? game.bestAttack(u, other);
-    const why = game.attackProblem(u, other, atk ?? u.attacks[0]);
-    if (!atk || why) {
-      hud.toast(why ?? 'Cannot attack');
-      return;
-    }
-    heroCommand({ type: 'attack', target: unitRef(game, other), attack: u.attacks.indexOf(atk) });
-    return;
-  }
-
-  if (game.grid.chests.has(key(t.x, t.z))) {
-    const why = game.chestProblem(u, t.x, t.z);
-    if (why) {
-      hud.toast(why);
-      return;
-    }
-    heroCommand({ type: 'chest', x: t.x, z: t.z });
-    return;
-  }
-
-  if (other === u) return;
-  const node = game.reachable(u).get(key(t.x, t.z));
-  if (!node || !game.canEndOn(u, t.x, t.z)) {
-    if (gridDistance(u, t) > u.movesLeft) hud.toast('Too far, not enough movement left');
-    return;
-  }
-  heroCommand({ type: 'move', x: t.x, z: t.z });
+  const r = tileCommand(game, game.current, t, selected, { unitAt: visibleUnitAt, spellTarget: spellTargetAt });
+  if (r?.toast) hud.toast(r.toast);
+  else if (r?.cmd) heroCommand(r.cmd);
 });
 
 window.addEventListener('keydown', (ev) => {
@@ -2428,7 +2220,7 @@ window.addEventListener('keydown', (ev) => {
     ev.preventDefault();
     undoMove();
   }
-  if (ev.code === 'KeyT') toggleThreats();
+  if (ev.code === 'KeyT') threats.toggle();
   if (ev.code === 'KeyM') toggleSound();
   if (ev.code === 'KeyN') toggleMusic();
   if (ev.code === 'KeyH' || ev.key === '?') helpBox.open = !helpBox.open;
@@ -2503,7 +2295,7 @@ preloadDungeon(bootProgress).then(() => {
 installDebug({
   game: () => game,
   board: () => board,
-  threatState: () => ({ on: threatsOn, focus: threatFocus }),
+  threatState: () => ({ on: threats.on, focus: threats.focus }),
   views: () => views,
   stage,
   sfx,

@@ -209,7 +209,7 @@ export class Camp {
       ? `${first.toLocaleDateString(undefined, { month: 'short' })} ${first.getDate()}–${last.getDate()}` : `${day(first)} – ${day(last)}`;
     box.querySelector('.daily-room').textContent =
       `${levelById(NODES[plan.node].level).name} at New Game+ ${plan.tier}, with a ${trait.name} elite. ${party.slice(0, 3).join(', ').replace(/^a/, 'A')} and ${party[3]} at level ${plan.level}.`;
-    box.title = `${trait.name}: ${trait.desc}`;
+    box.querySelector('.daily-trait').innerHTML = `<b>${esc(trait.name)}:</b> ${esc(trait.desc)}.`;
     const run = weekStreak(results, plan.key);
     const rounds = (n) => `${n} round${n === 1 ? '' : 's'}`;
     const weeks = (n) => `${n} week${n === 1 ? '' : 's'}`;

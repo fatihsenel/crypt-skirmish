@@ -352,7 +352,7 @@ describe('map features', () => {
   it('hidden traps spring on heroes but not monsters', () => {
     const game = new Game(['#######', '#F.^..#', '#.....#', '#....g#', '#######'], { rng: () => 0 }); // save fails, 2d6 = 2
     game.start();
-    const [f, g] = game.units;
+    const [f] = game.units;
     setTurn(game, 0);
     const r = game.move(f, 4, 1);
     // A failed save also knocks you prone, which ends the move on the trap.

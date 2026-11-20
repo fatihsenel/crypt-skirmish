@@ -857,6 +857,8 @@ b.loot { color: var(--gold); }
 #title .daily button { flex: none; padding: 8px 14px; }
 /* The weekly elite crypt: the elite's gold, and tucked under the daily. */
 #title .daily.weekly { margin-top: -4px; border-color: #ffd36b55; background: #ffd36b10; }
+#title .daily .daily-trait { color: #e9d9b0; }
+#title .daily .daily-trait b { color: #ffd36b; font-weight: 600; }
 #title .daily.weekly h2::before {
   content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; vertical-align: 1px;
   border-radius: 50%; background: #ffd36b; box-shadow: 0 0 0 1.5px #1c1720;

@@ -151,6 +151,10 @@ export const ACHIEVEMENTS = [
     id: 'weekly', name: 'Elite of the week', desc: 'Win a weekly elite crypt.',
     on: 'weekly', test: () => true,
   },
+  {
+    id: 'weekly-streak', name: 'Season of the hunt', desc: 'Win the weekly elite crypt 3 weeks in a row.',
+    on: 'weekly', test: ({ streak }) => streak >= 3,
+  },
 ];
 
 /** The achievements this event earns that aren't already unlocked. */

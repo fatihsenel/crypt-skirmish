@@ -9,6 +9,7 @@ push to `main`. README.md describes the game for players; this file is for worki
 ```bash
 npm run dev            # dev server, use http://localhost:5173
 npm test               # Vitest, run before every commit
+npm run lint           # ESLint: undefined names and unused code, run before every commit
 npm run sim -- 300     # headless balance check, run after changing monsters, spells or rooms
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 ```

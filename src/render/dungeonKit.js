@@ -2,7 +2,6 @@
 // The pack works on 2-unit floor tiles; our grid tiles are 1 unit, so pieces are scaled
 // by half. If the files fail to load, the board falls back to its plain box walls.
 
-import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
