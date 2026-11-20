@@ -94,50 +94,54 @@
           <kbd>H</kbd>
         </summary>
         <div class="help-body">
-          <dl class="help-keys">
-            <dt class="mouse"><kbd>Click</kbd></dt><dd class="mouse">Move, attack, or open a chest beside you</dd>
-            <dt class="mouse"><kbd>Right-drag</kbd></dt><dd class="mouse">Pan the view</dd>
-            <dt class="mouse"><kbd>Wheel</kbd></dt><dd class="mouse">Zoom</dd>
-            <dt class="mouse"><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></dt><dd class="mouse">Move a cursor over the board, from your hero; <kbd>Enter</kbd> picks a tile, <kbd>Enter</kbd> again acts</dd>
-            <dt class="mouse"><kbd>Space</kbd> <kbd>Enter</kbd></dt><dd class="mouse">Throw your die, or end the turn</dd>
-            <dt class="mouse"><kbd>Z</kbd></dt><dd class="mouse">Undo a move that rolled no dice and found nothing new</dd>
-            <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Un-pick the tile, cancel attack or spell, then put the cursor away</dd>
-            <dt class="mouse"><kbd>1</kbd>–<kbd>9</kbd> <kbd>0</kbd></dt><dd class="mouse">Pick an attack, spell or action (the number on its button)</dd>
-            <dt class="mouse"><kbd>R</kbd></dt><dd class="mouse">Read out the hero, enemies in sight and who's down</dd>
-            <dt class="mouse"><kbd>T</kbd></dt><dd class="mouse">Show where monsters can reach (hover a portrait: just that one)</dd>
-            <dt class="mouse"><kbd>M</kbd> <kbd>N</kbd></dt><dd class="mouse">Sound / music on or off</dd>
-            <dt class="mouse"><kbd>L</kbd></dt><dd class="mouse">Combat log</dd>
-            <dt class="mouse"><kbd>H</kbd> <kbd>?</kbd></dt><dd class="mouse">Show or hide these controls</dd>
-            <dt class="touch"><kbd>Tap</kbd></dt><dd class="touch">Show the move, attack or spell there</dd>
-            <dt class="touch"><kbd>Tap again</kbd></dt><dd class="touch">Do it</dd>
-            <dt class="touch"><kbd>Undo move</kbd></dt><dd class="touch">Take back a move that rolled no dice and found nothing new</dd>
-            <dt class="touch"><kbd>Drag</kbd></dt><dd class="touch">Pan the view</dd>
-            <dt class="touch"><kbd>Pinch</kbd></dt><dd class="touch">Zoom</dd>
-            <dt class="touch"><kbd>Tap a tag</kbd></dt><dd class="touch">What a feature or condition does</dd>
-            <dt class="touch"><kbd>Hold a button</kbd></dt><dd class="touch">What an attack, spell or action does</dd>
-            <dt class="touch"><kbd>Threats</kbd></dt><dd class="touch">Where monsters can reach (tap a portrait: just that one)</dd>
-          </dl>
+          <div class="help-mouse">
+            <dl class="help-keys">
+              <dt><kbd>Click</kbd></dt><dd>Move, attack, open a chest</dd>
+              <dt><kbd>Right-drag</kbd> <kbd>Wheel</kbd></dt><dd>Pan, zoom</dd>
+              <dt><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd></dt><dd>Cursor: <kbd>Enter</kbd> picks, again acts</dd>
+            </dl>
+            <ul class="help-grid" aria-label="Keys">
+              <li><kbd>Space</kbd>End turn, throw</li>
+              <li><kbd>L</kbd>Log</li>
+              <li><kbd>M</kbd><kbd>N</kbd>Sound, music</li>
+              <li><kbd>Esc</kbd>Cancel</li>
+              <li><kbd>1</kbd>–<kbd>0</kbd>Action bar</li>
+              <li><kbd>T</kbd>Threats</li>
+              <li><kbd>Z</kbd>Undo move</li>
+              <li><kbd>R</kbd>Read out</li>
+              <li><kbd>H</kbd><kbd>?</kbd>This panel</li>
+            </ul>
+          </div>
+          <div class="help-touch">
+            <dl class="help-keys">
+              <dt><kbd>Tap</kbd></dt><dd>Show the move, attack or spell</dd>
+              <dt><kbd>Tap again</kbd></dt><dd>Do it</dd>
+              <dt><kbd>Drag</kbd> <kbd>Pinch</kbd></dt><dd>Pan, zoom</dd>
+              <dt><kbd>Hold</kbd></dt><dd>What a button or figure is</dd>
+              <dt><kbd>Tap a tag</kbd></dt><dd>What it does</dd>
+            </dl>
+          </div>
           <h3>On the board</h3>
           <ul class="help-legend">
-            <li><i class="sw reach"></i>Can move here</li>
+            <li><i class="sw reach"></i>Can move</li>
             <li><i class="sw path"></i>Path</li>
-            <li><i class="sw danger"></i>Step provokes an attack</li>
+            <li><i class="sw danger"></i>Provokes</li>
             <li><i class="sw target"></i>Can attack</li>
             <li><i class="sw ally"></i>Can heal</li>
-            <li><i class="sw threat"></i>A monster can reach and strike</li>
-            <li><i class="sw threat-ranged"></i>A monster can shoot here</li>
+            <li><i class="sw threat"></i>Monster reach</li>
+            <li><i class="sw threat-ranged"></i>Monster shot</li>
           </ul>
         </div>
       </details>
       <div id="audio">
-      <button id="threats-toggle" type="button" aria-pressed="false" title="Show where the monsters can reach next turn (T)">
+      <button id="threats-toggle" type="button" aria-pressed="false" data-tip="Monster reach" data-desc="Where the monsters can hit next turn" data-key="T">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M4 4l9 9M4 4v4M4 4h4M20 4l-9 9M20 4v4M20 4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
           <path d="M7.5 14.5l2 2M16.5 14.5l-2 2M6 18l2-2M18 18l-2-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
         </svg>
         <span>Threats</span>
       </button>
-      <button id="log-toggle" type="button" aria-controls="log" aria-expanded="false" title="Combat log (L)">
+      <button id="log-toggle" type="button" aria-controls="log" aria-expanded="false" data-tip="Combat log" data-desc="Every roll and hit this fight" data-key="L">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M6 4h10a2 2 0 0 1 2 2v13a1 1 0 0 0 2 0V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />
           <path d="M6 4a2 2 0 0 0-2 2v13a1 1 0 0 0 1 1h15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
@@ -145,7 +149,7 @@
         </svg>
         <span>Log</span>
       </button>
-      <button id="music" type="button" aria-pressed="true" title="Music on/off (N)">
+      <button id="music" type="button" aria-pressed="true" data-tip="Music" data-desc="Turn the music on or off" data-key="N">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M9 17V6l10-2v11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
           <circle cx="6.5" cy="17" r="2.5" fill="currentColor" />
@@ -154,7 +158,7 @@
         </svg>
         <span>Music</span>
       </button>
-      <button id="sound" type="button" aria-pressed="true" title="Sound on/off (M)">
+      <button id="sound" type="button" aria-pressed="true" data-tip="Sound" data-desc="Mute or unmute everything" data-key="M">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor" />
           <path class="waves" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -162,7 +166,7 @@
         </svg>
         <span>Sound</span>
       </button>
-      <button id="settings-toggle" type="button" aria-controls="settings" aria-expanded="false" title="Settings">
+      <button id="settings-toggle" type="button" aria-controls="settings" aria-expanded="false" data-tip="Settings" data-desc="Volume, speed, motion and colours">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path d="M4 7h9M17 7h3M4 17h3M11 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
           <circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8" />

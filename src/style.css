@@ -420,7 +420,7 @@ kbd {
 #help {
   position: absolute;
   left: 12px; top: 76px; /* below the initiative bar, level with the combat log */
-  width: 236px;
+  width: 252px;
   font-size: 12px;
   color: var(--ink);
 }
@@ -454,7 +454,7 @@ kbd {
 }
 #help summary kbd { margin-left: auto; }
 #help[open] summary { border-bottom: 1px solid var(--panel-edge); }
-#help .help-body { padding: 8px 10px 10px; }
+#help .help-body { padding: 10px; }
 #help dl {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -474,14 +474,19 @@ kbd {
   white-space: nowrap;
 }
 #help h3 {
-  margin: 10px 0 6px;
+  margin: 10px 0 7px; /* each group sits 10px either side of its line */
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-edge);
   font: 600 10.5px var(--display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--gold);
 }
-#help ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
-#help li { display: flex; align-items: center; gap: 8px; color: #d8cfc0; }
+#help ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; }
+#help li { display: flex; align-items: center; gap: 6px; color: #d8cfc0; white-space: nowrap; }
+#help .help-grid { grid-template-columns: max-content max-content; column-gap: 18px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-edge); }
+#help .help-grid li { gap: 3px; }
+#help .help-grid li > kbd:last-of-type { margin-right: 3px; } /* a gap before the label */
 #help .sw {
   flex: none;
   width: 14px; height: 10px;
@@ -537,6 +542,47 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   border-radius: 50%;
   background: var(--gold);
 }
+/* The corner buttons' tooltip cards (buttonTips.js): on hover after a pause, on focus,
+   or held on touch. They match .tipcard, with an arrow at their button. */
+#audio > button { position: relative; }
+#audio .corner-tip {
+  position: absolute;
+  top: calc(100% + 9px); right: calc(-1 * var(--shift, 0px));
+  display: flex; flex-direction: column; gap: 2px;
+  width: max-content; max-width: 210px;
+  padding: 7px 10px 8px;
+  background: rgba(18, 14, 20, 0.97);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  color: var(--ink);
+  text-align: left; white-space: normal;
+  pointer-events: none;
+  opacity: 0; visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.14s, transform 0.14s, visibility 0s 0.14s;
+  z-index: 1;
+}
+#audio .corner-tip::before { /* the arrow */
+  content: '';
+  position: absolute;
+  top: -6px; right: var(--arrow, 14px);
+  width: 9px; height: 9px;
+  background: inherit;
+  border: 1px solid var(--panel-edge);
+  border-right: 0; border-bottom: 0;
+  transform: rotate(45deg);
+}
+#audio .corner-tip .tip-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#audio .corner-tip b { font: 600 13px var(--display); color: var(--gold); letter-spacing: 0.02em; }
+#audio .corner-tip kbd { margin: 0; color: var(--ink); background: rgba(255, 255, 255, 0.06); border-bottom-width: 2px; }
+#audio .corner-tip small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+@media (hover: hover) {
+  #audio > button:hover .corner-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s 0.35s, transform 0.14s 0.35s, visibility 0s 0.35s; }
+}
+#audio > button:focus-visible .corner-tip,
+#audio > button.tip-shown .corner-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s, transform 0.14s; }
+[data-motion=reduce] #audio .corner-tip { transform: none; }
 #log-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
 #settings-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
 #threats-toggle[aria-pressed='true'] { border-color: #ff7a4a; color: #ff9a6a; background: rgba(255, 90, 46, 0.14); }
@@ -725,7 +771,7 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   #help { width: min(260px, calc(100% - 24px)); max-height: calc(100% - 300px); overflow-y: auto; z-index: 4; }
 }
 @media (max-width: 1400px) {
-  #audio > button > span { display: none; } /* icons only: the row would run into the portraits */
+  #audio > button > span:not(.corner-tip) { display: none; } /* icons only: the row would run into the portraits */
   #audio > button { padding: 7px 9px; }
 }
 @media (max-width: 900px) {
@@ -759,11 +805,9 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
 }
 
 /* --- touch: bigger targets, no keyboard hints, touch wording in the controls --------- */
-/* Mouse or touch controls, never both. Scoped to #help so they beat `#help dt { display: flex }`. */
-#help .help-keys .touch { display: none; }
-body.touch #help .help-keys .mouse { display: none; }
-body.touch #help .help-keys dt.touch { display: flex; }
-body.touch #help .help-keys dd.touch { display: block; }
+/* Mouse and keys, or touch: never both. */
+#help .help-touch, body.touch #help .help-mouse { display: none; }
+body.touch #help .help-touch { display: block; }
 body.touch #end-turn kbd, body.touch #undo kbd, body.touch #help summary kbd { display: none; }
 body.touch button.ability { padding: 7px 10px; min-height: 40px; }
 body.touch #end-turn, body.touch #undo { min-height: 44px; padding: 8px 14px; }

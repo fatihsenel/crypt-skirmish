@@ -8,6 +8,7 @@ import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { AbilityTip } from './abilityTip.js';
 import { UnitTip } from './unitTip.js';
+import { buttonTips } from './buttonTips.js';
 import { unitCard, shortName } from './unitCard.js';
 
 /** A turn-order name, short enough to tell apart: "Giant Spider 2" shows as "G. Spider 2". */
@@ -68,6 +69,7 @@ export class Hud {
     $('#to-map').addEventListener('click', onMap);
     $('#sound').addEventListener('click', onToggleSound);
     $('#music').addEventListener('click', onToggleMusic);
+    buttonTips($('#audio'));
     $('#attacks').addEventListener('click', (ev) => this.onAbilityClick(ev));
     this.tips = new Map();
     this.abilityTip = new AbilityTip($('#attacks'), (key) => this.tips.get(key) ?? null);
@@ -695,7 +697,7 @@ export class Hud {
     const b = $('#sound');
     b.setAttribute('aria-pressed', String(on));
     b.classList.toggle('off', !on);
-    b.querySelector('span').textContent = on ? 'Sound' : 'Muted';
+    b.querySelector(':scope > span:not(.corner-tip)').textContent = on ? 'Sound' : 'Muted';
   }
 
   /**
