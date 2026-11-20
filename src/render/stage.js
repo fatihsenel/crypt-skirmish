@@ -4,13 +4,16 @@ import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { calm } from './tween.js';
+import { calm, animating, onAnimate, keepAwake } from './tween.js';
 
 export function createStage(container, { width, height }) {
   const center = new THREE.Vector3((width - 1) / 2, 0, (height - 1) / 2);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Phones have dense screens and small batteries: 1.5 device pixels per CSS pixel is sharp
+  // enough there (the labels and HUD are HTML, at full sharpness) and draws half as many as 3.
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -78,6 +81,7 @@ export function createStage(container, { width, height }) {
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
     labels.setSize(w, h);
+    keepAwake(300); // a resized canvas is blank until it's drawn again
   };
   fit();
   window.addEventListener('resize', fit);
@@ -95,13 +99,14 @@ export function createStage(container, { width, height }) {
     shakeLen = ms / 1000;
     shakeEnd = clock.elapsedTime + shakeLen;
   };
-  renderer.setAnimationLoop(() => {
+  const draw = () => {
     const dt = clock.getDelta();
     const t = clock.elapsedTime;
     for (const fn of tickers) fn(t, dt);
-    controls.update();
+    if (controls.update()) keepAwake(100); // still gliding after a pan or zoom
     const left = (shakeEnd - t) / shakeLen;
     if (left > 0) {
+      keepAwake(50);
       const a = shakeAmp * left * left;
       jitter.set(Math.sin(t * 91) * a, Math.sin(t * 73 + 1) * a * 0.6, Math.sin(t * 67 + 2) * a);
       camera.position.add(jitter);
@@ -110,7 +115,39 @@ export function createStage(container, { width, height }) {
     labels.render(scene, camera);
     declutter(labels.domElement);
     if (left > 0) camera.position.sub(jitter);
-  });
+  };
+
+  // Every frame while something moves (see animating in tween.js) or the player is touching,
+  // pointing or pressing keys; otherwise IDLE_MS apart, enough for torchlight and breathing.
+  // Hidden pages draw nothing (the browser stops animation frames).
+  const IDLE_MS = 50;
+  let looping = false;
+  let timer = 0;
+  const later = () => { timer = setTimeout(() => requestAnimationFrame(idle), IDLE_MS); };
+  const idle = () => {
+    if (looping) return;
+    draw();
+    if (animating()) start();
+    else later();
+  };
+  const start = () => {
+    if (looping) return;
+    clearTimeout(timer);
+    looping = true;
+    renderer.setAnimationLoop(() => {
+      draw();
+      if (animating()) return;
+      renderer.setAnimationLoop(null);
+      looping = false;
+      later();
+    });
+  };
+  onAnimate(start);
+  const touched = () => keepAwake(1000);
+  for (const type of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart', 'touchmove']) {
+    window.addEventListener(type, touched, { capture: true, passive: true });
+  }
+  keepAwake(1000);
 
   /** `fn(width, height)` returns { top, bottom, right }: the px the HUD covers. Re-fits. */
   const setInsets = (fn) => {

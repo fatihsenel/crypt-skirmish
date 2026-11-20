@@ -55,6 +55,12 @@ const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', f
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
 
+/** Marks which edges of a sideways-scrolling row have more out of sight (more-left, more-right). */
+function markOverflow(row) {
+  row.classList.toggle('more-left', row.scrollLeft > 2);
+  row.classList.toggle('more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 2);
+}
+
 export class Hud {
   /**
    * onChoose receives { kind: 'attack', attack } | { kind: 'spell', id } | { kind: 'action', id }
@@ -86,8 +92,14 @@ export class Hud {
       if (chip) this.showUnitTip(chip, 'below', true);
     });
     $('#initiative').addEventListener('pointerleave', (ev) => ev.pointerType === 'mouse' && this.unitTip.hide());
-    $('#initiative').addEventListener('scroll', () => { this.unitTip.hide(); this.markOverflow(); }, { passive: true });
-    window.addEventListener('resize', () => this.markOverflow());
+    $('#initiative').addEventListener('scroll', () => this.unitTip.hide(), { passive: true });
+    // Rows that scroll sideways on a phone fade the edge with more out of sight (style.css).
+    const rows = ['#initiative', '#attacks', '#who'].map((sel) => $(sel));
+    const resized = new ResizeObserver(() => rows.forEach(markOverflow));
+    for (const row of rows) {
+      row.addEventListener('scroll', () => markOverflow(row), { passive: true });
+      resized.observe(row);
+    }
     $('#initiative').addEventListener('click', (ev) => {
       const chip = chipOf(ev);
       if (!this.touch || !chip) return;
@@ -454,14 +466,7 @@ export class Hud {
     const bar = $('#initiative');
     const cur = bar.querySelector('.current');
     if (cur) bar.scrollLeft = cur.offsetLeft - bar.clientWidth / 2 + cur.clientWidth / 2;
-    this.markOverflow();
-  }
-
-  /** Fades the turn order's edge where more portraits are scrolled out of sight (style.css). */
-  markOverflow() {
-    const bar = $('#initiative');
-    bar.classList.toggle('more-left', bar.scrollLeft > 2);
-    bar.classList.toggle('more-right', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2);
+    markOverflow(bar);
   }
 
   renderActionBar(game, { selected, busy }) {
@@ -513,10 +518,12 @@ export class Hud {
     if (chosen) chosen.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
+  /** Writes `html` into `el` if it differs from what's there. */
   setHtml(el, html) {
     if (el.dataset.html === html) return;
     el.dataset.html = html;
     el.innerHTML = html;
+    markOverflow(el); // the ability row and the hero's line scroll sideways on a phone
   }
 
   abilityButtons(game, u, selected, busy) {

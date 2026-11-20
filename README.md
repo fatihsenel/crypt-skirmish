@@ -157,6 +157,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   saved copy"). On an iPhone it says how to add it to the Home Screen (Share, then Add to Home
   Screen); in Chrome or Edge it has an Install button. × hides that tip. When a new version
   is out, the title offers to reload into it.
+- **Easy on phone batteries:** the board is drawn at full speed only while something moves
+  or you touch the screen; the rest of the time a few frames a second keep the torches
+  flickering. Phones draw it at 1.5 pixels per point.
 
 ## Interface
 
@@ -224,6 +227,7 @@ Everything is generated in the browser, with no recordings:
 | Drag / pinch | Pan / zoom |
 | Undo button | Take back the last move |
 | Hold a button, or tap a tag | Show its tooltip |
+| Swipe the row of attacks and spells | See the rest; a faded edge means there are more |
 | Tap a portrait or hold a figure | Show the character card |
 | Log button (top right) | Open the combat log |
 

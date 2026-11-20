@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import { key } from '../game/grid.js';
-import { tween, easeOut, easeInOut } from './tween.js';
+import { tween, easeOut, easeInOut, keepAwake } from './tween.js';
 import { kitReady, piece } from './dungeonKit.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
@@ -216,6 +216,7 @@ export class Board {
     this.tick = (t, dt) => {
       if (this.fogDirty) this.tickFog(dt);
       if (this.fadeSources) this.tickFade(dt);
+      if (this.fogDirty || this.fading) keepAwake(100); // fog and walls easing in and out
       for (const { light, seed, cell } of this.torches) {
         light.intensity = (5.5 + Math.sin(t * 9 + seed) * 0.6 + Math.sin(t * 23 + seed * 2) * 0.4) * cell.f;
       }
@@ -333,6 +334,7 @@ export class Board {
   tickFade(dt) {
     const who = this.fadeSources();
     const k = Math.min(1, dt * 8);
+    this.fading = false;
     for (const w of this.walls) {
       let target = 1;
       for (const p of who) {
@@ -346,6 +348,7 @@ export class Board {
       if (Math.abs(w.opacity - target) < 0.005) continue;
       w.opacity += (target - w.opacity) * k;
       if (Math.abs(w.opacity - target) < 0.01) w.opacity = target;
+      else this.fading = true;
       const see = w.opacity < 0.999;
       for (const m of w.meshes) {
         if (m.material.transparent !== see) {

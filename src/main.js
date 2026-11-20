@@ -22,7 +22,7 @@ import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
 import { spiritWeapon } from './render/effects.js';
-import { wait, playback, calm, setMotion, onSystemMotion } from './render/tween.js';
+import { wait, playback, calm, setMotion, onSystemMotion, keepAwake } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Bestiary } from './ui/bestiary.js';
 import { meet, metBefore, slay, slayElite } from './game/bestiary.js';
@@ -809,6 +809,7 @@ function lookAt(x, z, zoom) {
   const shift = new THREE.Vector3(x, 0, z).sub(ground);
   stage.controls.target.add(shift);
   cam.position.add(shift);
+  keepAwake(100);
 }
 
 /**
@@ -847,9 +848,11 @@ function keepInView(unit) {
   if (calm()) { // reduced motion: jump there
     stage.controls.target.add(shift);
     cam.position.add(shift);
+    keepAwake(100);
     return;
   }
   const start = performance.now();
+  keepAwake(450);
   let done = 0;
   const step = (now) => {
     if (ticket !== panTween) return; // a newer pan took over

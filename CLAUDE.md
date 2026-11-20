@@ -47,6 +47,9 @@ server on 5173.
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
   motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):
   no shake, no camera pans, no drifting text, and a still title logo.
+  The 3D view draws every frame only while something moves (`animating()` in `tween.js`:
+  tweens, waits, input), else about 15 a second (`stage.js`). Anything else that moves the
+  scene for a while (a camera glide, a clip, fog) calls `keepAwake(ms)`, or it will stutter.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still
   (the same size) once the skull in `public/models/skull/` loads, and draws only while the title
   is on screen. Without WebGL, with Data Saver or on 2G its still (`boot-logo.jpg`) stays.

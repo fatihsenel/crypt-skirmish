@@ -22,6 +22,23 @@ export const onSystemMotion = (fn) => reduce?.addEventListener?.('change', fn);
  */
 export const calm = () => motion === 'reduce' || (motion === 'system' && !!reduce?.matches);
 
+/**
+ * Whether anything on the board is moving. The 3D view draws every frame while it is, and
+ * only a few times a second otherwise (the torches still flicker), to spare phone batteries.
+ * Tweens and waits count, and so does anything that calls keepAwake.
+ */
+let running = 0;
+let awakeUntil = 0;
+const wakers = new Set();
+export const animating = () => running > 0 || performance.now() < awakeUntil;
+/** `fn()` runs whenever something starts moving. */
+export const onAnimate = (fn) => wakers.add(fn);
+/** Draw every frame for the next `ms` (input, a camera glide, a clip playing). */
+export function keepAwake(ms = 0) {
+  awakeUntil = Math.max(awakeUntil, performance.now() + ms);
+  for (const fn of wakers) fn();
+}
+
 export const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 export const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 export const linear = (t) => t;
@@ -33,6 +50,8 @@ export const linear = (t) => t;
  */
 export function tween(ms, onUpdate, ease = easeInOut) {
   ms /= playback.rate;
+  running++;
+  keepAwake();
   return new Promise((resolve) => {
     const start = performance.now();
     let done = false;
@@ -47,6 +66,8 @@ export function tween(ms, onUpdate, ease = easeInOut) {
         timer = setTimeout(step, 100);
       } else {
         done = true;
+        running--;
+        keepAwake(300); // what the tween started (a fade, a fall) settles over the next frames
         resolve();
       }
     };
@@ -54,4 +75,7 @@ export function tween(ms, onUpdate, ease = easeInOut) {
   });
 }
 
-export const wait = (ms) => new Promise((r) => setTimeout(r, ms / playback.rate));
+export const wait = (ms) => {
+  keepAwake(ms / playback.rate + 300);
+  return new Promise((r) => setTimeout(r, ms / playback.rate));
+};

@@ -156,10 +156,10 @@ html, body {
   #initiative .chip .pic { width: 24px; height: 24px; }
   #initiative .chip .pic svg { width: 16px; height: 16px; }
 }
-/* More portraits past an edge: that edge fades (hud.js sets the classes as it scrolls). */
-#initiative.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
-#initiative.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
-#initiative.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+/* More portraits or buttons past an edge: that edge fades (hud.js sets the classes). */
+#initiative.more-right, #attacks.more-right, #who.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+#initiative.more-left, #attacks.more-left, #who.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+#initiative.more-left.more-right, #attacks.more-left.more-right, #who.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
 .chip {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -813,7 +813,7 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   #who { gap: 2px 10px; padding-bottom: 4px; }
   .who-name { font-size: 15px; }
   /* One row of abilities that scrolls sideways, rather than a wall of buttons over the board. */
-  #attacks { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+  #attacks { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; scroll-padding-inline: 28px; }
   #attacks::-webkit-scrollbar { display: none; }
   #attacks .group { flex: none; }
   #hint { font-size: 12px; max-width: 100%; }
