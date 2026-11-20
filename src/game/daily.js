@@ -6,6 +6,7 @@
 
 import { newCampaign, heroUnit } from './campaign.js';
 import { MAX_LEVEL } from './units.js';
+import { watchable } from './history.js';
 
 export const DAILY_KEY = 'crypt-skirmish:daily';
 const KEEP_DAYS = 60;
@@ -158,4 +159,41 @@ export function shareText({ key, room, level, rounds, marks, streak: days = 0 })
     ...(days > 1 ? [`Streak: ${days} days`] : []),
     'https://fatihsenel.github.io/crypt-skirmish/',
   ].join('\n');
+}
+
+/** The best won fight of today's daily and this week's weekly crypt, to watch from the title. */
+export const BEST_FIGHTS_KEY = 'crypt-skirmish:best-fights';
+
+/**
+ * `kept` with this attempt's fight kept for `mode` ('daily' or 'weekly') if it's a win and the
+ * best for its day or week: { [mode]: { key, won, rounds, downed, fight } }. Another day's (or
+ * week's) fight is forgotten.
+ */
+export function keepBest(kept, mode, key, attempt, fight) {
+  const prev = kept[mode]?.key === key ? kept[mode] : null;
+  const rec = watchable(fight);
+  if (!attempt.won || !rec || !better(attempt, prev)) return kept;
+  return { ...kept, [mode]: { key, won: true, rounds: attempt.rounds, downed: attempt.downed, fight: rec } };
+}
+
+/** The kept fight for `mode` on day or week `key`, or null. */
+export const bestFight = (kept, mode, key) => (kept?.[mode]?.key === key ? kept[mode].fight ?? null : null);
+
+export function loadBestFights() {
+  try {
+    const kept = JSON.parse(localStorage.getItem(BEST_FIGHTS_KEY) ?? '{}');
+    return kept && typeof kept === 'object' && !Array.isArray(kept) ? kept : {};
+  } catch {
+    return {};
+  }
+}
+
+export function recordBestFight(mode, key, attempt, fight) {
+  const kept = keepBest(loadBestFights(), mode, key, attempt, fight);
+  try {
+    localStorage.setItem(BEST_FIGHTS_KEY, JSON.stringify(kept));
+  } catch {
+    /* storage unavailable: nothing to watch later */
+  }
+  return kept;
 }

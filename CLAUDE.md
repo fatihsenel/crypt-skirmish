@@ -23,7 +23,7 @@ server on 5173.
   headlessly by `scripts/sim.js`. Keep it that way.
 - The rules engine (`Game` in `combat.js`) resolves everything instantly and emits events
   (`attack`, `move`, `spell`, `death`, …). `move()` returns steps. `src/main.js` turns them
-  into animations, HUD updates and sound.
+  into HUD updates, and `src/animate.js` into animations and sound.
 - **Randomness in rules goes through `this.rng`** (or a passed-in `rng`), never
   `Math.random`. Fights are saved as a seed plus the heroes' commands and replayed on load
   (`replay.js`). Anything that changes the dice order makes old saves fall back to camp.
@@ -34,7 +34,7 @@ server on 5173.
   they follow the monster-turn speed setting (`playback.rate`).
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).
 
 ## Adding content
 

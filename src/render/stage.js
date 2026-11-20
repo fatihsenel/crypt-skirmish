@@ -88,7 +88,9 @@ export function createStage(container, { width, height }) {
   let shakeEnd = 0;
   let shakeLen = 1;
   const jitter = new THREE.Vector3();
+  const still = matchMedia('(prefers-reduced-motion: reduce)');
   const shake = (amp = 0.25, ms = 350) => {
+    if (still.matches) return; // the system asks for less motion: no shaking
     shakeAmp = Math.max(shakeAmp * Math.max(0, (shakeEnd - clock.elapsedTime) / shakeLen), amp);
     shakeLen = ms / 1000;
     shakeEnd = clock.elapsedTime + shakeLen;

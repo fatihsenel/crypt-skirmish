@@ -129,10 +129,11 @@ It runs on desktop and on phones.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
-  A won campaign has the same button.
+  A won campaign has the same button. Watch your best replays the day's fastest win from
+  the title.
 - **Weekly elite crypt:** one room a week at New Game+ 3, the same for everyone, with that
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
-  keeps your best result and a streak of weeks won, and has a Copy result.
+  keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
@@ -166,6 +167,7 @@ Everything is generated in the browser, with no recordings:
   darker layers in boss rooms.
 - Sound effects and dungeon ambience.
 - Voices: every character shouts, chants and grunts in a made-up language.
+- With reduced motion turned on in the system, the screen doesn't shake on crits and blasts.
 
 ## Controls
 
@@ -183,6 +185,7 @@ Everything is generated in the browser, with no recordings:
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel |
 | L | Open or close the combat log |
+| Tab / Esc in a panel | Tab stays inside the panel; Esc closes it |
 
 | Touch | Action |
 | --- | --- |
@@ -236,7 +239,7 @@ npm run build    # production bundle in dist/
 npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
 
-Every push to `main` runs the tests, builds and deploys to GitHub Pages
+Every push to `main` runs lint and the tests, builds and deploys to GitHub Pages
 (`.github/workflows/pages.yml`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
@@ -320,6 +323,7 @@ src/
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
   main.js            controller: input → game → animations → HUD
+  animate.js         plays back resolved attacks, moves, chests, actions and spells
   links.js           copying and opening #watch= and #play= links
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
   input.js           picking a tile, the long press, and what a click on a tile does

@@ -14,7 +14,7 @@ import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
 import { loadHistory, loadDeepest, deepestLabel } from '../game/history.js';
 import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
-import { dayKey, dailyPlan, loadDaily, streak } from '../game/daily.js';
+import { dayKey, dailyPlan, loadDaily, streak, bestFight, loadBestFights } from '../game/daily.js';
 import { weekKey, weeklyPlan, loadWeekly, weekStreak } from '../game/weekly.js';
 import { ELITE_TRAITS } from '../game/combat.js';
 
@@ -62,6 +62,10 @@ export class Camp {
       if (b?.id === 'title-ngplus') this.h.onNewGamePlus(b);
       if (b?.id === 'title-daily-play') this.h.onDaily();
       if (b?.id === 'title-weekly-play') this.h.onWeekly();
+      if (b?.id === 'title-daily-watch' || b?.id === 'title-weekly-watch') {
+        const fight = this.best?.[b.id === 'title-daily-watch' ? 'daily' : 'weekly'];
+        if (fight) this.h.onWatch(fight);
+      }
       if (b?.id === 'title-new') this.titleStep('setup');
       if (b?.id === 'setup-back') this.titleStep('main');
       if (b?.id === 'setup-start') this.h.onNewCampaign(this.difficulty, this.names(), { ...this.classes });
@@ -170,6 +174,7 @@ export class Camp {
     this.renderHistory(loadHistory());
     this.renderAwards(loadAchievements());
     Bestiary.label($('#title-bestiary'));
+    this.best = {};
     this.renderDaily();
     this.renderWeekly();
   }
@@ -191,6 +196,7 @@ export class Camp {
         + (run ? ` · Streak: ${run} day${run === 1 ? '' : 's'}` : '')
       : run ? `Streak: ${run} day${run === 1 ? '' : 's'}. Win today to keep it going.` : 'Not played yet today.';
     $('#title-daily-play').textContent = today?.won ? 'Play it again' : 'Play today’s crypt';
+    this.showBest('daily', plan.key);
   }
 
   /** This week's elite crypt: the trait, room and party, and the week's best and the streak so far. */
@@ -218,6 +224,16 @@ export class Camp {
         + (run ? ` · Streak: ${weeks(run)}` : '')
       : run ? `Streak: ${weeks(run)}. Win this week to keep it going.` : 'The same for everyone this week. Not played yet.';
     $('#title-weekly-play').textContent = week?.won ? 'Play it again' : 'Play this week’s crypt';
+    this.showBest('weekly', plan.key);
+  }
+
+  /** The Watch your best button under a daily or weekly box, when its best win was kept. */
+  showBest(mode, key) {
+    const fight = bestFight(loadBestFights(), mode, key);
+    this.best = { ...this.best, [mode]: fight };
+    const b = $(`#title-${mode}-watch`);
+    b.hidden = !fight;
+    if (fight) b.setAttribute('aria-label', `Watch your best ${mode === 'daily' ? 'daily' : 'weekly'} fight again`);
   }
 
   /** Every achievement: unlocked ones in gold with the date, the rest dimmed, as goals. */

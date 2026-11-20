@@ -72,7 +72,7 @@
           <h2>Combat log</h2>
           <button id="log-close" type="button" aria-label="Close the combat log">✕</button>
         </div>
-        <ol id="log-list"></ol>
+        <ol id="log-list" aria-live="polite" aria-relevant="additions"></ol>
       </aside>
 
       <footer id="actionbar">
@@ -199,8 +199,8 @@
         <button id="replay-play" type="button" hidden title="The same room, party and dice">Play it yourself</button>
         <button id="replay-exit" type="button" title="Esc">Exit replay</button>
       </div>
-      <div id="banner" hidden>
-        <div class="card">
+      <div id="banner" hidden role="dialog" aria-labelledby="banner-title" aria-describedby="banner-text">
+        <div class="card" tabindex="-1">
           <h1 id="banner-title"></h1>
           <p id="banner-text"></p>
           <div id="banner-recap" hidden></div>
@@ -238,6 +238,7 @@
                 <h2 id="daily-head">Daily crypt <span class="daily-date"></span></h2>
                 <p class="daily-room"></p>
                 <p class="daily-result"></p>
+                <button id="title-daily-watch" type="button" class="daily-watch" hidden>Watch your best</button>
               </div>
               <button id="title-daily-play" type="button">Play today’s crypt</button>
             </section>
@@ -247,6 +248,7 @@
                 <p class="daily-room"></p>
                 <p class="daily-trait"></p>
                 <p class="daily-result"></p>
+                <button id="title-weekly-watch" type="button" class="daily-watch" hidden>Watch your best</button>
               </div>
               <button id="title-weekly-play" type="button">Play this week’s crypt</button>
             </section>

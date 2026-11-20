@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, shareText } from '../src/game/daily.js';
+import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, shareText, keepBest, bestFight } from '../src/game/daily.js';
 import { NODES } from '../src/game/campaign.js';
 
 describe('daily crypt', () => {
@@ -91,5 +91,33 @@ describe('sharing a daily', () => {
     expect(text).toContain('Won in 1 round, 2 of 4 fell');
     expect(text).toContain('🛡️💀🛡️💀');
     expect(text).not.toContain('Streak');
+  });
+});
+
+describe('the best daily and weekly fight', () => {
+  const fight = (n) => ({ node: 'crypt', seed: n, party: { F: {} }, difficulty: 'normal', log: [{ type: 'end' }], result: 'victory' });
+  const win = (rounds, downed = 0) => ({ won: true, rounds, downed });
+
+  it('keeps the best win of the day, and only a win', () => {
+    let kept = keepBest({}, 'daily', '2026-11-20', { won: false, rounds: 9, downed: 4 }, { ...fight(1), result: 'defeat' });
+    expect(bestFight(kept, 'daily', '2026-11-20')).toBeNull();
+    kept = keepBest(kept, 'daily', '2026-11-20', win(8), fight(2));
+    kept = keepBest(kept, 'daily', '2026-11-20', win(9), fight(3)); // slower: not kept
+    expect(bestFight(kept, 'daily', '2026-11-20').seed).toBe(2);
+    kept = keepBest(kept, 'daily', '2026-11-20', win(6), fight(4));
+    expect(bestFight(kept, 'daily', '2026-11-20').seed).toBe(4);
+  });
+
+  it('forgets another day’s fight, and keeps daily and weekly apart', () => {
+    let kept = keepBest({}, 'daily', '2026-11-19', win(3), fight(1));
+    kept = keepBest(kept, 'weekly', '2026-11-16', win(12), fight(2));
+    expect(bestFight(kept, 'daily', '2026-11-20')).toBeNull();
+    kept = keepBest(kept, 'daily', '2026-11-20', win(10), fight(3)); // a slower win on a new day still counts
+    expect(bestFight(kept, 'daily', '2026-11-20').seed).toBe(3);
+    expect(bestFight(kept, 'weekly', '2026-11-16').seed).toBe(2);
+  });
+
+  it('keeps nothing it couldn’t replay', () => {
+    expect(keepBest({}, 'daily', '2026-11-20', win(5), { node: 'crypt' })).toEqual({});
   });
 });

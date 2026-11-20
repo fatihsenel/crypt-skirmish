@@ -733,6 +733,9 @@ export class Hud {
     if (challenge) this.challengeBanner(challenge);
     $('#banner').dataset.result = result;
     $('#banner').hidden = false;
+    // Keyboard and screen reader users land on the result; Tab reaches its buttons. (Not a
+    // button itself, so a key still held from the last move can't press one.)
+    $('#banner .card').focus({ preventScroll: true });
   }
 
   /**
