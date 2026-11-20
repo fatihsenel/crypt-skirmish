@@ -138,7 +138,9 @@ It runs on desktop and on phones.
   If an update moves the week to another room, its best starts again there.
 - **Achievements:** 32 goals that carry across runs. Open them from the title screen.
 - **The title's skull** gapes, chatters and twitches on its own. Click or tap it to play its
-  moves in turn: gape, chatter, cocked head, laugh, lunge and the torch guttering.
+  moves in turn, each with its own sound: gape, chatter, cocked head, laugh, lunge and the
+  torch guttering. A faint glow behind it pulses until the first click. With Data Saver on or
+  on a 2G connection the title keeps the flat emblem.
 - **Bestiary:** every monster you've met, with its character card, a line of lore and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each

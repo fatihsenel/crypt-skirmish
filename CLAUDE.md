@@ -42,7 +42,8 @@ server on 5173.
   no shake, no camera pans, no drifting text, and a still title logo.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces the flat
   `emblem.svg` once the skull in `public/models/skull/` loads, and draws only while the title
-  is on screen. Without WebGL the flat emblem stays.
+  is on screen. Without WebGL, with Data Saver or on 2G the flat emblem stays. Clicking the
+  skull plays its moves in turn with `sfx.skull(move)`; a glow hints at it until the first click.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it
@@ -54,7 +55,7 @@ server on 5173.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, `skull-poked`, …).
 
 ## Adding content
 

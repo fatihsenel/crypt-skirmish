@@ -192,8 +192,10 @@ const camp = new Camp({
   },
 });
 
-// The 3D emblem loads on its own and replaces the flat one when it's ready.
-import('./render/titleLogo.js').then((m) => m.mountTitleLogo(document.querySelector('#title .title-emblem'))).catch(() => {});
+// The 3D emblem loads on its own and replaces the flat one when it's ready. With Data Saver
+// on, or on a 2G connection, the flat one stays and the skull isn't downloaded.
+const slowLink = ((c) => !!c && (c.saveData || /2g/.test(c.effectiveType ?? '')))(navigator.connection);
+if (!slowLink) import('./render/titleLogo.js').then((m) => m.mountTitleLogo(document.querySelector('#title .title-emblem'))).catch(() => {});
 
 function startCampaign(difficulty, names, classes) {
   sfx.ui();

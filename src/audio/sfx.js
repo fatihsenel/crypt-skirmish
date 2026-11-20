@@ -655,6 +655,41 @@ class Sfx {
     this.play((t) => this.click(t, 1800, 0.08));
   }
 
+  /** The title skull's moves, when it's clicked: gape, chatter, twitch, laugh, lunge, gutter. */
+  skull(move) {
+    this.play((t) => {
+      if (move === 'gape') {
+        // the jaw creaks open, then snaps shut
+        this.tone(t, { type: 'sawtooth', freq: 58, freqEnd: 92, dur: 1.1, gain: 0.06, attack: 0.25, lowpass: 480 });
+        this.noise(t, { dur: 1.1, filter: 'bandpass', freq: 320, freqEnd: 520, q: 9, gain: 0.12, attack: 0.3 });
+        this.click(t + 1.95, 700, 0.3);
+        this.noise(t + 1.95, { dur: 0.08, filter: 'lowpass', freq: 900, gain: 0.25 });
+      } else if (move === 'chatter') {
+        for (let i = 0; i < 13; i++) this.click(t + i * 0.075 + rand(0, 0.015), rand(1700, 2600), 0.2 * (1 - i / 16));
+      } else if (move === 'twitch') {
+        // a neck bone cracks
+        this.click(t, 1300, 0.28);
+        this.click(t + 0.05, 900, 0.2);
+        this.noise(t, { dur: 0.06, filter: 'lowpass', freq: 700, gain: 0.2 });
+      } else if (move === 'laugh') {
+        // a dry, breathy cackle that falls away, with the teeth clacking under it
+        for (let i = 0; i < 6; i++) {
+          const at = t + i * 0.24;
+          this.noise(at, { dur: 0.14, filter: 'bandpass', freq: 760 - i * 50, q: 3, gain: 0.2 - i * 0.02, attack: 0.02 });
+          this.tone(at, { type: 'sawtooth', freq: 150 - i * 8, freqEnd: 120 - i * 8, dur: 0.14, gain: 0.05, attack: 0.02, lowpass: 900 });
+          this.click(at + 0.1, rand(1800, 2400), 0.1);
+        }
+      } else if (move === 'lunge') {
+        this.hissNow(t, 1.5);
+        this.tone(t, { type: 'sine', freq: 95, freqEnd: 50, dur: 0.4, gain: 0.25 });
+      } else if (move === 'gutter') {
+        // the flame gasps low and sputters back
+        this.noise(t, { dur: 0.45, filter: 'lowpass', freq: 900, freqEnd: 140, gain: 0.3, attack: 0.02 });
+        for (let i = 0; i < 6; i++) this.click(t + 0.4 + Math.random() * 0.5, rand(300, 900), rand(0.06, 0.14));
+      }
+    });
+  }
+
   victory() {
     this.play((t) => {
       [523, 659, 784, 1047].forEach((f, i) => {

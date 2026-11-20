@@ -5,10 +5,14 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { calm } from './tween.js';
+import { sfx } from '../audio/sfx.js';
 
 const BASE = `${import.meta.env.BASE_URL}models/skull/`;
 const STILL = { yaw: -0.25, pitch: 0.05, jaw: 0.04 };
 const easeIn = (x) => x * x * x;
+// Set once the skull has been clicked: until then a faint glow pulses behind it as a hint.
+const POKED_KEY = 'crypt-skirmish:skull-poked';
+const poked = () => { try { return localStorage.getItem(POKED_KEY) === '1'; } catch { return true; } };
 
 /** Swap `img` (the flat emblem) for the 3D logo once it has loaded. Keeps the image on any failure. */
 export async function mountTitleLogo(img) {
@@ -70,7 +74,15 @@ export async function mountTitleLogo(img) {
     return ray.intersectObject(parts.skull, true).length > 0;
   };
   canvas.addEventListener('pointermove', (e) => { canvas.style.cursor = !calm() && onSkull(e) ? 'pointer' : ''; });
-  canvas.addEventListener('click', (e) => { if (!calm() && onSkull(e)) anim.poke(); });
+  anim.hint = !poked();
+  canvas.addEventListener('click', (e) => {
+    if (calm() || !onSkull(e)) return;
+    sfx.skull(anim.poke());
+    if (anim.hint) {
+      anim.hint = false;
+      try { localStorage.setItem(POKED_KEY, '1'); } catch { /* the hint just comes back next visit */ }
+    }
+  });
   // Draw only while the title is showing.
   new IntersectionObserver(([e]) => {
     last = performance.now();
@@ -220,7 +232,13 @@ function buildScene(scene, env) {
     return w;
   });
 
-  return { G, skull, eyes, orb, torch, cold, mist, wisps, jaw: null };
+  // The hint: a faint glow behind the skull until it's first clicked.
+  const halo = sprite(0x7fffe0, { blending: THREE.AdditiveBlending });
+  halo.position.set(0, -0.05, -0.4);
+  halo.scale.setScalar(2.4);
+  skull.add(halo);
+
+  return { G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw: null };
 }
 
 async function loadSkull(parts) {
@@ -260,7 +278,7 @@ async function loadSkull(parts) {
 }
 
 /** Returns `(dt, still)` that poses everything for the next frame. */
-function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, jaw }) {
+function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, halo, jaw }) {
   let t = 0;
   // Now and then: a chatter, a slow gape, a cocked head, or the torch guttering. A click adds
   // a laugh and a lunge, and plays the moves in turn.
@@ -318,6 +336,7 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, jaw }) {
       e.scale.setScalar(1 + flare * 0.6);
     }
     orb.material.emissiveIntensity = 0.5 + 0.6 * p + flare;
+    halo.material.opacity = pose.hint && !still ? 0.6 * Math.max(0, Math.sin(t * 1.6)) ** 2 : 0;
 
     for (const m of mist) {
       const d = m.userData, x = ((d.x + t * d.speed + 3.2) % 6.4) - 3.2;
@@ -336,13 +355,15 @@ function animator({ G, skull, eyes, orb, torch, cold, mist, wisps, jaw }) {
     }
   };
 
-  /** Play the next move now, and hold off the random ones for a moment. */
+  pose.hint = false;
+  /** Play the next move now, hold off the random ones for a moment, and return its name. */
   pose.poke = () => {
     const name = MOVES[move++ % MOVES.length];
     ev[name] = t;
     if (name === 'twitch') ev.tilt = (move % 4 < 2 ? -1 : 1) * 0.28;
     if (name === 'chatter' || name === 'gutter' || name === 'laugh') ev.flare = t;
     ev.next = t + 4;
+    return name;
   };
   return pose;
 }
