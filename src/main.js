@@ -41,9 +41,10 @@ import { unlock } from './game/achievements.js';
 import { createLinks } from './links.js';
 import { createThreats, listNames } from './threats.js';
 import { createAnimations } from './animate.js';
-import { tileFromEvent, figureRect, longPress, tileCommand, stepTile, ARROWS } from './input.js';
+import { createControls } from './controls.js';
+import { announce } from './ui/announce.js';
 import { installDebug, sampleVictory } from './debug.js';
-import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed, replayKey } from './ui/replayBar.js';
+import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, recordDaily, streak, loadDaily, shareText, recordBestFight } from './game/daily.js';
 import { weekKey, weeklyPlan, weeklyCampaign, recordWeekly, weekStreak, weeklyShareText } from './game/weekly.js';
 
@@ -523,7 +524,7 @@ function addView(u) {
 const spiritWeapons = new Map();
 const anim = createAnimations({
   stage, hud, settings, spiritWeapons, view, addView, unseen, inView, flushReveals, syncStatus, keepInView,
-  game: () => game, board: () => board, selected: () => selected, busy: () => busy, touching: () => touching,
+  game: () => game, board: () => board, selected: () => selected, busy: () => busy, touching: () => controls.touching,
   autoplaying: () => debugAutoplay, replaying: () => !!replay,
 });
 const { play, damageReaction, throwsOwn } = anim;
@@ -925,6 +926,8 @@ async function onTurnStart(unit) {
   for (const v of views.values()) v.setActive(v.unit === unit);
   if (!unseen(unit)) keepInView(unit);
   selected = null;
+  controls.disarm();
+  if (!unseen(unit)) announce(`${unit.name}’s turn${unit.team === 'heroes' ? '' : ' (enemy)'}`);
   syncStatus();
   hud.renderInitiative(game);
   refresh();
@@ -948,7 +951,7 @@ async function onTurnStart(unit) {
     saveFight(); // with the rooms seen so far
     if (!debugAutoplay) {
       const chestInSight = [...game.grid.chests.keys()].some((k) => visible.has(k));
-      tips.notice('heroTurn', { unit, chestInSight, touch: touching });
+      tips.notice('heroTurn', { unit, chestInSight, touch: controls.touching });
     }
   }
   if (unit.team === 'monsters' || debugAutoplay) await runMonsterTurn(unit);
@@ -1023,7 +1026,7 @@ function refresh() {
     const danger = provokingSteps(u, path);
     board.danger.set(danger);
     const who = game.provokers(u, path).map((f) => f.name);
-    if (who.length) tips.notice('provoke', { touch: touching });
+    if (who.length) tips.notice('provoke', { touch: controls.touching });
     const reachers = threats.active ? threats.at(hovered.x, hovered.z).map((m) => m.name) : [];
     hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
       + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : ''), true);
@@ -1350,7 +1353,7 @@ function watchFromTitle(rec, { link = false } = {}) {
   });
 }
 
-const links = createLinks({ hud, touch: () => touching, watch: watchFromTitle, play: startChallenge, idle: () => !replay && !game });
+const links = createLinks({ hud, touch: () => controls.touching, watch: watchFromTitle, play: startChallenge, idle: () => !replay && !game });
 
 /** Back to the end banner, with the real fight as it ended. */
 function endReplay() {
@@ -1471,7 +1474,7 @@ async function heroCommand(cmd) {
   }
   busy = false;
   refresh();
-  if (game.current === u && cmd.type !== 'end') tips.notice('acted', { unit: u, cmd, touch: touching });
+  if (game.current === u && cmd.type !== 'end') tips.notice('acted', { unit: u, cmd, touch: controls.touching });
   return r;
 }
 
@@ -1552,144 +1555,21 @@ function choose(choice) {
   const same = selected?.kind === choice.kind
     && (choice.kind === 'attack' ? selected.attack === choice.attack : selected.id === choice.id);
   selected = same ? null : choice;
-  if (touching) hovered = null; // aim afresh: a tap from before must not cast at once
+  controls.disarm();
+  if (controls.touching) hovered = null; // aim afresh: a tap from before must not cast at once
   refresh();
 }
 
 // --- input ----------------------------------------------------------------
-const pickTile = (ev) => tileFromEvent(ev, { stage, views, board, game });
-const unitRect = (u) => figureRect(stage, u, view(u));
-
-// A finger has no hover: the first tap on a tile shows what would happen there (the path,
-// the odds, the blast), and a second tap on the same tile does it. Dragging pans the view.
-let touching = matchMedia('(hover: none)').matches; // the last pointer was a finger or pen
-hud.touch = touching;
-document.body.classList.toggle('touch', touching);
-let downAt = null;
-window.addEventListener('pointerdown', (ev) => {
-  const touch = ev.pointerType !== 'mouse';
-  if (touch === touching) return;
-  touching = hud.touch = touch;
-  document.body.classList.toggle('touch', touch);
-  if (isHeroTurn() && !busy) refresh(); // hints say "tap" now
-}, { capture: true });
-stage.dom.addEventListener('pointerdown', (ev) => {
-  downAt = { x: ev.clientX, y: ev.clientY };
-  press.start(ev);
+// Mouse, touch and keyboard (see controls.js).
+const controls = createControls({
+  stage, hud, threats, helpBox, camp,
+  game: () => game, board: () => board, views: () => views, busy: () => busy, replay: () => replay,
+  hovered: () => hovered, setHovered: (t) => { hovered = t; },
+  selected: () => selected, setSelected: (s) => { selected = s; },
+  isHeroTurn, refresh, heroCommand, endHeroTurn, undoMove, endReplay, keepInView,
+  toggleSound, toggleMusic, visibleUnitAt, spellTargetAt,
 });
-
-// On a touch screen a long press on a figure shows its character card (a tap previews and
-// acts, as before). The press that showed the card isn't a tap.
-const press = longPress(stage.dom, {
-  target: (ev) => {
-    if (!game || game.over) return null;
-    const t = pickTile(ev);
-    return t && visibleUnitAt(t.x, t.z);
-  },
-  show: (who) => hud.showUnitCard(game, who, unitRect(who)),
-});
-stage.dom.addEventListener('contextmenu', (ev) => ev.pointerType !== 'mouse' && touching && ev.preventDefault());
-
-stage.dom.addEventListener('pointermove', (ev) => {
-  if (ev.pointerType !== 'mouse') return;
-  keyCursor = false; // the mouse has the cursor again
-  const t = pickTile(ev);
-  if (t?.x === hovered?.x && t?.z === hovered?.z) return;
-  hovered = t;
-  // The character card for a figure the mouse rests on, whoever's turn it is.
-  const who = game && t && !game.over ? visibleUnitAt(t.x, t.z) : null;
-  hud.hoverUnit(game, who, () => unitRect(who));
-  if (isHeroTurn() && !busy) refresh();
-});
-
-stage.dom.addEventListener('pointerleave', (ev) => {
-  if (ev.pointerType !== 'mouse') return; // a lifted finger leaves its preview up
-  hovered = null;
-  hud.hoverUnit(game, null);
-  if (isHeroTurn() && !busy) refresh();
-});
-for (const type of ['pointerdown', 'wheel']) {
-  stage.dom.addEventListener(type, (ev) => ev.pointerType !== 'touch' && hud.hoverUnit(game, null), { passive: true });
-}
-
-stage.dom.addEventListener('click', (ev) => {
-  if (press.consume()) return; // the long press that showed a card
-  if (!isHeroTurn() || busy) return;
-  if (downAt && Math.hypot(ev.clientX - downAt.x, ev.clientY - downAt.y) > 10) return; // a drag
-  const t = pickTile(ev);
-  if (!t) return;
-  if (touching && (t.x !== hovered?.x || t.z !== hovered?.z)) {
-    hovered = t;
-    refresh();
-    return;
-  }
-  actAt(t);
-});
-
-/** What a click (or Enter on the keyboard cursor) on tile `t` does: act, or say why not. */
-function actAt(t) {
-  const r = tileCommand(game, game.current, t, selected, { unitAt: visibleUnitAt, spellTarget: spellTargetAt });
-  if (r?.toast) hud.toast(r.toast);
-  else if (r?.cmd) heroCommand(r.cmd);
-}
-
-// The keyboard cursor: the arrow keys move the hovered tile (starting on the hero whose turn
-// it is) and show what a click there would do; Enter does it. The mouse takes it back.
-let keyCursor = false;
-const screenOf = (x, z) => {
-  const v = new THREE.Vector3(x, 0, z).project(stage.camera);
-  return { x: v.x, y: -v.y * (stage.dom.clientHeight / Math.max(1, stage.dom.clientWidth)) };
-};
-function moveCursor(dir) {
-  const hero = game.current?.team === 'heroes' ? game.current : game.living('heroes')[0];
-  if (!hero) return;
-  hovered = keyCursor && hovered ? stepTile(game.grid, hovered, dir, screenOf) : { x: hero.x, z: hero.z };
-  keyCursor = true;
-  keepInView(hovered); // a phone with a keyboard: don't let it walk off screen
-  const who = visibleUnitAt(hovered.x, hovered.z);
-  hud.hoverUnit(game, who, () => unitRect(who));
-  if (isHeroTurn() && !busy) refresh();
-  else board.hover.set([hovered]);
-}
-
-window.addEventListener('keydown', (ev) => {
-  if (ev.target instanceof HTMLInputElement) return; // typing a hero's name
-  if (replay && replayKey(replay, ev, game?.round ?? 0, endReplay)) return;
-  if (ARROWS[ev.code] && game && board && !game.over && !replay && !camp.open && !ev.altKey && !ev.metaKey && !ev.ctrlKey) {
-    if (ev.target.closest?.('#settings, #log, #help, .overlay')) return; // scrolling or picking there
-    ev.preventDefault();
-    moveCursor(ARROWS[ev.code]);
-    return;
-  }
-  if (ev.code === 'Space' || ev.code === 'Enter') {
-    if (ev.target instanceof HTMLButtonElement || ev.target instanceof HTMLElement && ev.target.closest('summary')) return;
-    ev.preventDefault();
-    // Enter acts on the keyboard cursor's tile; Space (or Enter without the cursor) ends the turn.
-    if (ev.code === 'Enter' && keyCursor && hovered) {
-      if (isHeroTurn() && !busy) actAt(hovered);
-    } else endHeroTurn();
-  }
-  if (ev.code === 'KeyZ' && !ev.altKey) {
-    ev.preventDefault();
-    undoMove();
-  }
-  if (ev.code === 'KeyT') threats.toggle();
-  if (ev.code === 'KeyM') toggleSound();
-  if (ev.code === 'KeyN') toggleMusic();
-  if (ev.code === 'KeyH' || ev.key === '?') helpBox.open = !helpBox.open;
-  if (ev.code === 'KeyL' && game) hud.toggleLog();
-  if (ev.code === 'Escape') {
-    if (!selected && keyCursor) { // nothing to cancel: put the keyboard cursor away
-      keyCursor = false;
-      hovered = null;
-      hud.hoverUnit(game, null);
-    }
-    selected = null;
-    if (isHeroTurn() && !busy) refresh();
-    else board?.hover.clear();
-  }
-});
-
 /** ?victory: the won-campaign screen for a made-up run (see debug.js). Nothing is saved or recorded. */
 function showSampleVictory() {
   saving = false;

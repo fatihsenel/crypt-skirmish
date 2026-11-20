@@ -170,6 +170,8 @@ Everything is generated in the browser, with no recordings:
 - With reduced motion (the Motion setting, or the system's when it's on System), the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
   dice don't wobble.
+- Screen readers hear the combat log as it happens (even with the log panel closed), whose
+  turn it is, and what the keyboard cursor rests on with what Enter would do there.
 
 ## Controls
 
@@ -181,9 +183,9 @@ Everything is generated in the browser, with no recordings:
 | Click a chest | Open it when standing next to it |
 | Right-drag / wheel | Pan / zoom |
 | Arrow keys | Move a cursor over the board, starting at your hero |
-| Enter on the cursor | Act there, like a click: move, attack or cast |
+| Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
 | Space or Enter | End turn (or throw the die when it's waiting) |
-| Esc | Cancel the selected attack or spell, then put the cursor away |
+| Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
 | T | Show or hide enemy reach |
 | M / N | Sound / music on or off |
@@ -315,6 +317,7 @@ src/
   audio/             sfx.js, music.js, voices.js (all procedural)
   ui/
     hud.js           initiative, action bar, combat log
+    announce.js      what a screen reader hears: log lines, turns, the keyboard cursor
     replayBar.js     the replay bar: pause, next turn, speed and their keys
     runCard.js       the won campaign drawn as a picture to save
     camp.js          title screen and camp
@@ -328,11 +331,12 @@ src/
     overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
-  main.js            controller: input → game → animations → HUD
+  main.js            controller: game → animations → HUD
+  controls.js        mouse, touch and keyboard: the arrow-key cursor and the shortcut keys
   animate.js         plays back resolved attacks, moves, chests, actions and spells
   links.js           copying and opening #watch= and #play= links
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
-  input.js           picking a tile, the long press, and what a click on a tile does
+  input.js           picking a tile, the long press, what a click does, the cursor's step and words
   debug.js           window.__debug and the ?victory sample run
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/

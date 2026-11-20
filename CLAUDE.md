@@ -34,8 +34,10 @@ server on 5173.
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
   motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):
   no shake, no camera pans, no drifting text.
-- Arrow keys move a board cursor (`stepTile` in `input.js`) that reuses the hover tile;
-  Enter acts there through the same `actAt` as a click.
+- Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
+  `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
+  second tap (`enterStep`). Screen readers hear log lines, turns and the cursor's tile
+  through `announce()` (`ui/announce.js`), so a new spoken message goes there.
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
   `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, …).

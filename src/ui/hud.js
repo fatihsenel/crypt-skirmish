@@ -1,6 +1,7 @@
 // HTML overlay: initiative tracker, action bar, combat log, banners.
 
 import { EndBanner } from './banner.js';
+import { announce } from './announce.js';
 import { signed } from '../game/dice.js';
 import { ACTIONS, SPELLS, PASSIVES, SHOVE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
@@ -175,6 +176,7 @@ export class Hud {
     const list = $('#log-list');
     list.appendChild(li);
     list.scrollTop = list.scrollHeight;
+    announce(li.textContent); // read out even while the log panel is closed
     if (!this.logOpen) $('#log-toggle').classList.add('unread');
   }
 
@@ -680,9 +682,14 @@ export class Hud {
     if (this.touch && text) {
       text = text.replace(/\bclick\b/g, 'tap').replace(/\bClick\b/g, 'Tap').replace(/ with the mouse/g, '').replace(' · Esc to cancel', '');
       if (act) text += ' · tap again to confirm';
-    }
+    } else if (this.keys && text && act) text += this.armed ? ' · Enter again to confirm' : ' · Enter to choose';
     $('#hint').textContent = text;
     $('#hint').classList.toggle('show', !!text);
+  }
+
+  /** The hint line as shown (what the keyboard cursor reads out). */
+  hintText() {
+    return $('#hint').textContent;
   }
 
   /** A short note under the top bar. kind 'news' (good news, in gold) or a warning. */

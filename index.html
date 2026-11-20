@@ -72,7 +72,7 @@
           <h2>Combat log</h2>
           <button id="log-close" type="button" aria-label="Close the combat log">✕</button>
         </div>
-        <ol id="log-list" aria-live="polite" aria-relevant="additions"></ol>
+        <ol id="log-list"></ol>
       </aside>
 
       <footer id="actionbar">
@@ -98,10 +98,10 @@
             <dt class="mouse"><kbd>Click</kbd></dt><dd class="mouse">Move, attack, or open a chest beside you</dd>
             <dt class="mouse"><kbd>Right-drag</kbd></dt><dd class="mouse">Pan the view</dd>
             <dt class="mouse"><kbd>Wheel</kbd></dt><dd class="mouse">Zoom</dd>
-            <dt class="mouse"><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></dt><dd class="mouse">Move a cursor over the board, from your hero; <kbd>Enter</kbd> acts there</dd>
+            <dt class="mouse"><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></dt><dd class="mouse">Move a cursor over the board, from your hero; <kbd>Enter</kbd> picks a tile, <kbd>Enter</kbd> again acts</dd>
             <dt class="mouse"><kbd>Space</kbd> <kbd>Enter</kbd></dt><dd class="mouse">Throw your die, or end the turn</dd>
             <dt class="mouse"><kbd>Z</kbd></dt><dd class="mouse">Undo a move that rolled no dice and found nothing new</dd>
-            <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Cancel attack or spell, then put the cursor away</dd>
+            <dt class="mouse"><kbd>Esc</kbd></dt><dd class="mouse">Un-pick the tile, cancel attack or spell, then put the cursor away</dd>
             <dt class="mouse"><kbd>T</kbd></dt><dd class="mouse">Show where monsters can reach (hover a portrait: just that one)</dd>
             <dt class="mouse"><kbd>M</kbd> <kbd>N</kbd></dt><dd class="mouse">Sound / music on or off</dd>
             <dt class="mouse"><kbd>L</kbd></dt><dd class="mouse">Combat log</dd>
@@ -197,6 +197,7 @@
         <button id="settings-close" type="button">Done</button>
       </section>
       <div id="toast" role="status"></div>
+      <div id="announce" class="sr-only" aria-live="polite" aria-relevant="additions"></div>
       <div id="loading" role="status" hidden>Gathering the party…</div>
 
       <div id="replay-bar" hidden role="group" aria-label="Replay">

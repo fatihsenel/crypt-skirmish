@@ -167,3 +167,25 @@ export function stepTile(grid, from, dir, toScreen) {
   }
   return best ?? from;
 }
+
+/**
+ * What's on tile `t`, in words for a screen reader: the unit there with its HP, a chest, or
+ * the floor. `unitAt(x, z)` is the visible unit on a tile, `explored(x, z)` whether it's mapped.
+ */
+export function tileSummary(game, t, { unitAt, explored }) {
+  if (!explored(t.x, t.z)) return 'Unexplored';
+  const u = unitAt(t.x, t.z);
+  if (u) return `${u.name}${u === game.current ? ' (your turn)' : ''}, ${u.hp} of ${u.maxHp} HP`;
+  if (game.grid.chests.has(key(t.x, t.z))) return 'A chest';
+  return 'Floor';
+}
+
+/**
+ * Enter on the keyboard cursor's tile `t`, like a second tap on a touch screen: the first
+ * Enter picks the tile ('arm': its preview says Enter again), the second does it ('act').
+ * `armed` is the key of the tile picked, `r` what a click there would do (see tileCommand);
+ * a tile with nothing to do acts at once, so its reason shows straight away.
+ */
+export function enterStep(armed, t, r) {
+  return !r?.cmd || armed === key(t.x, t.z) ? 'act' : 'arm';
+}

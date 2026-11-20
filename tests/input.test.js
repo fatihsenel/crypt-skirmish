@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Game } from '../src/game/combat.js';
-import { tileCommand, stepTile, ARROWS } from '../src/input.js';
+import { tileCommand, stepTile, ARROWS, tileSummary, enterStep } from '../src/input.js';
 
 function setTurn(game, i) {
   game.order = [game.units[i], ...game.units.filter((_, j) => j !== i)];
@@ -61,5 +61,33 @@ describe('the keyboard cursor', () => {
     expect(stepTile(grid, { x: 2, z: 1 }, ARROWS.ArrowDown, flat)).not.toEqual({ x: 2, z: 2 }); // the pillar
     expect(stepTile(grid, { x: 1, z: 1 }, ARROWS.ArrowUp, flat)).toEqual({ x: 1, z: 1 });
     expect(stepTile(grid, { x: 1, z: 1 }, ARROWS.ArrowLeft, flat)).toEqual({ x: 1, z: 1 });
+  });
+});
+
+describe('the keyboard cursor read aloud', () => {
+  it('names who stands on the tile with their HP, or a chest, or the floor', () => {
+    const game = new Game(['#####', '#Fg.#', '#####'], { senses: false });
+    game.start();
+    const f = setTurn(game, 0);
+    const g = game.units[1];
+    g.hp = 3;
+    const h = { ...helpers(game), explored: () => true };
+    expect(tileSummary(game, { x: f.x, z: f.z }, h)).toBe(`${f.name} (your turn), ${f.hp} of ${f.maxHp} HP`);
+    expect(tileSummary(game, { x: g.x, z: g.z }, h)).toBe(`${g.name}, 3 of ${g.maxHp} HP`);
+    expect(tileSummary(game, { x: 3, z: 1 }, h)).toBe('Floor');
+    expect(tileSummary(game, { x: 3, z: 1 }, { ...h, explored: () => false })).toBe('Unexplored');
+  });
+});
+
+describe('Enter on the keyboard cursor', () => {
+  const move = { cmd: { type: 'move', x: 3, z: 1 } };
+  it('picks a tile first and does it on the second Enter', () => {
+    expect(enterStep(null, { x: 3, z: 1 }, move)).toBe('arm');
+    expect(enterStep('3,1', { x: 3, z: 1 }, move)).toBe('act');
+    expect(enterStep('2,1', { x: 3, z: 1 }, move)).toBe('arm'); // picked elsewhere: pick this one
+  });
+  it('says at once why a tile cannot be used', () => {
+    expect(enterStep(null, { x: 3, z: 1 }, { toast: 'Too far' })).toBe('act');
+    expect(enterStep(null, { x: 3, z: 1 }, null)).toBe('act');
   });
 });
