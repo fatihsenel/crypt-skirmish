@@ -19,7 +19,7 @@ const $ = (sel) => document.querySelector(sel);
 const LOG_KEY = 'crypt-skirmish:log'; // '0' when the log beside the board is folded
 const NARROW = '(max-width: 900px)'; // the log is a panel of its own (style.css)
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const who = (u) => `<span class="${u.team}">${esc(u.name)}</span>`;
+const who = (u) => `<span class="${u.team}" data-unit="${u.id}">${esc(u.name)}</span>`;
 const ordinal = (n) => ['', '1st', '2nd', '3rd'][n] ?? `${n}th`;
 const spellLevel = (s) => (s.level ? `${ordinal(s.level)}-level spell` : s.pool ? 'Paladin feature' : 'Cantrip');
 /** The numbers worth seeing at a glance on a spell's card. */
@@ -115,6 +115,19 @@ export class Hud {
     $('#log-toggle').addEventListener('click', () => this.panelLog());
     $('#log-close').addEventListener('click', () => this.panelLog(false));
     $('#log-fold').addEventListener('click', () => this.toggleLog());
+    // A name in the log points at its figure: hover to mark its tile, click to look at it.
+    const named = (ev) => ev.target.closest?.('#log-list [data-unit]');
+    $('#log-list').addEventListener('pointerover', (ev) => {
+      if (ev.pointerType === 'mouse') this.onLogName?.(Number(named(ev)?.dataset.unit), named(ev) ? 'hover' : 'leave');
+    });
+    $('#log-list').addEventListener('pointerleave', () => this.onLogName?.(NaN, 'leave'));
+    $('#log-list').addEventListener('click', (ev) => {
+      const name = named(ev);
+      if (!name) return;
+      ev.preventDefault(); // a name in a monster turn's summary doesn't open it
+      if (matchMedia(NARROW).matches) this.panelLog(false); // the panel would cover the board
+      this.onLogName?.(Number(name.dataset.unit), 'go');
+    });
     try {
       this.logFolded = localStorage.getItem(LOG_KEY) === '0';
     } catch {
@@ -175,7 +188,11 @@ export class Hud {
     this.logFolded = folded;
     $('#log').classList.toggle('folded', folded);
     $('#log-fold').setAttribute('aria-expanded', String(!folded));
-    if (!folded) $('#log-list').scrollTop = $('#log-list').scrollHeight; // catch up on what came in
+    if (!folded) {
+      $('#log-list').scrollTop = $('#log-list').scrollHeight; // catch up on what came in
+      this.newLines = 0;
+      $('#log-new').hidden = true;
+    }
     if (!save) return;
     try {
       localStorage.setItem(LOG_KEY, folded ? '0' : '1');
@@ -198,6 +215,9 @@ export class Hud {
 
   reset() {
     $('#log-list').innerHTML = '';
+    this.turn = null;
+    this.newLines = 0;
+    $('#log-new').hidden = true;
     $('#banner').hidden = true;
     this.hint('');
   }
@@ -220,10 +240,48 @@ export class Hud {
     li.className = cls;
     li.innerHTML = html;
     const list = $('#log-list');
-    list.appendChild(li);
+    const turn = this.turn;
+    if (turn) { // a monster's turn: its lines go under one summary line
+      if (!turn.li.isConnected) this.addLine(turn.li);
+      turn.list.appendChild(li);
+      if (cls === 'death') this.turnNote(html.replace(/\.$/, ''));
+    } else this.addLine(li);
     list.scrollTop = list.scrollHeight;
     announce(li.textContent); // read out even while the log panel is closed
     if (!this.logOpen) $('#log-toggle').classList.add('unread');
+  }
+
+  /** A line of the log's own (not one inside a monster's turn); counted while the log is folded. */
+  addLine(li) {
+    $('#log-list').appendChild(li);
+    if (!this.logFolded || matchMedia(NARROW).matches) return;
+    this.newLines = (this.newLines ?? 0) + 1;
+    const badge = $('#log-new');
+    badge.textContent = `${this.newLines} new`;
+    badge.hidden = false;
+  }
+
+  /** A monster's turn starts: what it does is logged under one line that sums it up, and opens
+      to show the dice. Nothing is shown if nothing is logged (a monster out of sight). */
+  beginTurn(unit, hidden = () => false) {
+    const li = document.createElement('li');
+    li.className = 'turn';
+    li.innerHTML = '<details><summary></summary><ol></ol></details>';
+    this.turn = { unit, hidden, li, summary: li.querySelector('summary'), list: li.querySelector('ol'), notes: [] };
+    this.turnNote(null);
+  }
+
+  endTurn() {
+    this.turn = null;
+  }
+
+  /** Add to the summary of the monster's turn: "moves", "hits Brannoc for 5", … */
+  turnNote(html) {
+    const t = this.turn;
+    if (!t) return;
+    if (html && t.notes.at(-1) !== html) t.notes.push(html);
+    const name = t.hidden() ? '<span class="monsters">Something</span>' : who(t.unit); // out of sight
+    t.summary.innerHTML = t.notes.length ? `${name}: ${t.notes.join(', ')}` : `${name}’s turn`;
   }
 
   logAttack(r) {
@@ -250,6 +308,10 @@ export class Hud {
       + (r.colossus ? ` incl. <b class="sneak">Colossus Slayer +${r.colossus.total}</b> ${dice(r.colossus)}` : '')
       + (r.strike ? ` incl. <b class="spell">Divine Strike +${r.strike.total} radiant</b> ${dice(r.strike)}` : '')
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '');
+    const did = r.crit ? `crits ${who(r.target)}${r.attack.damage ? ` for ${r.damage}` : ''}`
+      : r.hit && !r.shielded && !r.fumble ? `hits ${who(r.target)}${r.attack.damage ? ` for ${r.damage}` : ''}`
+        : `misses ${who(r.target)}`;
+    this.turnNote(r.attacker === this.turn?.unit ? did : `${who(r.attacker)} ${did}`);
     this.log(
       `${tag}${who(r.attacker)} → ${who(r.target)} · ${esc(r.attack.name)}${why}<br> ` +
         `<span class="dice">${d20} ${signed(r.toHit)} = ${r.total}</span> vs AC ${r.ac}${r.cover ? ' <span class="cover">(half cover +2)</span>' : ''}. ${outcome}${dmg}${sneak}`,

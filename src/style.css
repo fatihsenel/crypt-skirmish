@@ -294,6 +294,42 @@ html, body {
 #log-list .adv { color: var(--hp-high); font-size: 11px; }
 #log-list .cover { color: #c9b07a; font-size: 11px; }
 #log-list .dis { color: var(--monster); font-size: 11px; }
+/* Names point at their figures (hud.js onLogName). */
+#log-list [data-unit] { cursor: pointer; }
+@media (hover: hover) { #log-list [data-unit]:hover { text-decoration: underline; text-underline-offset: 2px; } }
+/* A monster's turn: one line that sums it up, opening to show every roll. */
+#log-list li.turn details summary {
+  list-style: none;
+  cursor: pointer;
+  padding-left: 14px;
+  position: relative;
+}
+#log-list li.turn summary::-webkit-details-marker { display: none; }
+#log-list li.turn summary::before {
+  content: '▸';
+  position: absolute; left: 0;
+  color: var(--muted);
+  transition: transform 0.12s;
+}
+#log-list li.turn details[open] summary::before { transform: rotate(90deg); }
+#log-list li.turn summary:hover::before { color: var(--gold); }
+#log-list li.turn summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; border-radius: 4px; }
+#log-list li.turn ol {
+  list-style: none;
+  margin: 4px 0 0 5px;
+  padding: 0 0 0 9px;
+  border-left: 1px solid var(--panel-edge);
+}
+#log-list li.turn li:last-child { border-bottom: 0; }
+#log-new {
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--gold);
+  color: #1a1410;
+  font: 700 10px var(--body);
+  letter-spacing: 0;
+  text-transform: none;
+}
 
 #actionbar {
   position: absolute;
@@ -848,7 +884,7 @@ body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle)
   #log-list { font-size: 13px; }
   #help { width: min(272px, calc(100% - 24px)); max-height: calc(100% - 300px); overflow-y: auto; z-index: 4; }
   #help:not([open]) { overflow: visible; } /* room for the header's card */
-  #log .head-tip, #log-fold > kbd { display: none; } /* the header only closes the panel here */
+  #log .head-tip, #log-fold > kbd, #log-new { display: none; } /* the header only closes the panel here */
 }
 @media (max-width: 1400px) {
   #audio > button > span:not(.corner-tip) { display: none; } /* icons only: the row would run into the portraits */

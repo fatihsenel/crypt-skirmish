@@ -253,6 +253,8 @@ export class Board {
     this.threatRanged = new TileLayer(this.group, stripes(THREAT_COLORS.normal.ranged, 0.55, 4, 'dots'), 0.98, 0.0102);
     // Ice Storm's ground (difficult terrain): frost under everything else.
     this.ice = new TileLayer(this.group, stripes(0xd8f0ff, 0.6, 3), 0.98, 0.0106);
+    // The figure a name in the combat log points at (hovered or clicked), over everything.
+    this.spot = new TileLayer(this.group, overlay(0xffc93c, 0.7), 0.98, 0.018);
   }
 
   /** The threat colours: red and amber, or purple and yellow for colour-blind players. */
@@ -718,7 +720,7 @@ export class Board {
 
   /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
   showOverlays(on) {
-    for (const l of [...this.layers, this.threatMelee, this.threatRanged]) l.material.visible = on;
+    for (const l of [...this.layers, this.threatMelee, this.threatRanged, this.spot]) l.material.visible = on;
   }
 
   dispose() {

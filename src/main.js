@@ -14,7 +14,7 @@ import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
 import { key } from './game/grid.js';
 import { signed, seeded } from './game/dice.js';
-import { SPELLS } from './game/abilities.js';
+import { SPELLS, ACTIONS } from './game/abilities.js';
 import { createStage } from './render/stage.js';
 import { Board } from './render/board.js';
 import { UnitView, floatText } from './render/unitView.js';
@@ -604,7 +604,7 @@ stage.tickers.add(() => {
 function spotElite(u, news) {
   const t = ELITE_TRAITS.find((e) => e.id === u.elite);
   if (!t) return;
-  hud.log(`<span class="monsters">${u.name}</span> is an <b>elite</b>: ${t.name.toLowerCase()} (${t.desc}).`, 'sys');
+  hud.log(`<span class="monsters" data-unit="${u.id}">${u.name}</span> is an <b>elite</b>: ${t.name.toLowerCase()} (${t.desc}).`, 'sys');
   hud.toast(`${news ? `${news} · ` : ''}Elite: ${t.name}`, 'news');
   sfx.elite();
   view(u)?.flashElite();
@@ -738,7 +738,7 @@ function startFight(resume, watch = null) {
         lurking++;
         continue;
       }
-      hud.log(`<span class="${u.team}">${u.name}</span> <span class="dice">d20 ${u.initRoll} ${signed(u.initiative - u.initRoll)} = ${u.initiative}</span>`);
+      hud.log(`<span class="${u.team}" data-unit="${u.id}">${u.name}</span> <span class="dice">d20 ${u.initRoll} ${signed(u.initiative - u.initRoll)} = ${u.initiative}</span>`);
     }
     if (lurking) hud.log(`<span class="monsters">Something</span> stirs beyond your sight…`, 'sys');
     // The run's relics that change how a fight starts.
@@ -768,7 +768,7 @@ function startFight(resume, watch = null) {
     }
     if (unmarked) view(unmarked)?.updateStatus(); // and a fallen ranger's mark
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
-    else hud.log(`<span class="${unit.team}">${unit.name}</span> falls.`, 'death');
+    else hud.log(`<span class="${unit.team}" data-unit="${unit.id}">${unit.name}</span> falls.`, 'death');
     if (blessing) {
       hud.logBlessing(blessing);
       // Shown once the blow has landed (the death plays out first).
@@ -986,10 +986,10 @@ const ALERT_TEXT = {
 function flushAlerts() {
   for (const { unit, cause, by } of pendingSpotted) {
     if (unseen(unit)) continue; // a goblin found somewhere the party can't see
-    const who = `<span class="${unit.team}">${unit.name}</span>`;
+    const who = `<span class="${unit.team}" data-unit="${unit.id}">${unit.name}</span>`;
     if (cause === 'spotted' || cause === 'searched') {
       floatText(stage.scene, unit, cause === 'searched' ? 'Found!' : 'Spotted!', unit.team === 'heroes' ? 'warn' : 'spell');
-      const finder = by && !unseen(by) ? `<span class="${by.team}">${by.name}</span>` : 'Something';
+      const finder = by && !unseen(by) ? `<span class="${by.team}" data-unit="${by.id}">${by.name}</span>` : 'Something';
       hud.log(`${finder} ${cause === 'searched' ? 'finds' : 'spots'} ${who} in the shadows!`, 'sys');
     } else if (unit.team === 'monsters' && cause === 'attack') {
       hud.log(`${who} strikes from hiding!`, 'sys');
@@ -1008,7 +1008,7 @@ function flushAlerts() {
     }
     if (cause !== 'hurt') floatText(stage.scene, unit, '!', 'warn');
     const text = wasAsleep && cause !== 'hurt' ? 'wakes with a start!' : ALERT_TEXT[cause];
-    hud.log(`<span class="monsters">${unit.name}</span> ${text}`, 'sys');
+    hud.log(`<span class="monsters" data-unit="${unit.id}">${unit.name}</span> ${text}`, 'sys');
   }
   if (hidden) hud.log('Somewhere in the dark, something stirs.', 'sys');
   if (pendingAlerts.some((a) => !unseen(a.unit) && a.cause !== 'hurt')) sfx.alert();
@@ -1163,7 +1163,9 @@ async function runMonsterTurn(unit) {
     if (game !== g) return;
     await pace(450);
 
+    if (unit.team === 'monsters') hud.beginTurn(unit, () => unseen(unit));
     for (const { step, result } of monsterTurn(g, unit)) {
+      if (result.ok) hud.turnNote(stepNote(step));
       try {
         if (result.ok) await play(unit, step.type, result);
       } catch (err) {
@@ -1184,10 +1186,38 @@ async function runMonsterTurn(unit) {
     if (game !== g) return;
   } finally {
     playback.rate = replay ? replayRate() : 1;
+    hud.endTurn();
   }
   busy = false;
   game.endTurn();
 }
+
+const STEP_VERBS = { dash: 'dashes', dodge: 'dodges', disengage: 'disengages', hide: 'hides', nimbleHide: 'hides',
+  nimbleEscape: 'slips away', search: 'searches', aggressive: 'charges' };
+
+/** What a monster's step adds to its turn's line in the log (attacks add their own). */
+function stepNote(step) {
+  if (step.type === 'move') return 'moves';
+  if (step.type === 'spell') return `casts ${SPELLS[step.id]?.name ?? 'a spell'}`;
+  if (step.type === 'action' || step.type === 'bonus') return STEP_VERBS[step.id] ?? ACTIONS[step.id]?.name.toLowerCase() ?? null;
+  return null;
+}
+
+// A name in the combat log: hovering marks its figure's tile, clicking looks at it.
+let spotTimer = 0;
+hud.onLogName = (id, how) => {
+  clearTimeout(spotTimer);
+  const u = game?.units.find((x) => x.id === id);
+  const shown = u?.alive && !unseen(u) && !hud.unknown?.(u);
+  board?.spot.set(how !== 'leave' && shown ? [u] : []);
+  keepAwake(100);
+  if (how !== 'go' || !shown) return;
+  lookAt(u.x, u.z, stage.camera.zoom);
+  spotTimer = setTimeout(() => {
+    board?.spot.clear();
+    keepAwake(100);
+  }, 1500);
+};
 
 // --- watching a finished fight again ------------------------------------------
 const $replayBar = document.getElementById('replay-bar');
@@ -1386,7 +1416,7 @@ async function undoMove() {
   refresh();
   await view(unit).moveAlong([...undo.path].reverse());
   if (game !== g) return;
-  hud.log(`<span class="heroes">${unit.name}</span> takes the move back.`, 'sys');
+  hud.log(`<span class="heroes" data-unit="${unit.id}">${unit.name}</span> takes the move back.`, 'sys');
   busy = false;
   refresh();
 }

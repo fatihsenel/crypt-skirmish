@@ -244,6 +244,7 @@ Everything is generated in the browser, with no recordings:
 | Attack / spell / action buttons | Pick a specific attack, spell or action |
 | Click a chest | Open it when standing next to it |
 | Right-drag / wheel | Pan / zoom |
+| A name in the combat log | Hover marks that figure's tile, click looks at it; a monster's turn is one line, click it for the rolls |
 | Arrow keys | Move a cursor over the board, starting at your hero |
 | Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
 | 1–9, 0 | Pick the action bar's first ten buttons in order (attacks, spells, actions); the number shows on each |
@@ -255,7 +256,7 @@ Everything is generated in the browser, with no recordings:
 | P | Photo mode: drag turns, right-drag pans, S saves the image, P or Esc leaves |
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel (or click its header) |
-| L | Fold or open the combat log (or click its header); remembered |
+| L | Fold or open the combat log (or click its header); remembered, and a folded log counts new lines |
 | K | On the title, or a defeat or the won campaign: the skull plays its next move |
 | Tab / Esc in a panel | Tab stays inside the panel; Esc closes it |
 
@@ -268,7 +269,7 @@ Everything is generated in the browser, with no recordings:
 | Hold a button, or tap a tag | Show its tooltip |
 | Swipe the row of attacks and spells | See the rest; a faded edge means there are more |
 | Tap a portrait or hold a figure | Show the character card |
-| Log button (top right) | Open the combat log |
+| Log button (top right) | Open the combat log; tap a name in it to see that figure |
 | Camera button (top right) | Photo mode: one finger turns, two pan and pinch |
 
 ## House rules
