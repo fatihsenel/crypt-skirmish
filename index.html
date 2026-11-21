@@ -71,7 +71,12 @@
 
       <aside id="log" aria-label="Combat log">
         <div class="log-head">
-          <h2>Combat log</h2>
+          <h2><button id="log-fold" type="button" aria-expanded="true" aria-controls="log-list" aria-description="Every roll and hit this fight. Key L.">
+            <span class="head-icon" aria-hidden="true">≡</span>
+            <span class="head-title">Combat log</span>
+            <kbd>L</kbd>
+            <span class="head-tip" aria-hidden="true"><span class="tip-row"><b>Combat log</b><kbd>L</kbd></span><small>Every roll and hit this fight. <span class="if-open">Click to fold it away.</span><span class="if-shut">Click to open it.</span></small></span>
+          </button></h2>
           <button id="log-close" type="button" aria-label="Close the combat log">✕</button>
         </div>
         <ol id="log-list"></ol>
@@ -90,10 +95,11 @@
       </footer>
 
       <details id="help" open>
-        <summary title="Show or hide the controls (H or ?)">
+        <summary aria-description="Keys, taps and what the board's colours mean. Key H or ?.">
           <span class="help-icon" aria-hidden="true">?</span>
           <span class="help-title">Controls</span>
           <kbd>H</kbd>
+          <span class="head-tip" aria-hidden="true"><span class="tip-row"><b>Controls</b><span><kbd>H</kbd> <kbd>?</kbd></span></span><small>Keys, taps and what the board's colours mean. <span class="if-open">Click to fold them away.</span><span class="if-shut">Click to show them.</span></small></span>
         </summary>
         <div class="help-body">
           <div class="help-mouse">

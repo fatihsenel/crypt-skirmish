@@ -224,21 +224,46 @@ html, body {
 #log .log-head { /* the same height, type and line as the Controls panel's header */
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex: none;
   min-height: 33px;
-  padding: 0 14px;
   margin-bottom: 6px;
   border-bottom: 1px solid var(--panel-edge);
 }
-#log h2 {
-  margin: 0;
+#log h2 { flex: 1; margin: 0; font: inherit; }
+/* The header folds the log away like Controls' (hud.js foldLog); on a phone it closes the panel. */
+#log-fold {
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: none; border: 0; border-radius: 10px;
+  font-size: 12px;
+  text-align: left;
+  user-select: none;
+}
+#log-fold:hover .head-title { color: var(--gold); }
+#log-fold:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+#log-fold > kbd { margin-left: auto; }
+#log .head-icon {
+  display: grid; place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font: 700 12px/1 var(--body);
+}
+#log .head-title {
   font: 600 12px var(--display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink);
 }
-#log-close { display: none; padding: 2px 9px; font-size: 13px; line-height: 1.4; }
+#log-close { display: none; margin-right: 8px; padding: 2px 9px; font-size: 13px; line-height: 1.4; }
+@media (min-width: 901px) {
+  #log.folded { bottom: auto; width: auto; }
+  #log.folded .log-head { margin-bottom: 0; border-bottom: 0; }
+  #log.folded #log-list { display: none; }
+}
 #log-list {
   list-style: none;
   margin: 0;
@@ -467,7 +492,8 @@ kbd {
   text-transform: uppercase;
   color: var(--ink);
 }
-#help summary kbd { margin-left: auto; }
+#help summary > kbd { margin-left: auto; }
+#help summary { position: relative; }
 #help[open] summary { border-bottom: 1px solid var(--panel-edge); }
 #help .help-body { padding: 10px; }
 #help dl {
@@ -561,7 +587,7 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
 /* The corner buttons' tooltip cards (buttonTips.js): on hover after a pause, on focus,
    or held on touch. They match .tipcard, with an arrow at their button. */
 #audio > button { position: relative; }
-#audio .corner-tip {
+#audio .corner-tip, .head-tip {
   position: absolute;
   top: calc(100% + 9px); right: calc(-1 * var(--shift, 0px));
   display: flex; flex-direction: column; gap: 2px;
@@ -579,7 +605,7 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   transition: opacity 0.14s, transform 0.14s, visibility 0s 0.14s;
   z-index: 1;
 }
-#audio .corner-tip::before { /* the arrow */
+#audio .corner-tip::before, .head-tip::before { /* the arrow */
   content: '';
   position: absolute;
   top: -6px; right: var(--arrow, 14px);
@@ -589,10 +615,24 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   border-right: 0; border-bottom: 0;
   transform: rotate(45deg);
 }
-#audio .corner-tip .tip-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-#audio .corner-tip b { font: 600 13px var(--display); color: var(--gold); letter-spacing: 0.02em; }
-#audio .corner-tip kbd { margin: 0; color: var(--ink); background: rgba(255, 255, 255, 0.06); border-bottom-width: 2px; }
-#audio .corner-tip small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+#audio .corner-tip .tip-row, .head-tip .tip-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#audio .corner-tip b, .head-tip b { font: 600 13px var(--display); color: var(--gold); letter-spacing: 0.02em; text-transform: none; }
+#audio .corner-tip kbd, :is(#help, #log) .head-tip kbd { margin: 0; font-size: 11px; color: var(--ink); background: rgba(255, 255, 255, 0.06); border-bottom-width: 2px; }
+#audio .corner-tip small, .head-tip small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+/* The Controls and Combat log headers' cards: the same, hanging below the header from its
+   outer edge, with the line for what a click does now. */
+.head-tip { top: calc(100% + 6px); width: 220px; max-width: none; z-index: 6; }
+#help .head-tip { left: 0; right: auto; }
+#help .head-tip::before { left: 14px; right: auto; }
+#log .head-tip { right: 0; }
+#log .head-tip::before { right: 14px; }
+#help:not([open]) .if-open, #help[open] .if-shut, #log:not(.folded) .if-shut, #log.folded .if-open { display: none; }
+@media (hover: hover) {
+  #help summary:hover .head-tip, #log-fold:hover .head-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s 0.5s, transform 0.14s 0.5s, visibility 0s 0.5s; }
+}
+#help summary:focus-visible .head-tip, #log-fold:focus-visible .head-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s, transform 0.14s; }
+[data-motion=reduce] .head-tip { transform: none; }
+body.touch .head-tip { display: none; }
 @media (hover: hover) {
   #audio > button:hover .corner-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s 0.35s, transform 0.14s 0.35s, visibility 0s 0.35s; }
 }
@@ -688,6 +728,10 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   z-index: 8; /* over the Controls panel and the log on phones */
 }
 #banner .card { margin: auto; }
+/* The corner buttons stay above the banner (sound and settings still work), so the card starts
+   below them; the fight's own ones (threats, log, photo) step aside while it's up. */
+#banner { padding-top: calc(env(safe-area-inset-top) + 60px); }
+body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle) { display: none; }
 #banner .card:focus { outline: none; } /* focused for keyboard and screen readers, see hud.banner */
 #banner[hidden] { display: none; }
 #banner .card {
@@ -803,6 +847,8 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   #app.log-open #log-close { display: block; }
   #log-list { font-size: 13px; }
   #help { width: min(272px, calc(100% - 24px)); max-height: calc(100% - 300px); overflow-y: auto; z-index: 4; }
+  #help:not([open]) { overflow: visible; } /* room for the header's card */
+  #log .head-tip, #log-fold > kbd { display: none; } /* the header only closes the panel here */
 }
 @media (max-width: 1400px) {
   #audio > button > span:not(.corner-tip) { display: none; } /* icons only: the row would run into the portraits */

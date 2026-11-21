@@ -394,6 +394,7 @@ const $banner = document.getElementById('banner');
 const $actionbar = document.getElementById('actionbar');
 let barRoom = 0; // the tallest action bar since the window last changed size
 let framedFor = '';
+const LOG_WIDTH = 290; // #log's width in style.css
 function hudInsets(w, h) {
   if (framedFor !== `${w}x${h}`) {
     framedFor = `${w}x${h}`;
@@ -403,11 +404,11 @@ function hudInsets(w, h) {
   if (bar.height) barRoom = Math.max(barRoom, h - bar.top);
   const top = document.getElementById('initiative').getBoundingClientRect().bottom;
   const log = document.getElementById('log');
-  const beside = getComputedStyle(log).display !== 'none' && !hud.logOpen;
+  const beside = getComputedStyle(log).display !== 'none' && !hud.logOpen; // folded or not, so the board never jumps
   return {
     top: Math.max(56, top + 6),
     bottom: Math.max(80, barRoom + 6),
-    right: beside ? w - log.getBoundingClientRect().left : 0,
+    right: beside ? w - log.getBoundingClientRect().right + LOG_WIDTH : 0, // its open width, even folded
   };
 }
 stage.setInsets(hudInsets);

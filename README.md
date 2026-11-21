@@ -254,8 +254,8 @@ Everything is generated in the browser, with no recordings:
 | T | Show or hide enemy reach |
 | P | Photo mode: drag turns, right-drag pans, S saves the image, P or Esc leaves |
 | M / N | Sound / music on or off |
-| H or ? | Show or hide the controls panel |
-| L | Open or close the combat log |
+| H or ? | Show or hide the controls panel (or click its header) |
+| L | Fold or open the combat log (or click its header); remembered |
 | K | On the title, or a defeat or the won campaign: the skull plays its next move |
 | Tab / Esc in a panel | Tab stays inside the panel; Esc closes it |
 

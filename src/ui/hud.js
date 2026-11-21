@@ -16,6 +16,8 @@ const chipName = (name) => esc(shortName(name));
 import { isWeapon, isMelee } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
+const LOG_KEY = 'crypt-skirmish:log'; // '0' when the log beside the board is folded
+const NARROW = '(max-width: 900px)'; // the log is a panel of its own (style.css)
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const who = (u) => `<span class="${u.team}">${esc(u.name)}</span>`;
 const ordinal = (n) => ['', '1st', '2nd', '3rd'][n] ?? `${n}th`;
@@ -110,8 +112,15 @@ export class Hud {
     document.addEventListener('pointerdown', (ev) => {
       if (ev.pointerType !== 'mouse' && !this.unitTip.el.hidden && !$('#initiative').contains(ev.target)) this.unitTip.hide();
     });
-    $('#log-toggle').addEventListener('click', () => this.toggleLog());
-    $('#log-close').addEventListener('click', () => this.toggleLog(false));
+    $('#log-toggle').addEventListener('click', () => this.panelLog());
+    $('#log-close').addEventListener('click', () => this.panelLog(false));
+    $('#log-fold').addEventListener('click', () => this.toggleLog());
+    try {
+      this.logFolded = localStorage.getItem(LOG_KEY) === '0';
+    } catch {
+      this.logFolded = false; // storage unavailable: start open
+    }
+    this.foldLog(this.logFolded, false);
     this.toastTimer = null;
     this.touch = false;
     this.end = new EndBanner({ toast: (text) => this.toast(text), touch: () => this.touch });
@@ -154,8 +163,29 @@ export class Hud {
     return this.unknown?.(u) ? this.unknownCard() : unitCard(game, u);
   }
 
+  /** L, the log's header or its button: fold the log beside the board, or on a narrow screen
+      open and close it as a panel of its own. */
+  toggleLog() {
+    if (matchMedia(NARROW).matches) this.panelLog();
+    else this.foldLog(!this.logFolded);
+  }
+
+  /** Fold the log beside the board down to its header, or open it again (remembered). */
+  foldLog(folded, save = true) {
+    this.logFolded = folded;
+    $('#log').classList.toggle('folded', folded);
+    $('#log-fold').setAttribute('aria-expanded', String(!folded));
+    if (!folded) $('#log-list').scrollTop = $('#log-list').scrollHeight; // catch up on what came in
+    if (!save) return;
+    try {
+      localStorage.setItem(LOG_KEY, folded ? '0' : '1');
+    } catch {
+      /* it just won't be remembered */
+    }
+  }
+
   /** The combat log as a panel of its own, for screens too narrow to keep it beside the board. */
-  toggleLog(open = !this.logOpen) {
+  panelLog(open = !this.logOpen) {
     this.logOpen = open;
     $('#app').classList.toggle('log-open', open);
     $('#log-toggle').setAttribute('aria-expanded', String(open));
