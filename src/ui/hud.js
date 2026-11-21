@@ -157,6 +157,7 @@ export class Hud {
 
   /** The card for a figure on the board under the mouse (`rect`: where it stands), or none. */
   hoverUnit(game, u, rect) {
+    this.markLine(u);
     if (!u) return this.unitTip.key?.startsWith('fig:') && this.unitTip.hide();
     this.unitTip.hover(`fig:${u.id}`, () => this.unitCard(game, u), rect, 'beside');
   }
@@ -216,6 +217,8 @@ export class Hud {
   reset() {
     $('#log-list').innerHTML = '';
     this.turn = null;
+    this.round = null;
+    this.litLine = this.litUnit = null;
     this.newLines = 0;
     $('#log-new').hidden = true;
     $('#banner').hidden = true;
@@ -241,24 +244,65 @@ export class Hud {
     li.innerHTML = html;
     const list = $('#log-list');
     const turn = this.turn;
-    if (turn) { // a monster's turn: its lines go under one summary line
+    if (cls === 'death' && this.round) this.round.fallen.push(html.replace(/ falls\.$/, ''));
+    if (cls === 'round' && !turn) this.startRound(html);
+    else if (turn) { // a monster's turn: its lines go under one summary line
       if (!turn.li.isConnected) this.addLine(turn.li);
       turn.list.appendChild(li);
       if (cls === 'death') this.turnNote(html.replace(/\.$/, ''));
     } else this.addLine(li);
     list.scrollTop = list.scrollHeight;
+    if (this.litUnit) this.markLine(this.litUnit, false); // the figure under the mouse may be in this line
     announce(li.textContent); // read out even while the log panel is closed
     if (!this.logOpen) $('#log-toggle').classList.add('unread');
   }
 
   /** A line of the log's own (not one inside a monster's turn); counted while the log is folded. */
   addLine(li) {
-    $('#log-list').appendChild(li);
+    (this.round?.list ?? $('#log-list')).appendChild(li);
     if (!this.logFolded || matchMedia(NARROW).matches) return;
     this.newLines = (this.newLines ?? 0) + 1;
     const badge = $('#log-new');
     badge.textContent = `${this.newLines} new`;
     badge.hidden = false;
+  }
+
+  /** A new round: the one before folds under its heading, which then names who fell in it.
+      Its heading opens it again. */
+  startRound(html) {
+    const last = this.round;
+    if (last) {
+      last.details.open = false;
+      if (last.fallen.length) last.summary.insertAdjacentHTML('beforeend', ` <span class="round-note">· ${last.fallen.join(', ')} fell</span>`);
+    }
+    const li = document.createElement('li');
+    li.className = 'round-block';
+    li.innerHTML = `<details open><summary class="round">${html}</summary><ol></ol></details>`;
+    this.round = null; // the heading itself goes at the top level
+    this.addLine(li);
+    const details = li.querySelector('details');
+    this.round = { details, summary: details.querySelector('summary'), list: details.querySelector('ol'), fallen: [] };
+  }
+
+  /** Light the last line that names `u` (a figure under the mouse), or none. */
+  markLine(u, scroll = true) {
+    this.litLine?.classList.remove('lit');
+    this.litLine = null;
+    this.litUnit = u;
+    if (!u || this.unknown?.(u)) return;
+    const name = [...document.querySelectorAll(`#log-list [data-unit="${u.id}"]`)].at(-1);
+    if (!name) return;
+    // The line itself, or the heading of the folded turn or round it's in.
+    let line = name.closest('li');
+    for (let d = line.closest('details:not([open])'); d; d = d.parentElement.closest('details:not([open])')) {
+      line = d.querySelector('summary');
+    }
+    line.classList.add('lit');
+    this.litLine = line;
+    const list = $('#log-list');
+    const r = line.getBoundingClientRect();
+    const box = list.getBoundingClientRect();
+    if (scroll && box.height && (r.top < box.top || r.bottom > box.bottom)) line.scrollIntoView({ block: 'nearest' });
   }
 
   /** A monster's turn starts: what it does is logged under one line that sums it up, and opens

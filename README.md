@@ -245,6 +245,7 @@ Everything is generated in the browser, with no recordings:
 | Click a chest | Open it when standing next to it |
 | Right-drag / wheel | Pan / zoom |
 | A name in the combat log | Hover marks that figure's tile, click looks at it; a monster's turn is one line, click it for the rolls |
+| Hover a figure | Its last line in the combat log lights up; earlier rounds fold under their heading (click to open) |
 | Arrow keys | Move a cursor over the board, starting at your hero |
 | Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
 | 1–9, 0 | Pick the action bar's first ten buttons in order (attacks, spells, actions); the number shows on each |

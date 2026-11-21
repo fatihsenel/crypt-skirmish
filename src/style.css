@@ -272,12 +272,26 @@ html, body {
   font-size: 12.5px;
 }
 #log-list li { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-#log-list li.round {
+/* Each round: its heading, then its lines; earlier rounds fold under their heading (hud.js). */
+#log-list li.round-block { padding: 0; border-bottom: 0; }
+#log-list .round-block > details > ol { list-style: none; margin: 0; padding: 0; }
+#log-list .round {
   color: var(--gold);
   font: 600 12px var(--display);
-  padding-top: 10px;
-  border-bottom-color: var(--panel-edge);
+  padding: 10px 0 4px 14px;
+  border-bottom: 1px solid var(--panel-edge);
+  list-style: none;
+  cursor: pointer;
+  position: relative;
 }
+#log-list .round::-webkit-details-marker { display: none; }
+#log-list .round::before { content: '▸'; position: absolute; left: 0; color: var(--muted); font: 12px var(--body); transition: transform 0.12s; }
+#log-list details[open] > .round::before { transform: rotate(90deg); }
+#log-list .round:hover::before { color: var(--gold); }
+#log-list .round:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; border-radius: 4px; }
+#log-list .round-note { color: var(--muted); font: 400 11.5px var(--body); }
+/* The last line about the figure under the mouse. */
+#log-list .lit { background: rgba(255, 201, 60, 0.14); box-shadow: inset 2px 0 var(--gold); }
 #log-list li.sys { color: var(--gold); }
 #log-list li.death { color: var(--monster); font-style: italic; }
 #log-list .heroes { color: var(--hero); font-weight: 600; }
