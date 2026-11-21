@@ -10,5 +10,11 @@ binding = "DB"
 database_name = "crypt-skirmish-losses"
 database_id = "5c59f9fc-b9da-4671-bb5d-04f577146975"
 
+# At most 3 uploads a minute from one address (per Cloudflare location); see src/index.js.
+[[ratelimits]]
+name = "UPLOADS"
+namespace_id = "1001"
+simple = { limit = 3, period = 60 }
+
 [triggers]
 crons = ["17 3 * * *"]

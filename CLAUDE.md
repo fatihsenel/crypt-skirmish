@@ -79,6 +79,8 @@ server on 5173.
   A lost run or daily also sends its record, names stripped (`withoutNames`, `sendLoss`), to the
   loss-replay Worker in `worker/` (Cloudflare, D1, deployed with `npx wrangler deploy` from there);
   `?losses` (`ui/losses.js`, loaded by `boot.js` instead of the game) lists them with a read key.
+  Uploads are limited per address (`UPLOADS` in `wrangler.toml`), unpacked to check they're a lost
+  fight in the room they name (`checkCode`), and capped at `DAILY_CAP` a day.
   The Worker's tests (`tests/worker.test.js`) use a fake D1.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a

@@ -365,7 +365,10 @@ and loss rates in Umami against these numbers.
 
 Lost fights go to a Cloudflare Worker (`worker/`, with a D1 database) and are kept for 60 days.
 The unlisted page `?losses` lists them, newest first, by room, difficulty and mode, and opens
-each in the game's replay. It asks once for the Worker's read key. From `worker/`:
+each in the game's replay. It asks once for the Worker's read key. The Worker takes uploads
+only from the game's page, about 3 a minute from one address (Cloudflare's rate limiter,
+approximate, and the address is never stored), only a lost fight in the room it names, and at
+most 1000 a day. From `worker/`:
 `npx wrangler deploy` deploys it, `npx wrangler secret put READ_KEY` sets the key, and
 `npx wrangler d1 execute crypt-skirmish-losses --remote --file=schema.sql` makes the table.
 

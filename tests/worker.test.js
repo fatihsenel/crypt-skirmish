@@ -1,8 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import worker, { checkLoss, listQuery, GAME, MAX_CODE, KEEP_DAYS } from '../worker/src/index.js';
+import worker, { checkLoss, checkCode, listQuery, GAME, MAX_CODE, KEEP_DAYS, DAILY_CAP } from '../worker/src/index.js';
+import { encodeFight } from '../src/game/fightLink.js';
+import { newCampaign } from '../src/game/campaign.js';
 
-/** A stand-in for the D1 binding: records each statement and returns `rows` from all(). */
-function fakeDB(rows = []) {
+/** A record as the game sends it: a lost fight in `room`, packed like a #watch= link. */
+const lostFight = (over = {}) => encodeFight({
+  node: 'throne', seed: 7, party: newCampaign('hard').party, difficulty: 'hard', log: [], result: 'defeat', check: 'x', ...over,
+});
+
+/** A stand-in for the D1 binding: records each statement, returns `rows` from all() and `today` as the day's count. */
+function fakeDB(rows = [], today = 0) {
   const calls = [];
   return {
     calls,
@@ -13,6 +20,7 @@ function fakeDB(rows = []) {
         bind: (...args) => { call.args = args; return stmt; },
         run: async () => ({ success: true }),
         all: async () => ({ results: rows }),
+        first: async () => ({ n: today }),
       };
       return stmt;
     },
@@ -20,8 +28,10 @@ function fakeDB(rows = []) {
 }
 
 const good = { code: 'abc_DEF-123', room: 'throne', difficulty: 'hard', tier: 1, mode: 'campaign', rounds: 7 };
-const post = (body, origin = GAME) => new Request('https://w.example/loss', {
-  method: 'POST', headers: { Origin: origin, 'Content-Type': 'text/plain' }, body: typeof body === 'string' ? body : JSON.stringify(body),
+/** The rate limiter's stand-in: allows `n` calls, then refuses; records the keys. */
+const limiter = (n = 99) => ({ keys: [], async limit({ key }) { this.keys.push(key); return { success: this.keys.length <= n }; } });
+const post = (body, origin = GAME, ip = '203.0.113.9') => new Request('https://w.example/loss', {
+  method: 'POST', headers: { Origin: origin, 'Content-Type': 'text/plain', 'CF-Connecting-IP': ip }, body: typeof body === 'string' ? body : JSON.stringify(body),
 });
 const get = (query = '', key = 'sekrit', origin = GAME) => new Request(`https://w.example/losses${query}`, {
   headers: { Origin: origin, ...(key && { Authorization: `Bearer ${key}` }) },
@@ -40,17 +50,48 @@ describe('loss replay worker', () => {
 
   it('stores an upload from the game, and refuses other sites and junk', async () => {
     const db = fakeDB();
-    const ok = await worker.fetch(post(good), { DB: db });
+    const code = await lostFight();
+    const ok = await worker.fetch(post({ ...good, code }), { DB: db, UPLOADS: limiter() });
     expect(ok.status).toBe(204);
     expect(ok.headers.get('Access-Control-Allow-Origin')).toBe(GAME);
-    expect(db.calls[0].sql).toMatch(/^INSERT INTO losses/);
-    expect(db.calls[0].args.slice(1)).toEqual(['throne', 'hard', 1, 'campaign', 7, 'abc_DEF-123']);
-    expect((await worker.fetch(post(good, 'https://evil.example'), { DB: db })).status).toBe(403);
-    expect((await worker.fetch(post(good, 'http://localhost:5173'), { DB: db })).status).toBe(403); // the dev server reads, never writes
-    expect((await worker.fetch(post('{oops'), { DB: db })).status).toBe(400);
-    expect((await worker.fetch(post({ ...good, mode: 'x' }), { DB: db })).status).toBe(400);
-    expect((await worker.fetch(post('x'.repeat(MAX_CODE + 600)), { DB: db })).status).toBe(413);
-    expect(db.calls).toHaveLength(1);
+    const insert = db.calls.find((c) => c.sql.startsWith('INSERT'));
+    expect(insert.args.slice(1)).toEqual(['throne', 'hard', 1, 'campaign', 7, code]);
+    const env = { DB: db, UPLOADS: limiter() };
+    expect((await worker.fetch(post(good, 'https://evil.example'), env)).status).toBe(403);
+    expect((await worker.fetch(post(good, 'http://localhost:5173'), env)).status).toBe(403); // the dev server reads, never writes
+    expect((await worker.fetch(post('{oops'), env)).status).toBe(400);
+    expect((await worker.fetch(post({ ...good, mode: 'x' }), env)).status).toBe(400);
+    expect((await worker.fetch(post('x'.repeat(MAX_CODE + 600)), env)).status).toBe(413);
+    expect(db.calls.filter((c) => c.sql.startsWith('INSERT'))).toHaveLength(1);
+  });
+
+  it('only stores a lost fight in the room it claims', async () => {
+    const row = { room: 'throne', difficulty: 'hard' };
+    expect(await checkCode(await lostFight(), row)).toBe(true);
+    expect(await checkCode('abc_DEF-123', row)).toBe(false); // not a fight at all
+    expect(await checkCode(await lostFight({ node: 'crypt' }), row)).toBe(false);
+    expect(await checkCode(await lostFight({ result: 'victory' }), row)).toBe(false);
+    expect(await checkCode(await lostFight({ difficulty: 'story' }), row)).toBe(false);
+    const db = fakeDB();
+    const res = await worker.fetch(post(good), { DB: db, UPLOADS: limiter() });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'fight' });
+    expect(db.calls.some((c) => c.sql.startsWith('INSERT'))).toBe(false);
+  });
+
+  it('limits each address, and stores no more than a day’s cap', async () => {
+    const code = await lostFight();
+    const slow = limiter(3);
+    const db = fakeDB();
+    const codes = [];
+    for (let i = 0; i < 5; i++) codes.push((await worker.fetch(post({ ...good, code }), { DB: db, UPLOADS: slow })).status);
+    expect(codes).toEqual([204, 204, 204, 429, 429]);
+    expect(slow.keys).toEqual(Array(5).fill('203.0.113.9')); // the address is the key, and is never stored
+    expect(db.calls.filter((c) => c.sql.startsWith('INSERT')).every((c) => !c.args.includes('203.0.113.9'))).toBe(true);
+    // A full day: refused, and nothing written.
+    const full = fakeDB([], DAILY_CAP);
+    expect((await worker.fetch(post({ ...good, code }), { DB: full, UPLOADS: limiter() })).status).toBe(429);
+    expect(full.calls.some((c) => c.sql.startsWith('INSERT'))).toBe(false);
   });
 
   it('lists losses only with the key, newest first, filtered', async () => {
