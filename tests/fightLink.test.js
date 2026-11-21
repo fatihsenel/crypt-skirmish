@@ -5,6 +5,7 @@ import { nextMonsterStep } from '../src/game/ai.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign, runDifficulty } from '../src/game/campaign.js';
+import { withoutNames } from '../src/stats.js';
 import { encodeFight, decodeFight, replaysTrue, replayOutcome, challengeText, cleanParty, unpack, fightUrl, linkIn, LINK_VERSION } from '../src/game/fightLink.js';
 
 /** Play a room to the end with the AI choosing the heroes' moves, given as commands like the player's. */
@@ -47,6 +48,16 @@ describe('a fight as a link', () => {
   it('plays a real fight to the end', () => {
     expect(['victory', 'defeat']).toContain(fight.result);
     expect(fight.log.length).toBeGreaterThan(10);
+  });
+
+  it('sent as a loss replay, it has no names and still replays', async () => {
+    expect(fight.party.F.name).toBe('Tamsin');
+    const sent = withoutNames(fight);
+    expect(fight.party.F.name).toBe('Tamsin'); // the record itself is untouched
+    const back = await decodeFight(await encodeFight(sent));
+    expect(JSON.stringify(back)).not.toMatch(/Tamsin/);
+    expect(back.party.F.level).toBe(fight.party.F.level);
+    expect(replaysTrue(back)).toBe(true);
   });
 
   it('comes back from the link as it went in, short enough to share', async () => {

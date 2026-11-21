@@ -10,6 +10,8 @@ const HOST = 'fatihsenel.github.io';
 const SCRIPT = 'https://cloud.umami.is/script.js';
 const WEBSITE = '90fc36a8-7d1b-4488-bbcd-2cba1311156d';
 const HEROES = ['F', 'W', 'R', 'C'];
+/** The loss-replay Worker (worker/): lost fights go there to be watched on the ?losses page. */
+export const LOSS_API = 'https://crypt-skirmish-losses.fatih-senel.workers.dev';
 
 /** Whether this page may send stats at all (the setting aside). */
 export function statsAllowed({ prod, host, search, dnt }) {
@@ -113,6 +115,25 @@ export function track(name, data) {
   if (import.meta.env.DEV) return void console.debug('[stats]', name, data);
   if (!statsAllowed(env())) return;
   if ((on === null || !send(name, data)) && queue.length < 20) queue.push([name, data]); // sent once the script is in
+}
+
+/** The record without the heroes' names, for sending. */
+export const withoutNames = (record) => ({
+  ...record,
+  party: Object.fromEntries(Object.entries(record.party).map(([code, { name, ...hero }]) => [code, hero])),
+});
+
+/**
+ * A lost fight for the loss-replay Worker: `code` is the record as a #watch= link carries it
+ * (made from withoutNames), `meta` its room, difficulty, tier, mode and rounds. Sent under the
+ * same rules as the events.
+ */
+export function sendLoss(code, meta) {
+  if (on !== true || !LOSS_API || import.meta.env.DEV || !statsAllowed(env())) return;
+  fetch(`${LOSS_API}/loss`, {
+    method: 'POST', body: JSON.stringify({ code, ...meta }), keepalive: true,
+    headers: { 'Content-Type': 'text/plain' }, // a simple request: no preflight
+  }).catch(() => {});
 }
 
 /** Several events, as fightEvents gives them. */

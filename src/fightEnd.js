@@ -11,10 +11,10 @@ import { fightRecap, winRecap } from './game/recap.js';
 import { recordBlows, loadBestiary, slainTotal, loadElitesSlain } from './game/bestiary.js';
 import { recordRun, saveLastFight } from './game/history.js';
 import { unlock } from './game/achievements.js';
-import { challengeText } from './game/fightLink.js';
+import { challengeText, encodeFight, MAX_LINK_CODE } from './game/fightLink.js';
 import { recordDaily, streak, shareText, recordBestFight } from './game/daily.js';
 import { recordWeekly, weekStreak, weeklyShareText } from './game/weekly.js';
-import { trackAll, fightEvents } from './stats.js';
+import { trackAll, fightEvents, sendLoss, withoutNames } from './stats.js';
 
 /**
  * Settle a fight that is over (`game.over` is 'victory' or 'defeat'). `ctx`: the game, its
@@ -54,10 +54,15 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
     campaign = recordDefeat(campaign, game);
     store.writeSave(campaign);
   }
-  // Anonymous play stats: real runs, dailies and linked fights, not test fights.
+  // Anonymous play stats: real runs, dailies and linked fights, not test fights. A lost run or
+  // daily also sends its replay, without names (the ?losses page).
   if (saving || daily || challenge) {
     const mode = challenge ? 'challenge' : daily ? (daily.weekly ? 'weekly' : 'daily') : 'campaign';
     trackAll(fightEvents({ game, nodeId, campaign, mode, final: final && won }));
+    if (!won && record && !challenge) {
+      const meta = { room: nodeId, difficulty: record.difficulty, tier: record.tier ?? 0, mode, rounds: game.round };
+      encodeFight(withoutNames(record)).then((code) => code.length <= MAX_LINK_CODE && sendLoss(code, meta)).catch(() => {});
+    }
   }
   const dailyResult = daily ? settleDaily(game, nodeId, daily, level, record, awards) : null;
   const versus = challenge && challengeText(challenge.theirs, { won, rounds: game.round }, level.name);

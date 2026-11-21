@@ -202,9 +202,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Play stats:** the deployed game sends anonymous events to Umami (a run started or continued,
   a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
   choice, a run abandoned, a campaign won, a replay watched, something shared), to see where
-  runs end. No cookies, names or saves, and links' fights stay out
-  of the address it sends. Off with Settings › Share anonymous play stats, or Do Not Track; test
-  links and the dev server send nothing.
+  runs end. A lost run or daily also sends its fight, without the heroes' names, so it can be
+  watched (see Loss replays). No cookies, names or saves, and links' fights stay out of the
+  address it sends. Off with Settings › Share anonymous play stats, or Do Not Track; test links
+  and the dev server send nothing.
 
 ## Sound
 
@@ -357,6 +358,17 @@ time on Story, 87% on Normal and 51% on Hard (monsters get +20% HP and +1 to hit
 with no relics, 97%, 78% and 35%. At New Game+ 3 with all four relics it's about 46%. Samples
 of 300 runs swing by about 5 points either way.
 
+[docs/stats.md](docs/stats.md) lists the play stats' events and how to read real players' win
+and loss rates in Umami against these numbers.
+
+### Loss replays
+
+Lost fights go to a Cloudflare Worker (`worker/`, with a D1 database) and are kept for 60 days.
+The unlisted page `?losses` lists them, newest first, by room, difficulty and mode, and opens
+each in the game's replay. It asks once for the Worker's read key. From `worker/`:
+`npx wrangler deploy` deploys it, `npx wrangler secret put READ_KEY` sets the key, and
+`npx wrangler d1 execute crypt-skirmish-losses --remote --file=schema.sql` makes the table.
+
 ### Layout
 
 ```
@@ -422,7 +434,9 @@ src/
   photo.js           photo mode: no HUD, a free camera, Save image
   input.js           picking a tile, the long press, what a click does, the cursor's step and words
   debug.js           window.__debug and the ?victory sample run
-  stats.js           anonymous play stats (Umami): the setting, the events, the script loaded after the title
+  stats.js           anonymous play stats (Umami): the setting, the events, the script loaded after the title,
+                     and lost fights sent to the loss-replay Worker
+  ui/losses.js       the unlisted ?losses page: players' lost fights to watch
   offline.js         registers the offline copy (public/sw.js), hands it the files already loaded, looks for a new deploy
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
@@ -434,6 +448,8 @@ scripts/
   skull-glb.mjs      converts the title skull's OBJ scan to public/models/skull/skull.glb
   size-check.mjs     gzipped size of the title's code and of the skull against a budget
 public/sw.js         the offline copy: pages from the network first, everything else saved
+worker/              the loss-replay Cloudflare Worker (src/index.js), its table (schema.sql) and wrangler.toml
+docs/stats.md        the play stats' events, and reading them in Umami
 ```
 
 The rules engine resolves everything instantly and emits events (`attack`, `move`, `spell`,

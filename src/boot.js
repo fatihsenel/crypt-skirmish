@@ -38,13 +38,18 @@ export function hideBoot() {
   setTimeout(() => $boot.remove(), 600);
 }
 
-// ?level= and ?victory skip the title; main.js starts them.
+// ?level= and ?victory skip the title; main.js starts them. ?losses is the unlisted page of
+// players' lost fights (ui/losses.js), with no game behind it.
 const q = new URLSearchParams(location.search);
-if (!q.has('level') && !q.has('victory')) {
-  camp.showTitle(loadSave(), loadWonRun());
-  hideBoot();
+if (q.has('losses')) {
+  import('./ui/losses.js').then((m) => { m.showLosses(); hideBoot(); });
+} else {
+  if (!q.has('level') && !q.has('victory')) {
+    camp.showTitle(loadSave(), loadWonRun());
+    hideBoot();
+  }
+  main = import('./main.js');
 }
-main = import('./main.js');
 // Anonymous play stats (src/stats.js), once the page has loaded, so they never slow the title.
 const startStats = () => setTimeout(() => setStats(loadSettings().stats), 1000);
 if (document.readyState === 'complete') startStats();

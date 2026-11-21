@@ -76,6 +76,10 @@ server on 5173.
   through `track()`: `settleFight` (real runs, dailies and links, not `?level=` fights),
   `startCampaign`, Continue, New Game+, dailies, the stops, replays, challenges and sharing. On the dev server they're logged
   as `[stats]` in the console instead. A new event goes there, with no names or free text.
+  A lost run or daily also sends its record, names stripped (`withoutNames`, `sendLoss`), to the
+  loss-replay Worker in `worker/` (Cloudflare, D1, deployed with `npx wrangler deploy` from there);
+  `?losses` (`ui/losses.js`, loaded by `boot.js` instead of the game) lists them with a read key.
+  The Worker's tests (`tests/worker.test.js`) use a fake D1.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it
@@ -91,7 +95,7 @@ server on 5173.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, `loss-key`, …).
 
 ## Adding content
 
@@ -119,6 +123,8 @@ server on 5173.
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
   `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&relics=veil,horn`, `&paladin`, `&ranger`, `&warlock`,
   `&seed=S` (the same dice every time; `SEED=S npm run touch-check` uses it).
+- `?losses` lists real players' lost fights (needs the Worker's read key, kept under
+  `crypt-skirmish:loss-key`).
 - `?victory` shows the won-campaign screen for a sample run (Copy result, Save image);
   `&tier=2` makes it a New Game+ run with elites slain.
 - `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.

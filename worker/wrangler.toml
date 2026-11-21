@@ -1,0 +1,14 @@
+# The loss-replay Worker (src/index.js). From this folder:
+#   npx wrangler deploy              deploy it
+#   npx wrangler secret put READ_KEY the key the ?losses page asks for
+name = "crypt-skirmish-losses"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crypt-skirmish-losses"
+database_id = "5c59f9fc-b9da-4671-bb5d-04f577146975"
+
+[triggers]
+crons = ["17 3 * * *"]
