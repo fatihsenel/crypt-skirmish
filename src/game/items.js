@@ -69,7 +69,7 @@ export function applyItems(unit, items = []) {
 export const RELICS = {
   phylactery: {
     name: 'Morvath’s Phylactery', boss: 'sanctum',
-    desc: 'In each fight, the first hero who would drop to 0 HP stays on 1 HP instead.',
+    desc: 'The first hero who would drop to 0 HP stays on 1 HP instead. Once used, it sleeps until the next long rest.',
   },
   horn: {
     name: 'Varek’s Barrow Horn', boss: 'barrow',
@@ -77,11 +77,11 @@ export const RELICS = {
   },
   veil: {
     name: 'Ysolde’s Veil', boss: 'throne',
-    desc: 'The party starts every fight hidden (passive Stealth), until a monster spots them.',
+    desc: 'The party starts every fight hidden (15 + Stealth, even in plate). Each hero stays hidden until they attack or cast, get hurt, or a sharp-eyed monster spots them.',
   },
   jar: {
     name: 'Nekhet’s Embalming Jar', boss: 'tomb',
-    desc: 'The short rest after a room heals every hero fully, not half.',
+    desc: 'The short rest after a room heals three-quarters of everyone’s missing HP, not half.',
   },
 };
 

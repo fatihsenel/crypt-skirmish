@@ -8,7 +8,7 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize,
-  choices, START_NODE, runDifficulty, newGamePlus,
+  choices, START_NODE, runDifficulty, newGamePlus, fightRelics,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
@@ -621,7 +621,7 @@ function startFight(resume, watch = null) {
   const difficulty = watch?.difficulty ?? campaign.difficulty;
   const tier = (watch ? watch.tier : campaign.tier) ?? 0; // New Game+
   // A saved fight keeps the relics it began with (none for one saved before relics).
-  const relics = (watch ? watch.relics : resume ? resume.relics : campaign.relics) ?? [];
+  const relics = (watch ? watch.relics : resume ? resume.relics : fightRelics(campaign)) ?? [];
   game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed), relics });
   fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
   if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };

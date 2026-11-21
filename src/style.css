@@ -1065,6 +1065,8 @@ b.loot { color: var(--gold); }
 #camp-pack-box[hidden], #camp-relics-box[hidden] { display: none; }
 .relic-item { padding: 6px 10px; margin-bottom: 6px; border-radius: 8px; border: 1px solid var(--panel-edge); }
 .relic-item small { display: block; color: var(--muted); }
+.relic-item.asleep b.relic { color: var(--muted); }
+.relic-state { font-size: 12px; color: var(--muted); font-style: italic; }
 
 /* New Game+: one heirloom per hero. */
 #history-deepest { margin: 2px 0 10px; font-size: 13px; color: var(--gold); }

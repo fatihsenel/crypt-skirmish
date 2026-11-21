@@ -91,11 +91,13 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   them, such as "AC 15 → 17" or "Max HP 35 → 53".
 - **Relics:** each boss leaves one behind. A relic isn't worn: it works for the whole party
   for the rest of the run, and the camp lists them under Relics.
-  - Morvath's Phylactery: in each fight, the first hero who would drop to 0 HP stays on 1 HP.
+  - Morvath's Phylactery: the first hero who would drop to 0 HP stays on 1 HP. Once used, it
+    sleeps until the next long rest (the camp shows it).
   - Varek's Barrow Horn: the heroes go first in every fight.
-  - Ysolde's Veil: the party starts every fight hidden, until a monster spots them.
-  - Nekhet's Embalming Jar: the rest after each room heals everyone fully (New Game+ only,
-    since Nekhet is the last boss).
+  - Ysolde's Veil: the party starts every fight hidden, even in plate; each hero stays hidden
+    until they attack or cast, get hurt, or a sharp-eyed monster spots them.
+  - Nekhet's Embalming Jar: the rest after each room gives back three-quarters of the missing
+    HP, not half (New Game+ only, since Nekhet is the last boss).
 - A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
   each hero fell, which foe hit hardest and who was still standing, with a tip for next time
   (unused potions, archers, a foe to focus). A won room says who led the way, the closest
@@ -277,9 +279,9 @@ A few things differ from the SRD to keep the game simple:
   trait (regains 5 HP a turn; stays on 1 HP once; one more attack; +10 ft speed; +2 AC and
   no frightened, prone or poisoned; or 3 piercing damage, no roll, to a foe that hits it with
   a melee weapon).
-- Relics are not from the SRD. The Phylactery works like Death Ward on the first hero to drop
-  each fight. The Veil hides the party at passive Stealth (10 + Stealth bonus, 5 less in
-  noisy armor), with no roll.
+- Relics are not from the SRD. The Phylactery works like Death Ward on the first hero to drop,
+  once between long rests. The Veil hides the party at 15 + Stealth bonus, with no roll and
+  no penalty for noisy armor.
 
 ## For developers
 
@@ -324,13 +326,17 @@ run with elites slain. Nothing is saved.
 - Runs are split over one worker thread per core; `JOBS=1` plays them on one thread (the same
   numbers as before threads, for a given `SEED`).
 - `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
+- `RELICS=horn,veil` gives the party exactly those relics in every fight (`RELICS=` for none);
+  without it they're earned from the bosses as in a real run.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
 Armory. On Hard the Throne drops to about 95% and 60%, and the Tomb to about 80% and 35%.
-A whole run (1,500 simulated) wins about 97% of the time on Story, 72% on Normal and 32% on
-Hard (monsters get +20% HP and +1 to hit and damage). On both the Tomb ends the most runs. Samples of 300 runs swing by about 5 points either way.
+A whole run (900 simulated, relics earned from the bosses along the way) wins about 99% of the
+time on Story, 87% on Normal and 51% on Hard (monsters get +20% HP and +1 to hit and damage);
+with no relics, 97%, 78% and 35%. At New Game+ 3 with all four relics it's about 46%. Samples
+of 300 runs swing by about 5 points either way.
 
 ### Layout
 

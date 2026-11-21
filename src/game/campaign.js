@@ -360,8 +360,9 @@ export function completeFight(prev, id, game) {
     if (!carried[code]) continue;
     const rec = { ...state.party[code], ...carried[code] };
     const max = restedHero(code, rec).maxHp;
-    // Nekhet's Embalming Jar makes it a full heal.
-    rec.hp = state.relics?.includes('jar') ? max : Math.min(max, rec.hp + Math.ceil((max - rec.hp) / 2));
+    // Half of the missing HP back; Nekhet's Embalming Jar makes it three-quarters.
+    const share = state.relics?.includes('jar') ? 3 / 4 : 1 / 2;
+    rec.hp = Math.min(max, rec.hp + Math.ceil((max - rec.hp) * share));
     rec.alive = true;
     state.party[code] = rec;
   }
@@ -423,12 +424,22 @@ export function completeFight(prev, id, game) {
   if (NODES[id].next.length === 0) state.done = true;
   // The end of an act: a long rest before the next one (casters would start it empty).
   const longRest = !!NODES[id].actBreak;
+  // Morvath's Phylactery saves one hero between long rests: spent when it works.
+  if (game.phylacteryUsed) state.phylacterySpent = true;
+  const spent = !!state.phylacterySpent;
   if (longRest) restParty(state);
-  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest, relic } };
+  const phylactery = !spent ? null : longRest ? 'ready' : game.phylacteryUsed ? 'spent' : null;
+  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery } };
 }
 
-/** Everyone back to full HP and spell slots. */
+/** The relics the next fight starts with: the run's, less a Phylactery spent this act. */
+export function fightRelics(state) {
+  return cleanRelics(state.relics).filter((id) => id !== 'phylactery' || !state.phylacterySpent);
+}
+
+/** Everyone back to full HP and spell slots, and a spent Phylactery wakes. */
 function restParty(state) {
+  delete state.phylacterySpent;
   for (const code of HERO_CODES) {
     const rec = state.party[code];
     const u = restedHero(code, rec);
@@ -552,6 +563,7 @@ export function parseSave(text) {
     s.stats = validStats(s.stats); // saves from before the run tally start a fresh one
     // Saves from before relics get those of the bosses they've beaten.
     s.relics = cleanRelics(s.relics ?? s.cleared.map((c) => (NODES[c].boss ? relicFrom(NODES[c].level) : null)));
+    if (s.phylacterySpent !== true) delete s.phylacterySpent; // kept only while spent
     for (const code of HERO_CODES) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;

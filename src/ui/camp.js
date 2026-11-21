@@ -338,8 +338,10 @@ export class Camp {
     $('#camp-pack-box').hidden = !state.pack.length; // nothing to hand out
     const relics = state.relics ?? [];
     $('#camp-relics-box').hidden = !relics.length;
-    $('#camp-relics').innerHTML = relics.map((id) =>
-      `<div class="relic-item"><b class="relic">${esc(RELICS[id].name)}</b><small>${esc(RELICS[id].desc)}</small></div>`).join('');
+    $('#camp-relics').innerHTML = relics.map((id) => {
+      const asleep = id === 'phylactery' && state.phylacterySpent;
+      return `<div class="relic-item${asleep ? ' asleep' : ''}"><b class="relic">${esc(RELICS[id].name)}</b>${asleep ? ' <span class="relic-state">spent until the next long rest</span>' : ''}<small>${esc(RELICS[id].desc)}</small></div>`;
+    }).join('');
     $('#camp-new').textContent = 'Abandon run';
     Bestiary.label($('#camp-bestiary'));
     const returned = had?.includes('data-unequip') && document.querySelector('#camp-pack .pack-item:last-child [data-equip]:not([disabled])');
@@ -383,7 +385,9 @@ export class Camp {
       ];
       const parts = [`<p>Room cleared: <b>+${report.xp} XP</b>. ${report.longRest
         ? 'Long rest: full HP and every spell slot back.'
-        : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: full HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
+        : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: three-quarters of everyone’s missing HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
+      if (report.phylactery === 'spent') parts.push(`<p><b class="relic">${esc(RELICS.phylactery.name)}</b> is spent: it sleeps until the next long rest.</p>`);
+      if (report.phylactery === 'ready') parts.push(`<p><b class="relic">${esc(RELICS.phylactery.name)}</b> wakes with the long rest.</p>`);
       if (report.relic) parts.push(`<p>Relic found: <b class="relic">${esc(RELICS[report.relic].name)}</b>. ${esc(RELICS[report.relic].desc)}</p>`);
       if (report.levelUps.length) {
         parts.push(`<div class="levelups"><b>Level up!</b><ul>${report.levelUps.map((l) =>

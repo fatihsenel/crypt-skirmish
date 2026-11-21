@@ -536,9 +536,9 @@ export class Game extends Spellcasting {
     this.turn = 0;
     this.emit('round', { round: 1 });
     this.revealTraps();
-    // Ysolde's Veil: the party starts hidden, at passive Stealth (5 less in noisy armour).
+    // Ysolde's Veil: the party starts hidden at 15 + Stealth, plate or not.
     if (this.relics.includes('veil')) {
-      for (const h of this.living('heroes')) h.hidden = Math.max(1, 10 + this.stealthBonus(h) - (h.noisyArmor ? 5 : 0));
+      for (const h of this.living('heroes')) h.hidden = 15 + this.stealthBonus(h);
     }
     this.updateAwareness();
     this.beginTurn();

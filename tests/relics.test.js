@@ -3,7 +3,7 @@ import { Game } from '../src/game/combat.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
 import { RELICS, relicFrom, cleanRelics } from '../src/game/items.js';
-import { NODES, newCampaign, completeFight, newGamePlus, parseSave, serialize, heroUnit } from '../src/game/campaign.js';
+import { NODES, newCampaign, completeFight, newGamePlus, parseSave, serialize, heroUnit, fightRelics, takeRest } from '../src/game/campaign.js';
 import { watchable } from '../src/game/history.js';
 
 const room = (relics = [], node = 'crypt', seed = 1) =>
@@ -78,7 +78,35 @@ describe('boss relics', () => {
     }
   });
 
-  it('veil: the party starts hidden at passive Stealth, with no roll', () => {
+  it('phylactery: once spent, it sleeps until the next long rest', () => {
+    const all = ['phylactery', 'horn'];
+    let state = { ...newCampaign(), relics: all };
+    expect(fightRelics(state)).toEqual(all);
+    // A fight where it saves someone spends it for the rest of the act.
+    const g = new Game(levelById(NODES.crypt.level), { party: state.party, relics: fightRelics(state) });
+    g.applyDamage(heroes(g)[0], 999, null);
+    for (const m of g.units) if (m.team === 'monsters') m.alive = false;
+    let r = completeFight(state, 'crypt', g);
+    expect(r.state.phylacterySpent).toBe(true);
+    expect(r.report.phylactery).toBe('spent');
+    expect(fightRelics(r.state)).toEqual(['horn']);
+    // A quiet fight leaves it spent; it survives a save and load.
+    r = won(r.state, 'warren');
+    expect(r.state.phylacterySpent).toBe(true);
+    expect(r.report.phylactery).toBeNull();
+    expect(parseSave(serialize(r.state)).phylacterySpent).toBe(true);
+    // The boss's long rest wakes it.
+    r = won(r.state, 'sanctum');
+    expect(r.state.phylacterySpent).toBeUndefined();
+    expect(r.report.phylactery).toBe('ready');
+    expect(fightRelics(r.state)).toEqual(all);
+    // So does a long rest at a rest stop like the Chapel.
+    expect(takeRest({ ...r.state, phylacterySpent: true }, 'chapel').phylacterySpent).toBeUndefined();
+    // Junk in a save reads as not spent.
+    expect(parseSave(serialize({ ...state, phylacterySpent: 'yes' })).phylacterySpent).toBeUndefined();
+  });
+
+  it('veil: the party starts hidden at 15 + Stealth, plate or not, with no roll', () => {
     const plain = room();
     plain.start();
     const g = room(['veil']);
@@ -87,11 +115,11 @@ describe('boss relics', () => {
     const hidden = heroes(g).filter((h) => h.hidden);
     // The crypt's monsters are far off at the start: nobody sees through it yet.
     expect(hidden.length).toBe(heroes(g).length);
-    for (const h of hidden) expect(h.hidden).toBe(10 + g.stealthBonus(h) - (h.noisyArmor ? 5 : 0));
+    for (const h of hidden) expect(h.hidden).toBe(15 + g.stealthBonus(h));
     expect(heroes(plain).some((h) => h.hidden)).toBe(false);
   });
 
-  it('jar: the rest after a room heals fully', () => {
+  it('jar: the rest after a room heals three-quarters of what is missing, not half', () => {
     const hurt = (relics) => {
       const state = { ...newCampaign(), relics };
       const g = new Game(levelById('crypt'), { party: state.party, relics });
@@ -100,8 +128,9 @@ describe('boss relics', () => {
       return completeFight(state, 'crypt', g).state.party.F.hp;
     };
     const max = heroUnit('F', newCampaign().party.F).maxHp;
-    expect(hurt(['jar'])).toBe(max);
-    expect(hurt([])).toBeLessThan(max);
+    expect(hurt(['jar'])).toBe(Math.min(max, 2 + Math.ceil((max - 2) * 3 / 4)));
+    expect(hurt([])).toBe(2 + Math.ceil((max - 2) / 2));
+    expect(hurt(['jar'])).toBeLessThan(max);
   });
 
   it('are kept in saves, come to old saves from the bosses beaten, and go into New Game+', () => {

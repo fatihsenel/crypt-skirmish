@@ -38,7 +38,7 @@ export class EndBanner {
     const rest = longRest
       ? 'takes a long rest before going deeper (full HP and spell slots)'
       : jar
-        ? 'catches its breath (short rest, with the Embalming Jar: full HP)'
+        ? 'catches its breath (short rest, with the Embalming Jar: three-quarters of the missing HP)'
         : 'catches its breath (short rest: regain half your missing HP)';
     $('#banner-title').textContent = won ? (final ? 'Victory' : 'Room cleared') : 'Defeat';
     $('#banner-emblem').hidden = won && !final; // the skull laughs or mocks there (bannerSkull in main.js)

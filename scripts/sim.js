@@ -11,8 +11,8 @@ import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
 import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
-import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, runDifficulty, newGamePlus } from '../src/game/campaign.js';
-import { ITEMS } from '../src/game/items.js';
+import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, runDifficulty, newGamePlus, fightRelics } from '../src/game/campaign.js';
+import { ITEMS, cleanRelics } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { availableParallelism } from 'node:os';
@@ -22,15 +22,18 @@ const CLASSES = {
 };
 /** TIER=N plays every fight at New Game+ tier N (0 by default). */
 const TIER = Math.max(0, Math.floor(Number(process.env.TIER) || 0));
+/** RELICS=horn,veil gives the party exactly those relics in every fight (RELICS= for none); by default they're earned from the bosses. */
+const FORCED = process.env.RELICS === undefined ? null : cleanRelics(process.env.RELICS.split(','));
+const withRelics = (state) => (FORCED && state ? { ...state, relics: FORCED } : state);
 /** What a won party typically carries back down in New Game+: one good item each. */
 const HEIRLOOMS = { F: 'weaponPlus2', W: 'bracersDefense', R: 'weaponPlus1', C: 'amuletHealth' };
 
 function freshCampaign() {
-  const start = newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES);
+  const start = withRelics(newCampaign(process.env.DIFFICULTY ?? 'normal', {}, CLASSES));
   if (!TIER) return start;
   const won = { ...start, done: true, tier: TIER - 1 };
   for (const code of HERO_CODES) won.party[code] = { ...won.party[code], items: [HEIRLOOMS[code]] };
-  return newGamePlus(won, HEIRLOOMS);
+  return withRelics(newGamePlus(won, HEIRLOOMS));
 }
 
 /** A rested party at `level`. */
@@ -211,7 +214,7 @@ function playTurn(game, u) {
 
 /** One fight. Returns { won, rounds, downed, state }. */
 export function fight(levelId, campaign, rng) {
-  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER), relics: campaign.relics ?? [] });
+  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER), relics: fightRelics(campaign) });
   game.start();
   let turns = 0;
   while (!game.over && turns++ < 600) {
@@ -222,7 +225,7 @@ export function fight(levelId, campaign, rng) {
   const downed = heroes.filter((u) => !u.alive).length;
   const hpLeft = heroes.reduce((s, u) => s + Math.max(0, u.hp), 0) / heroes.reduce((s, u) => s + u.maxHp, 0);
   const won = game.over === 'victory';
-  return { won, rounds: game.round, downed, hpLeft, sprung: !!game.sprung, game, state: won ? completeFight(campaign, levelId, game).state : null };
+  return { won, rounds: game.round, downed, hpLeft, sprung: !!game.sprung, game, state: won ? withRelics(completeFight(campaign, levelId, game).state) : null };
 }
 
 /** How often the mimic's ambush bite drops a fresh hero of each class. */
@@ -421,7 +424,7 @@ const rates = (whole) => Object.fromEntries(Object.entries(whole).map(([k, [won,
 const levelsOf = (list) => [...new Set(list.map((r) => r.level))].join('/');
 
 function print(mode, data, runs, seed, jobs) {
-  const how = `seed ${seed}${TIER ? `, NG+${TIER}` : ''}${jobs > 1 ? `, ${jobs} threads` : ''}`;
+  const how = `seed ${seed}${TIER ? `, NG+${TIER}` : ''}${FORCED ? `, relics: ${FORCED.join('+') || 'none'}` : ''}${jobs > 1 ? `, ${jobs} threads` : ''}`;
   if (mode === 'full') {
     const [won, total] = data.whole.all;
     console.log(`Whole campaigns, ${total} runs (${process.env.DIFFICULTY ?? 'normal'}, ${how})`);
