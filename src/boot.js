@@ -8,7 +8,9 @@ import { Camp } from './ui/camp.js';
 import { parseSave, parseWonRun } from './game/campaign.js';
 import './offline.js'; // the offline copy, registered as early as the title
 import { loadSettings } from './game/settings.js';
-import { setStats } from './stats.js';
+import { setStats, watchErrors } from './stats.js';
+
+watchErrors(); // crashes are reported (by place, never message) once the stats are on
 
 export const SAVE_KEY = 'crypt-skirmish.save';
 /** The last won campaign, kept so New Game+ can start from it until a new campaign does. */

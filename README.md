@@ -201,8 +201,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   motion (System, Reduced or Full), colour-blind friendly enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami (a run started or continued,
   a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
-  choice, a run abandoned, a campaign won, a replay watched, something shared), to see where
-  runs end. A lost run or daily also sends its fight, without the heroes' names, so it can be
+  choice, a run abandoned, a campaign won, a replay watched, something shared, a fight left
+  half-way), to see where runs end, and a crash by where it happened in the code (never its
+  message), to find what breaks in which browser. A lost run or daily also sends its fight, without the heroes' names, so it can be
   watched (see Loss replays). No cookies, names or saves, and links' fights stay out of the
   address it sends. Off with Settings › Share anonymous play stats, or Do Not Track; test links
   and the dev server send nothing.

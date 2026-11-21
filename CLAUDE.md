@@ -74,7 +74,9 @@ server on 5173.
 - Play stats (`src/stats.js`): Umami Cloud, loaded by `boot.js` after the page has loaded,
   only on fatihsenel.github.io, with the `stats` setting on and no Do Not Track. Events go
   through `track()`: `settleFight` (real runs, dailies and links, not `?level=` fights),
-  `startCampaign`, Continue, New Game+, dailies, the stops, replays, challenges and sharing. On the dev server they're logged
+  `startCampaign`, Continue, New Game+, dailies, the stops, replays, challenges and sharing, a fight
+  left on `pagehide` (`leftEvent`), and crashes (`watchErrors`, from `boot.js`: type, file, line,
+  column, browser, never the message; 3 a visit). On the dev server they're logged
   as `[stats]` in the console instead. A new event goes there, with no names or free text.
   A lost run or daily also sends its record, names stripped (`withoutNames`, `sendLoss`), to the
   loss-replay Worker in `worker/` (Cloudflare, D1, deployed with `npx wrangler deploy` from there);

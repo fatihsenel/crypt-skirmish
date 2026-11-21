@@ -3,7 +3,7 @@ import { Game } from '../src/game/combat.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign } from '../src/game/campaign.js';
 import { parseSettings } from '../src/game/settings.js';
-import { statsAllowed, fightEvents, runEvent, abandonEvent, continueEvent, shareEvent, partyCode, track } from '../src/stats.js';
+import { statsAllowed, fightEvents, runEvent, abandonEvent, continueEvent, shareEvent, partyCode, track, errorEvent, browserFamily, leftEvent } from '../src/stats.js';
 
 const live = { prod: true, host: 'fatihsenel.github.io', search: '', dnt: null };
 
@@ -40,6 +40,57 @@ describe('play stats', () => {
     expect(end[1][1].relics).toBe(1);
     g.over = 'defeat';
     expect(fightEvents({ game: g, nodeId: 'crypt', campaign, mode: 'daily', final: false })[0][0]).toBe('fight-lost');
+  });
+
+  it('describe a fight left half-way: where, which round, and how the party stood', () => {
+    const campaign = newCampaign('normal', { W: 'Somebody' });
+    const g = new Game(levelById(NODES.crypt.level), { party: campaign.party });
+    g.round = 4;
+    const hero = g.units.find((u) => u.team === 'heroes');
+    hero.hp = 0;
+    hero.alive = false;
+    g.stats[hero.slot] = { ...g.stats[hero.slot], downed: 1 };
+    const [name, data] = leftEvent({ game: g, nodeId: 'crypt', campaign, mode: 'daily' });
+    expect(name).toBe('fight-left');
+    expect(data).toEqual({ room: 'crypt', mode: 'daily', difficulty: 'normal', tier: 0, party: 'FWRC', round: 4, standing: 3, downed: 1 });
+    expect(JSON.stringify(data)).not.toMatch(/Somebody/);
+  });
+
+  it('report a crash in the game’s own code by kind and place, never its message', () => {
+    const base = 'https://fatihsenel.github.io';
+    const err = new TypeError('Cannot read properties of undefined (reading "hp") for Somebody');
+    err.stack = `TypeError: Cannot read properties of undefined\n    at xY (${base}/crypt-skirmish/assets/index-B66MHsDo.js:1:23456)\n    at ${base}/crypt-skirmish/assets/vendor-AbC_12.js:3:9`;
+    const chrome = 'Mozilla/5.0 (Macintosh) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36';
+    const [name, data] = errorEvent(err, { origin: base, ua: chrome });
+    expect(name).toBe('error');
+    expect(data).toEqual({ type: 'TypeError', file: 'index-B66MHsDo.js', line: 1, col: 23456, browser: 'chrome' });
+    expect(JSON.stringify(data)).not.toMatch(/Somebody|Cannot/);
+    // Firefox's stack frames look different.
+    err.stack = `xY@${base}/crypt-skirmish/assets/index-B66MHsDo.js:1:777\n`;
+    expect(errorEvent(err, { origin: base, ua: chrome })[1]).toMatchObject({ file: 'index-B66MHsDo.js', line: 1, col: 777 });
+    // The dev server's modules.
+    err.stack = `at f (http://localhost:5173/src/main.js?t=17:40:12)`;
+    expect(errorEvent(err, { origin: 'http://localhost:5173', ua: chrome })[1]).toMatchObject({ file: 'main.js', line: 40, col: 12 });
+    // Not ours (an extension, another site's script, a cross-origin "Script error."), or nothing to go on: no report.
+    err.stack = 'at x (chrome-extension://abc/content.js:1:1)';
+    expect(errorEvent(err, { origin: base, ua: chrome })).toBeNull();
+    err.stack = 'at x (https://cloud.umami.is/script.js:1:1)';
+    expect(errorEvent(err, { origin: base, ua: chrome })).toBeNull();
+    expect(errorEvent('a string thrown', { origin: base, ua: chrome })).toBeNull();
+    expect(errorEvent(null, { origin: base, ua: chrome })).toBeNull();
+    // A thrown oddity keeps a plain type.
+    const odd = { name: 'Weird name with spaces', stack: `at x (${base}/crypt-skirmish/assets/index-B.js:1:5)` };
+    expect(errorEvent(odd, { origin: base, ua: chrome })[1].type).toBe('Error');
+  });
+
+  it('name the browser family only', () => {
+    expect(browserFamily('Mozilla/5.0 (Windows NT 10.0) Gecko/20100101 Firefox/133.0')).toBe('firefox');
+    expect(browserFamily('Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1')).toBe('safari');
+    expect(browserFamily('Mozilla/5.0 (iPhone) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0 Mobile/15E148 Safari/604.1')).toBe('chrome');
+    expect(browserFamily('Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36 Edg/131.0')).toBe('edge');
+    expect(browserFamily('Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0 Mobile Safari/537.36')).toBe('samsung');
+    expect(browserFamily('Mozilla/5.0 (Macintosh) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36')).toBe('chrome');
+    expect(browserFamily('')).toBe('other');
   });
 
   it('describe a new run and an abandoned one', () => {

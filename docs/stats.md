@@ -19,6 +19,8 @@ player.
 | `replay-watched` | Watch replay | `from` (banner, title, link), `room` |
 | `challenge-played` | A `#play=` link opened | `room` |
 | `shared` | A share that went through | `what` (replay, challenge, result, run-card, photo), `how` (share, copy, save) |
+| `fight-left` | The page closed or reloaded mid-fight (not `?level=` or replays) | `room`, `mode`, `difficulty`, `tier`, `party`, `round`, `standing`, `downed` |
+| `error` | A crash in the game's own code, up to 3 a visit, each place once | `type` (TypeError, …), `file`, `line`, `col`, `browser` (chrome, safari, firefox, edge, samsung, other) |
 
 `party` is the class letters in hero order: F W R C, with P (Paladin), K (Warlock) and
 A (Ranger) in place of their slot's usual class. `mode` is campaign, daily, weekly or challenge.
@@ -56,6 +58,18 @@ him pays too little; if nobody offers at the altar, the blessing isn't worth the
 
 **Are classes balanced?** `fight-lost` by `party` against `run-start` by `party`. A swap that
 loses more often than the base party (FWRC) is weaker in people's hands.
+
+**Where do people give up mid-fight?** `fight-left` by `room`, beside `fight-lost`. A room
+left far more often than it's lost frustrates people before it beats them: look at `round` (left
+at round 1 is a bad start or a slow load; late is a slog) and `standing`. A reload of a campaign
+fight picks it up again: `run-continue` with `midFight` counts those who came back.
+
+**Does it break somewhere?** `error` by `browser`, then by `file`, `line` and `col`. One
+browser alone means a compatibility bug; every browser, a plain bug. The built file's name
+(`index-Dk6rnk2i.js`) names its deploy: the deploy's log prints it (`gh run view <id> --log | grep
+index-`). Build that commit with `npx vite build --sourcemap` and look the line and column up in
+the `.map` (DevTools or any source-map tool) to find the code. On the dev server the file and
+line are the source's own.
 
 **Do players come back and share?** `run-continue` and `daily-start` per day; `shared` by `what`.
 

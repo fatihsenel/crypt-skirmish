@@ -45,7 +45,7 @@ import { settleFight } from './fightEnd.js';
 import { announce } from './ui/announce.js';
 import { installDebug, sampleVictory } from './debug.js';
 import { saveLoaded } from './offline.js';
-import { track, setStats, runEvent, abandonEvent, continueEvent } from './stats.js';
+import { track, setStats, runEvent, abandonEvent, continueEvent, leftEvent } from './stats.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, loadDaily } from './game/daily.js';
 import { weekKey, weeklyPlan, weeklyCampaign } from './game/weekly.js';
@@ -347,6 +347,16 @@ function enterRoom(id) {
   nodeId = id;
   newGame();
 }
+
+// A fight still going when the page closes or reloads is counted (play stats), once a fight:
+// real runs, dailies and linked fights, not test fights or replays.
+let leftFor = null;
+window.addEventListener('pagehide', () => {
+  if (!game || game.over || replay || !campaign || !(saving || daily || challenge) || leftFor === game) return;
+  leftFor = game;
+  const mode = challenge ? 'challenge' : daily ? (daily.weekly ? 'weekly' : 'daily') : 'campaign';
+  track(...leftEvent({ game, nodeId, campaign, mode }));
+});
 
 /** After a won room: rest, XP, loot, save, then back to the map. */
 function leaveRoom() {
