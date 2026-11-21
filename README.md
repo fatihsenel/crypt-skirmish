@@ -191,7 +191,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   crosshatch means melee and amber dots mean ranged. Settings can switch them to purple and
   yellow for colour-blind players.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does. Small
-  labels (spell slots, potions, the replay buttons' keys) show a short note on hover, focus or a tap.
+  labels (spell slots, potions, Action / Bonus / Reaction, the replay buttons' keys) show a
+  short note on hover, focus or a tap.
 - **Turn order:** portraits along the top, each with its initiative number. Long names
   shrink to fit, like "G. Spider 2" or "R. Mummy". On an upright phone the whole party fits
   across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
@@ -202,8 +203,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
-  motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log
-  and cards), colour-blind friendly enemy reach and play stats.
+  motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log,
+  cards and the names and numbers over the figures), colour-blind friendly enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
   a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
   choice, a run abandoned, a campaign won, an easier difficulty offered or taken, a visit and whether its browser played before, a replay watched, something shared, a fight left
@@ -238,7 +239,10 @@ Everything is generated in the browser, with no recordings:
   to choose it, and focus stays where it was when the camp redraws.
 - Tab to the combat log, and the arrow keys step from name to name in it (each is read out
   with its line); Enter looks at that figure.
-- The end banner's Copy log puts the whole fight's log on the clipboard as plain text.
+- The end banner's Copy log puts the whole fight's log on the clipboard as plain text (on a
+  phone, the share sheet). Where a browser won't let the game copy, Copy log, Copy result and
+  the link buttons open the text selected in a panel, to copy by hand.
+- Scrolled up in the combat log to read, new lines don't pull it back down; New lines ↓ does.
 
 ## Controls
 
@@ -447,6 +451,7 @@ src/
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
     hints.js         the short notes on small labels (data-hint), on hover, focus or a tap
+    copyBox.js       copying text: the clipboard, else a panel with it selected
     appStatus.js     the title's line about offline play, installing and a new version
   boot.js            the entry: the title and the saves, before three.js and main.js load
   main.js            controller: game → animations → HUD

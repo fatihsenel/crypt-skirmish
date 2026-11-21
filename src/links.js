@@ -4,6 +4,7 @@
 import { encodeFight, decodeFight, replayOutcome, fightUrl, linkIn, MAX_LINK_CODE } from './game/fightLink.js';
 import { sfx } from './audio/sfx.js';
 import { track, shareEvent } from './stats.js';
+import { copyText } from './ui/copyBox.js';
 
 /**
  * `watch(rec, { link })` shows a fight's replay, `play(rec, theirs)` starts it as a challenge,
@@ -31,10 +32,9 @@ export function createLinks({ hud, touch, watch, play, idle }) {
         track(...shareEvent(kind === 'play' ? 'challenge' : 'replay', 'share'));
         return;
       }
-      await navigator.clipboard.writeText(url);
-      track(...shareEvent(kind === 'play' ? 'challenge' : 'replay', 'copy'));
-      button.textContent = 'Copied';
-      setTimeout(() => { button.textContent = label; }, 2000);
+      if (await copyText(url, { button, label, what: kind === 'play' ? 'challenge link' : 'replay link' })) {
+        track(...shareEvent(kind === 'play' ? 'challenge' : 'replay', 'copy'));
+      }
     } catch (err) {
       if (err?.name !== 'AbortError') hud.toast('Couldn’t copy the link here.');
     }

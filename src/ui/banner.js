@@ -3,6 +3,7 @@
 // and Save image. The Watch, link and New Game+ buttons are wired up in main.js.
 
 import { saveRunCard } from './runCard.js';
+import { copyText } from './copyBox.js';
 import { track, shareEvent } from '../stats.js';
 import { RELICS } from '../game/items.js';
 
@@ -127,13 +128,10 @@ export class EndBanner {
         track(...shareEvent('result', 'share'));
         return;
       }
-      await navigator.clipboard.writeText(text);
-      track(...shareEvent('result', 'copy'));
-      btn.textContent = 'Copied';
-      setTimeout(() => { btn.textContent = 'Copy result'; }, 2000);
+      if (await copyText(text, { button: btn, label: 'Copy result', what: 'result' })) track(...shareEvent('result', 'copy'));
     } catch (err) {
       if (err?.name === 'AbortError') return; // the share sheet was closed
-      this.toast('Couldn’t copy the result here.');
+      this.toast('Couldn’t share the result here.');
     }
   }
 
@@ -141,12 +139,11 @@ export class EndBanner {
   async copyLog(text) {
     const btn = $('#copy-log');
     try {
-      await navigator.clipboard.writeText(text);
-      btn.textContent = 'Copied';
-      setTimeout(() => { btn.textContent = 'Copy log'; }, 2000);
-    } catch {
-      this.toast('Couldn’t copy the log here.');
+      if (this.touch() && navigator.share) return void await navigator.share({ text });
+    } catch (err) {
+      if (err?.name === 'AbortError') return; // the share sheet was closed
     }
+    await copyText(text, { button: btn, label: 'Copy log', what: 'combat log' });
   }
 
   /** The won campaign as a picture (see runCard.js): a download, or the share sheet on a phone. */

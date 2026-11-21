@@ -481,6 +481,7 @@ new SettingsPanel(settings, (key, value) => {
   if (key === 'motion') return applyMotion();
   if (key === 'text') {
     document.documentElement.dataset.text = value;
+    framedFor = ''; // the action bar's height changed: measure it afresh, smaller too
     return stage.fit(); // the panels' edges moved
   }
   if (key === 'stats') return setStats(value);

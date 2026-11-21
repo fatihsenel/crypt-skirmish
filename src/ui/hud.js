@@ -111,6 +111,9 @@ export class Hud {
     $('#log-toggle').addEventListener('click', () => this.panelLog());
     $('#log-close').addEventListener('click', () => this.panelLog(false));
     $('#log-fold').addEventListener('click', () => this.toggleLog());
+    // Scrolled up to read: new lines don't pull the log down; a button goes back to them.
+    $('#log-list').addEventListener('scroll', () => this.atLogEnd() && ($('#log-latest').hidden = true), { passive: true });
+    $('#log-latest').addEventListener('click', () => this.logToEnd());
     // A name in the log points at its figure: hover to mark its tile, click to look at it.
     const named = (ev) => ev.target.closest?.('#log-list [data-unit]');
     $('#log-list').addEventListener('pointerover', (ev) => {
@@ -214,7 +217,7 @@ export class Hud {
     $('#log').classList.toggle('folded', folded);
     $('#log-fold').setAttribute('aria-expanded', String(!folded));
     if (!folded) {
-      $('#log-list').scrollTop = $('#log-list').scrollHeight; // catch up on what came in
+      this.logToEnd(); // catch up on what came in
       this.newLines = 0;
       $('#log-new').hidden = true;
     }
@@ -233,8 +236,7 @@ export class Hud {
     $('#log-toggle').setAttribute('aria-expanded', String(open));
     if (open) {
       $('#log-toggle').classList.remove('unread');
-      const list = $('#log-list');
-      list.scrollTop = list.scrollHeight; // a hidden list can't scroll, so catch up now
+      this.logToEnd(); // a hidden list can't scroll, so catch up now
     }
   }
 
@@ -245,6 +247,7 @@ export class Hud {
     this.litLine = this.litUnit = null;
     this.newLines = 0;
     $('#log-new').hidden = true;
+    $('#log-latest').hidden = true;
     $('#banner').hidden = true;
     this.hint('');
   }
@@ -266,7 +269,7 @@ export class Hud {
     const li = document.createElement('li');
     li.className = cls;
     li.innerHTML = html;
-    const list = $('#log-list');
+    const reading = !this.atLogEnd(); // scrolled up to an earlier line: leave it there
     const turn = this.turn;
     if (cls === 'death' && this.round) this.round.fallen.push(html.replace(/ falls\.$/, ''));
     if (cls === 'round' && !turn) this.startRound(html);
@@ -275,10 +278,24 @@ export class Hud {
       turn.list.appendChild(li);
       if (cls === 'death') this.turnNote(html.replace(/\.$/, ''));
     } else this.addLine(li);
-    list.scrollTop = list.scrollHeight;
+    if (reading) $('#log-latest').hidden = false;
+    else this.logToEnd();
     if (this.litUnit) this.markLine(this.litUnit, false); // the figure under the mouse may be in this line
     announce(li.textContent); // read out even while the log panel is closed
     if (!this.logOpen) $('#log-toggle').classList.add('unread');
+  }
+
+  /** Whether the log shows its last line (or can't be seen, so it has nowhere to be). */
+  atLogEnd() {
+    const list = $('#log-list');
+    return !list.clientHeight || list.scrollHeight - list.scrollTop - list.clientHeight < 24;
+  }
+
+  /** Scroll the log to its last line. */
+  logToEnd() {
+    const list = $('#log-list');
+    list.scrollTop = list.scrollHeight;
+    $('#log-latest').hidden = true;
   }
 
   /** A line of the log's own (not one inside a monster's turn); counted while the log is folded. */
@@ -670,7 +687,14 @@ export class Hud {
       this.abilityTip.hide();
       return;
     }
-    const pip = (label, used) => `<span class="pip ${used ? 'used' : 'ready'}">${label}</span>`;
+    const pip = (label, used, hint) => `<span class="pip ${used ? 'used' : 'ready'}" data-hint="${esc(hint)}">${label}</span>`;
+    const PIP_HINTS = {
+      action: 'Action: one a turn, to attack, cast a spell, or Dash, Dodge, Disengage, Hide…',
+      attacks: 'Attacks left from this turn’s Attack action.',
+      bonus: 'Bonus action: one quick extra a turn, like Second Wind or a bonus-action spell.',
+      reaction: 'Reaction: one a round, for an opportunity attack or a spell like Shield. It comes back at the start of this figure’s turn.',
+    };
+    const spent = (text, used) => (used ? `${text} Used this turn.` : text);
     const conds = Object.keys(u.conditions ?? {});
     const slots = Object.entries(u.slots)
       .filter(([l, n]) => n > 0 || (u.slotMax?.[l] ?? 0) > 0) // a warlock's old 2nd-level slots are gone at 5
@@ -689,7 +713,7 @@ export class Hud {
         `<span class="passive-tag" data-hint="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
         `<span class="passive-tag item" data-hint="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
       <div class="economy">
-        ${pip(u.actionUsed && u.attacksLeft > 0 ? `Attack ×${u.attacksLeft}` : 'Action', u.actionUsed && !u.attacksLeft)}${pip('Bonus', u.bonusUsed)}${pip('Reaction', u.reactionUsed)}${slots}
+        ${u.actionUsed && u.attacksLeft > 0 ? pip(`Attack ×${u.attacksLeft}`, false, PIP_HINTS.attacks) : pip('Action', u.actionUsed, spent(PIP_HINTS.action, u.actionUsed))}${pip('Bonus', u.bonusUsed, spent(PIP_HINTS.bonus, u.bonusUsed))}${pip('Reaction', u.reactionUsed, u.reactionUsed ? 'Reaction: used. It comes back at the start of this figure’s turn.' : PIP_HINTS.reaction)}${slots}
       </div>`);
 
     $('#end-turn').disabled = !mine || busy;
