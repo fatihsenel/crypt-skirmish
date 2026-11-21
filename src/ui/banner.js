@@ -11,10 +11,11 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 export class EndBanner {
   /** `toast(text)` explains a failure; `touch()` says whether the last pointer was a finger. */
-  constructor({ toast, touch }) {
+  constructor({ toast, touch, logText }) {
     this.toast = toast;
     this.touch = touch;
     $('#share').addEventListener('click', () => this.share());
+    $('#copy-log').addEventListener('click', () => this.copyLog(logText()));
     $('#save-card').addEventListener('click', () => this.saveCard());
   }
 
@@ -33,6 +34,8 @@ export class EndBanner {
     $('#copy-challenge').textContent = 'Copy challenge link';
     $('#watch-theirs').hidden = !challenge; // the link's fight, once yours is done
     $('#ngplus').hidden = !ngplus;
+    $('#copy-log').hidden = false;
+    $('#copy-log').textContent = 'Copy log';
     this.renderAwards(awards);
     const rounds = `${round} round${round === 1 ? '' : 's'}`;
     const won = result === 'victory';
@@ -134,6 +137,18 @@ export class EndBanner {
     }
   }
 
+  /** The fight's combat log as plain text, every roll included: to share it or report a bug. */
+  async copyLog(text) {
+    const btn = $('#copy-log');
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = 'Copy log'; }, 2000);
+    } catch {
+      this.toast('Couldn’t copy the log here.');
+    }
+  }
+
   /** The won campaign as a picture (see runCard.js): a download, or the share sheet on a phone. */
   async saveCard() {
     if (!this.cardSummary) return;
@@ -178,7 +193,7 @@ export class EndBanner {
   renderAwards(awards) {
     const el = $('#banner-awards');
     el.hidden = awards.length === 0;
-    el.innerHTML = awards.map((a) => `<li title="${esc(a.desc)}"><span class="award-mark" aria-hidden="true">★</span>`
+    el.innerHTML = awards.map((a) => `<li data-hint="${esc(a.desc)}"><span class="award-mark" aria-hidden="true">★</span>`
       + `<span><b>${esc(a.name)}</b><small>${esc(a.desc)}</small></span></li>`).join('');
     el.setAttribute('aria-label', `Achievement${awards.length === 1 ? '' : 's'} unlocked`);
   }

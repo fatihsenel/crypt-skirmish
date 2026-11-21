@@ -5,6 +5,7 @@
 
 import './style.css';
 import { Camp } from './ui/camp.js';
+import { hints } from './ui/hints.js';
 import { parseSave, parseWonRun } from './game/campaign.js';
 import './offline.js'; // the offline copy, registered as early as the title
 import { loadSettings } from './game/settings.js';
@@ -28,6 +29,8 @@ export const loadWonRun = () => {
 export const later = {};
 let main = null;
 const handOn = (name) => (...args) => main?.then(() => later[name]?.(...args));
+hints(); // styled tooltips for data-hint, everywhere
+document.documentElement.dataset.text = loadSettings().text; // the Text size setting, from the title on
 export const camp = new Camp(Object.fromEntries([
   'onEnter', 'onEquip', 'onUnequip', 'onNewCampaign', 'onDaily', 'onWeekly', 'onWatch',
   'onShareFight', 'onNewGamePlus', 'onContinue',

@@ -10,7 +10,7 @@ describe('settings', () => {
 
   it('keeps valid values and clamps levels to 0..1', () => {
     const s = parseSettings(JSON.stringify({ music: 0.3, effects: 2, voices: -1, speed: 'fastest' }));
-    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true, colorblind: false, motion: 'system', stats: true });
+    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true, colorblind: false, motion: 'system', text: 'normal', stats: true });
   });
 
   it('drops an unknown speed and non-numeric levels', () => {
@@ -23,6 +23,12 @@ describe('settings', () => {
     expect(parseSettings(JSON.stringify({ rolls: false })).rolls).toBe(false);
     expect(parseSettings(JSON.stringify({ rolls: 'no' })).rolls).toBe(true);
     expect(parseSettings(JSON.stringify({ throwDice: false })).throwDice).toBe(false);
+  });
+
+  it('keeps a known text size, else normal', () => {
+    expect(parseSettings(null).text).toBe('normal');
+    expect(parseSettings(JSON.stringify({ text: 'larger' })).text).toBe('larger');
+    expect(parseSettings(JSON.stringify({ text: 'huge' })).text).toBe('normal');
   });
 
   it('follows the system’s motion setting unless one is picked', () => {

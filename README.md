@@ -190,7 +190,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Enemy reach** (T): marks the tiles monsters could reach and hit next turn. A red
   crosshatch means melee and amber dots mean ranged. Settings can switch them to purple and
   yellow for colour-blind players.
-- **Tooltips:** hover or long-press any attack, spell or tag to see what it does.
+- **Tooltips:** hover or long-press any attack, spell or tag to see what it does. Small
+  labels (spell slots, potions, the replay buttons' keys) show a short note on hover, focus or a tap.
 - **Turn order:** portraits along the top, each with its initiative number. Long names
   shrink to fit, like "G. Spider 2" or "R. Mummy". On an upright phone the whole party fits
   across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
@@ -201,7 +202,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
-  motion (System, Reduced or Full), colour-blind friendly enemy reach and play stats.
+  motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log
+  and cards), colour-blind friendly enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
   a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
   choice, a run abandoned, a campaign won, an easier difficulty offered or taken, a visit and whether its browser played before, a replay watched, something shared, a fight left
@@ -234,6 +236,9 @@ Everything is generated in the browser, with no recordings:
   how the last room went, which room is next, each room on the map, and items handed out.
 - The title, camp and New Game+ work from the keyboard alone: Tab to a room on the map, Enter
   to choose it, and focus stays where it was when the camp redraws.
+- Tab to the combat log, and the arrow keys step from name to name in it (each is read out
+  with its line); Enter looks at that figure.
+- The end banner's Copy log puts the whole fight's log on the clipboard as plain text.
 
 ## Controls
 
@@ -258,6 +263,7 @@ Everything is generated in the browser, with no recordings:
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel (or click its header) |
 | L | Fold or open the combat log (or click its header); remembered, and a folded log counts new lines |
+| Tab to the combat log, then arrows / Enter | Step through the names in it / look at that figure |
 | K | On the title, or a defeat or the won campaign: the skull plays its next move |
 | Tab / Esc in a panel | Tab stays inside the panel; Esc closes it |
 
@@ -267,7 +273,7 @@ Everything is generated in the browser, with no recordings:
 | Tap the same spot again | Do it |
 | Drag / pinch | Pan / zoom |
 | Undo button | Take back the last move |
-| Hold a button, or tap a tag | Show its tooltip |
+| Hold a button, or tap a tag or label | Show its tooltip or note |
 | Swipe the row of attacks and spells | See the rest; a faded edge means there are more |
 | Tap a portrait or hold a figure | Show the character card |
 | Log button (top right) | Open the combat log; tap a name in it to see that figure |
@@ -436,10 +442,11 @@ src/
     unitTip.js       the character card over figures and portraits
     unitCard.js      the character card's text
     bestiary.js      the bestiary screen and its lore
-    banner.js        the end-of-fight banner: result, recap, run summary, Copy result, Save image
+    banner.js        the end-of-fight banner: result, recap, run summary, Copy result, Save image, Copy log
     overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order
     tips.js          tips for new players
+    hints.js         the short notes on small labels (data-hint), on hover, focus or a tap
     appStatus.js     the title's line about offline play, installing and a new version
   boot.js            the entry: the title and the saves, before three.js and main.js load
   main.js            controller: game → animations → HUD

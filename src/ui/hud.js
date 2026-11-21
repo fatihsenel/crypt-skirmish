@@ -83,11 +83,7 @@ export class Hud {
     this.tips = new Map();
     this.abilityTip = new AbilityTip($('#attacks'), (key) => this.tips.get(key) ?? null);
     this.unitTip = new UnitTip();
-    // No hover on a touch screen: tapping a tag shows its tooltip, a portrait its card.
-    $('#who').addEventListener('click', (ev) => {
-      const tip = ev.target.closest('[title]');
-      if (this.touch && tip) this.toast(tip.title);
-    });
+    // No hover on a touch screen: tapping a tag shows its hint (hints.js), a portrait its card.
     const chipOf = (ev) => ev.target.closest('#initiative .chip');
     $('#initiative').addEventListener('pointerover', (ev) => {
       if (ev.pointerType !== 'mouse') return;
@@ -121,6 +117,34 @@ export class Hud {
       if (ev.pointerType === 'mouse') this.onLogName?.(Number(named(ev)?.dataset.unit), named(ev) ? 'hover' : 'leave');
     });
     $('#log-list').addEventListener('pointerleave', () => this.onLogName?.(NaN, 'leave'));
+    // From the keyboard: Tab to the log, arrows step from name to name, Enter looks at one.
+    const list = $('#log-list');
+    const names = () => [...list.querySelectorAll('[data-unit]')].filter((e) => e.getClientRects().length);
+    const pick = (el) => {
+      list.querySelector('.kbd-name')?.classList.remove('kbd-name');
+      this.kbdName = el;
+      if (!el) return this.onLogName?.(NaN, 'leave');
+      el.classList.add('kbd-name');
+      el.scrollIntoView({ block: 'nearest' });
+      this.onLogName?.(Number(el.dataset.unit), 'hover');
+      announce(`${el.textContent}: ${el.closest('summary, li').textContent}`);
+    };
+    list.addEventListener('focus', () => pick(this.kbdName?.isConnected ? this.kbdName : names().at(-1)));
+    list.addEventListener('blur', () => pick(null));
+    list.addEventListener('keydown', (ev) => {
+      const all = names();
+      const at = all.indexOf(this.kbdName);
+      const step = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[ev.key];
+      if (step) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const next = all[Math.min(all.length - 1, Math.max(0, (at < 0 ? all.length : at) + step))];
+        if (next) pick(next);
+      } else if (ev.key === 'Enter' && this.kbdName) {
+        ev.preventDefault();
+        this.onLogName?.(Number(this.kbdName.dataset.unit), 'go');
+      } else if (ev.key === 'Escape') list.blur();
+    });
     $('#log-list').addEventListener('click', (ev) => {
       const name = named(ev);
       if (!name) return;
@@ -136,7 +160,7 @@ export class Hud {
     this.foldLog(this.logFolded, false);
     this.toastTimer = null;
     this.touch = false;
-    this.end = new EndBanner({ toast: (text) => this.toast(text), touch: () => this.touch });
+    this.end = new EndBanner({ toast: (text) => this.toast(text), touch: () => this.touch, logText: () => this.logText() });
     this.logOpen = false;
   }
 
@@ -307,19 +331,44 @@ export class Hud {
 
   /** A monster's turn starts: what it does is logged under one line that sums it up, and opens
       to show the dice. Nothing is shown if nothing is logged (a monster out of sight). */
-  beginTurn(unit, hidden = () => false) {
+  beginTurn(unit, hidden = () => false, open = false) {
     const li = document.createElement('li');
-    li.className = 'turn';
-    li.innerHTML = '<details><summary></summary><ol></ol></details>';
-    this.turn = { unit, hidden, li, summary: li.querySelector('summary'), list: li.querySelector('ol'), notes: [] };
+    li.className = `turn ${unit.team}`;
+    li.innerHTML = `<details${open ? ' open' : ''}><summary></summary><ol></ol></details>`;
+    this.turn = { unit, hidden, li, details: li.firstChild, summary: li.querySelector('summary'), list: li.querySelector('ol'), notes: [] };
     this.turnNote(null);
   }
 
+  /** The turn is over: a hero's, open while they act, folds like a monster's. */
   endTurn() {
+    if (this.turn) this.turn.details.open = false;
     this.turn = null;
   }
 
-  /** Add to the summary of the monster's turn: "moves", "hits Brannoc for 5", … */
+  /** The whole log as text, folded parts included and indented under their line (Copy log). */
+  logText() {
+    const out = [];
+    const line = (el) => {
+      const copy = el.cloneNode(true);
+      for (const br of copy.querySelectorAll('br')) br.replaceWith(' — ');
+      return copy.textContent.replace(/\s+/g, ' ').trim();
+    };
+    const walk = (list, depth) => {
+      for (const li of list.children) {
+        const d = li.querySelector(':scope > details');
+        if (!d) {
+          out.push('  '.repeat(depth) + line(li));
+          continue;
+        }
+        out.push('  '.repeat(depth) + line(d.querySelector(':scope > summary')));
+        walk(d.querySelector(':scope > ol'), depth + 1);
+      }
+    };
+    walk($('#log-list'), 0);
+    return out.filter((l) => l.trim()).join('\n');
+  }
+
+  /** Add to the summary of the turn: "moves", "hits Brannoc for 5", … */
   turnNote(html) {
     const t = this.turn;
     if (!t) return;
@@ -625,20 +674,20 @@ export class Hud {
     const conds = Object.keys(u.conditions ?? {});
     const slots = Object.entries(u.slots)
       .filter(([l, n]) => n > 0 || (u.slotMax?.[l] ?? 0) > 0) // a warlock's old 2nd-level slots are gone at 5
-      .map(([l, n]) => `<span class="slots" title="${ordinal(+l)}-level spell slots">${ordinal(+l)} ${'◆'.repeat(n)}<s>${'◇'.repeat(Math.max(0, (u.slotMax?.[l] ?? n) - n))}</s></span>`)
+      .map(([l, n]) => `<span class="slots" data-hint="${ordinal(+l)}-level spell slots">${ordinal(+l)} ${'◆'.repeat(n)}<s>${'◇'.repeat(Math.max(0, (u.slotMax?.[l] ?? n) - n))}</s></span>`)
       .join('');
     this.setHtml($('#who'), `
       <div class="who-name ${u.team}">${esc(u.name)} <small>${esc(u.cls)}${u.team === 'heroes' ? ` · Lv ${u.level}` : ''}</small></div>
       <div class="stats">
-        <span>HP <b>${u.hp}</b>/${u.maxHp}${u.tempHp > 0 ? ` <b class="temp-hp" title="Temporary HP: lost before your hit points">+${u.tempHp}</b>` : ''}</span>
+        <span>HP <b>${u.hp}</b>/${u.maxHp}${u.tempHp > 0 ? ` <b class="temp-hp" data-hint="Temporary HP: lost before your hit points">+${u.tempHp}</b>` : ''}</span>
         <span>AC <b>${game.acOf(u)}</b></span>
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
-        ${u.team === 'heroes' ? `<span title="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
+        ${u.team === 'heroes' ? `<span data-hint="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
       </div>
-      ${u.passives.length || u.items?.length || conds.length || u.marked ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" title="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.marked ? `<span class="passive-tag cond" title="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
-        `<span class="passive-tag cond ${c}" title="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
-        `<span class="passive-tag" title="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
-        `<span class="passive-tag item" title="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
+      ${u.passives.length || u.items?.length || conds.length || u.marked ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.marked ? `<span class="passive-tag cond" data-hint="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
+        `<span class="passive-tag cond ${c}" data-hint="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
+        `<span class="passive-tag" data-hint="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
+        `<span class="passive-tag item" data-hint="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
       <div class="economy">
         ${pip(u.actionUsed && u.attacksLeft > 0 ? `Attack ×${u.attacksLeft}` : 'Action', u.actionUsed && !u.attacksLeft)}${pip('Bonus', u.bonusUsed)}${pip('Reaction', u.reactionUsed)}${slots}
       </div>`);

@@ -80,7 +80,7 @@
           </button></h2>
           <button id="log-close" type="button" aria-label="Close the combat log">✕</button>
         </div>
-        <ol id="log-list"></ol>
+        <ol id="log-list" tabindex="0" aria-label="Combat log: arrow keys move between the names in it, Enter looks at that figure"></ol>
       </aside>
 
       <footer id="actionbar">
@@ -89,7 +89,7 @@
           <div id="who"></div>
           <div id="attacks"></div>
           <div class="turn-buttons">
-            <button id="undo" type="button" hidden title="Take back the last move (it rolled no dice and found nothing new)">Undo<span class="wide"> move</span> <kbd>Z</kbd></button>
+            <button id="undo" type="button" hidden data-hint="Take back the last move (it rolled no dice and found nothing new)">Undo<span class="wide"> move</span> <kbd>Z</kbd></button>
             <button id="end-turn" type="button">End turn <kbd>Space</kbd></button>
           </div>
         </div>
@@ -217,6 +217,12 @@
           <label><input type="radio" name="motion" value="full" /><span>Full</span></label>
         </div>
         <p class="settings-note">Reduced: no screen shake or camera sweeps, and numbers fade in place.</p>
+        <h3 id="text-head">Text size</h3>
+        <div class="speed" role="radiogroup" aria-labelledby="text-head">
+          <label><input type="radio" name="text" value="normal" /><span>Normal</span></label>
+          <label><input type="radio" name="text" value="large" /><span>Large</span></label>
+          <label><input type="radio" name="text" value="larger" /><span>Larger</span></label>
+        </div>
         <h3>Colours</h3>
         <label class="check"><input type="checkbox" name="colorblind" /><span>Colour-blind friendly enemy reach (purple and yellow)</span></label>
         <h3>Privacy</h3>
@@ -236,11 +242,11 @@
       </div>
       <div id="replay-bar" hidden role="group" aria-label="Replay">
         <span id="replay-label">Replay</span>
-        <button id="replay-pause" type="button" title="Space">Pause</button>
-        <button id="replay-step" type="button" title="→" disabled>Next turn</button>
-        <button id="replay-speed" type="button" aria-label="Replay speed" title="+ and −">1×</button>
-        <button id="replay-play" type="button" hidden title="The same room, party and dice">Play it yourself</button>
-        <button id="replay-exit" type="button" title="Esc">Exit replay</button>
+        <button id="replay-pause" type="button" data-hint="Key: Space">Pause</button>
+        <button id="replay-step" type="button" data-hint="Key: →" disabled>Next turn</button>
+        <button id="replay-speed" type="button" aria-label="Replay speed" data-hint="Keys: + and −">1×</button>
+        <button id="replay-play" type="button" hidden data-hint="The same room, party and dice">Play it yourself</button>
+        <button id="replay-exit" type="button" data-hint="Key: Esc">Exit replay</button>
       </div>
       <div id="banner" hidden role="dialog" aria-labelledby="banner-title" aria-describedby="banner-text">
         <div class="card" tabindex="-1">
@@ -261,7 +267,8 @@
             <button id="watch" type="button" hidden>Watch replay</button>
             <button id="watch-theirs" type="button" hidden>Watch theirs</button>
             <button id="copy-link" type="button" hidden>Copy replay link</button>
-            <button id="copy-challenge" type="button" hidden title="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
+            <button id="copy-challenge" type="button" hidden data-hint="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
+            <button id="copy-log" type="button" hidden>Copy log</button>
             <button id="ngplus" type="button" hidden>New Game+</button>
           </div>
         </div>
@@ -287,7 +294,7 @@
                 <div id="title-daily-best" class="daily-best" hidden>
                   <button id="title-daily-watch" type="button" class="daily-watch">Watch your best</button>
                   <button type="button" class="daily-link" data-best="daily" data-kind="watch">Copy link</button>
-                  <button type="button" class="daily-link" data-best="daily" data-kind="play" title="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
+                  <button type="button" class="daily-link" data-best="daily" data-kind="play" data-hint="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
                 </div>
               </div>
               <button id="title-daily-play" type="button">Play today’s crypt</button>
@@ -301,7 +308,7 @@
                 <div id="title-weekly-best" class="daily-best" hidden>
                   <button id="title-weekly-watch" type="button" class="daily-watch">Watch your best</button>
                   <button type="button" class="daily-link" data-best="weekly" data-kind="watch">Copy link</button>
-                  <button type="button" class="daily-link" data-best="weekly" data-kind="play" title="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
+                  <button type="button" class="daily-link" data-best="weekly" data-kind="play" data-hint="A link that plays this room from the same dice, without showing your fight first">Copy challenge link</button>
                 </div>
               </div>
               <button id="title-weekly-play" type="button">Play this week’s crypt</button>

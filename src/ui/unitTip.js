@@ -88,7 +88,8 @@ export class UnitTip {
       if (inHi - inLo >= tip.height) [lo, hi] = [inLo, inHi];
     }
     top = Math.min(Math.max(top, lo), hi - tip.height);
-    this.el.style.left = `${left - app.left}px`;
-    this.el.style.top = `${top - app.top}px`;
+    const z = parseFloat(getComputedStyle(this.el).zoom) || 1; // the Text size setting scales these too
+    this.el.style.left = `${(left - app.left) / z}px`;
+    this.el.style.top = `${(top - app.top) / z}px`;
   }
 }

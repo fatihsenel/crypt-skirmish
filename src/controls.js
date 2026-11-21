@@ -188,7 +188,7 @@ export function createControls(deps) {
       return;
     }
     if (ev.code === 'Space' || ev.code === 'Enter') {
-      if (ev.target instanceof HTMLButtonElement || ev.target instanceof HTMLElement && ev.target.closest('summary')) return;
+      if (ev.target instanceof HTMLButtonElement || ev.target instanceof HTMLElement && ev.target.closest('summary, #log-list')) return;
       ev.preventDefault();
       if (ev.repeat) return; // a held key doesn't end turn after turn
       // Enter works the keyboard cursor's tile; Space (or Enter without the cursor) ends the turn.

@@ -111,6 +111,9 @@ server on 5173.
 - `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
+  A short note on a small label is `data-hint="…"`, never `title=`: `ui/hints.js` shows it
+  as a card on hover, focus or a tap. The Text size setting is CSS `zoom` on the panels
+  (`data-text` on `<html>`), so cards placed by script divide by the element's zoom.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
   `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, `loss-key`, …).
 

@@ -138,7 +138,8 @@ export class AbilityTip {
     let top = barTop - tip.height - 8;
     if (top < app.top + pad) top = r.top - tip.height - 8; // a short screen: just above the button
     if (top < app.top + pad) top = app.top + pad;          // shorter still: as high as it goes
-    this.el.style.left = `${left - app.left}px`;
-    this.el.style.top = `${top - app.top}px`;
+    const z = parseFloat(getComputedStyle(this.el).zoom) || 1; // the Text size setting scales these too
+    this.el.style.left = `${(left - app.left) / z}px`;
+    this.el.style.top = `${(top - app.top) / z}px`;
   }
 }

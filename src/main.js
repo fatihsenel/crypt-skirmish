@@ -409,7 +409,7 @@ function hudInsets(w, h) {
   return {
     top: Math.max(56, top + 6),
     bottom: Math.max(80, barRoom + 6),
-    right: beside ? w - log.getBoundingClientRect().right + LOG_WIDTH : 0, // its open width, even folded
+    right: beside ? w - log.getBoundingClientRect().right + LOG_WIDTH * (parseFloat(getComputedStyle(log).zoom) || 1) : 0, // its open width, even folded
   };
 }
 stage.setInsets(hudInsets);
@@ -479,6 +479,10 @@ new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
   if (key === 'motion') return applyMotion();
+  if (key === 'text') {
+    document.documentElement.dataset.text = value;
+    return stage.fit(); // the panels' edges moved
+  }
   if (key === 'stats') return setStats(value);
   if (key === 'colorblind') {
     board?.setThreatColors(value);
@@ -751,6 +755,7 @@ function startFight(resume, watch = null) {
   });
   game.on('round', ({ round }) => hud.log(`Round ${round}`, 'round'));
   game.on('turnStart', ({ unit }) => onTurnStart(unit));
+  game.on('turnEnd', () => hud.endTurn()); // before the next round's heading
   game.on('attack', (r) => {
     // The player is about to throw this one: the log waits until the die lands.
     if (throwsOwn(r)) hud.holdLog();
@@ -1053,10 +1058,14 @@ async function onTurnStart(unit) {
     }
     await replayGate();
     if (game !== g) return;
-    if (unit.team === 'heroes') await replayHeroTurn(unit);
+    if (unit.team === 'heroes') {
+      hud.beginTurn(unit, () => false, true);
+      await replayHeroTurn(unit);
+    }
     else await runMonsterTurn(unit);
     return;
   }
+  if (unit.team === 'heroes') hud.beginTurn(unit, () => false, true); // open while they act
   if (unit.team === 'heroes') {
     sfx.turn();
     voices.bark(unit, 'turn'); // now and then
@@ -1194,11 +1203,13 @@ async function runMonsterTurn(unit) {
 }
 
 const STEP_VERBS = { dash: 'dashes', dodge: 'dodges', disengage: 'disengages', hide: 'hides', nimbleHide: 'hides',
-  nimbleEscape: 'slips away', search: 'searches', aggressive: 'charges' };
+  nimbleEscape: 'slips away', search: 'searches', aggressive: 'charges', potion: 'drinks a potion' };
 
-/** What a monster's step adds to its turn's line in the log (attacks add their own). */
+/** What a step (a monster's, or a hero's command) adds to its turn's line in the log (attacks add their own). */
 function stepNote(step) {
   if (step.type === 'move') return 'moves';
+  if (step.type === 'shove') return 'shoves';
+  if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'spell') return `casts ${SPELLS[step.id]?.name ?? 'a spell'}`;
   if (step.type === 'action' || step.type === 'bonus') return STEP_VERBS[step.id] ?? ACTIONS[step.id]?.name.toLowerCase() ?? null;
   return null;
@@ -1318,6 +1329,7 @@ async function replayHeroTurn(unit) {
     const r = cmd ? applyCommand(game, cmd) : null;
     if (!r?.ok) return endReplay(); // the record ran out or went astray
     if (cmd.type === 'end') return; // the next turn has begun
+    hud.turnNote(stepNote(cmd));
     try {
       await play(unit, cmd.type, r);
     } catch (err) {
@@ -1354,6 +1366,7 @@ async function heroCommand(cmd) {
     hud.toast(r.reason);
     return r;
   }
+  hud.turnNote(stepNote(cmd));
   const g = game;
   busy = true;
   selected = null;

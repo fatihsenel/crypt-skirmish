@@ -173,7 +173,7 @@ export class Camp {
       const options = CLASS_CHOICES[code];
       const head = options.length > 1
         ? `<span class="cls-pick" role="group" aria-label="${options.map((c) => TEMPLATES[c].cls).join(' or ')}">${options.map((c) => `
-            <button type="button" data-slot="${code}" data-cls="${c}" title="${esc(CLASS_BLURB[c])}"
+            <button type="button" data-slot="${code}" data-cls="${c}" data-hint="${esc(CLASS_BLURB[c])}"
               aria-pressed="${c === code}">${esc(TEMPLATES[c].cls)}</button>`).join('')}</span>`
         : `<small>${esc(TEMPLATES[code].cls)}</small>`;
       // A div, not a label: a label would name (and click) the first class button.
@@ -392,7 +392,7 @@ export class Camp {
     const next = XP_LEVELS[lvl + 1];
     const prev = XP_LEVELS[lvl] ?? 0;
     const pct = next ? ((state.xp - prev) / (next - prev)) * 100 : 100;
-    const bar = `<div class="xp" title="Party XP">
+    const bar = `<div class="xp" data-hint="Party XP">
       <span>Party level <b>${lvl}</b></span>
       <span class="xpbar"><i style="width:${pct}%"></i></span>
       <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · ${esc(difficultyLabel(state.difficulty ?? 'normal', state.tier))}</span>
@@ -498,15 +498,15 @@ export class Camp {
       const pct = Math.max(0, (u.hp / u.maxHp) * 100);
       const slots = Object.entries(u.slotMax).map(([l, max]) => {
         const n = u.slots[l] ?? 0;
-        return `<span class="slots" title="${ordinal(+l)}-level spell slots">${ordinal(+l)} ${'◆'.repeat(n)}<s>${'◇'.repeat(Math.max(0, max - n))}</s></span>`;
+        return `<span class="slots" data-hint="${ordinal(+l)}-level spell slots">${ordinal(+l)} ${'◆'.repeat(n)}<s>${'◇'.repeat(Math.max(0, max - n))}</s></span>`;
       }).join('');
       const items = rec.items.map((it, i) => (ITEMS[it].kind === 'boon'
-        ? `<span class="item-chip boon" title="${esc(ITEMS[it].desc)}">${esc(ITEMS[it].name)}</span>`
-        : `<span class="item-chip" title="${esc(ITEMS[it].desc)}">${esc(ITEMS[it].name)}<button type="button" data-unequip="${code}:${i}" aria-label="Put ${esc(ITEMS[it].name)} back in the pack">×</button></span>`)).join('');
+        ? `<span class="item-chip boon" data-hint="${esc(ITEMS[it].desc)}">${esc(ITEMS[it].name)}</span>`
+        : `<span class="item-chip" data-hint="${esc(ITEMS[it].desc)}">${esc(ITEMS[it].name)}<button type="button" data-unequip="${code}:${i}" aria-label="Put ${esc(ITEMS[it].name)} back in the pack">×</button></span>`)).join('');
       return `<div class="hero-card ${code}">
         <div class="hero-top"><b>${esc(u.name)}</b> <small>${esc(u.cls)} · Lv ${u.level}${u.level >= MAX_LEVEL ? ' (max)' : ''}</small></div>
         <div class="hp-line"><span class="hpbar"><i style="width:${pct}%"></i></span><span>${u.hp}/${u.maxHp} HP</span><span>AC ${u.ac + u.acBonus}</span></div>
-        <div class="hero-meta">${slots}<span title="Potions of healing">Potions ${u.potions}</span></div>
+        <div class="hero-meta">${slots}<span data-hint="Potions of healing">Potions ${u.potions}</span></div>
         ${items ? `<div class="hero-items">${items}</div>` : ''}
       </div>`;
     }).join('');
