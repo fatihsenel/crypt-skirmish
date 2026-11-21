@@ -475,7 +475,7 @@ button.ability { -webkit-touch-callout: none; -webkit-user-select: none; user-se
 .tipcard .tip-how { margin-top: 6px; color: var(--muted); font-style: italic; }
 .tipcard .tip-problem { margin-top: 6px; color: var(--monster); }
 /* the character card: a figure's or portrait's stats, attacks and conditions */
-#unit-tip { max-width: min(320px, calc(100% - 16px)); z-index: 27; }
+#unit-tip, #map-tip { max-width: min(320px, calc(100% - 16px)); z-index: 27; }
 #unit-tip .tip-head b.heroes, .beast .tip-head b.heroes { color: var(--hero); }
 #unit-tip .tip-head b.monsters, .beast .tip-head b.monsters { color: var(--monster); }
 .tipcard .tip-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 3px; }

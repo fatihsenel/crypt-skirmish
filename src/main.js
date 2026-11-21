@@ -361,6 +361,7 @@ function enterRoom(id) {
     return;
   }
   camp.hide();
+  tips.hide(); // the camp's tip is about the camp
   nodeId = id;
   newGame();
 }

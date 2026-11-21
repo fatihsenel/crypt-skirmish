@@ -12,6 +12,7 @@ import { ITEMS, RELICS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
 import { tips } from './tips.js';
+import { UnitTip } from './unitTip.js';
 import { announce } from './announce.js';
 import { loadHistory, loadDeepest, deepestLabel } from '../game/history.js';
 import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
@@ -72,6 +73,17 @@ export class Camp {
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
+    // A room on the map names itself on hover in a card of the camp's own, not the browser's
+    // tooltip, which would stay up over the fight when the room is entered.
+    this.mapTip = new UnitTip();
+    this.mapTip.el.id = 'map-tip';
+    $('#camp').addEventListener('pointerover', (ev) => {
+      if (ev.pointerType !== 'mouse') return;
+      const node = ev.target.closest?.('[data-node]');
+      if (!node) return this.mapTip.hide();
+      this.mapTip.hover(`node:${node.dataset.node}`, () => node.dataset.card, () => node.querySelector('circle').getBoundingClientRect(), 'below');
+    });
+    $('#camp').addEventListener('pointerleave', () => this.mapTip.hide());
     $('#camp').addEventListener('keydown', (ev) => {
       if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.closest?.('[data-node]')) {
         ev.preventDefault();
@@ -320,6 +332,7 @@ export class Camp {
   }
 
   hide() {
+    this.mapTip.hide();
     $('#camp').hidden = true;
     $('#title').hidden = true;
   }
@@ -438,8 +451,10 @@ export class Camp {
         + `${elite ? `, elite: ${elite.name}` : ''}`;
       const role = state_ === 'available'
         ? `tabindex="0" role="button" aria-pressed="${id === this.selected}"` : 'role="img"';
-      return `<g class="${cls}" data-node="${id}" transform="translate(${p.x} ${p.y})" ${role} aria-label="${esc(spoken)}">
-        <title>${esc(nodeName(id))}${elite ? ` · Elite: ${esc(elite.name)}` : ''}</title>
+      const card = `<div class="tip-head"><b>${esc(nodeName(id))}</b><small>${{ rest: 'A rest', event: 'A stop with no fight', boss: 'The boss room', fight: 'A room' }[kind]}`
+        + `${{ cleared: ' · cleared', available: ' · open', locked: '' }[state_]}${id === state.at ? ' · the party is here' : ''}</small></div>`
+        + (elite ? `<p class="tip-note">Elite: ${esc(elite.name)}</p>` : '');
+      return `<g class="${cls}" data-node="${id}" data-card="${esc(card)}" transform="translate(${p.x} ${p.y})" ${role} aria-label="${esc(spoken)}">
         <circle r="${r}" />
         <g class="glyph">${GLYPH[kind]}</g>
         ${cleared.has(id) ? '<path class="tick" d="M10 -14 l4 4 l8 -9" />' : ''}
