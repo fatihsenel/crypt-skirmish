@@ -24,7 +24,7 @@ const env = () => ({
   dnt: navigator.doNotTrack ?? window.doNotTrack,
 });
 
-let on = false; // the setting
+let on = null; // the setting, once boot.js has read it (null before: events wait for it)
 let loading = false;
 const queue = []; // events before the script is in (at most a few)
 
@@ -94,16 +94,17 @@ function load() {
 /** Start (or stop) sending, as the setting says. Loads the script once the title is up. */
 export function setStats(enabled) {
   on = !!enabled;
-  if (!on) queue.length = 0;
-  if (on && statsAllowed(env())) load();
+  if (!on || !statsAllowed(env())) return void (queue.length = 0);
+  if (window.umami) for (const [name, data] of queue.splice(0)) send(name, data);
+  else load();
 }
 
-/** One game event. Nothing is sent while the setting is off or on a test page. */
+/** One game event. Nothing is sent while the setting is off or on a test page; before the setting is read, it waits. */
 export function track(name, data) {
-  if (!on) return;
+  if (on === false) return;
   if (import.meta.env.DEV) return void console.debug('[stats]', name, data);
   if (!statsAllowed(env())) return;
-  if (!send(name, data) && queue.length < 20) queue.push([name, data]);
+  if ((on === null || !send(name, data)) && queue.length < 20) queue.push([name, data]); // sent once the script is in
 }
 
 /** Several events, as fightEvents gives them. */

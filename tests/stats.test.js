@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Game } from '../src/game/combat.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign } from '../src/game/campaign.js';
@@ -51,5 +51,63 @@ describe('play stats', () => {
 
   it('send nothing before the setting is read', () => {
     expect(() => track('fight-won', {})).not.toThrow();
+  });
+
+  it('hold events made before the setting is read, then send them once the script is in', async () => {
+    vi.resetModules();
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
+    const scripts = [];
+    const sent = [];
+    vi.stubGlobal('location', { hostname: 'fatihsenel.github.io', search: '' });
+    vi.stubGlobal('navigator', { doNotTrack: null });
+    vi.stubGlobal('window', {});
+    vi.stubGlobal('document', { createElement: () => ({ dataset: {} }), head: { append: (s) => scripts.push(s) } });
+    try {
+      const stats = await import('../src/stats.js');
+      stats.track('challenge-played', { room: 'crypt' }); // a #play= link, before boot.js reads the setting
+      stats.setStats(true);
+      expect(scripts).toHaveLength(1);
+      expect(scripts[0].dataset).toMatchObject({ autoTrack: 'false', excludeHash: 'true', excludeSearch: 'true' });
+      window.umami = { track: (...a) => sent.push(a) };
+      scripts[0].onload();
+      expect(sent).toEqual([[], ['challenge-played', { room: 'crypt' }]]); // the page view, then the held event
+      stats.track('stop', { stop: 'altar' });
+      expect(sent.at(-1)).toEqual(['stop', { stop: 'altar' }]);
+      // Turned off: nothing more.
+      stats.setStats(false);
+      stats.track('fight-won', {});
+      expect(sent).toHaveLength(3);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
+  });
+
+  it('drop held events when the player has turned stats off', async () => {
+    vi.resetModules();
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
+    const scripts = [];
+    vi.stubGlobal('location', { hostname: 'fatihsenel.github.io', search: '' });
+    vi.stubGlobal('navigator', { doNotTrack: null });
+    vi.stubGlobal('window', {});
+    vi.stubGlobal('document', { createElement: () => ({ dataset: {} }), head: { append: (s) => scripts.push(s) } });
+    try {
+      const stats = await import('../src/stats.js');
+      stats.track('challenge-played', {});
+      stats.setStats(false);
+      expect(scripts).toHaveLength(0);
+      stats.setStats(true); // turned on later in the visit: the earlier event is gone
+      const sent = [];
+      window.umami = { track: (...a) => sent.push(a) };
+      scripts[0].onload();
+      expect(sent).toEqual([[]]);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
   });
 });
