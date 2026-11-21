@@ -78,7 +78,8 @@ server on 5173.
   as `[stats]` in the console instead. A new event goes there, with no names or free text.
   A lost run or daily also sends its record, names stripped (`withoutNames`, `sendLoss`), to the
   loss-replay Worker in `worker/` (Cloudflare, D1, deployed with `npx wrangler deploy` from there);
-  `?losses` (`ui/losses.js`, loaded by `boot.js` instead of the game) lists them with a read key.
+  `?losses` (`ui/losses.js`, loaded by `boot.js` instead of the game) lists them with a read key,
+  under a per-room count from the Worker's `/summary` (`summaryRows`).
   Uploads are limited per address (`UPLOADS` in `wrangler.toml`), unpacked to check they're a lost
   fight in the room they name (`checkCode`), and capped at `DAILY_CAP` a day.
   The Worker's tests (`tests/worker.test.js`) use a fake D1.

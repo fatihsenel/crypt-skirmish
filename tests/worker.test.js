@@ -112,6 +112,25 @@ describe('loss replay worker', () => {
     expect(dev.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5173');
   });
 
+  it('counts losses by room and difficulty for the last 7 and 30 days, only with the key', async () => {
+    const rows = [{ room: 'throne', difficulty: 'hard', week: 3, month: 9 }];
+    const db = fakeDB(rows);
+    const env = { DB: db, READ_KEY: 'sekrit' };
+    const ask = (query, key) => worker.fetch(new Request(`https://w.example/summary${query}`, { headers: { Origin: GAME, ...(key && { Authorization: `Bearer ${key}` }) } }), env);
+    expect((await ask('', null)).status).toBe(401);
+    expect(db.calls).toHaveLength(0);
+    const now = Date.now();
+    const res = await ask('?mode=daily&room=throne', 'sekrit');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ rooms: rows });
+    const { sql, args } = db.calls.at(-1);
+    expect(sql).toMatch(/SUM\(at > \?\) AS week, COUNT\(\*\) AS month FROM losses WHERE at > \? AND mode = \? GROUP BY room, difficulty$/);
+    expect(args[0]).toBeGreaterThanOrEqual(now - 7 * 86_400_000 - 1000);
+    expect(args[1]).toBeGreaterThanOrEqual(now - 30 * 86_400_000 - 1000);
+    expect(args[2]).toBe('daily'); // the room filter is ignored: the summary is of every room
+    expect(args).toHaveLength(3);
+  });
+
   it('ignores filters it does not know', () => {
     const q = listQuery(new URLSearchParams('room=DROP TABLE&difficulty=x&mode=daily&before=-3&limit=1000'));
     expect(q).toEqual({ room: null, difficulty: null, mode: 'daily', before: null, limit: 50 });

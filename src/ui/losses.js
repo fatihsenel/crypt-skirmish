@@ -2,7 +2,9 @@
 // sendLoss) to the loss-replay Worker (worker/). It asks once for the Worker's read key (kept
 // in this browser), lists the newest losses with room, difficulty and mode filters, and opens
 // each in the game's own replay (#watch=, in a new tab). A fight recorded before the rules
-// changed no longer replays, and says so.
+// changed no longer replays, and says so. Above the list, a summary counts the losses per room
+// and difficulty in the last 7 and 30 days (the Worker's /summary), the most first; a room's
+// name there filters the list to it.
 
 import { NODES } from '../game/campaign.js';
 import { levelById } from '../game/maps.js';
@@ -16,6 +18,28 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 const readKey = () => { try { return localStorage.getItem(KEY_STORE) ?? ''; } catch { return ''; } };
 const writeKey = (k) => { try { if (k) localStorage.setItem(KEY_STORE, k); else localStorage.removeItem(KEY_STORE); } catch { /* this visit only */ } };
+
+const DIFFICULTIES = [['story', 'Story'], ['normal', 'Normal'], ['hard', 'Hard']];
+const order = (id) => { const i = rooms.findIndex(([r]) => r === id); return i < 0 ? rooms.length : i; };
+const count = (n) => Number.isInteger(n) && n >= 0;
+
+/**
+ * The Worker's per-room, per-difficulty counts as one row a room:
+ * { room, week, month, by: { hard: { week, month }, … } }, the most losses in 30 days first,
+ * then in 7 days, then in campaign order. Rows with no losses are left out.
+ */
+export function summaryRows(list) {
+  const byRoom = new Map();
+  for (const r of Array.isArray(list) ? list : []) {
+    if (!r || typeof r.room !== 'string' || !count(r.week) || !count(r.month) || !r.month) continue;
+    const row = byRoom.get(r.room) ?? { room: r.room, week: 0, month: 0, by: {} };
+    row.week += r.week;
+    row.month += r.month;
+    row.by[r.difficulty] = { week: r.week, month: r.month };
+    byRoom.set(r.room, row);
+  }
+  return [...byRoom.values()].sort((a, b) => b.month - a.month || b.week - a.week || order(a.room) - order(b.room));
+}
 
 const options = (list, all) => `<option value="">${all}</option>${list.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('')}`;
 
@@ -32,10 +56,18 @@ export function showLosses() {
     </form>
     <div class="losses-filters" hidden>
       <label>Room <select name="room">${options(rooms, 'Every room')}</select></label>
-      <label>Difficulty <select name="difficulty">${options([['story', 'Story'], ['normal', 'Normal'], ['hard', 'Hard']], 'Any')}</select></label>
+      <label>Difficulty <select name="difficulty">${options(DIFFICULTIES, 'Any')}</select></label>
       <label>Mode <select name="mode">${options([['campaign', 'Campaign'], ['daily', 'Daily'], ['weekly', 'Weekly']], 'Any')}</select></label>
       <button type="button" class="losses-forget">Forget key</button>
     </div>
+    <section class="losses-summary" hidden>
+      <h2>Where they fall</h2>
+      <table>
+        <thead><tr><th>Room</th>${DIFFICULTIES.map(([, d]) => `<th>${d}</th>`).join('')}<th>All</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="losses-legend">Losses in the last 7 days / last 30 days, for the mode chosen above.</p>
+    </section>
     <p class="losses-status" role="status"></p>
     <table class="losses-table" hidden>
       <thead><tr><th>When</th><th>Room</th><th>Difficulty</th><th>Mode</th><th>Rounds</th><th></th></tr></thead>
@@ -51,7 +83,22 @@ export function showLosses() {
   const table = $('.losses-table');
   const body = $('tbody');
   const more = $('.losses-more');
+  const summary = $('.losses-summary');
   let oldest = null;
+
+  async function loadSummary() {
+    const q = new URLSearchParams();
+    const mode = filters.querySelector('[name=mode]').value;
+    if (mode) q.set('mode', mode);
+    let rooms = [];
+    try {
+      const res = await fetch(`${LOSS_API}/summary?${q}`, { headers: { Authorization: `Bearer ${readKey()}` } });
+      if (res.ok) rooms = summaryRows((await res.json()).rooms);
+    } catch { /* the list says if the Worker is out of reach */ }
+    const cell = (c) => (c ? `${esc(c.week)} / ${esc(c.month)}` : '–');
+    summary.querySelector('tbody').innerHTML = rooms.map((r) => `<tr><th scope="row"><button type="button" class="link" data-room="${esc(r.room)}">${esc(roomName(r.room))}</button></th>${DIFFICULTIES.map(([d]) => `<td>${cell(r.by[d])}</td>`).join('')}<td>${cell(r)}</td></tr>`).join('');
+    summary.hidden = !rooms.length;
+  }
 
   async function load(append = false) {
     if (!LOSS_API) return void (status.textContent = 'The loss-replay Worker isn’t set up (LOSS_API in src/stats.js).');
@@ -72,13 +119,17 @@ export function showLosses() {
       filters.hidden = true;
       table.hidden = true;
       more.hidden = true;
+      summary.hidden = true;
       status.textContent = 'That key wasn’t accepted.';
       return;
     }
     const { losses = [] } = await res.json().catch(() => ({}));
     form.hidden = true;
     filters.hidden = false;
-    if (!append) body.innerHTML = '';
+    if (!append) {
+      body.innerHTML = '';
+      loadSummary();
+    }
     for (const l of losses) body.append(row(l));
     oldest = losses.at(-1)?.id ?? oldest;
     table.hidden = !body.children.length;
@@ -109,6 +160,12 @@ export function showLosses() {
   });
   filters.addEventListener('change', () => load());
   more.addEventListener('click', () => load(true));
+  summary.addEventListener('click', (ev) => {
+    const room = ev.target.closest('[data-room]')?.dataset.room;
+    if (!room) return;
+    filters.querySelector('[name=room]').value = room;
+    load();
+  });
   $('.losses-forget').addEventListener('click', () => {
     writeKey('');
     location.reload();

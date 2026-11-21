@@ -365,7 +365,8 @@ and loss rates in Umami against these numbers.
 
 Lost fights go to a Cloudflare Worker (`worker/`, with a D1 database) and are kept for 60 days.
 The unlisted page `?losses` lists them, newest first, by room, difficulty and mode, and opens
-each in the game's replay. It asks once for the Worker's read key. The Worker takes uploads
+each in the game's replay. Above the list, Where they fall counts each room's losses by
+difficulty in the last 7 and 30 days, the most first; a room's name filters the list to it. It asks once for the Worker's read key. The Worker takes uploads
 only from the game's page, about 3 a minute from one address (Cloudflare's rate limiter,
 approximate, and the address is never stored), only a lost fight in the room it names, and at
 most 1000 a day. From `worker/`:

@@ -6,6 +6,8 @@
 //                where code is the fight as a #watch= link carries it (no hero names).
 // GET  /losses   with Authorization: Bearer <READ_KEY>: the newest losses, filtered by room,
 //                difficulty and mode, `before` an id for the next page, up to `limit` (50).
+// GET  /summary  with the key: losses per room and difficulty in the last 7 and 30 days
+//                ({ rooms: [{ room, difficulty, week, month }] }), for one `mode` or all.
 // Every day at 03:17 UTC, records older than 60 days are deleted.
 //
 // Against junk: uploads come from the game's page only (Origin), at most 3 a minute from one
@@ -126,9 +128,19 @@ export default {
       return new Response(null, { status: 204, headers });
     }
 
+    const keyed = () => !!env.READ_KEY && sameKey(request.headers.get('Authorization') ?? '', `Bearer ${env.READ_KEY}`);
+
+    if (url.pathname === '/summary' && request.method === 'GET') {
+      if (!keyed()) return json({ error: 'key' }, 401, headers);
+      const { mode } = listQuery(url.searchParams);
+      const now = Date.now();
+      const sql = `SELECT room, difficulty, SUM(at > ?) AS week, COUNT(*) AS month FROM losses WHERE at > ?${mode ? ' AND mode = ?' : ''} GROUP BY room, difficulty`;
+      const { results } = await env.DB.prepare(sql).bind(now - 7 * 86_400_000, now - 30 * 86_400_000, ...(mode ? [mode] : [])).all();
+      return json({ rooms: results }, 200, headers);
+    }
+
     if (url.pathname === '/losses' && request.method === 'GET') {
-      const auth = request.headers.get('Authorization') ?? '';
-      if (!env.READ_KEY || !sameKey(auth, `Bearer ${env.READ_KEY}`)) return json({ error: 'key' }, 401, headers);
+      if (!keyed()) return json({ error: 'key' }, 401, headers);
       const q = listQuery(url.searchParams);
       const where = [];
       const args = [];

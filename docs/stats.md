@@ -62,8 +62,9 @@ loses more often than the base party (FWRC) is weaker in people's hands.
 ## Watching the losses
 
 The rates say which room; the replays say why. Open the game with `?losses`
-(https://fatihsenel.github.io/crypt-skirmish/?losses), give the read key once, filter by the
-room that stands out, and watch a few: where the party stood, what killed them first, whether
+(https://fatihsenel.github.io/crypt-skirmish/?losses) and give the read key once. Where they
+fall, at the top, counts each room's losses in the last 7 and 30 days by difficulty, the most
+first (set Mode to Campaign for runs only). Click the room that stands out and watch a few: where the party stood, what killed them first, whether
 they used what they had. A fight recorded before a rules change shows "Older version".
 
 ## Acting on it
