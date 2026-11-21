@@ -108,7 +108,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
     the Sealed Vault's chest. Inside: a Periapt of Wound Closure.
 - A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
   each hero fell, which foe hit hardest and who was still standing, with a tip for next time
-  (unused potions, archers, a foe to focus). A won room says who led the way, the closest
+  (a trap, unused potions, the healer falling first, a knock prone or a web before the last blow,
+  a hero cut off alone, archers, spells, a foe to focus, spell slots left unspent). A won room says who led the way, the closest
   call, who fell and how many potions were drunk.
 - **Watch replay:** after any fight you played yourself, the end screen can play it again from
   the start, move by move with the same dice. Pause, step to the next turn, speed it up to 4×,
@@ -199,10 +200,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
   motion (System, Reduced or Full), colour-blind friendly enemy reach and play stats.
-- **Play stats:** the deployed game sends anonymous events to Umami (a run started or continued,
+- **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
   a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
   choice, a run abandoned, a campaign won, a replay watched, something shared, a fight left
-  half-way), to see where runs end, and a crash by where it happened in the code (never its
+  half-way, with the input it was played by), how smoothly the board draws (a frame-rate band,
+  once a visit), to see where runs end, and a crash by where it happened in the code (never its
   message), to find what breaks in which browser. A lost run or daily also sends its fight, without the heroes' names, so it can be
   watched (see Loss replays). No cookies, names or saves, and links' fights stay out of the
   address it sends. Off with Settings › Share anonymous play stats, or Do Not Track; test links
@@ -315,11 +317,14 @@ npm run touch-check  # headless Chrome on a phone: first tap previews, second ac
 npm run stills   # re-renders the icons, link preview, boot still and README shots of the 3D emblem
 npm run build    # production bundle in dist/
 npm run size-check  # the first screen's download stays within its budget (after a build)
+npm run digest   # the week's play stats and stored losses as a short report (LOSS_READ_KEY set)
 npm run preview  # http://localhost:4173/crypt-skirmish/
 ```
 
 Every push to `main` runs lint and the tests, builds, checks the first screen's size, runs the touch check on three fixed fights against the
-build (and once with each finger lifted late, as a busy phone sees it) and deploys to GitHub Pages (`.github/workflows/pages.yml`).
+build (and once with each finger lifted late, as a busy phone sees it) and deploys to GitHub Pages (`.github/workflows/pages.yml`). Every Monday `.github/workflows/digest.yml`
+runs the digest with the keys from the repository secrets `LOSS_READ_KEY` and `UMAMI_API_KEY` and keeps the report
+as the run's `digest` artifact, out of the public log.
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
@@ -370,9 +375,11 @@ each in the game's replay. Above the list, Where they fall counts each room's lo
 difficulty in the last 7 and 30 days, the most first; a room's name filters the list to it. It asks once for the Worker's read key. The Worker takes uploads
 only from the game's page, about 3 a minute from one address (Cloudflare's rate limiter,
 approximate, and the address is never stored), only a lost fight in the room it names, and at
-most 1000 a day. From `worker/`:
+most 1000 a day. It also counts the play-stats events by day (`/event`, at most 30 a minute from
+one address and 20,000 a day, kept 400 days), which `npm run digest` reads with the same key
+(`/tallies`). From `worker/`:
 `npx wrangler deploy` deploys it, `npx wrangler secret put READ_KEY` sets the key, and
-`npx wrangler d1 execute crypt-skirmish-losses --remote --file=schema.sql` makes the table.
+`npx wrangler d1 execute crypt-skirmish-losses --remote --file=schema.sql` makes the tables.
 
 ### Layout
 
@@ -452,6 +459,7 @@ scripts/
   compress-models.js meshopt-compresses every .glb (npm run models)
   skull-glb.mjs      converts the title skull's OBJ scan to public/models/skull/skull.glb
   size-check.mjs     gzipped size of the title's code and of the skull against a budget
+  digest.mjs         the weekly digest: the Worker's event tallies and stored losses (npm run digest)
 public/sw.js         the offline copy: pages from the network first, everything else saved
 worker/              the loss-replay Cloudflare Worker (src/index.js), its table (schema.sql) and wrangler.toml
 docs/stats.md        the play stats' events, and reading them in Umami

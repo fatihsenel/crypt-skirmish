@@ -11,7 +11,29 @@ describe('a lost fight’s recap', () => {
     game.attack(o, f, o.attacks[0]);
     expect(game.blows).toEqual([{
       round: game.round, to: f.name, by: o.name, byId: o.id, kind: o.cls, code: o.code, how: o.attacks[0].name, via: 'melee', damage: 3, hp: 0, down: true,
+      alone: false, conds: [], // no one else in the party to be near
     }]);
+  });
+
+  it('notes, when a hero falls, whether they stood alone and what held them', () => {
+    const game = new Game(['#########', '#Fo....W#', '#########'], { senses: false, rng: () => 0.95 });
+    game.start();
+    const [f, o] = game.units;
+    f.hp = 3;
+    game.addCondition(f, 'prone');
+    game.attack(o, f, o.attacks[0]);
+    expect(game.blows.at(-1)).toMatchObject({ down: true, alone: true, conds: ['prone'] }); // the Wizard is 6 tiles off
+    // A friend within 10 feet: not alone. A blow that doesn't drop them notes nothing.
+    const fight = (hp) => {
+      const g = new Game(['#######', '#FoW..#', '#######'], { senses: false, rng: () => 0.95 });
+      g.start();
+      const [hero, orc] = g.units;
+      hero.hp = hp;
+      g.attack(orc, hero, orc.attacks[0]);
+      return g.blows.at(-1);
+    };
+    expect(fight(2)).toMatchObject({ down: true, alone: false, conds: [] });
+    expect(fight(60)).not.toHaveProperty('alone');
   });
 
   it('logs nothing when a monster is hit', () => {
@@ -73,6 +95,48 @@ describe('a lost fight’s recap', () => {
         .toBe('Maela fell with 2 potions unused. Drinking one takes an action and heals 2d4 + 2.');
       expect(tip([blow({ via: 'melee' })], [hero('Ilsa', 'Wizard', { potions: 1 }), hero('Maela', 'Cleric', { potions: 1 }), hero('Wren', 'Rogue', { potions: 3 })]))
         .toBe('Ilsa, Maela and Wren fell with potions unused. Drinking one takes an action and heals 2d4 + 2.');
+    });
+
+    it('notices the healer falling first', () => {
+      const party = [hero('Maela', 'Cleric', { spells: ['sacredFlame', 'cureWounds'] }), hero('Wren', 'Rogue')];
+      const falls = [blow({ to: 'Maela', round: 2, via: 'melee', down: true }), blow({ to: 'Wren', round: 3, via: 'melee', down: true })];
+      expect(tip(falls, party)).toBe('Maela, the party’s healer, fell first, in round 2, and no one could bring the others back up. Keep Maela behind the front line, out of reach.');
+      expect(tip([...falls].reverse(), party)).not.toMatch(/healer/); // the Rogue fell first
+      expect(tip(falls.slice(0, 1), party)).not.toMatch(/healer/); // the only one to fall: nothing to bring back
+    });
+
+    it('explains a fall that a condition set up', () => {
+      expect(tip([blow({ to: 'Wren', via: 'melee', down: true, conds: ['prone'] })]))
+        .toBe('Wren was knocked prone and fell before getting up: melee attacks have advantage against someone on the floor. Keep a friend beside anyone fighting the foes that knock heroes down.');
+      expect(tip([blow({ to: 'Wren', via: 'melee', down: true, conds: ['restrained'] })]))
+        .toBe('Wren was stuck in a web when the last blow landed: every attack against them had advantage. Kill the spiders first, or keep out of their webs’ reach.');
+      expect(tip([blow({ to: 'Wren', via: 'melee', down: true, conds: ['rotting'] })]))
+        .toBe('Wren was rotting when they fell, so no healing could take. Heal before the Mummy’s fist lands, or keep the hurt out of its reach.');
+      expect(tip([blow({ to: 'Wren', via: 'melee', down: true, conds: ['poisoned'] })])).not.toMatch(/poison/); // nothing that helped the foe
+    });
+
+    it('notices a hero who fell cut off from the party', () => {
+      expect(tip([blow({ to: 'Wren', round: 4, via: 'melee', down: true, alone: true })]))
+        .toBe('Wren fell alone in round 4, with no one within 10 feet. Move as a group, so a foe that reaches one hero meets two.');
+    });
+
+    it('notices spell slots left unspent when nothing else stands out', () => {
+      // Three foes' worth of melee: no one cause stands out.
+      const even = [blow({ via: 'melee' }), blow({ by: 'Mummy', kind: 'Mummy', via: 'melee' }), blow({ by: 'Ghoul', kind: 'Ghoul', via: 'melee' })];
+      const party = [hero('Ilsa', 'Wizard', { slots: { 1: 2, 2: 1 } }), hero('Maela', 'Cleric', { slots: { 1: 1 } }), hero('Wren', 'Rogue')];
+      expect(tip(even, party))
+        .toBe('Ilsa and Maela ended the fight with 4 spell slots unspent. When a fight turns against you, spend them: they come back with rest.');
+      expect(tip(even, [hero('Ilsa', 'Wizard', { slots: { 1: 1 } })])).toBe(null); // one slot is no lesson
+      expect(tip([blow({}), blow({ via: 'melee', damage: 4 })], party)).toMatch(/^Most of the damage came from range/); // a clearer cause first
+    });
+
+    it('tries the tips in order: trap, potions, healer, condition, alone, damage, slots', () => {
+      const all = [blow({ to: 'Maela', via: 'melee', down: true, conds: ['prone'], alone: true }), blow({ to: 'Wren', via: 'melee', down: true })];
+      const healer = hero('Maela', 'Cleric', { spells: ['healingWord'] });
+      expect(tip(all, [healer, hero('Wren', 'Rogue', { potions: 1 })])).toMatch(/potion unused/);
+      expect(tip(all, [healer, hero('Wren', 'Rogue')])).toMatch(/healer/);
+      expect(tip(all, [hero('Maela', 'Wizard'), hero('Wren', 'Rogue')])).toMatch(/prone/);
+      expect(tip([blow({ to: 'Wren', via: 'melee', down: true, alone: true }), blow({ via: 'melee' })])).toMatch(/alone/);
     });
 
     it('blames archers, spells or one foe when they did most of the damage', () => {

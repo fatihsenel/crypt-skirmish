@@ -667,9 +667,14 @@ export class Game extends Spellcasting {
     const t = target.team === 'monsters' ? this.tally(source) : null;
     if (t) t.damage += before - target.hp; // only what landed, not overkill
     if (target.team === 'heroes' && before > target.hp) {
+      const down = target.hp <= 0 && target.alive;
+      // A fall also notes, for the recap's tip, whether no other hero standing was within 10 ft
+      // and the conditions the hero had.
+      const friends = down ? this.units.filter((u) => u.team === 'heroes' && u !== target && u.alive && !u.corpse) : [];
       this.blows.push({
         round: this.round, to: target.name, by: source?.name ?? null, byId: source?.id ?? null, kind: source?.cls ?? null, code: source?.code ?? null, how: this.cause, via: this.via,
-        damage: before - target.hp, hp: target.hp, down: target.hp <= 0 && target.alive,
+        damage: before - target.hp, hp: target.hp, down,
+        ...(down && { alone: friends.length > 0 && friends.every((u) => gridDistance(u, target) > 2), conds: CONDITIONS.filter((c) => this.has(target, c)) }),
       });
     }
     if (target.hp <= 0 && target.alive) {

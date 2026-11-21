@@ -3,7 +3,7 @@ import { Game } from '../src/game/combat.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign } from '../src/game/campaign.js';
 import { parseSettings } from '../src/game/settings.js';
-import { statsAllowed, fightEvents, runEvent, abandonEvent, continueEvent, shareEvent, partyCode, track, errorEvent, browserFamily, leftEvent } from '../src/stats.js';
+import { statsAllowed, fightEvents, runEvent, abandonEvent, continueEvent, shareEvent, partyCode, track, errorEvent, browserFamily, leftEvent, inputKind, perfEvent } from '../src/stats.js';
 
 const live = { prod: true, host: 'fatihsenel.github.io', search: '', dnt: null };
 
@@ -83,6 +83,30 @@ describe('play stats', () => {
     expect(errorEvent(odd, { origin: base, ua: chrome })[1].type).toBe('Error');
   });
 
+  it('say how a fight was played: the input used most', () => {
+    expect(inputKind({ touch: 12, mouse: 1, keys: 0 })).toBe('touch');
+    expect(inputKind({ touch: 0, mouse: 3, keys: 9 })).toBe('keys');
+    expect(inputKind({ touch: 0, mouse: 0, keys: 0 })).toBe('none');
+    expect(inputKind({ touch: 2, mouse: 2, keys: 0 })).toBe('touch'); // a tie goes to touch, then mouse
+    const campaign = newCampaign('normal');
+    const g = new Game(levelById(NODES.crypt.level), { party: campaign.party });
+    g.over = 'defeat';
+    expect(fightEvents({ game: g, nodeId: 'crypt', campaign, mode: 'campaign', input: 'keys' })[0][1].input).toBe('keys');
+    expect(fightEvents({ game: g, nodeId: 'crypt', campaign, mode: 'campaign' })[0][1]).not.toHaveProperty('input');
+    g.over = null;
+    expect(leftEvent({ game: g, nodeId: 'crypt', campaign, mode: 'campaign', input: 'touch' })[1].input).toBe('touch');
+  });
+
+  it('describe how smoothly the board draws, in bands', () => {
+    expect(perfEvent({ frames: 300, seconds: 5, dpr: 2 })).toEqual(['perf', { fps: '50+', dpr: 2 }]);
+    expect(perfEvent({ frames: 300, seconds: 7.5, dpr: 1 })).toEqual(['perf', { fps: '30-50', dpr: 1 }]);
+    expect(perfEvent({ frames: 300, seconds: 15, dpr: 3 })).toEqual(['perf', { fps: 'under 30', dpr: 3 }]);
+    expect(perfEvent({ frames: 300, seconds: 5, dpr: 1.75 })[1].dpr).toBe(2); // to a half
+    expect(perfEvent({ frames: 300, seconds: 5, dpr: 1.5 })[1].dpr).toBe(1.5); // a phone's cap
+    expect(perfEvent({ frames: 300, seconds: 5, dpr: 0 })[1].dpr).toBe(1);
+    expect(perfEvent({ frames: 0, seconds: 0, dpr: 1 })).toBeNull();
+  });
+
   it('name the browser family only', () => {
     expect(browserFamily('Mozilla/5.0 (Windows NT 10.0) Gecko/20100101 Firefox/133.0')).toBe('firefox');
     expect(browserFamily('Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1')).toBe('safari');
@@ -121,6 +145,7 @@ describe('play stats', () => {
     vi.stubGlobal('navigator', { doNotTrack: null });
     vi.stubGlobal('window', {});
     vi.stubGlobal('document', { createElement: () => ({ dataset: {} }), head: { append: (s) => scripts.push(s) } });
+    vi.stubGlobal('fetch', async () => ({ ok: true })); // the Worker's tallies (tested below)
     try {
       const stats = await import('../src/stats.js');
       stats.track('challenge-played', { room: 'crypt' }); // a #play= link, before boot.js reads the setting
@@ -152,6 +177,7 @@ describe('play stats', () => {
     vi.stubGlobal('navigator', { doNotTrack: null });
     vi.stubGlobal('window', {});
     vi.stubGlobal('document', { createElement: () => ({ dataset: {} }), head: { append: (s) => scripts.push(s) } });
+    vi.stubGlobal('fetch', async () => ({ ok: true })); // the Worker's tallies (tested below)
     try {
       const stats = await import('../src/stats.js');
       stats.track('challenge-played', {});
@@ -166,6 +192,62 @@ describe('play stats', () => {
       vi.unstubAllEnvs();
       vi.unstubAllGlobals();
       vi.resetModules();
+    }
+  });
+
+  it('count each event in the Worker too: held like the rest, sent even when Umami is blocked', async () => {
+    vi.resetModules();
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
+    const posts = [];
+    vi.stubGlobal('location', { hostname: 'fatihsenel.github.io', search: '' });
+    vi.stubGlobal('navigator', { doNotTrack: null });
+    vi.stubGlobal('window', {});
+    vi.stubGlobal('document', { createElement: () => ({ dataset: {} }), head: { append: () => {} } }); // the script never loads
+    vi.stubGlobal('fetch', async (url, init) => { posts.push({ url, init, body: JSON.parse(init.body) }); return { ok: true }; });
+    try {
+      const stats = await import('../src/stats.js');
+      stats.track('challenge-played', { room: 'crypt' });
+      expect(posts).toHaveLength(0); // the setting isn't read yet
+      stats.setStats(true);
+      expect(posts.map((p) => p.body)).toEqual([{ name: 'visit', data: {} }, { name: 'challenge-played', data: { room: 'crypt' } }]);
+      expect(posts[0].url).toBe(`${stats.LOSS_API}/event`);
+      expect(posts[0].init).toMatchObject({ method: 'POST', keepalive: true, headers: { 'Content-Type': 'text/plain' } });
+      stats.track('stop', { stop: 'altar' });
+      expect(posts.at(-1).body).toEqual({ name: 'stop', data: { stop: 'altar' } });
+      stats.setStats(true); // read again (Settings): the visit isn't counted twice
+      expect(posts.filter((p) => p.body.name === 'visit')).toHaveLength(1);
+      stats.setStats(false);
+      stats.track('fight-won', {});
+      expect(posts).toHaveLength(3);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
+  });
+
+  it('count nothing in the Worker on a test page or with Do Not Track', async () => {
+    for (const [search, dnt] of [['?level=2', null], ['', '1']]) {
+      vi.resetModules();
+      vi.stubEnv('PROD', true);
+      vi.stubEnv('DEV', false);
+      const posts = [];
+      vi.stubGlobal('location', { hostname: 'fatihsenel.github.io', search });
+      vi.stubGlobal('navigator', { doNotTrack: dnt });
+      vi.stubGlobal('window', {});
+      vi.stubGlobal('document', { createElement: () => ({ dataset: {} }), head: { append: () => {} } });
+      vi.stubGlobal('fetch', async (url, init) => { posts.push(init); return { ok: true }; });
+      try {
+        const stats = await import('../src/stats.js');
+        stats.setStats(true);
+        stats.track('fight-won', {});
+        expect(posts).toHaveLength(0);
+      } finally {
+        vi.unstubAllEnvs();
+        vi.unstubAllGlobals();
+        vi.resetModules();
+      }
     }
   });
 });

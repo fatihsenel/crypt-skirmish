@@ -8,11 +8,16 @@
 //                difficulty and mode, `before` an id for the next page, up to `limit` (50).
 // GET  /summary  with the key: losses per room and difficulty in the last 7 and 30 days
 //                ({ rooms: [{ room, difficulty, week, month }] }), for one `mode` or all.
-// Every day at 03:17 UTC, records older than 60 days are deleted.
+// POST /event    from the game only: { name, data }, one play-stats event (src/stats.js), added
+//                to the day's tallies (day, event, property, value → count). Nothing per player.
+// GET  /tallies  with the key: the tallies of the last `days` (7), summed: { tallies: [{ event,
+//                prop, value, n }] }; prop '' is the event's own count. scripts/digest.mjs reads it.
+// Every day at 03:17 UTC, records older than 60 days and tallies older than 400 are deleted.
 //
 // Against junk: uploads come from the game's page only (Origin), at most 3 a minute from one
 // address (the UPLOADS rate limiter, which keeps nothing), each must be a lost fight in the
-// room it claims, and no more than DAILY_CAP are stored in a day.
+// room it claims, and no more than DAILY_CAP are stored in a day. Events: from the game's page, at
+// most 30 a minute from one address (EVENTS), known events and plain values only, EVENT_CAP a day.
 
 export const GAME = 'https://fatihsenel.github.io';
 /** Pages that may read the list (with the key): the game and its dev server. */
@@ -25,6 +30,60 @@ export const DAILY_CAP = 1000;
 const MAX_UNPACKED = 200_000;
 const DIFFICULTIES = ['story', 'normal', 'hard'];
 const MODES = ['campaign', 'daily', 'weekly'];
+
+/** Events counted per day at most; past it, events are refused until the next day (UTC). */
+export const EVENT_CAP = 20_000;
+const TALLY_DAYS = 400;
+const FIGHT = ['room', 'mode', 'difficulty', 'tier', 'party', 'rounds', 'standing', 'downed', 'input'];
+/** The events the game sends and the properties counted for each; anything else is dropped. */
+const TALLY_EVENTS = {
+  visit: [],
+  'run-start': ['kind', 'difficulty', 'tier', 'party'],
+  'run-continue': ['room', 'cleared', 'difficulty', 'tier', 'midFight'],
+  'run-abandon': ['room', 'cleared', 'difficulty', 'tier'],
+  'fight-won': FIGHT,
+  'fight-lost': FIGHT,
+  'fight-left': [...FIGHT, 'round'],
+  'campaign-won': ['difficulty', 'tier', 'party', 'relics'],
+  stop: ['stop', 'choice', 'difficulty'],
+  'daily-start': ['mode', 'room'],
+  'challenge-played': ['room'],
+  'replay-watched': ['from', 'room'],
+  shared: ['what', 'how'],
+  error: ['type', 'file', 'browser'],
+  perf: ['fps', 'dpr'],
+};
+const day = (ms) => new Date(ms).toISOString().slice(0, 10);
+/** A property's value as stored: a short plain word or a small number, else nothing. */
+function tallyValue(v) {
+  if (typeof v === 'boolean') return String(v);
+  if (typeof v === 'number') return Number.isFinite(v) && Math.abs(v) < 100_000 ? String(v) : null;
+  return typeof v === 'string' && /^[\w .+-]{1,60}$/.test(v) ? v : null;
+}
+
+/**
+ * An event as tally rows [day, event, prop, value]: the day's total, the event's own count,
+ * each known property, and the combined ones (a fight's room/difficulty, a crash's file:line:col).
+ * Null for an event the game doesn't send.
+ */
+export function tallyRows(name, data, today) {
+  if (typeof name !== 'string' || !Object.hasOwn(TALLY_EVENTS, name)) return null;
+  const d = data && typeof data === 'object' ? data : {};
+  const rows = [[today, '', '', ''], [today, name, '', '']];
+  for (const prop of TALLY_EVENTS[name]) {
+    const v = tallyValue(d[prop]);
+    if (v !== null) rows.push([today, name, prop, v]);
+  }
+  const pair = (a, b) => (tallyValue(a) !== null && tallyValue(b) !== null ? `${a}/${b}` : null);
+  if (FIGHT === TALLY_EVENTS[name] || name === 'fight-left') {
+    const rd = pair(d.room, d.difficulty);
+    if (rd) rows.push([today, name, 'room/difficulty', rd]);
+  }
+  if (name === 'error' && /^[\w.-]{1,60}$/.test(d.file ?? '') && int(d.line, 0, 1e7) && int(d.col, 0, 1e7)) {
+    rows.push([today, name, 'at', `${d.file}:${d.line}:${d.col}`]);
+  }
+  return rows;
+}
 
 const int = (n, lo, hi) => Number.isInteger(n) && n >= lo && n <= hi;
 
@@ -110,6 +169,24 @@ export default {
     const headers = cors(origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
 
+    if (url.pathname === '/event' && request.method === 'POST') {
+      if (origin !== GAME) return json({ error: 'origin' }, 403, headers);
+      const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+      if (env.EVENTS && !(await env.EVENTS.limit({ key: ip })).success) return json({ error: 'slow down' }, 429, headers);
+      const text = await request.text();
+      if (text.length > 2000) return json({ error: 'too long' }, 413, headers);
+      let body;
+      try { body = JSON.parse(text); } catch { return json({ error: 'not json' }, 400, headers); }
+      const today = day(Date.now());
+      const rows = tallyRows(body?.name, body?.data, today);
+      if (!rows) return json({ error: 'event' }, 400, headers);
+      const total = await env.DB.prepare("SELECT n FROM tallies WHERE day = ? AND event = '' AND prop = '' AND value = ''").bind(today).first();
+      if ((total?.n ?? 0) >= EVENT_CAP) return json({ error: 'full today' }, 429, headers);
+      const add = 'INSERT INTO tallies (day, event, prop, value, n) VALUES (?, ?, ?, ?, 1) ON CONFLICT (day, event, prop, value) DO UPDATE SET n = n + 1';
+      await env.DB.batch(rows.map((r) => env.DB.prepare(add).bind(...r)));
+      return new Response(null, { status: 204, headers });
+    }
+
     if (url.pathname === '/loss' && request.method === 'POST') {
       if (origin !== GAME) return json({ error: 'origin' }, 403, headers);
       const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
@@ -129,6 +206,15 @@ export default {
     }
 
     const keyed = () => !!env.READ_KEY && sameKey(request.headers.get('Authorization') ?? '', `Bearer ${env.READ_KEY}`);
+
+    if (url.pathname === '/tallies' && request.method === 'GET') {
+      if (!keyed()) return json({ error: 'key' }, 401, headers);
+      const n = Number(url.searchParams.get('days'));
+      const days = int(n, 1, TALLY_DAYS) ? n : 7;
+      const { results } = await env.DB.prepare("SELECT event, prop, value, SUM(n) AS n FROM tallies WHERE day >= ? AND event != '' GROUP BY event, prop, value")
+        .bind(day(Date.now() - (days - 1) * 86_400_000)).all();
+      return json({ tallies: results }, 200, headers);
+    }
 
     if (url.pathname === '/summary' && request.method === 'GET') {
       if (!keyed()) return json({ error: 'key' }, 401, headers);
@@ -156,5 +242,6 @@ export default {
 
   async scheduled(event, env) {
     await env.DB.prepare('DELETE FROM losses WHERE at < ?').bind(Date.now() - KEEP_DAYS * 86_400_000).run();
+    await env.DB.prepare('DELETE FROM tallies WHERE day < ?').bind(day(Date.now() - TALLY_DAYS * 86_400_000)).run();
   },
 };

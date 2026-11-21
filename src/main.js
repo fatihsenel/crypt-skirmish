@@ -45,7 +45,7 @@ import { settleFight } from './fightEnd.js';
 import { announce } from './ui/announce.js';
 import { installDebug, sampleVictory } from './debug.js';
 import { saveLoaded } from './offline.js';
-import { track, setStats, runEvent, abandonEvent, continueEvent, leftEvent } from './stats.js';
+import { track, setStats, runEvent, abandonEvent, continueEvent, leftEvent, takeInput, perfEvent } from './stats.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, loadDaily } from './game/daily.js';
 import { weekKey, weeklyPlan, weeklyCampaign } from './game/weekly.js';
@@ -55,6 +55,12 @@ const stage = createStage(document.getElementById('stage'), {
   width: LEVELS[0].rows[0].length,
   height: LEVELS[0].rows.length,
 });
+// Once a visit, after about 300 frames of movement, how smoothly the board drew (play stats).
+const perfCheck = setInterval(() => {
+  if (stage.perf.frames < 300) return;
+  clearInterval(perfCheck);
+  track(...perfEvent({ ...stage.perf, dpr: stage.renderer.getPixelRatio() }));
+}, 5000);
 
 // --- campaign & saves ---------------------------------------------------------
 // Storage can be blocked (private windows, sandboxed previews); the game still runs.
@@ -355,7 +361,7 @@ window.addEventListener('pagehide', () => {
   if (!game || game.over || replay || !campaign || !(saving || daily || challenge) || leftFor === game) return;
   leftFor = game;
   const mode = challenge ? 'challenge' : daily ? (daily.weekly ? 'weekly' : 'daily') : 'campaign';
-  track(...leftEvent({ game, nodeId, campaign, mode }));
+  track(...leftEvent({ game, nodeId, campaign, mode, input: takeInput() }));
 });
 
 /** After a won room: rest, XP, loot, save, then back to the map. */
@@ -662,6 +668,7 @@ function startFight(resume, watch = null) {
   fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
   if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };
   feats = { maxHit: 0, sneaks: 0, stayDown: false };
+  if (!watch) takeInput(); // the fight's presses count from here (play stats)
   game.on('attack', (r) => {
     if (r.attacker.team !== 'heroes' || !r.hit) return;
     feats.maxHit = Math.max(feats.maxHit, r.damage ?? 0);

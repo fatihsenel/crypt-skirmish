@@ -10,7 +10,7 @@
 
 const HOST = 'fatihsenel.github.io';
 const SCRIPT = 'https://cloud.umami.is/script.js';
-const WEBSITE = '90fc36a8-7d1b-4488-bbcd-2cba1311156d';
+export const WEBSITE = '90fc36a8-7d1b-4488-bbcd-2cba1311156d'; // Umami's id for the game
 const HEROES = ['F', 'W', 'R', 'C'];
 /** The loss-replay Worker (worker/): lost fights go there to be watched on the ?losses page. */
 export const LOSS_API = 'https://crypt-skirmish-losses.fatih-senel.workers.dev';
@@ -31,12 +31,15 @@ const env = () => ({
 let on = null; // the setting, once boot.js has read it (null before: events wait for it)
 let loading = false;
 const queue = []; // events before the script is in (at most a few)
+const tallyQueue = []; // events before the setting is read, for the Worker's tallies
+let visited = false; // the visit tally goes once a page
 
 /** The party as class letters in hero order, e.g. "FWRC" or "PKAC". */
 export const partyCode = (campaign) => HEROES.map((c) => campaign?.party?.[c]?.cls ?? c).join('');
 
-const fightBase = (nodeId, campaign, mode) => ({
+const fightBase = (nodeId, campaign, mode, input) => ({
   room: nodeId, mode, difficulty: campaign?.difficulty ?? 'normal', tier: campaign?.tier ?? 0, party: partyCode(campaign),
+  ...(input && { input }),
 });
 /** Heroes on their feet, and how often any of them dropped. */
 const partyState = (game) => ({
@@ -45,9 +48,38 @@ const partyState = (game) => ({
 });
 
 /** A fight still going when the page closed or reloaded: where, which round, how the party stood. */
-export const leftEvent = ({ game, nodeId, campaign, mode }) => ['fight-left', {
-  ...fightBase(nodeId, campaign, mode), round: game.round, ...partyState(game),
+export const leftEvent = ({ game, nodeId, campaign, mode, input }) => ['fight-left', {
+  ...fightBase(nodeId, campaign, mode, input), round: game.round, ...partyState(game),
 }];
+
+/** The input pressed most, from counts: touch, mouse or keys (a tie in that order), or none. */
+export function inputKind(counts) {
+  const [kind, n] = ['touch', 'mouse', 'keys'].map((k) => [k, counts[k] ?? 0]).reduce((a, b) => (b[1] > a[1] ? b : a));
+  return n > 0 ? kind : 'none';
+}
+const inputs = { touch: 0, mouse: 0, keys: 0 };
+const MODIFIERS = ['Shift', 'Control', 'Alt', 'Meta'];
+/** Count presses by input from now on (a pen counts as touch). boot.js calls it. */
+export function watchInput() {
+  window.addEventListener('pointerdown', (e) => { inputs[e.pointerType === 'mouse' ? 'mouse' : 'touch']++; }, { capture: true, passive: true });
+  window.addEventListener('keydown', (e) => { if (!e.repeat && !MODIFIERS.includes(e.key)) inputs.keys++; }, { capture: true, passive: true });
+}
+/** The input used most since the last call (a fight's start), and the count starts again. */
+export function takeInput() {
+  const kind = inputKind(inputs);
+  inputs.touch = inputs.mouse = inputs.keys = 0;
+  return kind;
+}
+
+/**
+ * How smoothly the board draws: the frame rate while something moves (stage.js counts
+ * `frames` drawn back to back over `seconds`) in a band, and the pixel ratio it draws at (to a half).
+ */
+export function perfEvent({ frames, seconds, dpr }) {
+  if (!frames || !(seconds > 0)) return null;
+  const fps = frames / seconds;
+  return ['perf', { fps: fps >= 50 ? '50+' : fps >= 30 ? '30-50' : 'under 30', dpr: Math.max(1, Math.round((dpr || 1) * 2) / 2) }];
+}
 
 /** The browser's family from its user agent: chrome, safari, firefox, edge, samsung or other. */
 export function browserFamily(ua = '') {
@@ -93,9 +125,9 @@ export function watchErrors() {
 }
 
 /** What a finished fight reports: [name, data] pairs. `mode` is campaign, daily, weekly or challenge. */
-export function fightEvents({ game, nodeId, campaign, mode, final }) {
+export function fightEvents({ game, nodeId, campaign, mode, final, input }) {
   const won = game.over === 'victory';
-  const base = fightBase(nodeId, campaign, mode);
+  const base = fightBase(nodeId, campaign, mode, input);
   const out = [[won ? 'fight-won' : 'fight-lost', { ...base, rounds: game.round, ...partyState(game) }]];
   if (won && final) out.push(['campaign-won', { ...base, relics: campaign?.relics?.length ?? 0 }]);
   return out;
@@ -155,7 +187,9 @@ function load() {
 /** Start (or stop) sending, as the setting says. Loads the script once the title is up. */
 export function setStats(enabled) {
   on = !!enabled;
-  if (!on || !statsAllowed(env())) return void (queue.length = 0);
+  if (!on || !statsAllowed(env())) return void (queue.length = tallyQueue.length = 0);
+  if (!visited) { visited = true; sendTally('visit', {}); }
+  for (const [name, data] of tallyQueue.splice(0)) sendTally(name, data);
   if (window.umami) for (const [name, data] of queue.splice(0)) send(name, data);
   else load();
 }
@@ -165,7 +199,21 @@ export function track(name, data) {
   if (on === false) return;
   if (import.meta.env.DEV) return void console.debug('[stats]', name, data);
   if (!statsAllowed(env())) return;
+  if (on === null) { if (tallyQueue.length < 20) tallyQueue.push([name, data]); } else sendTally(name, data);
   if ((on === null || !send(name, data)) && queue.length < 20) queue.push([name, data]); // sent once the script is in
+}
+
+/**
+ * The same event, counted by day in the loss-replay Worker (`/event`): the weekly digest reads
+ * those tallies, since Umami Cloud's API is for paid plans. No address or id is stored.
+ */
+function sendTally(name, data) {
+  try {
+    fetch(`${LOSS_API}/event`, {
+      method: 'POST', body: JSON.stringify({ name, data: data ?? {} }), keepalive: true,
+      headers: { 'Content-Type': 'text/plain' }, // a simple request: no preflight
+    }).catch(() => {});
+  } catch { /* stats never get in the way of the game */ }
 }
 
 /** The record without the heroes' names, for sending. */

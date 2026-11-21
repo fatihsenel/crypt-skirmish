@@ -12,3 +12,14 @@ CREATE TABLE IF NOT EXISTS losses (
 );
 CREATE INDEX IF NOT EXISTS losses_at ON losses (at);
 CREATE INDEX IF NOT EXISTS losses_room ON losses (room, id);
+
+-- Play-stats events counted per day (POST /event): one row per day, event, property and value.
+-- prop '' is the event's own count; event '' the day's total (for the daily cap).
+CREATE TABLE IF NOT EXISTS tallies (
+  day TEXT NOT NULL,            -- YYYY-MM-DD, UTC
+  event TEXT NOT NULL,
+  prop TEXT NOT NULL,
+  value TEXT NOT NULL,
+  n INTEGER NOT NULL,
+  PRIMARY KEY (day, event, prop, value)
+);

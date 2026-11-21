@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import worker, { checkLoss, checkCode, listQuery, GAME, MAX_CODE, KEEP_DAYS, DAILY_CAP } from '../worker/src/index.js';
+import worker, { checkLoss, checkCode, listQuery, tallyRows, GAME, MAX_CODE, KEEP_DAYS, DAILY_CAP, EVENT_CAP } from '../worker/src/index.js';
 import { encodeFight } from '../src/game/fightLink.js';
 import { newCampaign } from '../src/game/campaign.js';
 
@@ -24,6 +24,8 @@ function fakeDB(rows = [], today = 0) {
       };
       return stmt;
     },
+    batched: [],
+    async batch(stmts) { this.batched.push(stmts.length); return stmts.map(() => ({ success: true })); },
   };
 }
 
@@ -143,11 +145,86 @@ describe('loss replay worker', () => {
     expect((await worker.fetch(new Request('https://w.example/'), {})).status).toBe(404);
   });
 
-  it('deletes records older than 60 days each day', async () => {
+  it('deletes records older than 60 days, and tallies older than 400, each day', async () => {
     const db = fakeDB();
     const before = Date.now();
     await worker.scheduled({}, { DB: db });
     expect(db.calls[0].sql).toBe('DELETE FROM losses WHERE at < ?');
     expect(db.calls[0].args[0]).toBeLessThanOrEqual(before - KEEP_DAYS * 86_400_000 + 1000);
+    expect(db.calls[1].sql).toBe('DELETE FROM tallies WHERE day < ?');
+    expect(db.calls[1].args[0]).toBe(new Date(before - 400 * 86_400_000).toISOString().slice(0, 10));
+  });
+
+  describe('event tallies', () => {
+    const DAY = '2026-11-23';
+    const send = (body, origin = GAME, ip = '203.0.113.9') => new Request('https://w.example/event', {
+      method: 'POST', headers: { Origin: origin, 'Content-Type': 'text/plain', 'CF-Connecting-IP': ip }, body: typeof body === 'string' ? body : JSON.stringify(body),
+    });
+
+    it('turns an event into rows: the event, each known property, and the combined ones', () => {
+      const rows = tallyRows('fight-lost', { room: 'throne', mode: 'campaign', difficulty: 'hard', tier: 0, party: 'FWRC', rounds: 7, standing: 0, downed: 4, input: 'touch', name: 'Somebody' }, DAY);
+      expect(rows).toContainEqual([DAY, '', '', '']); // the day's total
+      expect(rows).toContainEqual([DAY, 'fight-lost', '', '']);
+      expect(rows).toContainEqual([DAY, 'fight-lost', 'room', 'throne']);
+      expect(rows).toContainEqual([DAY, 'fight-lost', 'tier', '0']);
+      expect(rows).toContainEqual([DAY, 'fight-lost', 'room/difficulty', 'throne/hard']);
+      expect(rows.some((r) => r.includes('Somebody') || r.includes('name'))).toBe(false); // unknown fields are dropped
+      const crash = tallyRows('error', { type: 'TypeError', file: 'main-CahFguWJ.js', line: 2, col: 5847, browser: 'safari' }, DAY);
+      expect(crash).toContainEqual([DAY, 'error', 'at', 'main-CahFguWJ.js:2:5847']);
+      expect(crash).toContainEqual([DAY, 'error', 'browser', 'safari']);
+      expect(tallyRows('perf', { fps: 'under 30', dpr: 1.5 }, DAY)).toContainEqual([DAY, 'perf', 'fps', 'under 30']);
+      expect(tallyRows('run-continue', { midFight: true }, DAY)).toContainEqual([DAY, 'run-continue', 'midFight', 'true']);
+      expect(tallyRows('visit', {}, DAY)).toEqual([[DAY, '', '', ''], [DAY, 'visit', '', '']]);
+    });
+
+    it('refuses events it does not know, and values that could carry anything', () => {
+      expect(tallyRows('whatever', {}, DAY)).toBeNull();
+      expect(tallyRows('__proto__', {}, DAY)).toBeNull();
+      const rows = tallyRows('shared', { what: '<script>', how: 'x'.repeat(61) }, DAY);
+      expect(rows).toEqual([[DAY, '', '', ''], [DAY, 'shared', '', '']]);
+      expect(tallyRows('error', { type: 'TypeError', file: 'evil file.js', line: 1, col: 1 }, DAY).some((r) => r[2] === 'at')).toBe(false);
+    });
+
+    it('counts an event from the game, refuses others, and keeps no address', async () => {
+      const db = fakeDB();
+      const env = { DB: db, EVENTS: limiter() };
+      expect((await worker.fetch(send({ name: 'fight-won', data: { room: 'crypt', difficulty: 'normal' } }), env)).status).toBe(204);
+      const ups = db.calls.filter((c) => c.sql.startsWith('INSERT INTO tallies'));
+      expect(ups.map((c) => c.args.slice(1))).toEqual([['', '', ''], ['fight-won', '', ''], ['fight-won', 'room', 'crypt'], ['fight-won', 'difficulty', 'normal'], ['fight-won', 'room/difficulty', 'crypt/normal']]);
+      expect(ups[0].sql).toMatch(/ON CONFLICT \(day, event, prop, value\) DO UPDATE SET n = n \+ 1$/);
+      expect(ups[0].args[0]).toBe(new Date().toISOString().slice(0, 10));
+      expect(db.batched).toEqual([5]); // one round trip
+      expect(db.calls.flatMap((c) => c.args).includes('203.0.113.9')).toBe(false);
+      expect((await worker.fetch(send({ name: 'fight-won', data: {} }, 'https://evil.example'), env)).status).toBe(403);
+      expect((await worker.fetch(send({ name: 'nope', data: {} }), env)).status).toBe(400);
+      expect((await worker.fetch(send('{oops'), env)).status).toBe(400);
+      expect((await worker.fetch(send('x'.repeat(3000)), env)).status).toBe(413);
+    });
+
+    it('limits each address, and counts no more than a day’s cap', async () => {
+      const slow = limiter(2);
+      const env = { DB: fakeDB(), EVENTS: slow };
+      const codes = [];
+      for (let i = 0; i < 4; i++) codes.push((await worker.fetch(send({ name: 'visit', data: {} }), env)).status);
+      expect(codes).toEqual([204, 204, 429, 429]);
+      const full = fakeDB([], EVENT_CAP);
+      expect((await worker.fetch(send({ name: 'visit', data: {} }), { DB: full, EVENTS: limiter() })).status).toBe(429);
+      expect(full.calls.some((c) => c.sql.startsWith('INSERT'))).toBe(false);
+    });
+
+    it('reads the tallies of the last days only with the key', async () => {
+      const rows = [{ event: 'fight-lost', prop: 'room', value: 'throne', n: 9 }];
+      const db = fakeDB(rows);
+      const env = { DB: db, READ_KEY: 'sekrit' };
+      const ask = (q, key) => worker.fetch(new Request(`https://w.example/tallies${q}`, { headers: { ...(key && { Authorization: `Bearer ${key}` }) } }), env);
+      expect((await ask('', null)).status).toBe(401);
+      const res = await ask('?days=7', 'sekrit');
+      expect(await res.json()).toEqual({ tallies: rows });
+      const { sql, args } = db.calls.at(-1);
+      expect(sql).toBe("SELECT event, prop, value, SUM(n) AS n FROM tallies WHERE day >= ? AND event != '' GROUP BY event, prop, value");
+      expect(args).toEqual([new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)]); // today and the 6 days before
+      await ask('?days=9999', 'sekrit');
+      expect(db.calls.at(-1).args).toEqual([new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)]); // out of range: a week
+    });
   });
 });

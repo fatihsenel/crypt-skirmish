@@ -136,11 +136,18 @@ export function createStage(container, { width, height }) {
     if (animating()) start();
     else later();
   };
+  // Frames drawn back to back while something moves, and their time: how smoothly this
+  // device draws the board (main.js reports it once a visit, play stats).
+  const perf = { frames: 0, seconds: 0 };
+  let lastFrame = 0;
   const start = () => {
     if (looping) return;
     clearTimeout(timer);
     looping = true;
-    renderer.setAnimationLoop(() => {
+    lastFrame = 0;
+    renderer.setAnimationLoop((now) => {
+      if (lastFrame && now - lastFrame < 500) { perf.frames++; perf.seconds += (now - lastFrame) / 1000; }
+      lastFrame = now;
       draw(true);
       if (animating()) return;
       renderer.setAnimationLoop(null);
@@ -161,7 +168,7 @@ export function createStage(container, { width, height }) {
     fit();
   };
 
-  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, dom: renderer.domElement };
+  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, dom: renderer.domElement };
 }
 
 /**

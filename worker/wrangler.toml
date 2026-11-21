@@ -16,5 +16,11 @@ name = "UPLOADS"
 namespace_id = "1001"
 simple = { limit = 3, period = 60 }
 
+# Play-stats events: at most 30 a minute from one address.
+[[ratelimits]]
+name = "EVENTS"
+namespace_id = "1002"
+simple = { limit = 30, period = 60 }
+
 [triggers]
 crons = ["17 3 * * *"]

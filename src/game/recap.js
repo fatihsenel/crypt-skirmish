@@ -49,7 +49,21 @@ export function fightRecap(game) {
   return { falls, worst, left, tip: lossTip(game, byKind) };
 }
 
-/** One thing to try next time, from what hurt most. Null when nothing stands out. */
+const HEALS = ['cureWounds', 'healingWord'];
+const isHealer = (u) => !!u && (u.spells?.some((s) => HEALS.includes(s)) || u.layOnHands !== undefined);
+const list = (names) => names.join(' and ').replace(/ and (?=.* and )/g, ', ');
+/** What a condition on a falling hero says about the fall (only those that helped the foe). */
+const CONDITION_TIPS = {
+  prone: (n) => `${n} was knocked prone and fell before getting up: melee attacks have advantage against someone on the floor. Keep a friend beside anyone fighting the foes that knock heroes down.`,
+  restrained: (n) => `${n} was stuck in a web when the last blow landed: every attack against them had advantage. Kill the spiders first, or keep out of their webs’ reach.`,
+  rotting: (n) => `${n} was rotting when they fell, so no healing could take. Heal before the Mummy’s fist lands, or keep the hurt out of its reach.`,
+};
+
+/**
+ * One thing to try next time, from what hurt most. Tried in order: a trap, potions unused, the
+ * healer falling first, a condition that set up a fall, a hero cut off alone, most damage from
+ * range, spells or one foe, then spell slots unspent. Null when nothing stands out.
+ */
 function lossTip(game, byKind) {
   const total = game.blows.reduce((n, b) => n + b.damage, 0);
   if (!total) return null;
@@ -67,6 +81,17 @@ function lossTip(game, byKind) {
       : `${unused.map((u) => u.name).join(' and ').replace(/ and (?=.* and )/g, ', ')} fell with potions unused`;
     return `${who}. Drinking one takes an action and heals 2d4 + 2.`;
   }
+  const falls = game.blows.filter((b) => b.down);
+  const first = falls[0];
+  if (falls.length > 1 && first.to !== falls[1].to && isHealer(heroes.find((u) => u.name === first.to))) {
+    return `${first.to}, the party’s healer, fell first, in round ${first.round}, and no one could bring the others back up. Keep ${first.to} behind the front line, out of reach.`;
+  }
+  for (const b of falls) {
+    const cond = Object.keys(CONDITION_TIPS).find((c) => b.conds?.includes(c));
+    if (cond) return CONDITION_TIPS[cond](b.to);
+  }
+  const lone = falls.find((b) => b.alone);
+  if (lone) return `${lone.to} fell alone in round ${lone.round}, with no one within 10 feet. Move as a group, so a foe that reaches one hero meets two.`;
   if (share('ranged') >= 0.5) return 'Most of the damage came from range. Close in on the archers, or keep a crate or a wall between you.';
   if (share('spell') >= 0.5) return 'Spells did most of the damage. Spread out so one blast can’t catch the whole party.';
   const [top] = [...byKind].sort((a, b) => b[1].damage - a[1].damage);
@@ -74,6 +99,11 @@ function lossTip(game, byKind) {
     const many = top[1].names.size > 1;
     const name = many ? `The ${plural(top[0])}` : [...top[1].names][0];
     return `${name} dealt over half the damage. Bring ${many ? 'them' : 'it'} down first, or stay out of reach.`;
+  }
+  const unspent = heroes.map((u) => [u.name, Object.values(u.slots ?? {}).reduce((n, k) => n + (k > 0 ? k : 0), 0)]).filter(([, n]) => n > 0);
+  const slots = unspent.reduce((n, [, k]) => n + k, 0);
+  if (slots >= 2) {
+    return `${list(unspent.map(([n]) => n))} ended the fight with ${slots} spell slots unspent. When a fight turns against you, spend them: they come back with rest.`;
   }
   return null;
 }

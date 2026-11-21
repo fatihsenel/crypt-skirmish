@@ -14,7 +14,7 @@ import { unlock } from './game/achievements.js';
 import { challengeText, encodeFight, MAX_LINK_CODE } from './game/fightLink.js';
 import { recordDaily, streak, shareText, recordBestFight } from './game/daily.js';
 import { recordWeekly, weekStreak, weeklyShareText } from './game/weekly.js';
-import { trackAll, fightEvents, sendLoss, withoutNames } from './stats.js';
+import { trackAll, fightEvents, sendLoss, withoutNames, takeInput } from './stats.js';
 
 /**
  * Settle a fight that is over (`game.over` is 'victory' or 'defeat'). `ctx`: the game, its
@@ -58,7 +58,7 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
   // daily also sends its replay, without names (the ?losses page).
   if (saving || daily || challenge) {
     const mode = challenge ? 'challenge' : daily ? (daily.weekly ? 'weekly' : 'daily') : 'campaign';
-    trackAll(fightEvents({ game, nodeId, campaign, mode, final: final && won }));
+    trackAll(fightEvents({ game, nodeId, campaign, mode, final: final && won, input: takeInput() }));
     if (!won && record && !challenge) {
       const meta = { room: nodeId, difficulty: record.difficulty, tier: record.tier ?? 0, mode, rounds: game.round };
       encodeFight(withoutNames(record)).then((code) => code.length <= MAX_LINK_CODE && sendLoss(code, meta)).catch(() => {});

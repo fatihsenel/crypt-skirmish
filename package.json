@@ -13,7 +13,8 @@
     "stills": "vite build && node scripts/stills.mjs",
     "models": "node scripts/compress-models.js",
     "lint": "eslint .",
-    "size-check": "node scripts/size-check.mjs"
+    "size-check": "node scripts/size-check.mjs",
+    "digest": "node scripts/digest.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"

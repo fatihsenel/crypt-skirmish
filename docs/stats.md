@@ -1,6 +1,8 @@
 # Reading the play stats
 
-The deployed game sends anonymous events to Umami Cloud (`src/stats.js`). This page lists them
+The deployed game sends anonymous events to Umami Cloud (`src/stats.js`), and counts each one,
+with its properties, by day in the loss-replay Worker (`/event`, the `tallies` table; one more,
+`visit`, once a page). This page lists them
 and how to answer balance questions with them. Look after a week or so: a few dozen runs per
 room before trusting a rate, and compare against `npm run sim -- 300`, which assumes a careful
 player.
@@ -12,19 +14,21 @@ player.
 | `run-start` | New campaign or New Game+ | `kind` (new, ngplus), `difficulty`, `tier`, `party` |
 | `run-continue` | Continue from the title | `room`, `cleared`, `difficulty`, `tier`, `midFight` |
 | `run-abandon` | A new campaign replaces an unfinished one | `room`, `cleared`, `difficulty`, `tier` |
-| `fight-won` / `fight-lost` | A real fight ends (not `?level=`) | `room`, `mode`, `difficulty`, `tier`, `party`, `rounds`, `standing`, `downed` |
+| `fight-won` / `fight-lost` | A real fight ends (not `?level=`) | `room`, `mode`, `difficulty`, `tier`, `party`, `rounds`, `standing`, `downed`, `input` |
 | `campaign-won` | The Tomb won | `difficulty`, `tier`, `party`, `relics` |
 | `stop` | A choice at a stop | `stop` (pilgrim, altar, reliquary), `choice`, `difficulty` |
 | `daily-start` | Play today's or this week's crypt | `mode` (daily, weekly), `room` |
 | `replay-watched` | Watch replay | `from` (banner, title, link), `room` |
 | `challenge-played` | A `#play=` link opened | `room` |
 | `shared` | A share that went through | `what` (replay, challenge, result, run-card, photo), `how` (share, copy, save) |
-| `fight-left` | The page closed or reloaded mid-fight (not `?level=` or replays) | `room`, `mode`, `difficulty`, `tier`, `party`, `round`, `standing`, `downed` |
+| `fight-left` | The page closed or reloaded mid-fight (not `?level=` or replays) | `room`, `mode`, `difficulty`, `tier`, `party`, `round`, `standing`, `downed`, `input` |
+| `perf` | Once a visit, after about 300 frames of movement on the board | `fps` (50+, 30-50, under 30), `dpr` (the pixel ratio drawn at, to a half) |
 | `error` | A crash in the game's own code, up to 3 a visit, each place once | `type` (TypeError, …), `file`, `line`, `col`, `browser` (chrome, safari, firefox, edge, samsung, other) |
 
 `party` is the class letters in hero order: F W R C, with P (Paladin), K (Warlock) and
 A (Ranger) in place of their slot's usual class. `mode` is campaign, daily, weekly or challenge.
 `standing` counts heroes on their feet at the end; `downed` counts how often any hero dropped.
+`input` is what the player pressed most in that fight: touch, mouse, keys (or none).
 
 ## Where to look in Umami
 
@@ -71,7 +75,37 @@ index-`). Build that commit with `npx vite build --sourcemap` and look the line 
 the `.map` (DevTools or any source-map tool) to find the code. On the dev server the file and
 line are the source's own.
 
+**Do phone players have a harder time?** `fight-lost` by `input` against `fight-won` by
+`input`: a much higher loss rate on touch points at the touch controls, not the rooms. `perf`
+by `fps`: if a real share draws under 30, the board needs to get cheaper (shadows, pixel ratio).
+
 **Do players come back and share?** `run-continue` and `daily-start` per day; `shared` by `what`.
+
+## The weekly digest
+
+`npm run digest` prints the last 7 days as a short report from the Worker's tallies (Umami
+Cloud's API is for paid plans): visits, runs, each room's won, lost and left fights with its
+loss rate (the worst room named once it has 5 fights), crashes by browser and place in the code,
+input and frame-rate shares, and the losses stored by the Worker. It needs the Worker's read key
+in the environment, `LOSS_READ_KEY`; without it, or if the Worker refuses it, the report says so.
+`npm run digest -- --out week.md` saves it too.
+
+With `UMAMI_API_KEY` (Umami Cloud › Settings › API keys) too, it adds Umami's visitors, visits,
+page views and top 5 referrers.
+
+GitHub Actions runs it every Monday at 07:00 UTC (`.github/workflows/digest.yml`; Actions › Weekly
+digest › Run workflow runs it now). The keys are repository secrets, set once from the repo (each
+asks for the value without showing it):
+
+```
+gh secret set LOSS_READ_KEY
+gh secret set UMAMI_API_KEY
+```
+
+The report is the run's `digest` artifact (kept 30 days), never printed in the log, since the
+repository is public; a missing read key, or either key refused, fails the run, and GitHub emails about it. The
+tallies are kept 400 days, at most 20,000 events a day and 30 a minute from one address, and
+never store an address.
 
 ## Watching the losses
 

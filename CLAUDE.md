@@ -20,6 +20,10 @@ npm run stills         # re-render the 3D emblem's stills and README shots, afte
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 npm run size-check     # after a build: the title's code and the skull, gzipped, within budget;
                        # the deploy runs it
+npm run digest         # the last 7 days of play stats and stored losses, as Markdown, from the
+                       # Worker's tallies (and Umami's visitors with UMAMI_API_KEY); LOSS_READ_KEY
+                       # from the environment. GitHub Actions runs it on Mondays (digest.yml,
+                       # the keys repository secrets)
 ```
 
 The `dnd-dev` entry in `.claude/launch.json` uses port 5179. Don't use it: run the dev
@@ -76,8 +80,13 @@ server on 5173.
   through `track()`: `settleFight` (real runs, dailies and links, not `?level=` fights),
   `startCampaign`, Continue, New Game+, dailies, the stops, replays, challenges and sharing, a fight
   left on `pagehide` (`leftEvent`), and crashes (`watchErrors`, from `boot.js`: type, file, line,
-  column, browser, never the message; 3 a visit). On the dev server they're logged
+  column, browser, never the message; 3 a visit). Fight events carry the input used most
+  (`watchInput`, `takeInput` at a fight's start and end), and `perf` goes once a visit from
+  `stage.perf` (frames drawn back to back while moving). On the dev server they're logged
   as `[stats]` in the console instead. A new event goes there, with no names or free text.
+  Each event is also counted by day in the Worker (`sendTally` → `/event`, the `tallies` table,
+  read by `/tallies` with the read key); a new event or property needs a line in `TALLY_EVENTS`
+  in `worker/src/index.js`, or the Worker refuses or drops it.
   A lost run or daily also sends its record, names stripped (`withoutNames`, `sendLoss`), to the
   loss-replay Worker in `worker/` (Cloudflare, D1, deployed with `npx wrangler deploy` from there);
   `?losses` (`ui/losses.js`, loaded by `boot.js` instead of the game) lists them with a read key,
