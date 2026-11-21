@@ -7,6 +7,8 @@ import './style.css';
 import { Camp } from './ui/camp.js';
 import { parseSave, parseWonRun } from './game/campaign.js';
 import './offline.js'; // the offline copy, registered as early as the title
+import { loadSettings } from './game/settings.js';
+import { setStats } from './stats.js';
 
 export const SAVE_KEY = 'crypt-skirmish.save';
 /** The last won campaign, kept so New Game+ can start from it until a new campaign does. */
@@ -43,3 +45,7 @@ if (!q.has('level') && !q.has('victory')) {
   hideBoot();
 }
 main = import('./main.js');
+// Anonymous play stats (src/stats.js), once the page has loaded, so they never slow the title.
+const startStats = () => setTimeout(() => setStats(loadSettings().stats), 1000);
+if (document.readyState === 'complete') startStats();
+else window.addEventListener('load', startStats, { once: true });

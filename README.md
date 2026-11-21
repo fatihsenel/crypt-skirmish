@@ -198,7 +198,12 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
-  motion (System, Reduced or Full) and colour-blind friendly enemy reach.
+  motion (System, Reduced or Full), colour-blind friendly enemy reach and play stats.
+- **Play stats:** the deployed game sends anonymous events to Umami (a run started, a room won
+  or lost with its rounds and party classes, a stop's choice, a run abandoned, a campaign won, a
+  replay watched), to see where runs end. No cookies, names or saves, and links' fights stay out
+  of the address it sends. Off with Settings › Share anonymous play stats, or Do Not Track; test
+  links and the dev server send nothing.
 
 ## Sound
 
@@ -416,6 +421,7 @@ src/
   photo.js           photo mode: no HUD, a free camera, Save image
   input.js           picking a tile, the long press, what a click does, the cursor's step and words
   debug.js           window.__debug and the ?victory sample run
+  stats.js           anonymous play stats (Umami): the setting, the events, the script loaded after the title
   offline.js         registers the offline copy (public/sw.js), hands it the files already loaded, looks for a new deploy
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/

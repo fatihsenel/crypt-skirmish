@@ -45,6 +45,7 @@ import { settleFight } from './fightEnd.js';
 import { announce } from './ui/announce.js';
 import { installDebug, sampleVictory } from './debug.js';
 import { saveLoaded } from './offline.js';
+import { track, setStats, runEvent, abandonEvent } from './stats.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, loadDaily } from './game/daily.js';
 import { weekKey, weeklyPlan, weeklyCampaign } from './game/weekly.js';
@@ -231,11 +232,15 @@ function startCampaign(difficulty, names, classes) {
   challenge = null;
   // A run being replaced (Abandon run, or New campaign over a save) goes into the history.
   const old = loadSave();
-  if (old && !old.done) recordRun(old, 'abandoned');
+  if (old && !old.done) {
+    recordRun(old, 'abandoned');
+    track(...abandonEvent(old));
+  }
   clearLastFight(); // whatever it was, it isn't this run's
   setWonRun(null); // a new campaign closes the way to New Game+
   campaign = newCampaign(difficulty, names, classes);
   writeSave(campaign);
+  track(...runEvent(campaign));
   showCamp(null);
 }
 
@@ -249,6 +254,7 @@ const heirlooms = new Heirlooms((won, keep) => {
   setWonRun(null);
   campaign = newGamePlus(won, keep);
   writeSave(campaign);
+  track(...runEvent(campaign, 'ngplus'));
   showCamp(null);
 });
 
@@ -273,6 +279,7 @@ function startChallenge(rec, theirs) {
   saving = false;
   daily = null;
   challenge = { rec, theirs };
+  track('challenge-played', { room: rec.node });
   campaign = { ...newCampaign(rec.difficulty), party: structuredClone(rec.party), ...(rec.tier && { tier: rec.tier }), relics: [...(rec.relics ?? [])] };
   nodeId = rec.node;
   camp.hide();
@@ -318,6 +325,7 @@ function enterRoom(id) {
     const { state, report } = takeEvent(campaign, node, opt);
     campaign = state;
     writeSave(campaign);
+    track('stop', { stop: node, choice: opt, difficulty: campaign.difficulty });
     if (node === 'reliquary') sfx.unlock();
     else if (node === 'altar') sfx.discover();
     else if (opt === 'tend') sfx.heal();
@@ -439,6 +447,7 @@ new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
   if (key === 'motion') return applyMotion();
+  if (key === 'stats') return setStats(value);
   if (key === 'colorblind') {
     board?.setThreatColors(value);
     document.body.classList.toggle('colorblind', value);
@@ -1161,6 +1170,7 @@ function startReplay(rec = record, { fromTitle = false, link = false } = {}) {
   if (!rec || replay || (!fromTitle && !game?.over)) return;
   sfx.ui();
   replay = { rec, log: rec.log, at: 0, finished: fromTitle ? null : game, fight, fromTitle, link, over: false, paused: false, speed: 0, stepTurn: false, wake: null };
+  track('replay-watched', { from: link ? 'link' : fromTitle ? 'title' : 'banner', room: rec.node });
   $banner.hidden = true;
   tips.hide(); // nothing to do while watching
   document.body.classList.add('replaying');

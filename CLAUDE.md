@@ -71,6 +71,11 @@ server on 5173.
   and a new deploy found by fetching the page with `no-store`, which the worker passes by).
   The dev server never registers it, so that line never shows there; test it on
   `npm run preview` in a throwaway headless Chrome, not the browser pane's profile.
+- Play stats (`src/stats.js`): Umami Cloud, loaded by `boot.js` after the page has loaded,
+  only on fatihsenel.github.io, with the `stats` setting on and no Do Not Track. Events go
+  through `track()`: `settleFight` (real runs, dailies and links, not `?level=` fights),
+  `startCampaign`, New Game+, the stops, replays and challenges. On the dev server they're logged
+  as `[stats]` in the console instead. A new event goes there, with no names or free text.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it

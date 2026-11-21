@@ -10,7 +10,7 @@ describe('settings', () => {
 
   it('keeps valid values and clamps levels to 0..1', () => {
     const s = parseSettings(JSON.stringify({ music: 0.3, effects: 2, voices: -1, speed: 'fastest' }));
-    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true, colorblind: false, motion: 'system' });
+    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true, colorblind: false, motion: 'system', stats: true });
   });
 
   it('drops an unknown speed and non-numeric levels', () => {
