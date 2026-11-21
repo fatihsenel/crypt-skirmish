@@ -433,7 +433,7 @@ kbd {
 #help {
   position: absolute;
   left: 12px; top: 76px; /* below the initiative bar, level with the combat log */
-  width: 252px;
+  width: 272px; /* the key grid's two columns on one line each */
   font-size: 12px;
   color: var(--ink);
 }
@@ -497,8 +497,9 @@ kbd {
 }
 #help ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; }
 #help li { display: flex; align-items: center; gap: 6px; color: #d8cfc0; white-space: nowrap; }
-#help .help-grid { grid-template-columns: max-content max-content; column-gap: 18px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-edge); }
-#help .help-grid li { gap: 3px; }
+/* Two columns that shrink to the panel; a long label wraps rather than spilling over the edge. */
+#help .help-grid { grid-template-columns: repeat(2, minmax(0, max-content)); column-gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-edge); }
+#help .help-grid li { gap: 3px; white-space: normal; min-width: 0; line-height: 1.25; }
 #help .help-grid li > kbd:last-of-type { margin-right: 3px; } /* a gap before the label */
 #help .sw {
   flex: none;
@@ -799,7 +800,7 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   }
   #app.log-open #log-close { display: block; }
   #log-list { font-size: 13px; }
-  #help { width: min(260px, calc(100% - 24px)); max-height: calc(100% - 300px); overflow-y: auto; z-index: 4; }
+  #help { width: min(272px, calc(100% - 24px)); max-height: calc(100% - 300px); overflow-y: auto; z-index: 4; }
 }
 @media (max-width: 1400px) {
   #audio > button > span:not(.corner-tip) { display: none; } /* icons only: the row would run into the portraits */
