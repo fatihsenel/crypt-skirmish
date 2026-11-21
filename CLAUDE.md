@@ -74,7 +74,7 @@ server on 5173.
 - Play stats (`src/stats.js`): Umami Cloud, loaded by `boot.js` after the page has loaded,
   only on fatihsenel.github.io, with the `stats` setting on and no Do Not Track. Events go
   through `track()`: `settleFight` (real runs, dailies and links, not `?level=` fights),
-  `startCampaign`, New Game+, the stops, replays and challenges. On the dev server they're logged
+  `startCampaign`, Continue, New Game+, dailies, the stops, replays, challenges and sharing. On the dev server they're logged
   as `[stats]` in the console instead. A new event goes there, with no names or free text.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a

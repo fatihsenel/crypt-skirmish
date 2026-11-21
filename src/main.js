@@ -45,7 +45,7 @@ import { settleFight } from './fightEnd.js';
 import { announce } from './ui/announce.js';
 import { installDebug, sampleVictory } from './debug.js';
 import { saveLoaded } from './offline.js';
-import { track, setStats, runEvent, abandonEvent } from './stats.js';
+import { track, setStats, runEvent, abandonEvent, continueEvent } from './stats.js';
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, loadDaily } from './game/daily.js';
 import { weekKey, weeklyPlan, weeklyCampaign } from './game/weekly.js';
@@ -174,9 +174,11 @@ Object.assign(later, {
     saving = true;
     daily = null;
     challenge = null;
-    campaign = loadSave() ?? newCampaign();
+    const save = loadSave();
+    campaign = save ?? newCampaign();
     const saved = campaign.fight;
     delete campaign.fight;
+    if (save) track(...continueEvent(campaign, !!saved));
     if (saved) {
       camp.hide();
       nodeId = saved.node;
@@ -264,6 +266,7 @@ function startDaily(weekly = false) {
   saving = false;
   challenge = null;
   daily = weekly ? weeklyPlan(weekKey()) : dailyPlan(dayKey());
+  track('daily-start', { mode: weekly ? 'weekly' : 'daily', room: daily.node });
   campaign = weekly ? weeklyCampaign(daily) : dailyCampaign(daily);
   nodeId = daily.node;
   camp.hide();

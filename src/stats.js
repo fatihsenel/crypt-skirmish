@@ -53,6 +53,14 @@ export const runEvent = (campaign, kind = 'new') => ['run-start', {
   kind, difficulty: campaign.difficulty, tier: campaign.tier ?? 0, party: partyCode(campaign),
 }];
 
+/** A saved run picked up again: where it stands, and whether a fight was under way. */
+export const continueEvent = (campaign, midFight) => ['run-continue', {
+  room: campaign.at ?? 'start', cleared: campaign.cleared?.length ?? 0, difficulty: campaign.difficulty, tier: campaign.tier ?? 0, midFight,
+}];
+
+/** Something shared: `what` (replay, challenge, result, run-card, photo) and `how` (share sheet, copy or save). */
+export const shareEvent = (what, how) => ['shared', { what, how }];
+
 /** A run left unfinished for a new one: how far it got. */
 export const abandonEvent = (campaign) => ['run-abandon', {
   room: campaign.at ?? 'start', cleared: campaign.cleared?.length ?? 0, difficulty: campaign.difficulty, tier: campaign.tier ?? 0,

@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { keepAwake } from './render/tween.js';
 import { saveImage } from './ui/runCard.js';
+import { track, shareEvent } from './stats.js';
 import { announce } from './ui/announce.js';
 
 /**
@@ -121,7 +122,10 @@ export function createPhotoMode(stage, deps) {
     const label = saveBtn.textContent;
     try {
       const how = await saveImage(blob, `crypt-skirmish-${Date.now()}.png`, { touch: deps.touch() });
-      if (how !== 'cancelled') saveBtn.textContent = how === 'shared' ? 'Shared' : 'Saved';
+      if (how !== 'cancelled') {
+        saveBtn.textContent = how === 'shared' ? 'Shared' : 'Saved';
+        track(...shareEvent('photo', how === 'shared' ? 'share' : 'save'));
+      }
     } catch {
       saveBtn.textContent = 'Couldn’t save';
     }

@@ -3,7 +3,7 @@ import { Game } from '../src/game/combat.js';
 import { levelById } from '../src/game/maps.js';
 import { NODES, newCampaign } from '../src/game/campaign.js';
 import { parseSettings } from '../src/game/settings.js';
-import { statsAllowed, fightEvents, runEvent, abandonEvent, partyCode, track } from '../src/stats.js';
+import { statsAllowed, fightEvents, runEvent, abandonEvent, continueEvent, shareEvent, partyCode, track } from '../src/stats.js';
 
 const live = { prod: true, host: 'fatihsenel.github.io', search: '', dnt: null };
 
@@ -47,6 +47,13 @@ describe('play stats', () => {
     expect(partyCode(c)).toBe('FWRC');
     expect(runEvent(c)).toEqual(['run-start', { kind: 'new', difficulty: 'normal', tier: 0, party: 'FWRC' }]);
     expect(abandonEvent({ ...c, at: 'nest', cleared: ['crypt', 'warren', 'nest'] })).toEqual(['run-abandon', { room: 'nest', cleared: 3, difficulty: 'normal', tier: 0 }]);
+  });
+
+  it('describe a run picked up again, and something shared', () => {
+    const c = { ...newCampaign('hard'), at: 'nest', cleared: ['crypt', 'warren', 'nest'], tier: 1 };
+    expect(continueEvent(c, true)).toEqual(['run-continue', { room: 'nest', cleared: 3, difficulty: 'hard', tier: 1, midFight: true }]);
+    expect(continueEvent(newCampaign(), false)[1]).toMatchObject({ room: 'start', cleared: 0, midFight: false });
+    expect(shareEvent('challenge', 'copy')).toEqual(['shared', { what: 'challenge', how: 'copy' }]);
   });
 
   it('send nothing before the setting is read', () => {

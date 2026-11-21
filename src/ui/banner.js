@@ -3,6 +3,7 @@
 // and Save image. The Watch, link and New Game+ buttons are wired up in main.js.
 
 import { saveRunCard } from './runCard.js';
+import { track, shareEvent } from '../stats.js';
 import { RELICS } from '../game/items.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -117,9 +118,11 @@ export class EndBanner {
     try {
       if (this.touch() && navigator.share) {
         await navigator.share({ text });
+        track(...shareEvent('result', 'share'));
         return;
       }
       await navigator.clipboard.writeText(text);
+      track(...shareEvent('result', 'copy'));
       btn.textContent = 'Copied';
       setTimeout(() => { btn.textContent = 'Copy result'; }, 2000);
     } catch (err) {
@@ -136,6 +139,7 @@ export class EndBanner {
     try {
       const done = await saveRunCard(this.cardSummary, { touch: this.touch() });
       if (done !== 'cancelled') {
+        track(...shareEvent('run-card', done === 'shared' ? 'share' : 'save'));
         btn.textContent = done === 'shared' ? 'Shared' : 'Saved';
         setTimeout(() => { btn.textContent = 'Save image'; }, 2000);
       }

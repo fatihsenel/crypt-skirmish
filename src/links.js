@@ -3,6 +3,7 @@
 
 import { encodeFight, decodeFight, replayOutcome, fightUrl, linkIn, MAX_LINK_CODE } from './game/fightLink.js';
 import { sfx } from './audio/sfx.js';
+import { track, shareEvent } from './stats.js';
 
 /**
  * `watch(rec, { link })` shows a fight's replay, `play(rec, theirs)` starts it as a challenge,
@@ -27,9 +28,11 @@ export function createLinks({ hud, touch, watch, play, idle }) {
       const url = fightUrl(location.href, code, kind);
       if (touch() && navigator.share) {
         await navigator.share({ url, title: kind === 'play' ? 'Crypt Skirmish challenge' : 'Crypt Skirmish replay' });
+        track(...shareEvent(kind === 'play' ? 'challenge' : 'replay', 'share'));
         return;
       }
       await navigator.clipboard.writeText(url);
+      track(...shareEvent(kind === 'play' ? 'challenge' : 'replay', 'copy'));
       button.textContent = 'Copied';
       setTimeout(() => { button.textContent = label; }, 2000);
     } catch (err) {
