@@ -221,10 +221,16 @@ describe('loss replay worker', () => {
       const res = await ask('?days=7', 'sekrit');
       expect(await res.json()).toEqual({ tallies: rows });
       const { sql, args } = db.calls.at(-1);
-      expect(sql).toBe("SELECT event, prop, value, SUM(n) AS n FROM tallies WHERE day >= ? AND event != '' GROUP BY event, prop, value");
-      expect(args).toEqual([new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)]); // today and the 6 days before
+      const today = new Date().toISOString().slice(0, 10);
+      const weekAgo = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10);
+      expect(sql).toBe("SELECT event, prop, value, SUM(n) AS n FROM tallies WHERE day >= ? AND day <= ? AND event != '' GROUP BY event, prop, value");
+      expect(args).toEqual([weekAgo, today]); // today and the 6 days before
       await ask('?days=9999', 'sekrit');
-      expect(db.calls.at(-1).args).toEqual([new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)]); // out of range: a week
+      expect(db.calls.at(-1).args).toEqual([weekAgo, today]); // out of range: a week
+      await ask('?day=2026-11-20', 'sekrit');
+      expect(db.calls.at(-1).args).toEqual(['2026-11-20', '2026-11-20']); // one day
+      await ask("?day=2026-11-20' OR 1=1", 'sekrit');
+      expect(db.calls.at(-1).args).toEqual([weekAgo, today]); // not a date: a week
     });
   });
 });

@@ -8,20 +8,11 @@
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { NODES } from '../src/game/campaign.js';
-import { levelById } from '../src/game/maps.js';
+import { readTallies, roomName, pct, sum, ranked, shares } from '../src/tallies.js';
 import { LOSS_API, WEBSITE } from '../src/stats.js';
 
 const DAY = 86_400_000;
 const UMAMI = 'https://api.umami.is/v1';
-const WORST_MIN = 5; // fights in a room before its loss rate counts
-
-const roomName = (id) => (NODES[id]?.level ? levelById(NODES[id].level).name : id);
-const pct = (n, of) => `${Math.round((100 * n) / of)}%`;
-const sum = (obj) => Object.values(obj).reduce((n, k) => n + k, 0);
-/** "safari 5, chrome 1", the most first. */
-const ranked = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(', ');
-const shares = (obj) => { const all = sum(obj); return Object.entries(obj).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${pct(n, all)}`).join(', '); };
 
 /** The read key, from the environment. */
 export const readKeys = (env) => ({ losses: env.LOSS_READ_KEY || null, umami: env.UMAMI_API_KEY || null });
@@ -65,17 +56,9 @@ export async function buildDigest({ fetch, keys, now = Date.now() }) {
   const tallies = await worker('/tallies?days=7');
   if (tallies.error) out.push(`${tallies.error}: play stats left out.`, '');
   else {
-    const ev = {}; const props = {};
-    for (const { event, prop, value, n } of tallies.body.tallies ?? []) {
-      if (!prop) ev[event] = (ev[event] ?? 0) + n;
-      else ((props[`${event}:${prop}`] ??= {})[value] = (props[`${event}:${prop}`]?.[value] ?? 0) + n);
-    }
-    const e = (name) => ev[name] ?? 0;
-    const values = (event, prop) => props[`${event}:${prop}`] ?? {};
-    const won = values('fight-won', 'room'); const lost = values('fight-lost', 'room'); const left = values('fight-left', 'room');
-    const inputs = [values('fight-won', 'input'), values('fight-lost', 'input'), values('fight-left', 'input')]
-      .reduce((all, c) => { for (const [k, n] of Object.entries(c)) all[k] = (all[k] ?? 0) + n; return all; }, {});
-    const perf = values('perf', 'fps');
+    const t = readTallies(tallies.body.tallies);
+    const e = t.count;
+    const { inputs, perf } = t;
 
     out.push(`${e('visit')} visits.`);
     out.push(`${e('run-start')} runs started, ${e('run-continue')} continued, ${e('campaign-won')} campaigns won, ${e('daily-start')} dailies started.`, '');
@@ -84,19 +67,15 @@ export async function buildDigest({ fetch, keys, now = Date.now() }) {
     if (e('fight-won') + e('fight-lost') === 0) out.push('No fights ended this week.', '');
     else {
       out.push(`${e('fight-won') + e('fight-lost')} fights ended: ${e('fight-won')} won, ${e('fight-lost')} lost; ${e('fight-left')} left half-way.`, '');
-      const rooms = [...new Set([...Object.keys(won), ...Object.keys(lost), ...Object.keys(left)])].map((id) => {
-        const w = won[id] ?? 0; const l = lost[id] ?? 0;
-        return { id, w, l, left: left[id] ?? 0, rate: w + l ? l / (w + l) : 0 };
-      }).sort((a, b) => b.rate - a.rate || b.l - a.l);
       out.push('| Room | Won | Lost | Left | Loss rate |', '|---|---|---|---|---|');
-      for (const r of rooms) out.push(`| ${roomName(r.id)} | ${r.w} | ${r.l} | ${r.left} | ${r.w + r.l ? pct(r.l, r.w + r.l) : '–'} |`);
-      const worst = rooms.find((r) => r.w + r.l >= WORST_MIN);
-      if (worst) out.push('', `Worst room: ${roomName(worst.id)}, ${worst.l} of ${worst.w + worst.l} fights lost (${pct(worst.l, worst.w + worst.l)}).`);
+      for (const r of t.rooms) out.push(`| ${roomName(r.id)} | ${r.won} | ${r.lost} | ${r.left} | ${r.won + r.lost ? pct(r.lost, r.won + r.lost) : '–'} |`);
+      const { worst } = t;
+      if (worst) out.push('', `Worst room: ${roomName(worst.id)}, ${worst.lost} of ${worst.won + worst.lost} fights lost (${pct(worst.lost, worst.won + worst.lost)}).`);
       out.push('');
     }
 
     out.push('## Crashes', '');
-    out.push(e('error') ? `${e('error')} crashes: ${ranked(values('error', 'browser'))}. Where: ${ranked(values('error', 'at'))}.` : 'No crashes.', '');
+    out.push(e('error') ? `${e('error')} crashes: ${ranked(t.values('error', 'browser'))}. Where: ${ranked(t.values('error', 'at'))}.` : 'No crashes.', '');
 
     out.push('## How they play', '');
     if (sum(inputs)) out.push(`Input: ${shares(inputs)}.`);

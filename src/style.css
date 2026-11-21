@@ -1443,19 +1443,24 @@ body.touch #replay-bar button { min-height: 44px; }
 .losses-table td { padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
 .losses-table a { color: var(--gold); }
 .losses-watch { color: var(--muted); white-space: nowrap; }
-.losses-summary { margin-bottom: 18px; }
-.losses-summary[hidden] { display: none; }
-.losses-summary h2 { font: 700 16px var(--display); color: var(--gold); margin: 0 0 6px; }
-.losses-summary table { width: 100%; border-collapse: collapse; }
-.losses-summary thead th { text-align: right; font: 600 11px var(--display); letter-spacing: 0.06em; color: var(--muted); padding: 6px 8px; }
-.losses-summary thead th:first-child { text-align: left; }
-.losses-summary tbody th { text-align: left; font-weight: 400; padding: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
-.losses-summary td { text-align: right; padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.losses-summary td:last-child { font-weight: 600; }
-.losses-summary button {
+:is(.losses-summary, .losses-stats) { margin-bottom: 18px; }
+:is(.losses-summary, .losses-stats)[hidden] { display: none; }
+:is(.losses-summary, .losses-stats) h2 { font: 700 16px var(--display); color: var(--gold); margin: 0 0 6px; }
+:is(.losses-summary, .losses-stats) table { width: 100%; border-collapse: collapse; }
+:is(.losses-summary, .losses-stats) thead th { text-align: right; font: 600 11px var(--display); letter-spacing: 0.06em; color: var(--muted); padding: 6px 8px; }
+:is(.losses-summary, .losses-stats) thead th:first-child { text-align: left; }
+:is(.losses-summary, .losses-stats) tbody th { text-align: left; font-weight: 400; padding: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+:is(.losses-summary, .losses-stats) td { text-align: right; padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-variant-numeric: tabular-nums; white-space: nowrap; }
+:is(.losses-summary, .losses-stats) td:last-child { font-weight: 600; }
+:is(.losses-summary, .losses-stats) button {
   font: inherit; color: var(--gold); background: none; border: 0; padding: 8px; cursor: pointer;
   text-align: left; text-decoration: underline; text-underline-offset: 3px;
 }
+.losses-stats h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#losses .losses-stats h2 select { font-size: 13px; font-weight: 400; padding: 4px 6px; }
+.losses-stats p { margin: 0 0 6px; line-height: 1.45; overflow-wrap: anywhere; }
+.losses-stats p b { color: var(--muted); font-weight: 600; margin-right: 4px; }
+.losses-stats table { margin: 4px 0 10px; }
 .losses-legend { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 @media (max-width: 640px) {
   .losses-table th:nth-child(4), .losses-table td:nth-child(4) { display: none; } /* mode */

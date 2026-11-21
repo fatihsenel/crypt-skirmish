@@ -4,12 +4,14 @@
 // each in the game's own replay (#watch=, in a new tab). A fight recorded before the rules
 // changed no longer replays, and says so. Above the list, a summary counts the losses per room
 // and difficulty in the last 7 and 30 days (the Worker's /summary), the most first; a room's
-// name there filters the list to it.
+// name there filters the list to it. At the top, Play stats reads the Worker's event tallies
+// (/tallies, the same numbers as the weekly digest) for the last 7 or 30 days.
 
 import { NODES } from '../game/campaign.js';
 import { levelById } from '../game/maps.js';
 import { decodeFight, replayOutcome } from '../game/fightLink.js';
 import { LOSS_API } from '../stats.js';
+import { readTallies, pct, sum, ranked, shares } from '../tallies.js';
 
 export const KEY_STORE = 'crypt-skirmish:loss-key';
 const rooms = Object.entries(NODES).filter(([, n]) => n.kind === 'fight').map(([id, n]) => [id, levelById(n.level).name]);
@@ -41,6 +43,25 @@ export function summaryRows(list) {
   return [...byRoom.values()].sort((a, b) => b.month - a.month || b.week - a.week || order(a.room) - order(b.room));
 }
 
+/** Play stats from the Worker's tally rows, as HTML: the totals, each room's fights, crashes and play. */
+export function statsHtml(rows) {
+  const t = readTallies(rows);
+  const n = t.count;
+  const fights = n('fight-won') + n('fight-lost');
+  const line = (label, text) => `<p><b>${label}</b> ${esc(text)}</p>`;
+  const roomRows = t.rooms.map((r) => `<tr><th scope="row"><button type="button" class="link" data-room="${esc(r.id)}">${esc(roomName(r.id))}</button></th><td>${r.won}</td><td>${r.lost}</td><td>${r.left}</td><td>${r.won + r.lost ? pct(r.lost, r.won + r.lost) : '–'}</td></tr>`).join('');
+  return [
+    line('Players', `${n('visit')} visits, ${n('run-start')} runs started, ${n('run-continue')} continued, ${n('campaign-won')} campaigns won, ${n('daily-start')} dailies started.`),
+    fights
+      ? `${line('Fights', `${fights} ended: ${n('fight-won')} won, ${n('fight-lost')} lost; ${n('fight-left')} left half-way.`)}
+        <table class="stats-rooms"><thead><tr><th>Room</th><th>Won</th><th>Lost</th><th>Left</th><th>Loss rate</th></tr></thead><tbody>${roomRows}</tbody></table>`
+      : line('Fights', 'none ended.'),
+    line('Crashes', n('error') ? `${n('error')}: ${ranked(t.values('error', 'browser'))}. Where: ${ranked(t.values('error', 'at'))}.` : 'none.'),
+    sum(t.inputs) ? line('Input', `${shares(t.inputs)}.`) : '',
+    sum(t.perf) ? line('Frame rate', `${shares(t.perf)} (${sum(t.perf)} visits).`) : '',
+  ].join('');
+}
+
 const options = (list, all) => `<option value="">${all}</option>${list.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('')}`;
 
 export function showLosses() {
@@ -60,6 +81,10 @@ export function showLosses() {
       <label>Mode <select name="mode">${options([['campaign', 'Campaign'], ['daily', 'Daily'], ['weekly', 'Weekly']], 'Any')}</select></label>
       <button type="button" class="losses-forget">Forget key</button>
     </div>
+    <section class="losses-stats" hidden>
+      <h2>Play stats <select name="days" aria-label="Days"><option value="7">last 7 days</option><option value="30">last 30 days</option></select></h2>
+      <div class="stats-body"></div>
+    </section>
     <section class="losses-summary" hidden>
       <h2>Where they fall</h2>
       <table>
@@ -84,7 +109,18 @@ export function showLosses() {
   const body = $('tbody');
   const more = $('.losses-more');
   const summary = $('.losses-summary');
+  const stats = $('.losses-stats');
   let oldest = null;
+
+  async function loadStats() {
+    const days = stats.querySelector('[name=days]').value;
+    try {
+      const res = await fetch(`${LOSS_API}/tallies?days=${days}`, { headers: { Authorization: `Bearer ${readKey()}` } });
+      if (!res.ok) return void (stats.hidden = true);
+      stats.querySelector('.stats-body').innerHTML = statsHtml((await res.json()).tallies);
+      stats.hidden = false;
+    } catch { stats.hidden = true; }
+  }
 
   async function loadSummary() {
     const q = new URLSearchParams();
@@ -120,6 +156,7 @@ export function showLosses() {
       table.hidden = true;
       more.hidden = true;
       summary.hidden = true;
+      stats.hidden = true;
       status.textContent = 'That key wasn’t accepted.';
       return;
     }
@@ -129,6 +166,7 @@ export function showLosses() {
     if (!append) {
       body.innerHTML = '';
       loadSummary();
+      if (stats.hidden) loadStats(); // not the filters' business: once a visit, or on its own select
     }
     for (const l of losses) body.append(row(l));
     oldest = losses.at(-1)?.id ?? oldest;
@@ -159,7 +197,14 @@ export function showLosses() {
     load();
   });
   filters.addEventListener('change', () => load());
+  stats.querySelector('[name=days]').addEventListener('change', loadStats);
   more.addEventListener('click', () => load(true));
+  stats.addEventListener('click', (ev) => {
+    const room = ev.target.closest('[data-room]')?.dataset.room;
+    if (!room) return;
+    filters.querySelector('[name=room]').value = room;
+    load();
+  });
   summary.addEventListener('click', (ev) => {
     const room = ev.target.closest('[data-room]')?.dataset.room;
     if (!room) return;

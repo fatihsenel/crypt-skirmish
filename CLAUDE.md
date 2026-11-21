@@ -90,7 +90,10 @@ server on 5173.
   A lost run or daily also sends its record, names stripped (`withoutNames`, `sendLoss`), to the
   loss-replay Worker in `worker/` (Cloudflare, D1, deployed with `npx wrangler deploy` from there);
   `?losses` (`ui/losses.js`, loaded by `boot.js` instead of the game) lists them with a read key,
-  under a per-room count from the Worker's `/summary` (`summaryRows`).
+  under the week's play stats from `/tallies` (`statsHtml`) and a per-room count from the
+  Worker's `/summary` (`summaryRows`). `src/tallies.js` (`readTallies`) reads the tallies for
+  that page, the digest and the daily crash check (`scripts/crash-check.mjs`, `crash-check.yml`:
+  yesterday's `/tallies?day=`, failing the run on any crash).
   Uploads are limited per address (`UPLOADS` in `wrangler.toml`), unpacked to check they're a lost
   fight in the room they name (`checkCode`), and capped at `DAILY_CAP` a day.
   The Worker's tests (`tests/worker.test.js`) use a fake D1.

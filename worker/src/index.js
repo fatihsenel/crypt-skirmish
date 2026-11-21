@@ -209,10 +209,13 @@ export default {
 
     if (url.pathname === '/tallies' && request.method === 'GET') {
       if (!keyed()) return json({ error: 'key' }, 401, headers);
+      // ?day=YYYY-MM-DD: that day alone (the daily crash check); else ?days=N up to today.
+      const one = url.searchParams.get('day');
       const n = Number(url.searchParams.get('days'));
       const days = int(n, 1, TALLY_DAYS) ? n : 7;
-      const { results } = await env.DB.prepare("SELECT event, prop, value, SUM(n) AS n FROM tallies WHERE day >= ? AND event != '' GROUP BY event, prop, value")
-        .bind(day(Date.now() - (days - 1) * 86_400_000)).all();
+      const [from, to] = /^\d{4}-\d{2}-\d{2}$/.test(one ?? '') ? [one, one] : [day(Date.now() - (days - 1) * 86_400_000), day(Date.now())];
+      const { results } = await env.DB.prepare("SELECT event, prop, value, SUM(n) AS n FROM tallies WHERE day >= ? AND day <= ? AND event != '' GROUP BY event, prop, value")
+        .bind(from, to).all();
       return json({ tallies: results }, 200, headers);
     }
 

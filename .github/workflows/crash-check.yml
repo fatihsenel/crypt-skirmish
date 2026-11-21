@@ -1,0 +1,26 @@
+# The daily crash check (scripts/crash-check.mjs): fails, so GitHub emails about it, when the
+# game crashed for anyone the day before (UTC), or when the Worker can't be read. The read key is
+# the repository secret LOSS_READ_KEY. The log says only how many crashes; where is on
+# ?losses › Play stats.
+name: Crash check
+
+on:
+  schedule:
+    - cron: '30 5 * * *' # every day, 05:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  crashes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Count yesterday's crashes
+        env:
+          LOSS_READ_KEY: ${{ secrets.LOSS_READ_KEY }}
+        run: node scripts/crash-check.mjs

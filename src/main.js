@@ -1084,6 +1084,7 @@ async function checkGameOver() {
   if (!game.over) return false;
   if (ended) return true;
   ended = true;
+  tips.hide(); // a tip would sit on the end banner
   await wait(400);
   board.clearHighlights();
   drawThreats(); // the fight is over: no zones left
@@ -1340,7 +1341,7 @@ async function heroCommand(cmd) {
   }
   busy = false;
   refresh();
-  if (game.current === u && cmd.type !== 'end') tips.notice('acted', { unit: u, cmd, touch: controls.touching });
+  if (game.current === u && !game.over && cmd.type !== 'end') tips.notice('acted', { unit: u, cmd, touch: controls.touching });
   return r;
 }
 

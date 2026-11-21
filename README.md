@@ -324,7 +324,8 @@ npm run preview  # http://localhost:4173/crypt-skirmish/
 Every push to `main` runs lint and the tests, builds, checks the first screen's size, runs the touch check on three fixed fights against the
 build (and once with each finger lifted late, as a busy phone sees it) and deploys to GitHub Pages (`.github/workflows/pages.yml`). Every Monday `.github/workflows/digest.yml`
 runs the digest with the keys from the repository secrets `LOSS_READ_KEY` and `UMAMI_API_KEY` and keeps the report
-as the run's `digest` artifact, out of the public log.
+as the run's `digest` artifact, out of the public log. Every day `.github/workflows/crash-check.yml`
+fails, so GitHub emails, if the game crashed for anyone the day before (`scripts/crash-check.mjs`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
@@ -371,7 +372,8 @@ and loss rates in Umami against these numbers.
 
 Lost fights go to a Cloudflare Worker (`worker/`, with a D1 database) and are kept for 60 days.
 The unlisted page `?losses` lists them, newest first, by room, difficulty and mode, and opens
-each in the game's replay. Above the list, Where they fall counts each room's losses by
+each in the game's replay. At the top, Play stats shows the last 7 or 30 days of the play-stats
+counts (players, each room's fights and loss rate, crashes and where, input and frame rate). Above the list, Where they fall counts each room's losses by
 difficulty in the last 7 and 30 days, the most first; a room's name filters the list to it. It asks once for the Worker's read key. The Worker takes uploads
 only from the game's page, about 3 a minute from one address (Cloudflare's rate limiter,
 approximate, and the address is never stored), only a lost fight in the room it names, and at
@@ -447,8 +449,9 @@ src/
   input.js           picking a tile, the long press, what a click does, the cursor's step and words
   debug.js           window.__debug and the ?victory sample run
   stats.js           anonymous play stats (Umami): the setting, the events, the script loaded after the title,
-                     and lost fights sent to the loss-replay Worker
-  ui/losses.js       the unlisted ?losses page: players' lost fights to watch
+                     and the event counts and lost fights sent to the loss-replay Worker
+  tallies.js         the Worker's event counts read into numbers (the digest, ?losses, the crash check)
+  ui/losses.js       the unlisted ?losses page: play stats and players' lost fights to watch
   offline.js         registers the offline copy (public/sw.js), hands it the files already loaded, looks for a new deploy
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/
@@ -460,6 +463,7 @@ scripts/
   skull-glb.mjs      converts the title skull's OBJ scan to public/models/skull/skull.glb
   size-check.mjs     gzipped size of the title's code and of the skull against a budget
   digest.mjs         the weekly digest: the Worker's event tallies and stored losses (npm run digest)
+  crash-check.mjs    the daily crash check: yesterday's crashes from the tallies (GitHub Actions)
 public/sw.js         the offline copy: pages from the network first, everything else saved
 worker/              the loss-replay Cloudflare Worker (src/index.js), its table (schema.sql) and wrangler.toml
 docs/stats.md        the play stats' events, and reading them in Umami

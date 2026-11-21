@@ -107,6 +107,17 @@ repository is public; a missing read key, or either key refused, fails the run, 
 tallies are kept 400 days, at most 20,000 events a day and 30 a minute from one address, and
 never store an address.
 
+The same numbers, for the last 7 or 30 days, are at the top of
+https://fatihsenel.github.io/crypt-skirmish/?losses (Play stats), with the read key that page
+keeps; a room's name there filters the lost fights to it.
+
+## Crash alert
+
+Every day at 05:30 UTC GitHub Actions runs `scripts/crash-check.mjs`
+(`.github/workflows/crash-check.yml`): it reads yesterday's tallies (`/tallies?day=`) and fails
+the run, so GitHub emails, if anyone's game crashed, or if the read key is missing or refused.
+The log only says how many; Play stats on `?losses` says in which browser and where in the code.
+
 ## Watching the losses
 
 The rates say which room; the replays say why. Open the game with `?losses`
