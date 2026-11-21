@@ -33,6 +33,11 @@ let loading = false;
 const queue = []; // events before the script is in (at most a few)
 const tallyQueue = []; // events before the setting is read, for the Worker's tallies
 let visited = false; // the visit tally goes once a page
+// Played here before? Anything saved under the game's keys, read before this visit saves any
+// (boot.js imports this first). Only true or false is sent: no id.
+const returning = (() => {
+  try { return Object.keys(localStorage).some((k) => k.startsWith('crypt-skirmish')); } catch { return false; } // 'crypt-skirmish.save' too
+})();
 
 /** The party as class letters in hero order, e.g. "FWRC" or "PKAC". */
 export const partyCode = (campaign) => HEROES.map((c) => campaign?.party?.[c]?.cls ?? c).join('');
@@ -188,7 +193,7 @@ function load() {
 export function setStats(enabled) {
   on = !!enabled;
   if (!on || !statsAllowed(env())) return void (queue.length = tallyQueue.length = 0);
-  if (!visited) { visited = true; sendTally('visit', {}); }
+  if (!visited) { visited = true; sendTally('visit', { returning }); }
   for (const [name, data] of tallyQueue.splice(0)) sendTally(name, data);
   if (window.umami) for (const [name, data] of queue.splice(0)) send(name, data);
   else load();

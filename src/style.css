@@ -848,7 +848,7 @@ body.touch button.ability { padding: 7px 10px; min-height: 40px; }
 body.touch #end-turn, body.touch #undo { min-height: 44px; padding: 8px 14px; }
 body.touch .passive-tag { padding: 2px 7px; }
 #next[hidden] { display: none; }
-#to-map[hidden], #restart[hidden] { display: none; }
+#to-map[hidden], #restart[hidden], #ease[hidden] { display: none; }
 button.primary { border-color: var(--gold); background: rgba(217, 180, 90, 0.2); font-weight: 600; }
 button.primary:hover:not(:disabled) { background: rgba(217, 180, 90, 0.32); }
 button.quiet { background: none; border-color: transparent; color: var(--muted); font-size: 12px; padding: 4px 8px; }

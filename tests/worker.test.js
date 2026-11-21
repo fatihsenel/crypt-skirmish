@@ -174,6 +174,8 @@ describe('loss replay worker', () => {
       expect(crash).toContainEqual([DAY, 'error', 'browser', 'safari']);
       expect(tallyRows('perf', { fps: 'under 30', dpr: 1.5 }, DAY)).toContainEqual([DAY, 'perf', 'fps', 'under 30']);
       expect(tallyRows('run-continue', { midFight: true }, DAY)).toContainEqual([DAY, 'run-continue', 'midFight', 'true']);
+      expect(tallyRows('ease-taken', { room: 'throne', from: 'hard', to: 'normal' }, DAY)).toContainEqual([DAY, 'ease-taken', 'to', 'normal']);
+      expect(tallyRows('visit', { returning: true }, DAY)).toEqual([[DAY, '', '', ''], [DAY, 'visit', '', ''], [DAY, 'visit', 'returning', 'true']]);
       expect(tallyRows('visit', {}, DAY)).toEqual([[DAY, '', '', ''], [DAY, 'visit', '', '']]);
     });
 

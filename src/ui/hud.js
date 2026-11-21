@@ -65,12 +65,13 @@ export class Hud {
   /**
    * onChoose receives { kind: 'attack', attack } | { kind: 'spell', id } | { kind: 'action', id }
    */
-  constructor({ onEndTurn, onUndo, onChoose, onRestart, onNext, onMap, onToggleSound, onToggleMusic }) {
+  constructor({ onEndTurn, onUndo, onChoose, onRestart, onEase, onNext, onMap, onToggleSound, onToggleMusic }) {
     this.handlers = { onChoose };
     this.canUndo = false; // the controller sets it: the last move can be taken back
     $('#end-turn').addEventListener('click', onEndTurn);
     $('#undo').addEventListener('click', onUndo);
     $('#restart').addEventListener('click', onRestart);
+    $('#ease').addEventListener('click', onEase);
     $('#next').addEventListener('click', onNext);
     $('#to-map').addEventListener('click', onMap);
     $('#sound').addEventListener('click', onToggleSound);

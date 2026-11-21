@@ -124,7 +124,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   into the same fight, without showing yours first. The end screen then compares the rounds,
   and Watch yours and Watch theirs play both fights.
 - **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
-  ghoul out of the Barrow.
+  ghoul out of the Barrow. After a third defeat in the same room, the Defeat banner offers
+  Try again on Normal (from Hard) or Story (from Normal): the rest of the run goes on one step
+  down, and the run's record and achievements count it at that difficulty.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
   on the same turn.
 - Beating Nekhet shows a tally of the run and each hero's stats. Save image downloads it as a
@@ -202,7 +204,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   motion (System, Reduced or Full), colour-blind friendly enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
   a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
-  choice, a run abandoned, a campaign won, a replay watched, something shared, a fight left
+  choice, a run abandoned, a campaign won, an easier difficulty offered or taken, a visit and whether its browser played before, a replay watched, something shared, a fight left
   half-way, with the input it was played by), how smoothly the board draws (a frame-rate band,
   once a visit), to see where runs end, and a crash by where it happened in the code (never its
   message), to find what breaks in which browser. A lost run or daily also sends its fight, without the heroes' names, so it can be
@@ -373,7 +375,7 @@ and loss rates in Umami against these numbers.
 Lost fights go to a Cloudflare Worker (`worker/`, with a D1 database) and are kept for 60 days.
 The unlisted page `?losses` lists them, newest first, by room, difficulty and mode, and opens
 each in the game's replay. At the top, Play stats shows the last 7 or 30 days of the play-stats
-counts (players, each room's fights and loss rate, crashes and where, input and frame rate). Above the list, Where they fall counts each room's losses by
+counts (players, each room's fights and loss rate, crashes and where, input and frame rate), each with its change from the days before. Above the list, Where they fall counts each room's losses by
 difficulty in the last 7 and 30 days, the most first; a room's name filters the list to it. It asks once for the Worker's read key. The Worker takes uploads
 only from the game's page, about 3 a minute from one address (Cloudflare's rate limiter,
 approximate, and the address is never stored), only a lost fight in the room it names, and at

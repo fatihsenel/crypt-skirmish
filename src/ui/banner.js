@@ -19,7 +19,7 @@ export class EndBanner {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  show(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], relic = null, jar = false, daily = null, challenge = null, share = null, recap = null, win = null, replay = false, ngplus = false }) {
+  show(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], relic = null, jar = false, daily = null, challenge = null, share = null, recap = null, win = null, replay = false, ngplus = false, ease = null }) {
     this.renderSummary(summary);
     this.renderRecap(recap, win);
     this.cardSummary = summary;
@@ -47,7 +47,8 @@ export class EndBanner {
       ? final
         ? summary ? outro : `${outro} Won after ${rounds}. Well fought! (+${xp} XP)`
         : `${level} is quiet after ${rounds}. The party shares ${xp} XP and ${rest}.`
-      : `Your party has fallen in ${level}. Try the room again as you entered it, or go back to the map and pick another way.`;
+      : `Your party has fallen in ${level}. Try the room again as you entered it, or go back to the map and pick another way.`
+        + (ease ? ` A hard room: the rest of this run can go on at ${ease.name} instead (${ease.desc.replace(/[.:].*$/, '').toLowerCase()}).` : '');
     // A boss's relic: named under the result, with what it does.
     $('#banner-relic').hidden = !relic;
     $('#banner').setAttribute('aria-describedby', relic ? 'banner-text banner-relic' : 'banner-text');
@@ -57,6 +58,8 @@ export class EndBanner {
     $('#restart').textContent = won ? 'New campaign' : 'Try again';
     $('#restart').hidden = won && !final;
     $('#to-map').textContent = 'Back to the map';
+    $('#ease').hidden = !ease;
+    if (ease) $('#ease').textContent = `Try again on ${ease.name}`;
     this.setShare(share);
     if (daily) this.dailyBanner(daily, level);
     if (challenge) this.challengeBanner(challenge);

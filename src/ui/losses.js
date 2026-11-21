@@ -44,21 +44,23 @@ export function summaryRows(list) {
 }
 
 /** Play stats from the Worker's tally rows, as HTML: the totals, each room's fights, crashes and play. */
-export function statsHtml(rows) {
-  const t = readTallies(rows);
+export function statsHtml(rows, wider) {
+  const t = readTallies(rows, wider);
   const n = t.count;
+  const c = t.change;
   const fights = n('fight-won') + n('fight-lost');
   const line = (label, text) => `<p><b>${label}</b> ${esc(text)}</p>`;
   const roomRows = t.rooms.map((r) => `<tr><th scope="row"><button type="button" class="link" data-room="${esc(r.id)}">${esc(roomName(r.id))}</button></th><td>${r.won}</td><td>${r.lost}</td><td>${r.left}</td><td>${r.won + r.lost ? pct(r.lost, r.won + r.lost) : '–'}</td></tr>`).join('');
   return [
-    line('Players', `${n('visit')} visits, ${n('run-start')} runs started, ${n('run-continue')} continued, ${n('campaign-won')} campaigns won, ${n('daily-start')} dailies started.`),
+    line('Players', `${c('visit')} visits (${t.returning} had played before), ${c('run-start')} runs started, ${c('run-continue')} continued, ${c('campaign-won')} campaigns won, ${c('daily-start')} dailies started.`),
     fights
-      ? `${line('Fights', `${fights} ended: ${n('fight-won')} won, ${n('fight-lost')} lost; ${n('fight-left')} left half-way.`)}
+      ? `${line('Fights', `${fights} ended: ${c('fight-won')} won, ${c('fight-lost')} lost; ${c('fight-left')} left half-way.`)}
         <table class="stats-rooms"><thead><tr><th>Room</th><th>Won</th><th>Lost</th><th>Left</th><th>Loss rate</th></tr></thead><tbody>${roomRows}</tbody></table>`
       : line('Fights', 'none ended.'),
-    line('Crashes', n('error') ? `${n('error')}: ${ranked(t.values('error', 'browser'))}. Where: ${ranked(t.values('error', 'at'))}.` : 'none.'),
+    line('Crashes', n('error') ? `${c('error')}: ${ranked(t.values('error', 'browser'))}. Where: ${ranked(t.values('error', 'at'))}.` : 'none.'),
     sum(t.inputs) ? line('Input', `${shares(t.inputs)}.`) : '',
     sum(t.perf) ? line('Frame rate', `${shares(t.perf)} (${sum(t.perf)} visits).`) : '',
+    wider ? '<p class="losses-legend">In brackets: the change from the same number of days before.</p>' : '',
   ].join('');
 }
 
@@ -115,9 +117,11 @@ export function showLosses() {
   async function loadStats() {
     const days = stats.querySelector('[name=days]').value;
     try {
-      const res = await fetch(`${LOSS_API}/tallies?days=${days}`, { headers: { Authorization: `Bearer ${readKey()}` } });
+      const get = (n) => fetch(`${LOSS_API}/tallies?days=${n}`, { headers: { Authorization: `Bearer ${readKey()}` } });
+      const [res, before] = await Promise.all([get(days), get(days * 2)]);
       if (!res.ok) return void (stats.hidden = true);
-      stats.querySelector('.stats-body').innerHTML = statsHtml((await res.json()).tallies);
+      const wider = before.ok ? (await before.json()).tallies : undefined;
+      stats.querySelector('.stats-body').innerHTML = statsHtml((await res.json()).tallies, wider);
       stats.hidden = false;
     } catch { stats.hidden = true; }
   }

@@ -8,7 +8,7 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize,
-  choices, START_NODE, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem,
+  choices, START_NODE, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem, easeRun,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
@@ -140,6 +140,17 @@ const hud = new Hud({
     if (daily || challenge) newGame(); // the daily or the linked fight again, from the same seed
     else if (game?.over === 'victory') startCampaign(); // after the final room
     else newGame(); // retry this room with the party as it entered
+  },
+  // The Defeat banner's offer after losing a room again and again (easeOffer): the rest of the
+  // run one difficulty down, and this room again.
+  onEase: () => {
+    if (!campaign || !game || game.over !== 'defeat') return;
+    const from = campaign.difficulty;
+    campaign = easeRun(campaign);
+    writeSave(campaign);
+    track('ease-taken', { room: nodeId, from, to: campaign.difficulty });
+    sfx.ui();
+    newGame();
   },
   onNext: () => leaveRoom(),
   onMap: () => {
@@ -1114,6 +1125,7 @@ async function checkGameOver() {
     bannerSkull('chatter');
   }
   hud.banner(game.over, end.banner);
+  if (end.banner.ease) track('ease-offered', { room: nodeId, difficulty: campaign.difficulty });
   return true;
 }
 

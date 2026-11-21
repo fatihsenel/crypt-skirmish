@@ -49,7 +49,12 @@ describe('the ?losses play stats', () => {
 
   it('shows the totals, each room with its loss rate, crashes and how they play', () => {
     const html = statsHtml(rows);
-    expect(html).toContain('12 visits, 4 runs started');
+    expect(html).toContain('12 visits (0 had played before), 4 runs started');
+    expect(html).not.toContain('In brackets'); // nothing to compare with
+    const vs = statsHtml(rows, [...rows, { event: 'visit', prop: '', value: '', n: 20 }, { event: 'fight-lost', prop: '', value: '', n: 5 }]);
+    expect(vs).toContain('12 (−8) visits');
+    expect(vs).toContain('6 (+6) won, 2 (−3) lost');
+    expect(vs).toContain('In brackets: the change from the same number of days before.');
     expect(html).toContain('8 ended: 6 won, 2 lost; 0 left half-way.');
     expect(html).toMatch(/data-room="throne">The Weeping Throne<\/button><\/th><td>0<\/td><td>2<\/td><td>0<\/td><td>100%/);
     expect(html.indexOf('data-room="throne"')).toBeLessThan(html.indexOf('data-room="crypt"')); // the worst first

@@ -5,7 +5,7 @@
 import { ELITE_TRAITS } from './game/combat.js';
 import { levelById } from './game/maps.js';
 import { relicFrom } from './game/items.js';
-import { NODES, completeFight, recordDefeat, runSummary, runShareText } from './game/campaign.js';
+import { NODES, DIFFICULTIES, completeFight, recordDefeat, easeOffer, runSummary, runShareText } from './game/campaign.js';
 import { fightCheck } from './game/replay.js';
 import { fightRecap, winRecap } from './game/recap.js';
 import { recordBlows, loadBestiary, slainTotal, loadElitesSlain } from './game/bestiary.js';
@@ -51,7 +51,7 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
       if (saving) share = runShareText(summary);
     }
   } else if (campaign) {
-    campaign = recordDefeat(campaign, game);
+    campaign = recordDefeat(campaign, game, nodeId);
     store.writeSave(campaign);
   }
   // Anonymous play stats: real runs, dailies and linked fights, not test fights. A lost run or
@@ -66,11 +66,14 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
   }
   const dailyResult = daily ? settleDaily(game, nodeId, daily, level, record, awards) : null;
   const versus = challenge && challengeText(challenge.theirs, { won, rounds: game.round }, level.name);
+  // Lost this room again and again in a real run: offer the rest of it one difficulty down.
+  const ease = !won && saving && campaign && !daily && !challenge ? easeOffer(campaign, nodeId) : null;
   const banner = {
     round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
     summary, awards, relic, jar: !!campaign?.relics?.includes('jar') && !daily && !challenge, daily: dailyResult, challenge: versus, share, replay: !!record, recap: won ? null : fightRecap(game),
     win: won && !summary ? winRecap(game) : null,
     ngplus: !!summary && saving && !!campaign?.done,
+    ease: ease && { to: ease, name: DIFFICULTIES[ease].name, desc: DIFFICULTIES[ease].desc },
   };
   return { campaign, final, banner };
 }

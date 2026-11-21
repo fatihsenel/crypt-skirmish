@@ -33,7 +33,8 @@ async function umamiLines({ fetch, key, now }) {
   try {
     const stats = await get('stats');
     const from = (await get('metrics', { type: 'referrer', limit: '5' })) ?? [];
-    lines.push(`${num(stats.visitors)} visitors, ${num(stats.visits)} visits, ${num(stats.pageviews)} page views.`);
+    const v = num(stats.visitors);
+    lines.push(`${v} visitor${v === 1 ? '' : 's'}, ${num(stats.visits)} visits, ${num(stats.pageviews)} page views.`);
     if (from.length) lines.push(`Came from: ${from.map((r) => `${r.x || '(direct)'} ${r.y}`).join(', ')}.`);
   } catch (error) {
     lines.push(`${error.message}: left out.`);
@@ -53,20 +54,22 @@ export async function buildDigest({ fetch, keys, now = Date.now() }) {
   };
 
   // --- Play stats (tallies) ---
-  const tallies = await worker('/tallies?days=7');
+  const [tallies, fortnight] = await Promise.all([worker('/tallies?days=7'), worker('/tallies?days=14')]);
   if (tallies.error) out.push(`${tallies.error}: play stats left out.`, '');
   else {
-    const t = readTallies(tallies.body.tallies);
+    const t = readTallies(tallies.body.tallies, fortnight.body?.tallies);
     const e = t.count;
+    const c = t.change;
     const { inputs, perf } = t;
 
-    out.push(`${e('visit')} visits.`);
-    out.push(`${e('run-start')} runs started, ${e('run-continue')} continued, ${e('campaign-won')} campaigns won, ${e('daily-start')} dailies started.`, '');
+    if (fortnight.body) out.push('In brackets: the change from the week before.', '');
+    out.push(`${c('visit')} visits, ${t.returning} from players who had played before.`);
+    out.push(`${c('run-start')} runs started, ${c('run-continue')} continued, ${c('campaign-won')} campaigns won, ${c('daily-start')} dailies started.`, '');
 
     out.push('## Rooms', '');
     if (e('fight-won') + e('fight-lost') === 0) out.push('No fights ended this week.', '');
     else {
-      out.push(`${e('fight-won') + e('fight-lost')} fights ended: ${e('fight-won')} won, ${e('fight-lost')} lost; ${e('fight-left')} left half-way.`, '');
+      out.push(`${e('fight-won') + e('fight-lost')} fights ended: ${c('fight-won')} won, ${c('fight-lost')} lost; ${c('fight-left')} left half-way.`, '');
       out.push('| Room | Won | Lost | Left | Loss rate |', '|---|---|---|---|---|');
       for (const r of t.rooms) out.push(`| ${roomName(r.id)} | ${r.won} | ${r.lost} | ${r.left} | ${r.won + r.lost ? pct(r.lost, r.won + r.lost) : '–'} |`);
       const { worst } = t;
@@ -75,7 +78,7 @@ export async function buildDigest({ fetch, keys, now = Date.now() }) {
     }
 
     out.push('## Crashes', '');
-    out.push(e('error') ? `${e('error')} crashes: ${ranked(t.values('error', 'browser'))}. Where: ${ranked(t.values('error', 'at'))}.` : 'No crashes.', '');
+    out.push(e('error') ? `${c('error')} crashes: ${ranked(t.values('error', 'browser'))}. Where: ${ranked(t.values('error', 'at'))}.` : 'No crashes.', '');
 
     out.push('## How they play', '');
     if (sum(inputs)) out.push(`Input: ${shares(inputs)}.`);

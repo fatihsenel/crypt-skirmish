@@ -210,7 +210,7 @@ describe('play stats', () => {
       stats.track('challenge-played', { room: 'crypt' });
       expect(posts).toHaveLength(0); // the setting isn't read yet
       stats.setStats(true);
-      expect(posts.map((p) => p.body)).toEqual([{ name: 'visit', data: {} }, { name: 'challenge-played', data: { room: 'crypt' } }]);
+      expect(posts.map((p) => p.body)).toEqual([{ name: 'visit', data: { returning: false } }, { name: 'challenge-played', data: { room: 'crypt' } }]);
       expect(posts[0].url).toBe(`${stats.LOSS_API}/event`);
       expect(posts[0].init).toMatchObject({ method: 'POST', keepalive: true, headers: { 'Content-Type': 'text/plain' } });
       stats.track('stop', { stop: 'altar' });
@@ -243,6 +243,30 @@ describe('play stats', () => {
         stats.setStats(true);
         stats.track('fight-won', {});
         expect(posts).toHaveLength(0);
+      } finally {
+        vi.unstubAllEnvs();
+        vi.unstubAllGlobals();
+        vi.resetModules();
+      }
+    }
+  });
+
+  it('say whether the visit is from a browser that has played before', async () => {
+    for (const [keys, returning] of [[['crypt-skirmish.save', 'other'], true], [['other'], false]]) {
+      vi.resetModules();
+      vi.stubEnv('PROD', true);
+      vi.stubEnv('DEV', false);
+      const posts = [];
+      vi.stubGlobal('location', { hostname: 'fatihsenel.github.io', search: '' });
+      vi.stubGlobal('navigator', { doNotTrack: null });
+      vi.stubGlobal('window', {});
+      vi.stubGlobal('localStorage', Object.fromEntries(keys.map((k) => [k, '1'])));
+      vi.stubGlobal('document', { createElement: () => ({ dataset: {} }), head: { append: () => {} } });
+      vi.stubGlobal('fetch', async (url, init) => { posts.push(JSON.parse(init.body)); return { ok: true }; });
+      try {
+        const stats = await import('../src/stats.js');
+        stats.setStats(true);
+        expect(posts[0]).toEqual({ name: 'visit', data: { returning } });
       } finally {
         vi.unstubAllEnvs();
         vi.unstubAllGlobals();

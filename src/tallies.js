@@ -15,12 +15,17 @@ export const ranked = (obj) => byMost(obj).map(([k, n]) => `${k} ${n}`).join(', 
 /** "touch 70%, mouse 30%", the most first. */
 export const shares = (obj) => { const all = sum(obj); return byMost(obj).map(([k, n]) => `${k} ${pct(n, all)}`).join(', '); };
 
+/** "41 (+12)": a count and its change from the period before; just "41" with nothing to compare. */
+export const withChange = (n, before) => (before == null ? String(n) : `${n} (${n >= before ? '+' : '−'}${Math.abs(n - before)})`);
+
 /**
  * The tallies as numbers: `count(event)`, `values(event, prop)` ({ value: n }), each room's
  * fights ({ id, won, lost, left, rate }, the highest loss rate first), the worst room once it
- * has WORST_MIN fights, and the input used in fights and the frame-rate bands.
+ * has WORST_MIN fights, the input used in fights, the frame-rate bands and the visits from
+ * browsers that played before. With `wider` (the same days plus as many before them, e.g. 14 for
+ * 7), `change(event)` gives a count with its change from the period before ("41 (+12)").
  */
-export function readTallies(rows) {
+export function readTallies(rows, wider) {
   const totals = {}; const props = {};
   for (const r of Array.isArray(rows) ? rows : []) {
     if (!r || typeof r.event !== 'string' || !Number.isFinite(r.n)) continue;
@@ -36,8 +41,11 @@ export function readTallies(rows) {
   }).sort((a, b) => b.rate - a.rate || b.lost - a.lost);
   const inputs = {};
   for (const e of ['fight-won', 'fight-lost', 'fight-left']) for (const [k, n] of Object.entries(values(e, 'input'))) inputs[k] = (inputs[k] ?? 0) + n;
+  const all = wider ? readTallies(wider) : null;
+  const change = (event) => withChange(count(event), all ? all.count(event) - count(event) : null);
   return {
-    count, values, rooms, inputs, perf: values('perf', 'fps'),
+    count, values, rooms, inputs, change, perf: values('perf', 'fps'),
+    returning: values('visit', 'returning').true ?? 0,
     worst: rooms.find((r) => r.won + r.lost >= WORST_MIN) ?? null,
   };
 }

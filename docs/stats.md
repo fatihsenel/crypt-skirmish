@@ -16,6 +16,9 @@ player.
 | `run-abandon` | A new campaign replaces an unfinished one | `room`, `cleared`, `difficulty`, `tier` |
 | `fight-won` / `fight-lost` | A real fight ends (not `?level=`) | `room`, `mode`, `difficulty`, `tier`, `party`, `rounds`, `standing`, `downed`, `input` |
 | `campaign-won` | The Tomb won | `difficulty`, `tier`, `party`, `relics` |
+| `visit` | Once a page, when stats are on (counted by the Worker only) | `returning` (true when this browser has saved anything from the game before) |
+| `ease-offered` | The Defeat banner offers a lower difficulty (a third loss in the same room) | `room`, `difficulty` |
+| `ease-taken` | Try again on Normal or Story pressed | `room`, `from`, `to` |
 | `stop` | A choice at a stop | `stop` (pilgrim, altar, reliquary), `choice`, `difficulty` |
 | `daily-start` | Play today's or this week's crypt | `mode` (daily, weekly), `room` |
 | `replay-watched` | Watch replay | `from` (banner, title, link), `room` |
@@ -79,14 +82,18 @@ line are the source's own.
 `input`: a much higher loss rate on touch points at the touch controls, not the rooms. `perf`
 by `fps`: if a real share draws under 30, the board needs to get cheaper (shadows, pixel ratio).
 
-**Do players come back and share?** `run-continue` and `daily-start` per day; `shared` by `what`.
+**Is a room too hard?** `ease-offered` by `room` says where players lose three times running;
+`ease-taken` against it, how many would rather go on one step easier.
+
+**Do players come back and share?** `visit` by `returning`; `run-continue` and `daily-start` per day; `shared` by `what`.
 
 ## The weekly digest
 
 `npm run digest` prints the last 7 days as a short report from the Worker's tallies (Umami
 Cloud's API is for paid plans): visits, runs, each room's won, lost and left fights with its
 loss rate (the worst room named once it has 5 fights), crashes by browser and place in the code,
-input and frame-rate shares, and the losses stored by the Worker. It needs the Worker's read key
+input and frame-rate shares, and the losses stored by the Worker. Each count shows its change from
+the week before in brackets, and visits say how many came from players who had played before. It needs the Worker's read key
 in the environment, `LOSS_READ_KEY`; without it, or if the Worker refuses it, the report says so.
 `npm run digest -- --out week.md` saves it too.
 
@@ -107,7 +114,7 @@ repository is public; a missing read key, or either key refused, fails the run, 
 tallies are kept 400 days, at most 20,000 events a day and 30 a minute from one address, and
 never store an address.
 
-The same numbers, for the last 7 or 30 days, are at the top of
+The same numbers, for the last 7 or 30 days (each with its change from the period before), are at the top of
 https://fatihsenel.github.io/crypt-skirmish/?losses (Play stats), with the read key that page
 keeps; a room's name there filters the lost fights to it.
 

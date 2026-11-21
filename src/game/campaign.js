@@ -300,11 +300,29 @@ function addStats(stats, game) {
 }
 
 /** A lost fight counts toward the run's tally (its rounds, and one more defeat). */
-export function recordDefeat(prev, game) {
+export function recordDefeat(prev, game, nodeId) {
   const state = clone(prev);
   state.stats = validStats(state.stats);
   state.stats.lost++;
   state.stats.rounds += game.round;
+  if (nodeId) state.fails = { ...state.fails, [nodeId]: (state.fails?.[nodeId] ?? 0) + 1 }; // for easeOffer
+  return state;
+}
+
+/** Losses in one room before the Defeat banner offers to lower the run's difficulty. */
+export const EASE_AFTER = 3;
+const EASIER = { hard: 'normal', normal: 'story' };
+
+/** The difficulty one step down, offered after EASE_AFTER losses in `nodeId` this run, or null. */
+export function easeOffer(state, nodeId) {
+  return (state.fails?.[nodeId] ?? 0) >= EASE_AFTER ? EASIER[state.difficulty] ?? null : null;
+}
+
+/** The run, one difficulty down for the rest of it (what the records and achievements then see). */
+export function easeRun(prev) {
+  const state = clone(prev);
+  state.difficulty = EASIER[state.difficulty] ?? state.difficulty;
+  state.fails = {};
   return state;
 }
 
@@ -650,6 +668,9 @@ export function parseSave(text) {
     s.relics = cleanRelics(s.relics ?? s.cleared.map((c) => (NODES[c].boss ? relicFrom(NODES[c].level) : null)));
     if (s.phylacterySpent !== true) delete s.phylacterySpent; // kept only while spent
     if (!['owed', 'repaid', 'robbed'].includes(s.pilgrim)) delete s.pilgrim;
+    // Losses per room (easeOffer): whole numbers for real rooms only.
+    if (s.fails && typeof s.fails === 'object') s.fails = Object.fromEntries(Object.entries(s.fails).filter(([id, n]) => NODES[id] && Number.isInteger(n) && n > 0));
+    else delete s.fails;
     for (const code of HERO_CODES) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;

@@ -46,6 +46,18 @@ describe('the end of a fight', () => {
     expect(end.banner.win).toBeNull();
   });
 
+  it('a third loss in the same room of a real run offers the rest of it one difficulty down', () => {
+    const run = { ...newCampaign('normal'), fails: { [START_NODE]: 2 } };
+    const third = settleFight(base(finished('monsters'), { campaign: run, saving: true }));
+    expect(third.campaign.fails[START_NODE]).toBe(3);
+    expect(third.banner.ease).toEqual({ to: 'story', name: 'Story', desc: expect.any(String) });
+    // Not on a second loss, a test run, a daily or a win.
+    expect(settleFight(base(finished('monsters'), { campaign: { ...run, fails: {} }, saving: true })).banner.ease).toBeNull();
+    expect(settleFight(base(finished('monsters'), { campaign: run })).banner.ease).toBeNull();
+    expect(settleFight(base(finished('monsters'), { campaign: null, daily: { key: '2026-11-20', level: 6, seed: 1 } })).banner.ease).toBeNull();
+    expect(settleFight(base(finished('heroes'), { campaign: run, saving: true })).banner.ease).toBeNull();
+  });
+
   it('a won daily: its result, streak and share text go on the banner', () => {
     const game = finished('heroes');
     const daily = { key: '2026-11-20', level: 6, seed: 1 };

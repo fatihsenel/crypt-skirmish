@@ -14,7 +14,7 @@ function rows(spec) {
 }
 
 const WEEK = rows([
-  ['visit', 180],
+  ['visit', 180, { returning: { true: 70, false: 110 } }],
   ['run-start', 40], ['run-continue', 25], ['campaign-won', 3], ['daily-start', 30],
   ['fight-won', 29, { room: { crypt: 18, throne: 11 }, input: { touch: 20, mouse: 9 } }],
   ['fight-lost', 12, { room: { throne: 9, crypt: 2, well: 1 }, input: { touch: 8, keys: 4 } }],
@@ -23,8 +23,11 @@ const WEEK = rows([
   ['perf', 40, { fps: { '50+': 30, 'under 30': 10 } }],
 ]);
 
+// The 14 days: this week plus the week before (150 visits, 30 runs, 20 won, 15 lost, 2 crashes).
+const FORTNIGHT = [...WEEK, ...rows([['visit', 150], ['run-start', 30], ['fight-won', 20], ['fight-lost', 15], ['error', 2]])];
+
 /** A stand-in for the Worker: answers by path, and records each call. */
-function fakeFetch({ ok = true, tallies = WEEK, umami = true } = {}) {
+function fakeFetch({ ok = true, tallies = WEEK, before = FORTNIGHT, umami = true } = {}) {
   const calls = [];
   const fetch = async (url, { headers } = {}) => {
     const u = new URL(url);
@@ -37,7 +40,7 @@ function fakeFetch({ ok = true, tallies = WEEK, umami = true } = {}) {
         : u.pathname.endsWith('/metrics') ? [{ x: '', y: 60 }, { x: 'reddit.com', y: 40 }] : null;
       return { ok: true, status: 200, json: async () => umamiBody };
     }
-    const body = u.pathname === '/tallies' ? { tallies }
+    const body = u.pathname === '/tallies' ? { tallies: u.searchParams.get('days') === '14' ? before : tallies }
       : u.pathname === '/summary' ? { rooms: [{ room: 'throne', difficulty: 'hard', week: 5, month: 9 }, { room: 'crypt', difficulty: 'normal', week: 2, month: 2 }] }
         : null;
     return body ? { ok: true, status: 200, json: async () => body } : { ok: false, status: 404, json: async () => ({}) };
@@ -50,22 +53,22 @@ describe('the weekly digest', () => {
     const { fetch, calls } = fakeFetch();
     const text = await buildDigest({ fetch, keys: { losses: 'l-key' }, now: NOW });
     expect(text).toMatch(/^# Crypt Skirmish: the week to 23 Nov 2026/);
-    expect(text).toContain('180 visits.');
-    expect(text).toContain('40 runs started, 25 continued, 3 campaigns won, 30 dailies started.');
-    expect(text).toContain('41 fights ended: 29 won, 12 lost; 3 left half-way.');
+    expect(text).toContain('In brackets: the change from the week before.');
+    expect(text).toContain('180 (+30) visits, 70 from players who had played before.');
+    expect(text).toContain('40 (+10) runs started, 25 (+25) continued, 3 (+3) campaigns won, 30 (+30) dailies started.');
+    expect(text).toContain('41 fights ended: 29 (+9) won, 12 (−3) lost; 3 (+3) left half-way.');
     // Rooms by loss rate, the worst first; a room with fewer than 5 fights is listed but not named worst.
     expect(text).toContain('| The Weeping Throne | 11 | 9 | 3 | 45% |');
     expect(text.indexOf('The Weeping Throne |')).toBeLessThan(text.indexOf('The Crypt Door |'));
     expect(text).toContain('Worst room: The Weeping Throne, 9 of 20 fights lost (45%).');
-    expect(text).toContain('6 crashes: safari 5, chrome 1. Where: main-CahFguWJ.js:2:5847 6.');
+    expect(text).toContain('6 (+4) crashes: safari 5, chrome 1. Where: main-CahFguWJ.js:2:5847 6.');
     expect(text).toContain('Input: touch 70%, mouse 20%, keys 9%.');
     expect(text).toContain('Frame rate: 50+ 75%, under 30 25% (40 visits).');
     expect(text).toContain('7 losses stored, most in The Weeping Throne (5).');
     // Two calls, both with the read key; the tallies cover 7 days.
-    expect(calls.map((c) => c.url.pathname)).toEqual(['/tallies', '/summary']); // no Umami key: no Umami calls
+    expect(calls.map((c) => `${c.url.pathname}${c.url.search}`)).toEqual(['/tallies?days=7', '/tallies?days=14', '/summary']); // no Umami key: no Umami calls
     expect(text).not.toContain('Umami');
     expect(calls.every((c) => c.auth === 'Bearer l-key')).toBe(true);
-    expect(calls[0].url.searchParams.get('days')).toBe('7');
   });
 
   it('adds Umami’s visitors, page views and referrers when its key is set', async () => {
@@ -102,7 +105,7 @@ describe('the weekly digest', () => {
       return { ok: true, status: 200, json: async () => body };
     };
     const text = await buildDigest({ fetch: empty, keys: { losses: 'l' }, now: NOW });
-    expect(text).toContain('0 visits.');
+    expect(text).toContain('0 (+0) visits, 0 from players who had played before.');
     expect(text).toContain('No crashes.');
     expect(text).toContain('No fights ended this week.');
     expect(text).toContain('Nothing recorded yet.');

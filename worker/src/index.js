@@ -37,7 +37,7 @@ const TALLY_DAYS = 400;
 const FIGHT = ['room', 'mode', 'difficulty', 'tier', 'party', 'rounds', 'standing', 'downed', 'input'];
 /** The events the game sends and the properties counted for each; anything else is dropped. */
 const TALLY_EVENTS = {
-  visit: [],
+  visit: ['returning'], // played in this browser before
   'run-start': ['kind', 'difficulty', 'tier', 'party'],
   'run-continue': ['room', 'cleared', 'difficulty', 'tier', 'midFight'],
   'run-abandon': ['room', 'cleared', 'difficulty', 'tier'],
@@ -46,6 +46,8 @@ const TALLY_EVENTS = {
   'fight-left': [...FIGHT, 'round'],
   'campaign-won': ['difficulty', 'tier', 'party', 'relics'],
   stop: ['stop', 'choice', 'difficulty'],
+  'ease-offered': ['room', 'difficulty'], // the Defeat banner's offer after 3 losses in a room
+  'ease-taken': ['room', 'from', 'to'],
   'daily-start': ['mode', 'room'],
   'challenge-played': ['room'],
   'replay-watched': ['from', 'room'],
