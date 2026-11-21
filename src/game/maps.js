@@ -143,7 +143,7 @@ export const LEVELS = [
       '#$...#.......>.#',
       '################',
     ],
-    loot: [['cloakProtection', 'potion'], [], ['potion', 'weaponPlus1']],
+    loot: [['cloakProtection', 'ironKey', 'potion'], [], ['potion', 'weaponPlus1']],
     mimics: ['14,5'],
     asleep: ['2,7'],
     patrols: { '9,8': [[13, 9], [7, 9]] },

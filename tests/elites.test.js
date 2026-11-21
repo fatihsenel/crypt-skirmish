@@ -206,11 +206,12 @@ describe('elites on the camp map', () => {
     expect(roomElite('sanctum', 2).id).toBe('regenerating');
     const rest = Object.keys(NODES).find((id) => NODES[id].kind === 'rest');
     expect(roomElite(rest, 3)).toBeNull();
+    expect(roomElite('altar', 3)).toBeNull();
     expect(roomElite('nowhere', 3)).toBeNull();
   });
 
   it('matches the elite the fight then has', () => {
-    for (const node of Object.keys(NODES).filter((id) => NODES[id].kind !== 'rest')) {
+    for (const node of Object.keys(NODES).filter((id) => NODES[id].kind === 'fight')) {
       const g = room(3, 1, node);
       expect(elites(g).map((u) => u.elite)).toEqual([roomElite(node, 3).id]);
     }

@@ -239,7 +239,7 @@ export class Game extends Spellcasting {
 
   toHitBonus(unit, attack) {
     const archery = unit.passives?.includes('archery') && isWeapon(attack) && !isMelee(attack) ? 1 : 0; // SRD +2, halved for balance
-    return abilityMod(unit.stats[attack.stat]) + unit.prof + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + archery;
+    return abilityMod(unit.stats[attack.stat]) + unit.prof + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + archery + (unit.hitBonus ?? 0);
   }
 
   /** Flat damage bonus added to an attack's dice. */
@@ -748,6 +748,7 @@ export class Game extends Spellcasting {
   heal(target, amount, source = target) {
     if (this.has(target, 'rotting')) return 0; // mummy rot: no HP back until it wears off
     const before = target.hp;
+    if (target.healTwice) amount *= 2; // a Periapt of Wound Closure
     target.hp = Math.min(target.maxHp, target.hp + amount);
     const t = this.tally(source);
     if (t) t.healing += target.hp - before;

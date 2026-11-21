@@ -616,7 +616,7 @@ describe('campaign: levels, items and the dungeon map', () => {
     let s = newCampaign();
     expect(choices(s)).toEqual(['crypt']);
     s = { ...s, at: 'crypt', cleared: ['crypt'] };
-    expect(choices(s)).toEqual(['warren', 'ossuary']);
+    expect(choices(s)).toEqual(['warren', 'ossuary', 'pilgrim']); // the pilgrim: a stop with no fight
     const one = { ...s, at: 'warren', cleared: ['crypt', 'warren'] };
     expect(choices(one)).toEqual(['ossuary', 'chapel']);
     expect(choices({ ...one, at: 'chapel', cleared: [...one.cleared, 'chapel'] })).toEqual(['sanctum']);
@@ -1296,7 +1296,7 @@ describe('mimics', () => {
     const game = new Game(levelById('vault'), { party: start.party });
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;
     const { state } = completeFight(start, 'vault', game);
-    expect(state.pack.sort()).toEqual(['cloakProtection', 'weaponPlus1']);
+    expect(state.pack.sort()).toEqual(['cloakProtection', 'ironKey', 'weaponPlus1']);
   });
 });
 
@@ -1335,7 +1335,7 @@ describe('act two', () => {
 
   it('act three: the nest, then the gallery or the shrine, then the throne, which ends the act', () => {
     const base = { ...newCampaign(), at: 'nest', cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs', 'well', 'barrow', 'nest'] };
-    expect(choices(base)).toEqual(['gallery', 'shrine']);
+    expect(choices(base)).toEqual(['gallery', 'shrine', 'altar']);
     expect(choices({ ...base, at: 'gallery', cleared: [...base.cleared, 'gallery'] })).toEqual(['throne']);
     const rested = takeRest(base, 'shrine');
     expect(choices(rested)).toEqual(['throne']);
@@ -2169,7 +2169,7 @@ describe('act four and levels 7–8', () => {
 
   it('after the throne: the halls, then the armory or the hearth, then the tomb, which ends the campaign', () => {
     const base = { ...newCampaign(), at: 'halls', cleared: [...ACT_THREE, 'halls'] };
-    expect(choices(base)).toEqual(['armory', 'hearth']);
+    expect(choices(base)).toEqual(['armory', 'hearth', 'reliquary']);
     expect(choices({ ...base, at: 'armory', cleared: [...base.cleared, 'armory'] })).toEqual(['tomb']);
     const rested = takeRest(base, 'hearth');
     expect(choices(rested)).toEqual(['tomb']);

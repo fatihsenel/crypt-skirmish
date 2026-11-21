@@ -11,7 +11,7 @@ import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
 import { areaTiles, lineTiles } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
-import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, runDifficulty, newGamePlus, fightRelics } from '../src/game/campaign.js';
+import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem } from '../src/game/campaign.js';
 import { ITEMS, cleanRelics } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
@@ -257,6 +257,7 @@ function equipAll(state) {
   const order = {
     weaponPlus1: ['F', 'R'], weaponPlus2: ['R', 'F', 'C'], ringProtection: ['W', 'C', 'R'], cloakProtection: ['W', 'C', 'R'],
     bracersDefense: ['W'], gauntletsOgre: ['F', 'C'], amuletHealth: ['W', 'R', 'C'], periaptPoison: ['F', 'R', 'C'],
+    periaptWounds: ['F', 'C', 'R'],
   };
   for (let i = state.pack.length - 1; i >= 0; i--) {
     const id = state.pack[i];
@@ -275,6 +276,13 @@ const ACT_TWO = [
 const ACT_THREE = [['nest', 'gallery', 'throne'], ['nest', 'shrine', 'throne']];
 const ACT_FOUR = [['halls', 'armory', 'tomb'], ['halls', 'hearth', 'tomb']];
 const REST = new Set(['chapel', 'well', 'shrine', 'hearth']);
+/** EVENTS=1 takes the stops with no fight on the way: tend the pilgrim, bleed at the altar, open the reliquary. */
+const TAKE_EVENTS = !!process.env.EVENTS;
+const STOPS = [['pilgrim', 'tend'], ['pilgrim', 'rob'], ['altar', 'offer'], ['reliquary', 'open']];
+function takeStops(state) {
+  for (const [id, opt] of STOPS) if (!eventProblem(state, id, opt)) return takeStops(takeEvent(state, id, opt).state);
+  return state;
+}
 /** "vault", "well+larder", ...: the part of an act-two route between the catacombs and the barrow. */
 const via = (two) => two.slice(1, -1).join('+');
 
@@ -283,6 +291,7 @@ function campaign(route, rng, start = freshCampaign()) {
   let state = start;
   const out = [];
   for (const id of route) {
+    if (TAKE_EVENTS) state = equipAll(takeStops(state));
     if (REST.has(id)) {
       state = takeRest(state, id);
       continue;
@@ -424,7 +433,7 @@ const rates = (whole) => Object.fromEntries(Object.entries(whole).map(([k, [won,
 const levelsOf = (list) => [...new Set(list.map((r) => r.level))].join('/');
 
 function print(mode, data, runs, seed, jobs) {
-  const how = `seed ${seed}${TIER ? `, NG+${TIER}` : ''}${FORCED ? `, relics: ${FORCED.join('+') || 'none'}` : ''}${jobs > 1 ? `, ${jobs} threads` : ''}`;
+  const how = `seed ${seed}${TIER ? `, NG+${TIER}` : ''}${FORCED ? `, relics: ${FORCED.join('+') || 'none'}` : ''}${TAKE_EVENTS ? ', taking the stops' : ''}${jobs > 1 ? `, ${jobs} threads` : ''}`;
   if (mode === 'full') {
     const [won, total] = data.whole.all;
     console.log(`Whole campaigns, ${total} runs (${process.env.DIFFICULTY ?? 'normal'}, ${how})`);

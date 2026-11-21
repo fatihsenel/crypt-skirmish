@@ -1191,6 +1191,11 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 #camp-room .elite-note { font-size: 13px; }
 #camp-room .elite-note b { color: #ffc94a; font-weight: 600; }
 #camp-room button { margin-top: 8px; }
+#camp-room .event-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+#camp-room .event-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1 1 200px; text-align: left; }
+#camp-room .event-choice small { font-weight: 400; opacity: 0.85; }
+#camp-map .node.event .glyph path { stroke-width: 2.2; }
+.item-chip.boon { border-color: rgba(255, 125, 107, 0.55); color: #ffb4a8; }
 
 .hero-card { padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
 .hero-top b { color: var(--hero); }

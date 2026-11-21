@@ -59,7 +59,9 @@ export function difficultyLabel(difficulty, tier = 0) {
  * Act four (after the throne) asks it a last time: the armory's loot or the hearth's rest.
  */
 export const NODES = {
-  crypt: { kind: 'fight', level: 'crypt', col: 0, row: 1, next: ['warren', 'ossuary'] },
+  crypt: { kind: 'fight', level: 'crypt', col: 0, row: 1, next: ['warren', 'ossuary', 'pilgrim'] },
+  // A stop with a choice and no fight (EVENTS below): off the crypt, on the way to either middle room.
+  pilgrim: { kind: 'event', col: 1, row: 1, next: ['warren', 'ossuary'], name: 'The Wounded Pilgrim', short: 'Pilgrim' },
   warren: {
     kind: 'fight', level: 'warren', col: 1, row: 0,
     next: ['ossuary', 'chapel', { to: 'sanctum', ifAll: ['warren', 'ossuary'] }],
@@ -108,7 +110,7 @@ export const NODES = {
   },
   // Act three: the nest, then the gallery's loot or the shrine's rest, then the banshee.
   nest: {
-    kind: 'fight', level: 'nest', short: 'Nest', col: 8, row: 1, next: ['gallery', 'shrine'],
+    kind: 'fight', level: 'nest', short: 'Nest', col: 8, row: 1, next: ['gallery', 'shrine', 'altar'],
     teaser: 'Giant spiders: their webs hold you fast, their bites poison.',
   },
   gallery: {
@@ -121,6 +123,7 @@ export const NODES = {
     intro: 'A shrine to a forgotten saint, where no ghost will tread. The party takes a long rest.',
     teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
   },
+  altar: { kind: 'event', col: 9, row: 1, next: ['gallery', 'shrine'], name: 'The Blood Altar', short: 'Altar' },
   throne: {
     kind: 'fight', level: 'throne', short: 'Throne', col: 10, row: 1, next: ['halls'], boss: true,
     actBreak: true,
@@ -128,7 +131,7 @@ export const NODES = {
   },
   // Act four: the halls, then the armory's loot or the hearth's rest, then the mummy lord.
   halls: {
-    kind: 'fight', level: 'halls', short: 'Halls', col: 11, row: 1, next: ['armory', 'hearth'],
+    kind: 'fight', level: 'halls', short: 'Halls', col: 11, row: 1, next: ['armory', 'hearth', 'reliquary'],
     teaser: 'Mummies, skeletons and a wraith whose touch drains the life from you.',
   },
   armory: {
@@ -141,6 +144,7 @@ export const NODES = {
     intro: 'Embers still glow in the hearth of an old guardroom. The party takes a long rest.',
     teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
   },
+  reliquary: { kind: 'event', col: 12, row: 1, next: ['armory', 'hearth'], name: 'The Saint’s Reliquary', short: 'Reliquary' },
   tomb: {
     kind: 'fight', level: 'tomb', short: 'Tomb', col: 13, row: 1, next: [], boss: true,
     teaser: 'Nekhet the Mummy Lord. The end of the road.',
@@ -148,6 +152,36 @@ export const NODES = {
 };
 
 export const START_NODE = 'crypt';
+
+/**
+ * The stops with a choice and no fight. Each option is taken in camp (takeEvent); none rolls
+ * dice. Their lasting effects ride with the party: potions, the pack, and the altar's blessing
+ * as an item, so fight records and links need nothing new.
+ */
+export const EVENTS = {
+  pilgrim: {
+    intro: 'A pilgrim slumps against the wall, a goblin arrow in his leg and a fat purse at his belt.',
+    teaser: 'No fight. Help him, or help yourselves.',
+    options: {
+      tend: { label: 'Tend his wounds', desc: 'Give up one potion. After the Sanctum he finds you again and leaves a potion for every hero.' },
+      rob: { label: 'Take his purse', desc: 'Two potions now. You won’t see him again.' },
+    },
+  },
+  altar: {
+    intro: 'A black altar, warm to the touch. Old blood has run in its grooves.',
+    teaser: 'No fight. Pay in blood for a blessing.',
+    options: {
+      offer: { label: 'Offer blood', desc: 'Every hero loses a quarter of their HP maximum. The party is blessed for its next fight: +1 to hit and +1 AC.' },
+    },
+  },
+  reliquary: {
+    intro: 'A saint’s reliquary behind an iron door, its lock thick with rust.',
+    teaser: 'No fight. It opens only with the Iron Key from the Sealed Vault.',
+    options: {
+      open: { label: 'Open the reliquary', desc: 'Use the Iron Key: a Periapt of Wound Closure goes into the pack.' },
+    },
+  },
+};
 
 /**
  * A hero name as typed on the title screen, made safe: letters, digits, spaces, apostrophes
@@ -158,6 +192,47 @@ export function cleanName(text) {
 }
 
 export const nodeName = (id) => NODES[id].name ?? levelById(NODES[id].level).name;
+
+/** Why option `opt` at event `id` can't be taken now, or null. */
+export function eventProblem(state, id, opt) {
+  if (NODES[id]?.kind !== 'event' || !EVENTS[id].options[opt]) return 'No such choice';
+  if (!choices(state).includes(id)) return 'Not on the way';
+  if (id === 'pilgrim' && opt === 'tend' && !HERO_CODES.some((c) => state.party[c].potions > 0)) return 'No potion to spare';
+  if (id === 'reliquary' && !state.pack.includes('ironKey')) return 'Sealed: it needs the Iron Key from the Sealed Vault';
+  return null;
+}
+
+/** Take option `opt` at event `id`: the party moves there and lives with it. Returns { state, report }. */
+export function takeEvent(prev, id, opt) {
+  const problem = eventProblem(prev, id, opt);
+  if (problem) throw new Error(problem);
+  const state = clone(prev);
+  const report = { event: id, option: opt, loot: [] };
+  const byPotions = (most) => [...HERO_CODES].sort((a, b) => (state.party[most ? b : a].potions - state.party[most ? a : b].potions));
+  if (id === 'pilgrim' && opt === 'tend') {
+    state.party[byPotions(true)[0]].potions--;
+    state.pilgrim = 'owed';
+  }
+  if (id === 'pilgrim' && opt === 'rob') {
+    for (const code of byPotions(false).slice(0, 2)) state.party[code].potions++;
+    state.pilgrim = 'robbed';
+  }
+  if (id === 'altar') {
+    for (const code of HERO_CODES) {
+      const rec = state.party[code];
+      rec.hp = Math.max(1, rec.hp - Math.floor(restedHero(code, rec).maxHp / 4));
+      if (!rec.items.includes('altarBlessing')) rec.items.push('altarBlessing');
+    }
+  }
+  if (id === 'reliquary') {
+    state.pack.splice(state.pack.indexOf('ironKey'), 1);
+    state.pack.push('periaptWounds');
+    report.loot.push('periaptWounds');
+  }
+  state.cleared.push(id);
+  state.at = id;
+  return { state, report };
+}
 
 export function levelForXp(xp) {
   let level = 3;
@@ -424,12 +499,21 @@ export function completeFight(prev, id, game) {
   if (NODES[id].next.length === 0) state.done = true;
   // The end of an act: a long rest before the next one (casters would start it empty).
   const longRest = !!NODES[id].actBreak;
+  // The altar's blessing lasts one won fight.
+  const blessed = HERO_CODES.some((c) => state.party[c].items.includes('altarBlessing'));
+  for (const code of HERO_CODES) state.party[code].items = state.party[code].items.filter((i) => i !== 'altarBlessing');
+  // The pilgrim the party tended catches up at the end of the act with a potion for each hero.
+  const pilgrim = longRest && state.pilgrim === 'owed';
+  if (pilgrim) {
+    for (const code of HERO_CODES) state.party[code].potions++;
+    state.pilgrim = 'repaid';
+  }
   // Morvath's Phylactery saves one hero between long rests: spent when it works.
   if (game.phylacteryUsed) state.phylacterySpent = true;
   const spent = !!state.phylacterySpent;
   if (longRest) restParty(state);
   const phylactery = !spent ? null : longRest ? 'ready' : game.phylacteryUsed ? 'spent' : null;
-  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery } };
+  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery, blessed, pilgrim } };
 }
 
 /** The relics the next fight starts with: the run's, less a Phylactery spent this act. */
@@ -497,6 +581,7 @@ export function equipPreview(state, i, code) {
   }
   if (after.saveBonus !== before.saveBonus) lines.push(`${signed(after.saveBonus - before.saveBonus)} to saves`);
   if ((after.immune ?? []).includes('poisoned') && !(before.immune ?? []).includes('poisoned')) lines.push('Can’t be poisoned');
+  if (after.healTwice && !before.healTwice) lines.push('Heals twice as much');
   return lines;
 }
 
@@ -564,6 +649,7 @@ export function parseSave(text) {
     // Saves from before relics get those of the bosses they've beaten.
     s.relics = cleanRelics(s.relics ?? s.cleared.map((c) => (NODES[c].boss ? relicFrom(NODES[c].level) : null)));
     if (s.phylacterySpent !== true) delete s.phylacterySpent; // kept only while spent
+    if (!['owed', 'repaid', 'robbed'].includes(s.pilgrim)) delete s.pilgrim;
     for (const code of HERO_CODES) {
       const r = s.party?.[code];
       if (!r || typeof r.hp !== 'number' || typeof r.level !== 'number' || !Array.isArray(r.items)) return null;

@@ -9,9 +9,10 @@ import { newCampaign, equip, unequip, equipProblem, equipPreview, heroUnit } fro
 const withPack = (...items) => ({ ...newCampaign('normal'), pack: [...items] });
 
 describe('magic items', () => {
-  it('lists every item in some chest', () => {
+  it('lists every item in some chest, but those of the stops with no fight', () => {
     const found = new Set(LEVELS.flatMap((l) => (l.loot ?? []).flat()));
-    for (const id of Object.keys(ITEMS)) expect(found.has(id), id).toBe(true);
+    const fromStops = ['periaptWounds', 'altarBlessing']; // the reliquary and the altar
+    for (const id of Object.keys(ITEMS)) expect(found.has(id) || fromStops.includes(id), id).toBe(true);
   });
 
   it('keeps Bracers of Defense for a hero in no armor', () => {

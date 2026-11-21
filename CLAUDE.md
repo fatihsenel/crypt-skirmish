@@ -98,6 +98,11 @@ server on 5173.
 - **Room:** a map in `LEVELS` (`game/maps.js`) and a node in `NODES` (`game/campaign.js`).
 - **Relic:** `RELICS` in `game/items.js` (its `boss` is the room that drops it) and its rule in
   `Game` (`this.relics`) or `completeFight`. Relics ride in the fight record and links (`rl`).
+- **Stop with no fight:** a node of `kind: 'event'` in `NODES`, its words and options in
+  `EVENTS`, and its rule in `takeEvent` and `eventProblem` (`game/campaign.js`); the camp
+  draws its options as buttons (`data-enter="altar:offer"`) and `EVENT_NEWS` in `camp.js` says
+  what happened. Lasting effects ride with the party (potions, the pack, a `boon` item), so
+  fight records need nothing new.
 - **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
   `scripts/sim.js` if the AI wouldn't use its abilities.
 - **Spell or action:** it needs a case in `playSpell` or `playAction` in `animate.js`;

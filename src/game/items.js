@@ -55,6 +55,21 @@ export const ITEMS = {
     desc: 'Can’t be poisoned: goblin arrows, rat and spider bites, ghoul claws and ghast stench don’t take hold.',
     apply: (u) => { (u.immune ??= []).push('poisoned'); },
   },
+  // From the stops with no fight (EVENTS in campaign.js). Kept at the end: links list items by id.
+  ironKey: {
+    name: 'Iron Key', kind: 'key',
+    desc: 'Opens the Saint’s Reliquary, after the Halls in the fourth act.',
+  },
+  periaptWounds: {
+    name: 'Periapt of Wound Closure', kind: 'gear',
+    desc: 'Whenever the wearer regains hit points, they regain twice as many.',
+    apply: (u) => { u.healTwice = true; },
+  },
+  altarBlessing: {
+    name: 'Altar Blessing', kind: 'boon',
+    desc: '+1 to hit and +1 AC, for the next fight only.',
+    apply: (u) => { u.hitBonus = (u.hitBonus ?? 0) + 1; u.acBonus += 1; },
+  },
 };
 
 /** Equip a list of item ids on a unit (after levelling). */

@@ -5,7 +5,7 @@ import { Bestiary } from './bestiary.js';
 import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
-  cleanName, roomElite,
+  cleanName, roomElite, EVENTS, eventProblem,
 } from '../game/campaign.js';
 import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
 import { ITEMS, RELICS } from '../game/items.js';
@@ -33,6 +33,15 @@ const GLYPH = {
   fight: '<path d="M-7 -7 L7 7 M7 -7 L-7 7 M-8 4 L-4 8 M8 4 L4 8" />',
   rest: '<path d="M0 -8 V8 M-6 -2 H6" />',
   boss: '<path d="M-8 5 H8 L9 -5 L4 -1 L0 -7 L-4 -1 L-9 -5 Z" />',
+  event: '<path d="M-4 -4 A4 4 0 1 1 1 0 Q0 1 0 3 M0 7.5 V8" />', // a question mark: a stop with a choice
+};
+
+/** What each choice at a stop with no fight did, for the camp's report. */
+const EVENT_NEWS = {
+  'pilgrim:tend': 'You bind the pilgrim’s leg and give him a potion. He swears he’ll find you after the Sanctum.',
+  'pilgrim:rob': 'You take the pilgrim’s purse: two potions, shared out. He curses you as you go.',
+  'altar:offer': 'Each hero bleeds on the altar, a quarter of their HP maximum. The party is blessed for its next fight: +1 to hit and +1 AC.',
+  'reliquary:open': 'The Iron Key turns. Inside lies a Periapt of Wound Closure; hand it out from the pack.',
 };
 
 /** One line on what each swappable class brings, for the title screen's class picker. */
@@ -362,7 +371,7 @@ export class Camp {
 
   /** Where focus goes when the camp opens or a focused control is gone: the way on, or the pack. */
   firstControl() {
-    return document.querySelector('#camp-room [data-enter], #camp-pack [data-equip]:not([disabled]), #camp-new');
+    return document.querySelector('#camp-room [data-enter]:not([disabled]), #camp-pack [data-equip]:not([disabled]), #camp-new');
   }
 
   reportHtml(state, report) {
@@ -376,7 +385,9 @@ export class Camp {
       <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · ${esc(difficultyLabel(state.difficulty ?? 'normal', state.tier))}</span>
     </div>`;
     let news = '';
-    if (report?.rest) {
+    if (report?.event) {
+      news = `<p><b>${esc(nodeName(report.event))}.</b> ${esc(EVENT_NEWS[`${report.event}:${report.option}`])}</p>`;
+    } else if (report?.rest) {
       news = `<p><b>${esc(nodeName(report.rest))}.</b> ${esc(NODES[report.rest].intro)} Full HP and every spell slot back.</p>`;
     } else if (report) {
       const found = [
@@ -386,6 +397,8 @@ export class Camp {
       const parts = [`<p>Room cleared: <b>+${report.xp} XP</b>. ${report.longRest
         ? 'Long rest: full HP and every spell slot back.'
         : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: three-quarters of everyone’s missing HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
+      if (report.blessed) parts.push('<p>The altar’s blessing fades.</p>');
+      if (report.pilgrim) parts.push('<p>The pilgrim you tended finds you again: <b class="loot">a potion for every hero</b>.</p>');
       if (report.phylactery === 'spent') parts.push(`<p><b class="relic">${esc(RELICS.phylactery.name)}</b> is spent: it sleeps until the next long rest.</p>`);
       if (report.phylactery === 'ready') parts.push(`<p><b class="relic">${esc(RELICS.phylactery.name)}</b> wakes with the long rest.</p>`);
       if (report.relic) parts.push(`<p>Relic found: <b class="relic">${esc(RELICS[report.relic].name)}</b>. ${esc(RELICS[report.relic].desc)}</p>`);
@@ -414,13 +427,13 @@ export class Camp {
     }).join('');
     const nodes = Object.entries(NODES).map(([id, n]) => {
       const p = pos(id);
-      const kind = n.kind === 'rest' ? 'rest' : n.boss ? 'boss' : 'fight';
+      const kind = n.kind === 'rest' || n.kind === 'event' ? n.kind : n.boss ? 'boss' : 'fight';
       const state_ = cleared.has(id) ? 'cleared' : options.includes(id) ? 'available' : 'locked';
       const cls = ['node', kind, state_, id === state.at ? 'here' : '', id === this.selected ? 'selected' : ''].join(' ');
       const label = n.short ?? nodeName(id).replace(/^The /, '');
       const elite = cleared.has(id) ? null : roomElite(id, state.tier); // New Game+ 2 and deeper
       const r = kind === 'boss' ? 21 : 18;
-      const spoken = `${nodeName(id)}, ${kind === 'rest' ? 'a rest' : kind === 'boss' ? 'the boss room' : 'a room'}`
+      const spoken = `${nodeName(id)}, ${{ rest: 'a rest', event: 'a stop with no fight', boss: 'the boss room', fight: 'a room' }[kind]}`
         + `${{ cleared: ', cleared', available: ', open', locked: '' }[state_]}${id === state.at ? ', the party is here' : ''}`
         + `${elite ? `, elite: ${elite.name}` : ''}`;
       const role = state_ === 'available'
@@ -441,6 +454,18 @@ export class Camp {
     const id = this.selected;
     if (!id) return '<p class="muted">No way onward.</p>';
     const n = NODES[id];
+    if (n.kind === 'event') {
+      const e = EVENTS[id];
+      const opts = Object.entries(e.options).map(([opt, o]) => {
+        const why = eventProblem(state, id, opt);
+        return `<button type="button" class="primary event-choice" data-enter="${id}:${opt}" ${why ? 'disabled' : ''}>
+          <b>${esc(o.label)}</b><small>${esc(why ?? o.desc)}</small></button>`;
+      }).join('');
+      return `<h3>${esc(nodeName(id))}</h3>
+        <p>${esc(e.intro)}</p>
+        <p class="teaser">${esc(e.teaser)}</p>
+        <div class="event-choices">${opts}</div>`;
+    }
     const intro = n.kind === 'rest' ? n.intro : levelById(n.level).intro;
     const verb = n.verb ?? `Enter ${nodeName(id)}`;
     const elite = roomElite(id, state.tier);
@@ -460,8 +485,9 @@ export class Camp {
         const n = u.slots[l] ?? 0;
         return `<span class="slots" title="${ordinal(+l)}-level spell slots">${ordinal(+l)} ${'◆'.repeat(n)}<s>${'◇'.repeat(Math.max(0, max - n))}</s></span>`;
       }).join('');
-      const items = rec.items.map((it, i) =>
-        `<span class="item-chip" title="${esc(ITEMS[it].desc)}">${esc(ITEMS[it].name)}<button type="button" data-unequip="${code}:${i}" aria-label="Put ${esc(ITEMS[it].name)} back in the pack">×</button></span>`).join('');
+      const items = rec.items.map((it, i) => (ITEMS[it].kind === 'boon'
+        ? `<span class="item-chip boon" title="${esc(ITEMS[it].desc)}">${esc(ITEMS[it].name)}</span>`
+        : `<span class="item-chip" title="${esc(ITEMS[it].desc)}">${esc(ITEMS[it].name)}<button type="button" data-unequip="${code}:${i}" aria-label="Put ${esc(ITEMS[it].name)} back in the pack">×</button></span>`)).join('');
       return `<div class="hero-card ${code}">
         <div class="hero-top"><b>${esc(u.name)}</b> <small>${esc(u.cls)} · Lv ${u.level}${u.level >= MAX_LEVEL ? ' (max)' : ''}</small></div>
         <div class="hp-line"><span class="hpbar"><i style="width:${pct}%"></i></span><span>${u.hp}/${u.maxHp} HP</span><span>AC ${u.ac + u.acBonus}</span></div>
@@ -475,6 +501,7 @@ export class Camp {
     if (!state.pack.length) return '<p class="muted">The pack is empty. Magic items from chests land here.</p>';
     return state.pack.map((id, i) => {
       const it = ITEMS[id];
+      if (it.kind === 'key') return `<div class="pack-item"><div><b class="loot">${esc(it.name)}</b><small>${esc(it.desc)}</small></div></div>`;
       const give = HERO_CODES.map((code) => {
         const why = equipProblem(state, i, code);
         const name = heroUnit(code, state.party[code]).name;

@@ -8,7 +8,7 @@ import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize,
-  choices, START_NODE, runDifficulty, newGamePlus, fightRelics,
+  choices, START_NODE, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
@@ -311,6 +311,20 @@ function showCamp(report) {
 
 function enterRoom(id) {
   sfx.ui();
+  // A stop with no fight: the choice is made from the camp ("altar:offer").
+  if (id.includes(':')) {
+    const [node, opt] = id.split(':');
+    if (eventProblem(campaign, node, opt)) return;
+    const { state, report } = takeEvent(campaign, node, opt);
+    campaign = state;
+    writeSave(campaign);
+    if (node === 'reliquary') sfx.unlock();
+    else if (node === 'altar') sfx.discover();
+    else if (opt === 'tend') sfx.heal();
+    else sfx.chest();
+    showCamp(report);
+    return;
+  }
   if (NODES[id].kind === 'rest') {
     campaign = takeRest(campaign, id);
     writeSave(campaign);

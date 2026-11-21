@@ -87,7 +87,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - Between rooms the party takes a short rest, shares XP and hands out magic items at camp.
 - **Magic items:** Runed Weapons +1 and +2, Rings and Cloaks of Protection, Bracers of Defense
   (only for a hero in no armor), Gauntlets of Ogre Power, an Amulet of Health and a Periapt of
-  Proof against Poison. Each hero's button in the pack shows what the item would change for
+  Proof against Poison (and, from the Saint's Reliquary, a Periapt of Wound Closure). Each hero's button in the pack shows what the item would change for
   them, such as "AC 15 → 17" or "Max HP 35 → 53".
 - **Relics:** each boss leaves one behind. A relic isn't worn: it works for the whole party
   for the rest of the run, and the camp lists them under Relics.
@@ -98,6 +98,14 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
     until they attack or cast, get hurt, or a sharp-eyed monster spots them.
   - Nekhet's Embalming Jar: the rest after each room gives back three-quarters of the missing
     HP, not half (New Game+ only, since Nekhet is the last boss).
+- **Stops with no fight:** three side trips on the map, each one choice and no dice. Visit one
+  on the way, or walk past it; the fork after it is still there.
+  - The Wounded Pilgrim (after the Crypt): give up a potion and he finds you after the
+    Sanctum with one for every hero, or take his purse for two potions now.
+  - The Blood Altar (after the Nest): every hero loses a quarter of their HP maximum, and the
+    party fights its next fight blessed, +1 to hit and +1 AC. The Shrine's rest keeps it.
+  - The Saint's Reliquary (after the Halls): sealed unless the party carries the Iron Key from
+    the Sealed Vault's chest. Inside: a Periapt of Wound Closure.
 - A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
   each hero fell, which foe hit hardest and who was still standing, with a tip for next time
   (unused potions, archers, a foe to focus). A won room says who led the way, the closest
@@ -282,6 +290,8 @@ A few things differ from the SRD to keep the game simple:
 - Relics are not from the SRD. The Phylactery works like Death Ward on the first hero to drop,
   once between long rests. The Veil hides the party at 15 + Stealth bonus, with no roll and
   no penalty for noisy armor.
+- The Periapt of Wound Closure doubles all healing its wearer receives (the SRD's doubles
+  Hit Dice and stabilizes; there are no Hit Dice or death saves here).
 
 ## For developers
 
@@ -328,6 +338,9 @@ run with elites slain. Nothing is saved.
 - `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
 - `RELICS=horn,veil` gives the party exactly those relics in every fight (`RELICS=` for none);
   without it they're earned from the bosses as in a real run.
+- `EVENTS=1` takes the stops with no fight on the way (tends the pilgrim, bleeds at the altar,
+  opens the reliquary with the key). On Normal it changes little; on Hard it costs about 5
+  points, mostly the altar's blood before the Gallery.
 
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
