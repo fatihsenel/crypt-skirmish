@@ -180,7 +180,7 @@ export class Game extends Spellcasting {
       for (const u of this.units) {
         const saved = party[u.slot];
         if (u.team !== 'heroes' || !saved) continue;
-        if (saved.level) applyLevel(u, saved.level);
+        if (saved.level) applyLevel(u, saved.level, saved.picks);
         if (saved.name) u.name = saved.name;
         applyItems(u, saved.items);
         for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands']) {

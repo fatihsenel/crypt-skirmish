@@ -39,6 +39,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - Pick Paladin, Warlock, Ranger or Bard and rename the heroes under New campaign on the title screen.
 - The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
   or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
+- At levels 4 and 8 (the Fighter at 6 too) each hero raises an ability by 2 in camp. The
+  class's usual pick comes first; Constitution, Dexterity or Wisdom can take its place. Each
+  button says what changes. A pick left open takes the usual one when the next fight starts.
 - Ice Storm leaves its area icy: difficult terrain (each tile costs 10 ft of movement) until
   the end of the caster's next turn. Specters, wraiths and Ysolde fly over it.
 - The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
@@ -377,6 +380,7 @@ A few things differ from the SRD to keep the game simple:
 - The mimic knocks you prone instead of grappling.
 - Only Grukk's second attack has disadvantage.
 - Sculpt Spells and Sneak Attack 4d6 arrive at level 6. Sculpt spares every ally.
+- An Ability Score Improvement is always +2 to one ability (no feats, no +1 and +1).
 - The ghast's stench only lasts until the end of the victim's turn.
 - A giant spider's bite poisons instead of dealing poison damage, and its web wears off on
   its own.

@@ -32,7 +32,7 @@ const handOn = (name) => (...args) => main?.then(() => later[name]?.(...args));
 hints(); // styled tooltips for data-hint, everywhere
 document.documentElement.dataset.text = loadSettings().text; // the Text size setting, from the title on
 export const camp = new Camp(Object.fromEntries([
-  'onEnter', 'onEquip', 'onUnequip', 'onNewCampaign', 'onDaily', 'onWeekly', 'onWatch',
+  'onEnter', 'onEquip', 'onUnequip', 'onPick', 'onNewCampaign', 'onDaily', 'onWeekly', 'onWatch',
   'onShareFight', 'onNewGamePlus', 'onContinue', 'onTrade', 'onEndless', 'onEndDive',
 ].map((name) => [name, handOn(name)])));
 

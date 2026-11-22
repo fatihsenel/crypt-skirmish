@@ -6,9 +6,9 @@ import { canTrade } from '../game/shop.js';
 import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
-  cleanName, roomElite, EVENTS, eventProblem,
+  cleanName, roomElite, EVENTS, eventProblem, openPicks, pickOptions,
 } from '../game/campaign.js';
-import { TEMPLATES, CLASS_CHOICES } from '../game/units.js';
+import { TEMPLATES, CLASS_CHOICES, ABILITY_NAMES } from '../game/units.js';
 import { ITEMS, RELICS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
@@ -62,7 +62,7 @@ const CLASS_BLURB = {
 /** A selector for a camp control that a redraw replaces, to focus its new copy (null: leave focus). */
 function focusKey(el) {
   if (!el?.closest?.('#camp')) return null;
-  for (const a of ['data-node', 'data-enter', 'data-equip', 'data-unequip']) {
+  for (const a of ['data-node', 'data-enter', 'data-equip', 'data-unequip', 'data-pick']) {
     if (el.hasAttribute(a)) return `#camp [${a}="${el.getAttribute(a)}"]`;
   }
   return el.id ? `#${el.id}` : null;
@@ -72,8 +72,8 @@ function focusKey(el) {
 const nameLabel = (cls) => `${TEMPLATES[cls].cls}’s name (${TEMPLATES[cls].name} if left blank)`;
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -433,7 +433,7 @@ export class Camp {
       if (report.relic) parts.push(`<p>Relic found: <b class="relic">${esc(RELICS[report.relic].name)}</b>. ${esc(RELICS[report.relic].desc)}</p>`);
       if (report.levelUps.length) {
         parts.push(`<div class="levelups"><b>Level up!</b><ul>${report.levelUps.map((l) =>
-          `<li><b>${esc(l.name)}</b> reaches level ${l.level}: ${esc(l.note)}</li>`).join('')}</ul></div>`);
+          `<li><b>${esc(l.name)}</b> reaches level ${l.level}: ${esc(l.note)}${l.asi ? '. Or raise another ability: choose on their card' : ''}</li>`).join('')}</ul></div>`);
       }
       news = parts.join('');
     } else if (!state.at && state.endless) {
@@ -551,8 +551,19 @@ export class Camp {
         <div class="hp-line"><span class="hpbar"><i style="width:${pct}%"></i></span><span>${u.hp}/${u.maxHp} HP</span><span>AC ${u.ac + u.acBonus}</span></div>
         <div class="hero-meta">${slots}<span data-hint="Potions of healing">Potions ${u.potions}</span></div>
         ${items ? `<div class="hero-items">${items}</div>` : ''}
+        ${this.pickHtml(state, code, u)}
       </div>`;
     }).join('');
+  }
+
+  /** An Ability Score Improvement waiting on hero `code`: one button per ability worth raising, the class's own first. */
+  pickHtml(state, code, u) {
+    const [level] = openPicks(state, code);
+    if (!level) return '';
+    const buttons = pickOptions(state, code, level).map((o) =>
+      `<button type="button" data-pick="${code}:${level}:${o.stat}"><b>${ABILITY_NAMES[o.stat]} ${o.value}${o.own ? ' <span class="own">usual</span>' : ''}</b><small>${esc(o.lines.join(' · '))}</small></button>`).join('');
+    return `<div class="hero-pick"><div class="give-label">Level ${level}: raise an ability by 2 <span data-hint="Until the next fight starts. Left alone, ${esc(u.name)} raises the usual one.">(choose before the next fight)</span></div>
+      <div class="give" role="group" aria-label="${esc(u.name)}: ability to raise at level ${level}">${buttons}</div></div>`;
   }
 
   packHtml(state) {
@@ -589,6 +600,12 @@ export class Camp {
       const what = `${ITEMS[this.state.pack[i]].name} given to ${heroUnit(code, this.state.party[code]).name}.`;
       this.h.onEquip(Number(i), code);
       announce(what);
+    } else if (b.dataset.pick) {
+      const [code, level, stat] = b.dataset.pick.split(':');
+      const name = heroUnit(code, this.state.party[code]).name;
+      const to = pickOptions(this.state, code, Number(level)).find((o) => o.stat === stat)?.value;
+      this.h.onPick(code, Number(level), stat);
+      announce(`${name} raises ${ABILITY_NAMES[stat]} to ${to}.`);
     } else if (b.dataset.unequip) {
       const [code, i] = b.dataset.unequip.split(':');
       const what = `${ITEMS[this.state.party[code].items[i]].name} back in the pack.`;

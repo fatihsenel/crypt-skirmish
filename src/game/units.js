@@ -1,3 +1,5 @@
+import { abilityMod } from './dice.js';
+
 // Stat blocks. Numbers follow the SRD 5.1 (CC-BY-4.0) where possible.
 // speed and reach are in tiles (1 tile = 5 ft).
 // An attack's `rider` is a save the target makes when hit, or gains a condition
@@ -409,7 +411,10 @@ export function createUnit(code, x, z, number = 1, total = 1) {
 /**
  * What each hero gains on reaching a level. Heroes start at level 3 (their stat blocks
  * above). hp is added to max HP; stats are added; slots set the slot maximum per level;
- * spells / passives are learned; other keys are copied onto the unit.
+ * spells / passives are learned; other keys are copied onto the unit. A level's `stats` is
+ * its Ability Score Improvement: the class's own pick, which the player may swap (`picks`,
+ * see applyLevel), and what follows from it (CON's hit points, DEX's AC in light armour,
+ * CHA's Bardic Inspiration) is worked out in `raise`, never written here.
  */
 export const PROGRESSION = {
   F: {
@@ -417,7 +422,7 @@ export const PROGRESSION = {
     5: { hp: 8, prof: 3, extraAttack: 2, passives: ['extraAttack'], note: 'Extra Attack: two swings per Attack action' },
     6: { hp: 8, stats: { str: 2 }, note: 'Strength 20: +1 to hit and damage' },
     7: { hp: 8, critRange: 19, passives: ['improvedCritical'], note: 'Improved Critical: weapon hits crit on a 19 or 20' },
-    8: { hp: 16, stats: { con: 2 }, note: 'Constitution 17: +8 hit points' },
+    8: { hp: 8, stats: { con: 2 }, note: 'Constitution 17: +8 hit points' },
   },
   P: {
     4: { hp: 8, stats: { str: 2 }, note: 'Strength 18: +1 to hit and damage' },
@@ -450,21 +455,21 @@ export const PROGRESSION = {
     8: { hp: 7, stats: { cha: 2 }, note: 'Charisma 20: +1 to Eldritch Blast hits and damage, and to your spell DC' },
   },
   R: {
-    4: { hp: 6, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
+    4: { hp: 6, stats: { dex: 2 }, note: 'Dexterity 18: +1 to hit, damage and AC' },
     5: { hp: 6, prof: 3, sneakDice: 3, passives: ['uncannyDodge'], note: 'Sneak Attack 3d6 and Uncanny Dodge' },
     6: { hp: 6, sneakDice: 4, note: 'Sneak Attack 4d6' },
     7: { hp: 6, passives: ['evasion'], note: 'Evasion: no damage from a DEX save you make, half from one you fail' },
-    8: { hp: 6, stats: { dex: 2 }, ac: 1, note: 'Dexterity 20: +1 to hit, damage and AC' },
+    8: { hp: 6, stats: { dex: 2 }, note: 'Dexterity 20: +1 to hit, damage and AC' },
   },
   A: {
-    4: { hp: 8, stats: { dex: 2 }, ac: 1, note: 'Dexterity 18: +1 to hit, damage and AC' },
+    4: { hp: 8, stats: { dex: 2 }, note: 'Dexterity 18: +1 to hit, damage and AC' },
     5: {
       hp: 8, prof: 3, extraAttack: 2, slots: { 1: 4, 2: 2 }, passives: ['extraAttack', 'colossusSlayer'],
       note: 'Extra Attack and Colossus Slayer (+1d8 once per turn on a hurt foe)',
     },
     6: { hp: 8, passives: ['escapeTheHorde'], note: 'Escape the Horde: opportunity attacks against you have disadvantage' },
     7: { hp: 8, slots: { 2: 3 }, note: 'A third 2nd-level slot for Hunter’s Mark' },
-    8: { hp: 8, stats: { dex: 2 }, ac: 1, note: 'Dexterity 20: +1 to hit, damage and AC' },
+    8: { hp: 8, stats: { dex: 2 }, note: 'Dexterity 20: +1 to hit, damage and AC' },
   },
   C: {
     4: { hp: 7, stats: { wis: 2 }, slots: { 2: 3 }, note: 'Wisdom 18, a third 2nd-level slot' },
@@ -483,31 +488,65 @@ export const PROGRESSION = {
     },
   },
   B: {
-    4: { hp: 7, stats: { cha: 2 }, slots: { 2: 3 }, inspiration: 4, note: 'Charisma 18, a fourth Bardic Inspiration and a third 2nd-level slot' },
+    4: { hp: 7, stats: { cha: 2 }, slots: { 2: 3 }, note: 'Charisma 18, a fourth Bardic Inspiration and a third 2nd-level slot' },
     5: {
       hp: 7, prof: 3, slots: { 3: 2 }, spells: ['fear'], inspirationDie: 8,
       note: 'Fear, a d8 Bardic Inspiration die and two 3rd-level slots',
     },
     6: { hp: 7, slots: { 3: 3 }, spells: ['massHealingWord'], note: 'Magical Secrets: Mass Healing Word, and a third 3rd-level slot' },
     7: { hp: 7, slots: { 4: 1 }, spells: ['greaterInvisibility'], note: 'Greater Invisibility and a 4th-level slot' },
-    8: { hp: 7, stats: { cha: 2 }, slots: { 4: 2 }, inspiration: 5, note: 'Charisma 20, a fifth Bardic Inspiration and a second 4th-level slot' },
+    8: { hp: 7, stats: { cha: 2 }, slots: { 4: 2 }, note: 'Charisma 20, a fifth Bardic Inspiration and a second 4th-level slot' },
   },
 };
 
 export const MAX_LEVEL = 8;
 
-/** Raise a freshly created unit to `level`. Slots are refilled to the new maximum. */
-export function applyLevel(unit, level) {
+export const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+export const ABILITY_NAMES = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
+/** Classes whose armour counts their Dexterity (Mage Armor, leather): more DEX, more AC. */
+const DEX_AC = new Set(['W', 'K', 'R', 'A', 'B']);
+
+/** The levels where class `code` raises an ability score (4 and 8; the Fighter 6 too). */
+export const asiLevels = (code) =>
+  Object.entries(PROGRESSION[code] ?? {}).filter(([, g]) => g.stats).map(([l]) => Number(l));
+
+/** The ability class `code` raises at `level` unless the player picks another. */
+export const asiDefault = (code, level) => Object.keys(PROGRESSION[code]?.[level]?.stats ?? {})[0] ?? null;
+
+/** A pick the rules take: a real ability, or null (the class's own). */
+export const cleanPick = (stat) => (ABILITIES.includes(stat) ? stat : null);
+
+/** +n to one ability (20 at most), and what follows: CON's hit points for every level, DEX's AC in light armour. */
+function raise(unit, stat, n, level) {
+  const before = abilityMod(unit.stats[stat]);
+  unit.stats[stat] = Math.min(20, unit.stats[stat] + n);
+  const gain = abilityMod(unit.stats[stat]) - before;
+  if (stat === 'con') {
+    unit.maxHp += gain * level;
+    unit.hp += gain * level;
+  }
+  if (stat === 'dex' && DEX_AC.has(unit.code)) unit.ac += gain;
+}
+
+/**
+ * Raise a freshly created unit to `level`. Slots are refilled to the new maximum. `picks`
+ * swaps a level's ability increase for another, e.g. { 4: 'con' }; a level not in it takes
+ * the class's own (so records from before picks build the same heroes).
+ */
+export function applyLevel(unit, level, picks = {}) {
   const table = PROGRESSION[unit.code];
   if (!table || !unit.level) return unit;
+  const baseCon = abilityMod(unit.stats.con);
   for (let l = unit.level + 1; l <= Math.min(level, MAX_LEVEL); l++) {
     const g = table[l];
     if (!g) continue;
     const { hp = 0, stats = {}, slots = {}, spells = [], passives = [], note, ac = 0, ...rest } = g;
-    unit.maxHp += hp;
-    unit.hp += hp;
+    // A higher CON gives every new level its extra hit point too.
+    const more = hp + abilityMod(unit.stats.con) - baseCon;
+    unit.maxHp += more;
+    unit.hp += more;
     unit.ac += ac;
-    for (const [k, v] of Object.entries(stats)) unit.stats[k] += v;
+    for (const [k, v] of Object.entries(stats)) raise(unit, cleanPick(picks?.[l]) ?? k, v, l);
     for (const [k, v] of Object.entries(slots)) unit.slotMax[k] = v;
     unit.spells.push(...spells.filter((s) => !unit.spells.includes(s)));
     unit.passives.push(...passives.filter((p) => !unit.passives.includes(p)));
@@ -516,6 +555,8 @@ export function applyLevel(unit, level) {
   }
   unit.slots = { ...unit.slotMax };
   if (unit.spells.includes('layOnHands')) unit.layOnHands = unit.layOnHandsMax = 5 * unit.level;
+  // Bardic Inspiration: as many uses as the CHA modifier.
+  if (unit.inspirationDie) unit.inspiration = Math.max(1, abilityMod(unit.stats.cha));
   return unit;
 }
 

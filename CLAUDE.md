@@ -178,6 +178,12 @@ server on 5173.
   draws its options as buttons (`data-enter="altar:offer"`) and `EVENT_NEWS` in `camp.js` says
   what happened. Lasting effects ride with the party (potions, the pack, a `boon` item), so
   fight records need nothing new.
+- **Ability increases:** a `PROGRESSION` level with `stats` is an Ability Score Improvement
+  the player may swap (`picks` in the party record, `{ 4: 'con' }`; none means the class's own,
+  so old records build the same heroes). What follows from an ability (CON's hit points per
+  level, DEX's AC in light armour, a bard's inspiration from CHA) is worked out in `raise` and
+  `applyLevel`, never written into `PROGRESSION`. The camp offers them (`openPicks`,
+  `pickOptions`, `choosePick`), and `enterRoom` settles open ones (`settlePicks`).
 - **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
   `scripts/sim.js` if the AI wouldn't use its abilities, and its lines in `speech.js`.
 - **Spell or action:** it needs a case in `playSpell` or `playAction` in `animate.js`;

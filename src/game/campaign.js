@@ -2,7 +2,9 @@
 // party's pack of loot, and save data. Pure state, no DOM and no storage. Every
 // function returns a new state; the controller decides when to persist it.
 
-import { TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf } from './units.js';
+import {
+  TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf, asiLevels, asiDefault, cleanPick, ABILITY_NAMES,
+} from './units.js';
 import { ITEMS, applyItems, relicFrom, cleanRelics } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
@@ -248,7 +250,7 @@ export function levelForXp(xp) {
 export function heroUnit(code, rec) {
   const u = createUnit(classOf(code, rec), 0, 0);
   u.slot = code;
-  applyLevel(u, rec.level);
+  applyLevel(u, rec.level, rec.picks);
   applyItems(u, rec.items);
   for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
   u.hp = Math.min(u.hp, u.maxHp);
@@ -257,7 +259,7 @@ export function heroUnit(code, rec) {
 }
 
 /** The fresh-from-a-long-rest version of a slot's hero at `level`, with their items (an Amulet of Health adds HP). */
-const restedHero = (code, rec, level = rec.level) => heroUnit(code, { cls: rec.cls, level, items: rec.items ?? [] });
+const restedHero = (code, rec, level = rec.level) => heroUnit(code, { cls: rec.cls, level, items: rec.items ?? [], picks: rec.picks });
 
 /** A hero's display name: the one typed on the title screen, or the class's default. */
 export const heroName = (code, rec) => rec.name ?? TEMPLATES[classOf(code, rec)].name;
@@ -483,7 +485,8 @@ export function completeFight(prev, id, game) {
       rec.slots[l] = Math.max(0, (rec.slots[l] ?? 0) + n - (before.slotMax[l] ?? 0));
     }
     for (let l = rec.level + 1; l <= target; l++) {
-      levelUps.push({ code, name: heroName(code, rec), level: l, note: PROGRESSION[classOf(code, rec)][l]?.note ?? '' });
+      const cls = classOf(code, rec);
+      levelUps.push({ code, name: heroName(code, rec), level: l, note: PROGRESSION[cls][l]?.note ?? '', asi: asiLevels(cls).includes(l) });
     }
     rec.level = target;
   }
@@ -633,6 +636,72 @@ export function unequip(prev, code, i) {
   return state;
 }
 
+/** Keep a party record's ability picks only where they're real: an increase level of its class, an ability. */
+export function cleanPicks(code, r) {
+  const levels = asiLevels(classOf(code, r));
+  const ok = Object.entries(r.picks && typeof r.picks === 'object' ? r.picks : {})
+    .filter(([l, stat]) => levels.includes(Number(l)) && cleanPick(stat));
+  if (ok.length) r.picks = Object.fromEntries(ok);
+  else delete r.picks;
+  return r;
+}
+
+/**
+ * Ability Score Improvements (levels 4 and 8, the Fighter's 6 too): the levels where hero
+ * `code` hasn't picked yet, lowest first. An open level takes the class's own pick, and the
+ * next fight settles it (settlePicks).
+ */
+export function openPicks(state, code) {
+  const rec = state.party[code];
+  return asiLevels(classOf(code, rec)).filter((l) => l <= rec.level && !cleanPick(rec.picks?.[l]));
+}
+
+/** The abilities worth raising at `level`, the class's own first: { stat, value, own, lines }. */
+export function pickOptions(state, code, level) {
+  const rec = state.party[code];
+  const cls = classOf(code, rec);
+  // The hero just before that level's increase (with the picks made below it).
+  const below = heroUnit(code, { cls: rec.cls, level: level - 1, items: [], picks: rec.picks });
+  const own = asiDefault(cls, level);
+  const useful = [own, ...below.attacks.filter((a) => a.addMod !== false).map((a) => a.stat), below.castStat, 'con', 'dex', 'wis'];
+  const as = (stat) => heroUnit(code, { ...rec, picks: { ...rec.picks, [level]: stat } });
+  const plain = as(own === 'str' ? 'int' : 'str'); // the same hero with the increase where it changes nothing worked out
+  return [...new Set(useful)].filter((stat) => stat && below.stats[stat] < 20).map((stat) => {
+    const u = as(stat);
+    const lines = [];
+    if (u.maxHp > plain.maxHp) lines.push(`+${u.maxHp - plain.maxHp} max HP`);
+    if (u.ac > plain.ac) lines.push(`+${u.ac - plain.ac} AC`);
+    if (below.attacks.some((a) => a.stat === stat && a.addMod !== false)) lines.push('+1 to hit and damage');
+    else if (below.attacks.some((a) => a.stat === stat)) lines.push('+1 to hit');
+    if (below.castStat === stat) lines.push('+1 spell save DC');
+    if (stat === 'dex') lines.push('+1 initiative');
+    if ((u.inspiration ?? 0) > (plain.inspiration ?? 0)) lines.push('+1 Bardic Inspiration');
+    if (!lines.length) lines.push(`+1 to ${ABILITY_NAMES[stat]} saves`);
+    return { stat, value: u.stats[stat], own: stat === own, lines };
+  });
+}
+
+/** Hero `code` raises `stat` at open level `level` (its HP moves with its maximum). */
+export function choosePick(prev, code, level, stat) {
+  if (!openPicks(prev, code).includes(level) || !pickOptions(prev, code, level).some((o) => o.stat === stat)) return prev;
+  const state = clone(prev);
+  const rec = state.party[code];
+  rec.picks = { ...rec.picks, [level]: stat };
+  keepWounds(prev, state, code);
+  return state;
+}
+
+/** Every open increase takes the class's own pick (done as a fight starts). */
+export function settlePicks(prev) {
+  if (!HERO_CODES.some((code) => openPicks(prev, code).length)) return prev;
+  const state = clone(prev);
+  for (const code of HERO_CODES) {
+    const rec = state.party[code];
+    for (const l of openPicks(prev, code)) rec.picks = { ...rec.picks, [l]: asiDefault(classOf(code, rec), l) };
+  }
+  return state;
+}
+
 export const serialize = (state) => JSON.stringify(state);
 
 /**
@@ -683,6 +752,7 @@ export function parseSave(text) {
       if (!r.items.every((i) => ITEMS[i]) || typeof r.slots !== 'object') return null;
       if (r.name !== undefined && (typeof r.name !== 'string' || !r.name || cleanName(r.name) !== r.name)) delete r.name;
       if (r.cls !== undefined && (r.cls === code || !CLASS_CHOICES[code].includes(r.cls))) delete r.cls;
+      cleanPicks(code, r);
       const rested = restedHero(code, r);
       // A save from before a class lost hit points (the Ranger's 28 → 24) keeps no extra HP.
       r.hp = Math.min(r.hp, rested.maxHp);

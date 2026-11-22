@@ -8,7 +8,7 @@ import { replayFight, fightCheck } from './replay.js';
 import { seeded } from './dice.js';
 import { levelById } from './maps.js';
 import { NODES, HERO_CODES, DIFFICULTIES, cleanName, runDifficulty } from './campaign.js';
-import { CLASS_CHOICES } from './units.js';
+import { CLASS_CHOICES, cleanPick } from './units.js';
 import { ITEMS, cleanRelics } from './items.js';
 
 /** 2: New Game+ added the tier (`t`), so links from before it are refused. */
@@ -38,6 +38,8 @@ export function cleanParty(party) {
     };
     if (CLASS_CHOICES[code].includes(r.cls) && r.cls !== code) h.cls = r.cls;
     if (int(r.layOnHands, 0, 200)) h.layOnHands = r.layOnHands;
+    const picks = Object.entries(r.picks && typeof r.picks === 'object' ? r.picks : {}).filter(([l, stat]) => /^[1-9]$/.test(l) && cleanPick(stat));
+    if (picks.length) h.picks = Object.fromEntries(picks);
     const name = cleanName(r.name);
     if (name) h.name = name;
     out[code] = h;

@@ -7,7 +7,7 @@ import { Game, ELITE_TRAITS, RULES } from './game/combat.js';
 import { LEVELS } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
-  NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize,
+  NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, choosePick, settlePicks, serialize,
   choices, START_NODE, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem, easeRun,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
@@ -188,6 +188,12 @@ Object.assign(later, {
   onUnequip: (code, i) => {
     sfx.ui();
     campaign = unequip(campaign, code, i);
+    writeSave(campaign);
+    camp.show(campaign);
+  },
+  onPick: (code, level, stat) => {
+    sfx.levelUp();
+    campaign = choosePick(campaign, code, level, stat);
     writeSave(campaign);
     camp.show(campaign);
   },
@@ -393,6 +399,8 @@ function enterRoom(id) {
   // The Endless Crypt's next floor.
   if (id === 'deep') {
     if (!campaign?.endless) return;
+    campaign = settlePicks(campaign); // an ability increase left open keeps the usual one
+    writeSave(campaign);
     camp.hide();
     tips.hide();
     nodeId = nextFloor(campaign);
@@ -421,6 +429,8 @@ function enterRoom(id) {
     showCamp({ rest: id });
     return;
   }
+  campaign = settlePicks(campaign);
+  writeSave(campaign);
   camp.hide();
   tips.hide(); // the camp's tip is about the camp
   nodeId = id;

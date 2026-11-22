@@ -4,7 +4,7 @@
 // the same room from the id alone. Pure, like the rest of src/game: the map comes from `seeded`.
 
 import { seeded, hash } from './dice.js';
-import { NODES, HERO_CODES, restParty, levelForXp } from './campaign.js';
+import { NODES, HERO_CODES, restParty, levelForXp, cleanPicks } from './campaign.js';
 import { levelById } from './maps.js';
 
 export const ENDLESS_KEY = 'crypt-skirmish:endless';
@@ -268,6 +268,7 @@ export function parseEndless(text) {
     const e = s?.endless;
     if (!e || !Number.isInteger(e.seed) || !Number.isInteger(e.floor) || e.floor < 1) return null;
     if (!s.party || !HERO_CODES.every((c) => s.party[c] && Array.isArray(s.party[c].items))) return null;
+    for (const c of HERO_CODES) cleanPicks(c, s.party[c]);
     if (!Array.isArray(s.pack)) s.pack = [];
     if (!Number.isInteger(s.gold) || s.gold < 0) s.gold = 0;
     return s;
