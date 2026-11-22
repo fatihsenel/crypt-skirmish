@@ -226,7 +226,7 @@ try {
     if (next) await tap(await at(next));
     const back = next ? await until(isPreview, 5000) : null;
     if (!back || !isPreview(back)) problems.push(`no preview to test the banner over (${next ? `a tap at ${next} showed "${back.hint}"` : 'no free tile on screen'})`);
-    await ev(`__debug.win(); new Promise(r => setTimeout(r, 2500))`);
+    await ev(`__debug.win(); new Promise(r => setTimeout(r, 4000))`); // the last word, then the banner
     problems.push(...await layout('the banner'), ...await ev(`(() => {
       const out = [], hint = document.getElementById('hint');
       if (hint.classList.contains('show')) out.push('the banner: the hint line still shows "' + hint.textContent + '"');

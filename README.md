@@ -203,7 +203,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   It laughs on the won-campaign screen and chatters at you after a defeat, and a still of it
   shows while the game loads and on the saved run card. With Data Saver on or on a 2G
   connection the title keeps a still of it.
-- **Bestiary:** every monster you've met, with its character card, a line of lore and how
+- **Bestiary:** every monster you've met, with its character card, a line of lore, its last words to you and how
   many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
   until you look. Open it from the title screen or camp. It also keeps how much damage each
   kind has dealt your heroes and how many it dropped, with the three deadliest at the top.
@@ -250,9 +250,13 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
   one."), a named foe's first sight of the party ("You trespass in my barrow."), and now and
-  then a monster's attack or spell (one of a pack a round; most of a named foe's). Each class
-  and talking monster has its own voice; beasts, skeletons and spirits stay silent. One
-  bubble at a time, and they never hold up a turn.
+  then a monster's attack or spell (one of a pack a round; most of a named foe's), with a
+  minion sometimes answering its boss ("Yes, boss!"). A figure under a quarter of its HP says
+  so once a fight ("Not the face!"), the turned dead cry out as they flee, and a fight ends
+  with a last word: the hero who won it, or the boss gloating over a defeat. Each class and
+  talking monster has its own voice; beasts, skeletons and spirits stay silent. One bubble at
+  a time, and they never hold up a turn. Between rooms two heroes trade a line in camp,
+  teasing whoever dropped, and the bestiary quotes the last thing each monster said.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
   motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log,
   cards and the names and numbers over the figures), speech bubbles, colour-blind friendly

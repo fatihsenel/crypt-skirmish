@@ -412,6 +412,7 @@ export class Camp {
       const parts = [`<p>Room cleared: <b>+${report.xp} XP</b>. ${report.longRest
         ? 'Long rest: full HP and every spell slot back.'
         : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: three-quarters of everyone’s missing HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
+      if (report.banter) parts.push(`<p>${report.banter.map(([n, l]) => `<b>${esc(n)}:</b> “${esc(l)}”`).join('<br>')}</p>`);
       if (report.blessed) parts.push('<p>The altar’s blessing fades.</p>');
       if (report.pilgrim) parts.push('<p>The pilgrim you tended finds you again: <b class="loot">a potion for every hero</b>.</p>');
       if (report.phylactery === 'spent') parts.push(`<p><b class="relic">${esc(RELICS.phylactery.name)}</b> is spent: it sleeps until the next long rest.</p>`);

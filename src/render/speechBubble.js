@@ -19,11 +19,14 @@ export function hush() {
   current = null;
 }
 
-/** `view` (a UnitView) says `text`. */
+/** Is a bubble showing? */
+export const speaking = () => !!current;
+
+/** `view` (a UnitView) says `text`. Returns how long it shows, in ms (0: it didn't). */
 export function speak(view, text) {
   hush();
   const label = view?.label?.element;
-  if (!label || !text || !view.label.visible) return;
+  if (!label || !text || !view.label.visible) return 0;
   const el = document.createElement('div');
   el.className = `speech${view.unit.team === 'monsters' ? ' foe' : ''}`;
   el.setAttribute('aria-hidden', 'true');
@@ -63,6 +66,7 @@ export function speak(view, text) {
     later(hold, () => el.classList.add('fading'));
     later(hold + 220, hush);
   }
+  return (hold + (still ? 0 : 220)) / rate;
 }
 
 /**

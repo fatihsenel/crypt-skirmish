@@ -11,6 +11,7 @@ export const SLAIN_KEY = 'crypt-skirmish:slain';
 export const READ_KEY = 'crypt-skirmish:bestiary-read';
 export const HURT_KEY = 'crypt-skirmish:hurt';
 export const ELITES_SLAIN_KEY = 'crypt-skirmish:elites-slain';
+export const HEARD_KEY = 'crypt-skirmish:heard';
 
 /** Every monster kind, in the order the crypt introduces them. */
 export const MONSTERS = Object.keys(TEMPLATES).filter((code) => TEMPLATES[code].team === 'monsters');
@@ -107,6 +108,23 @@ export function slayElite(id) {
   } catch {
     /* storage unavailable: not counted */
   }
+}
+
+/** The last thing each kind was heard to say in a speech bubble: { code: line }. */
+export function loadHeard() {
+  try {
+    const heard = JSON.parse(localStorage.getItem(HEARD_KEY));
+    return heard && typeof heard === 'object' ? heard : {};
+  } catch {
+    return {};
+  }
+}
+
+/** A monster of kind `code` said `line`: the bestiary quotes it. */
+export function hear(code, line) {
+  try {
+    localStorage.setItem(HEARD_KEY, JSON.stringify({ ...loadHeard(), [code]: line }));
+  } catch { /* not kept */ }
 }
 
 /** What each kind has done to the party over every fight: { code: { damage, downs } }. */

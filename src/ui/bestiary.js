@@ -3,7 +3,7 @@
 
 import { createUnit } from '../game/units.js';
 import { ELITE_TRAITS } from '../game/combat.js';
-import { MONSTERS, loadBestiary, loadSlain, loadHurt, deadliest, unread, markRead, loadElitesSlain } from '../game/bestiary.js';
+import { MONSTERS, loadBestiary, loadSlain, loadHurt, deadliest, unread, markRead, loadElitesSlain, loadHeard } from '../game/bestiary.js';
 import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { reachedNewGamePlus, loadDeepest, loadHistory } from '../game/history.js';
 import { unitIcon, unknownIcon } from './icons.js';
@@ -56,6 +56,7 @@ export class Bestiary {
     const met = loadBestiary();
     const slain = loadSlain();
     const hurt = loadHurt();
+    const heard = loadHeard();
     const name = (code) => createUnit(code, 0, 0).name;
     const worst = deadliest(hurt).filter((h) => met.includes(h.code));
     $('#bestiary-deadliest').hidden = !worst.length;
@@ -86,7 +87,7 @@ export class Bestiary {
       const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
       const isNew = fresh.includes(code) ? '<span class="new-tag">New</span>' : '';
       return `<li class="beast"><span class="pic" style="--c:${color}">${unitIcon(u)}</span>${isNew}
-        <div class="tipcard">${unitCard(OUT_OF_FIGHT, u)}<p class="lore">${esc(LORE[code] ?? '')}</p>
+        <div class="tipcard">${unitCard(OUT_OF_FIGHT, u)}<p class="lore">${esc(LORE[code] ?? '')}</p>${heard[code] ? `<p class="lore">“${esc(heard[code])}”</p>` : ''}
         <p class="slain">${slain[code] ? `Slain: ${slain[code]}` : 'None slain yet'}${hurt[code] ? ` · Dealt you ${hurtText(hurt[code])}` : ''}</p></div></li>`;
     }).join('');
     this.panel.open(opener);

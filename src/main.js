@@ -33,6 +33,7 @@ import { loadSettings, saveSettings, SPEEDS } from './game/settings.js';
 import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { hush } from './render/speechBubble.js';
+import { banter } from './speech.js';
 import { tips } from './ui/tips.js';
 import { recordRun, loadHistory, clearLastFight } from './game/history.js';
 import { createLinks } from './links.js';
@@ -384,6 +385,9 @@ function leaveRoom() {
   const { state, report } = completeFight(campaign, nodeId, game);
   campaign = state;
   writeSave(campaign);
+  // Two heroes trade a line in camp (with speech bubbles on).
+  const heroes = game.units.filter((u) => u.team === 'heroes' && (u.alive || u.dying));
+  if (settings.bubbles) report.banter = banter(heroes, { downed: game.blows.filter((b) => b.down).map((b) => b.to), boss: !!NODES[nodeId]?.boss });
   showCamp(report);
   if (report.levelUps.length) setTimeout(() => sfx.levelUp(), 250);
 }
@@ -1191,6 +1195,7 @@ async function checkGameOver() {
   tips.hide(); // a tip would sit on the end banner
   await wait(400);
   board.clearHighlights();
+  hud.hint(''); // nor the preview's hint, while the last word is said
   drawThreats(); // the fight is over: no zones left
   if (replay) {
     await wait(600);
@@ -1203,6 +1208,9 @@ async function checkGameOver() {
     endReplay();
     return true;
   }
+  const g = game;
+  if (anim.lastWords(game.over)) await wait(1400); // the last word, before the banner
+  if (game !== g) return true;
   const end = settleFight({ game, nodeId, campaign, record, daily, challenge, saving, feats, store: { writeSave, clearSave, setWonRun } });
   campaign = end.campaign;
   hud.renderActionBar(game, { selected: null, busy: false });

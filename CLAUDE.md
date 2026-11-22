@@ -117,8 +117,11 @@ server on 5173.
 - Speech bubbles: `speech.js` has the lines and picks the moment (`attackMoment`: a kill, a
   crit, a hero's first blow, a monster now and then; `spellMoment`: a big spell, a heal on a
   friend, a monster's spell; `downSpeaker` when a hero falls; `thanks` from `rises`, `intro`
-  when the ticker in `main.js` first sees a named foe) with `Math.random`, never the fight's
-  dice; `quip` in `animate.js` shows them through
+  when the ticker in `main.js` first sees a named foe; `hurt` under a quarter HP in
+  `damageReaction`; `flee` for a turned monster's move; `replySpeaker`, a minion answering a
+  named foe; `lastWordsSpeaker` from `checkGameOver`) with `Math.random`, never the fight's
+  dice; `banter` gives `leaveRoom` two heroes' camp talk (`report.banter`), and a monster's
+  line is kept for the bestiary (`hear`, `crypt-skirmish:heard`); `quip` in `animate.js` shows them through
   `render/speechBubble.js` (one at a time, inside the speaker's label, the `bubbles` setting;
   its styles are `speechBubble.css`, loaded with the game to keep them off the title's budget).
   A new talking monster or class needs its lines in `speech.js`.
@@ -136,7 +139,7 @@ server on 5173.
   board's labels scale their type by `--t` instead, since zoom would move them. Copying text
   goes through `copyText` (`ui/copyBox.js`), which falls back to a panel with it selected.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, `loss-key`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `heard`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, `loss-key`, …).
 
 ## Adding content
 

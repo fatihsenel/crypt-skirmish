@@ -10,8 +10,9 @@ import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx
 import { wait } from './render/tween.js';
 import { sfx } from './audio/sfx.js';
 import { voices } from './audio/voices.js';
-import { attackMoment, spellMoment, lineFor, downSpeaker } from './speech.js';
-import { speak } from './render/speechBubble.js';
+import { attackMoment, spellMoment, lineFor, downSpeaker, replySpeaker, lastWordsSpeaker, canSay, SPEECH } from './speech.js';
+import { hear } from './game/bestiary.js';
+import { speak, speaking } from './render/speechBubble.js';
 
 /**
  * The controller's view of the fight: `stage`, `hud`, `settings` and `spiritWeapons` (the
@@ -26,11 +27,27 @@ export function createAnimations(app) {
   const recentLines = new Map(); // the last line of each kind of speaker, so it doesn't repeat
   const spokeIn = new WeakMap(); // each fight's monster kinds -> the round one last spoke in (a pack takes turns)
 
-  /** `unit` says a line for `moment` in a speech bubble (speech.js), if it's in sight. */
+  const winced = new WeakSet(); // figures that have said they're badly hurt (once a fight)
+  const fled = new WeakSet(); // turned monsters that have cried out as they ran
+  const seen = (u) => !unseen(u) && !!view(u)?.group.visible;
+
+  /**
+   * `unit` says a line for `moment` in a speech bubble (speech.js), if it's in sight. A named
+   * foe's minion in sight answers it now and then, once the boss has finished. A monster's
+   * line goes in the bestiary (`hear`). Returns whether it spoke.
+   */
   function quip(unit, moment, name) {
-    if (!settings.bubbles || !unit || unseen(unit) || !view(unit)?.group.visible) return;
+    if (!settings.bubbles || !unit || !seen(unit)) return false;
     const line = lineFor(unit, moment, { name, recent: recentLines });
-    if (line) speak(view(unit), line);
+    const shown = line ? speak(view(unit), line) : 0;
+    if (!shown) return false;
+    if (unit.team === 'monsters') hear(unit.code, line);
+    if (SPEECH.NAMED.has(unit.code) && ['intro', 'attack', 'cast'].includes(moment) && Math.random() < 0.5) {
+      const fight = app.game();
+      const minion = replySpeaker(unit, fight.units, seen);
+      if (minion) setTimeout(() => { if (app.game() === fight && minion.alive && !speaking()) quip(minion, 'reply'); }, shown + 150);
+    }
+    return true;
   }
 
   /** Blessed Healer: the cleric's own small heal, shown just above them. */
@@ -223,7 +240,12 @@ export function createAnimations(app) {
     v.updateHp();
     // A hero falls: the nearest friend in sight calls out.
     if (unit.team === 'heroes' && !unit.alive && !v.down && !unseen(unit)) {
-      quip(downSpeaker(unit, app.game().units, (u) => !unseen(u) && !!view(u)?.group.visible), 'down', unit.name);
+      quip(downSpeaker(unit, app.game().units, seen), 'down', unit.name);
+    }
+    // Under a quarter of its HP, a figure says so, once a fight (most monsters only now and then).
+    if (unit.alive && unit.hp <= unit.maxHp / 4 && !winced.has(unit) && canSay(unit, 'hurt')) {
+      winced.add(unit);
+      if (unit.team === 'heroes' || SPEECH.NAMED.has(unit.code) || Math.random() < 0.4) quip(unit, 'hurt');
     }
     // Heroes grunt when hit; monsters only cry out when they fall.
     if (!unseen(unit) && (!unit.alive || unit.team === 'heroes')) voices.bark(unit, unit.alive ? 'hurt' : 'die');
@@ -792,6 +814,11 @@ export function createAnimations(app) {
 
   /** Play back a resolved command or monster step (`kind`: its type), then anything it set off. */
   async function play(unit, kind, r) {
+    // A turned monster cries out as it starts to run (once a fight).
+    if (kind === 'move' && unit.turned && !fled.has(unit)) {
+      fled.add(unit);
+      quip(unit, 'flee');
+    }
     await playStep(unit, kind, r);
     await flushRisings();
   }
@@ -845,6 +872,11 @@ export function createAnimations(app) {
 
   return {
     play, damageReaction, throwsOwn,
+    /** The fight is over (`over`): its last hero standing, or a gloating foe, has the last word. */
+    lastWords: (over) => {
+      const fight = app.game();
+      return quip(lastWordsSpeaker(over, fight.units, fight.current, seen), over === 'victory' ? 'win' : 'gloat');
+    },
     /** A named foe comes into view for the first time this fight: it says who it is. */
     intro: (unit) => quip(unit, 'intro'),
     /** A rising to show after the step that set it off (see flushRisings). */
