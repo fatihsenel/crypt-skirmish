@@ -246,9 +246,15 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   sheet); Done or Esc puts the camera back.
 - **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
   speed, attacks with to-hit and damage, conditions and traits.
+- **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
+  gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
+  falling ("Hold on, Maela!"), and now and then a monster's attack (most of a named foe's).
+  Each class and talking monster has its own voice; beasts, skeletons and spirits stay silent.
+  One bubble at a time, and they never hold up a turn.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
   motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log,
-  cards and the names and numbers over the figures), colour-blind friendly enemy reach and play stats.
+  cards and the names and numbers over the figures), speech bubbles, colour-blind friendly
+  enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
   a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
   choice, a run abandoned, a campaign won, an easier difficulty offered or taken, a visit and whether its browser played before, a replay watched, something shared, a fight left
@@ -497,6 +503,7 @@ src/
     modelSpecs.js    which model and clips each unit uses
     models.js        procedural figures (the mimic and fallbacks)
     unitView.js      a unit's base, label and animations
+    speechBubble.js  the speech bubble over a figure's label: typed, held, faded
     effects.js       spell effects, hit particles
     rollBadge.js     the d20 badge over attacks and saves
     tween.js         promise-based tweening and playback speed
@@ -527,6 +534,7 @@ src/
   preview.js         what a click on the hovered tile would do: the path, the odds, a spell's blast
   fightEnd.js        a finished fight's records: runs, achievements, dailies, the end banner's facts
   animate.js         plays back resolved attacks, moves, chests, actions and spells
+  speech.js          the speech bubbles' lines and when each figure speaks
   links.js           copying and opening #watch= and #play= links
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
   photo.js           photo mode: no HUD, a free camera, Save image

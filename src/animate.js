@@ -10,6 +10,8 @@ import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx
 import { wait } from './render/tween.js';
 import { sfx } from './audio/sfx.js';
 import { voices } from './audio/voices.js';
+import { attackMoment, lineFor, downSpeaker } from './speech.js';
+import { speak } from './render/speechBubble.js';
 
 /**
  * The controller's view of the fight: `stage`, `hud`, `settings` and `spiritWeapons` (the
@@ -20,6 +22,15 @@ import { voices } from './audio/voices.js';
 export function createAnimations(app) {
   const { stage, hud, settings, spiritWeapons, view, addView, unseen, inView, flushReveals, syncStatus, keepInView } = app;
   let risings = []; // Nekhet's house rising, shown once the blow that bloodied him has played
+  const attacked = new WeakMap(); // each fight's attackers so far: a hero's first attack speaks
+  const recentLines = new Map(); // the last line of each kind of speaker, so it doesn't repeat
+
+  /** `unit` says a line for `moment` in a speech bubble (speech.js), if it's in sight. */
+  function quip(unit, moment, name) {
+    if (!settings.bubbles || !unit || unseen(unit) || !view(unit)?.group.visible) return;
+    const line = lineFor(unit, moment, { name, recent: recentLines });
+    if (line) speak(view(unit), line);
+  }
 
   /** Blessed Healer: the cleric's own small heal, shown just above them. */
   function blessedHealerFx(caster, amount) {
@@ -38,6 +49,13 @@ export function createAnimations(app) {
     const tv = view(target);
     const pos = { x: at.x, z: at.z };
     let reaction = null;
+    const fight = app.game();
+    if (!attacked.has(fight)) attacked.set(fight, new Set());
+    const first = !attacked.get(fight).has(attacker.id);
+    attacked.get(fight).add(attacker.id);
+    const landed = r.hit && !r.shielded;
+    const moment = attackMoment({ attacker, target, hit: landed, crit: r.crit, killed: landed && !target.alive, first });
+    if (moment === 'first' || moment === 'attack') quip(attacker, moment);
     // The roll pops up over the attacker; on the hero's own turn the player throws it.
     // (Settings can turn both off; then only natural 20s and 1s get a die, thrown on the board.)
     if (!unseen(attacker)) {
@@ -96,6 +114,7 @@ export function createAnimations(app) {
           tv.updateStatus();
         }
         reaction = damageReaction(target);
+        if (moment === 'kill' || moment === 'crit') quip(attacker, moment);
       } else {
         sfx.miss();
         floatText(stage.scene, pos, 'Miss', 'miss');
@@ -198,6 +217,10 @@ export function createAnimations(app) {
   function damageReaction(unit) {
     const v = view(unit);
     v.updateHp();
+    // A hero falls: the nearest friend in sight calls out.
+    if (unit.team === 'heroes' && !unit.alive && !v.down && !unseen(unit)) {
+      quip(downSpeaker(unit, app.game().units, (u) => !unseen(u) && !!view(u)?.group.visible), 'down', unit.name);
+    }
     // Heroes grunt when hit; monsters only cry out when they fall.
     if (!unseen(unit) && (!unit.alive || unit.team === 'heroes')) voices.bark(unit, unit.alive ? 'hurt' : 'die');
     if (unit.alive) return v.flinch();

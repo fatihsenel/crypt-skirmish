@@ -32,6 +32,7 @@ import { music } from './audio/music.js';
 import { loadSettings, saveSettings, SPEEDS } from './game/settings.js';
 import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
+import { hush } from './render/speechBubble.js';
 import { tips } from './ui/tips.js';
 import { recordRun, loadHistory, clearLastFight } from './game/history.js';
 import { createLinks } from './links.js';
@@ -489,7 +490,8 @@ new SettingsPanel(settings, (key, value) => {
     board?.setThreatColors(value);
     document.body.classList.toggle('colorblind', value);
   }
-  if (key === 'speed' || key === 'rolls' || key === 'throwDice' || key === 'colorblind') return;
+  if (key === 'bubbles' && !value) hush();
+  if (key === 'speed' || key === 'rolls' || key === 'throwDice' || key === 'colorblind' || key === 'bubbles') return;
   unlockAudio();
   sfx.setLevel(key, value);
 });

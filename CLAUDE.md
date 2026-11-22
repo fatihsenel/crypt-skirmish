@@ -114,6 +114,12 @@ server on 5173.
   The log can show one figure's lines (`filterLog`: double-click, F or a long press on a name);
   rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
+- Speech bubbles: `speech.js` has the lines and picks the moment (`attackMoment`: a kill, a
+  crit, a hero's first blow, a monster now and then; `downSpeaker` when a hero falls) with
+  `Math.random`, never the fight's dice; `quip` in `animate.js` shows them through
+  `render/speechBubble.js` (one at a time, inside the speaker's label, the `bubbles` setting;
+  its styles are `speechBubble.css`, loaded with the game to keep them off the title's budget).
+  A new talking monster or class needs its lines in `speech.js`.
 - Photo mode (`src/photo.js`, P or the camera button) hides the HUD and the board's highlights,
   centres the view on the current figure and lets the camera turn; Save image renders a frame and
   reads the canvas back. Monster turns wait for it (`whileAway`), and leaving restores the camera
@@ -133,7 +139,8 @@ server on 5173.
 ## Adding content
 
 - **Monster:** stat block in `game/units.js`, model in `render/modelSpecs.js` (or a
-  procedural builder in `render/models.js`), an icon in `ui/icons.js`.
+  procedural builder in `render/models.js`), an icon in `ui/icons.js`, and lines in
+  `speech.js` if it talks.
 - **Condition:** add it to `CONDITIONS` in `combat.js` and a line in `attackMods`. Monsters
   apply it through an attack `rider` or a spell's `condition`.
 - **Elite trait:** `ELITE_TRAITS` and `makeElite` in `combat.js`; the bestiary lists them.
@@ -152,7 +159,7 @@ server on 5173.
   what happened. Lasting effects ride with the party (potions, the pack, a `boon` item), so
   fight records need nothing new.
 - **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
-  `scripts/sim.js` if the AI wouldn't use its abilities.
+  `scripts/sim.js` if the AI wouldn't use its abilities, and its lines in `speech.js`.
 - **Spell or action:** it needs a case in `playSpell` or `playAction` in `animate.js`;
   `tests/animate.test.js` fails until it has one.
 - Rules that differ from the SRD go in the README's House rules section.
