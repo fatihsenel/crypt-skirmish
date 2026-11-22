@@ -644,8 +644,10 @@ kbd {
   background: repeating-linear-gradient(45deg, var(--c) 0 1.5px, transparent 1.5px 5px), repeating-linear-gradient(-45deg, var(--c) 0 1.5px, transparent 1.5px 5px);
 }
 #help .sw.threat-ranged { --c: rgba(255, 179, 71, 0.75); background: radial-gradient(circle, var(--c) 0 1.6px, transparent 2px) 0 0 / 5px 5px; }
+#help .sw.threat-far { --c: rgba(255, 179, 71, 0.45); background: radial-gradient(circle, var(--c) 0 1px, transparent 1.4px) 0 0 / 5px 5px; }
 body.colorblind #help .sw.threat { --c: rgba(204, 121, 167, 0.9); }
 body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
+body.colorblind #help .sw.threat-far { --c: rgba(240, 228, 66, 0.6); }
 
 #audio {
   position: absolute;

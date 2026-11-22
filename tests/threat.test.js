@@ -54,4 +54,18 @@ describe('threat zones', () => {
     expect(ranged.has(key(7, 3))).toBe(false); // behind the wall
     expect(ranged.has(key(1, 1))).toBe(false); // round the corner, out of sight
   });
+
+  it('marks the tiles only a long-range shot reaches, from the second rules', () => {
+    // The goblin (speed 6, shortbow 16, 64 long) at x=61: it can shoot x=39 at its range, x=20 only long.
+    const row = '#C' + '.'.repeat(59) + 'g#';
+    const map = ['#'.repeat(row.length), row, '#'.repeat(row.length)];
+    const now = new Game(map, { senses: false });
+    const t = now.threatOf(unit(now, 'g'));
+    expect(t.ranged.has(key(39, 1))).toBe(true);
+    expect(t.far.has(key(39, 1))).toBe(false);
+    expect(t.far.has(key(20, 1))).toBe(true);
+    expect(t.ranged.has(key(20, 1))).toBe(false);
+    const old = new Game(map, { senses: false, rules: 1 });
+    expect(old.threatOf(unit(old, 'g')).far.size).toBe(0);
+  });
 });

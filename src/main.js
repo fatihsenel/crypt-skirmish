@@ -1148,6 +1148,9 @@ async function onTurnStart(unit) {
         // Foes on the hunt but none in sight: a moment to Ready.
         foesComing: foes.length > 0 && foes.every((f) => unseen(f)) && foes.some((f) => !f.unaware),
         hurtAllyNext: game.alliesOf(unit).some((a) => near(a) && a.hp * 2 <= a.maxHp),
+        dyingAlly: game.units.find((a) => a.team === 'heroes' && a.dying && !unseen(a)),
+        paralysed: [unit, ...game.alliesOf(unit)].find((a) => game.has(a, 'paralyzed')),
+        rules: game.rules,
       });
     }
   }

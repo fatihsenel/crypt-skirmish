@@ -272,6 +272,8 @@ export class Board {
     // other highlights, and left alone by clearHighlights: main.js sets them on their own.
     this.threatMelee = new TileLayer(this.group, stripes(THREAT_COLORS.normal.melee, 0.6, 4, 'crosshatch'), 0.98, 0.0104);
     this.threatRanged = new TileLayer(this.group, stripes(THREAT_COLORS.normal.ranged, 0.55, 4, 'dots'), 0.98, 0.0102);
+    // Only a long-range shot reaches (at disadvantage): smaller, fainter dots.
+    this.threatFar = new TileLayer(this.group, stripes(THREAT_COLORS.normal.ranged, 0.3, 2, 'dots'), 0.98, 0.0101);
     // Ice Storm's ground (difficult terrain): frost under everything else.
     this.ice = new TileLayer(this.group, stripes(0xd8f0ff, 0.6, 3), 0.98, 0.0106);
     this.fire = new TileLayer(this.group, overlay(0xff4a10, 0.8), 0.9, 0.0108); // a tipped brazier's coals
@@ -284,8 +286,10 @@ export class Board {
     const c = THREAT_COLORS[colorblind ? 'colorblind' : 'normal'];
     this.threatMelee.material.color.setHex(c.melee);
     this.threatRanged.material.color.setHex(c.ranged);
+    this.threatFar.material.color.setHex(c.ranged);
     this.threatMelee.material.opacity = colorblind ? 0.85 : 0.6; // the paler pair needs more ink
     this.threatRanged.material.opacity = colorblind ? 0.7 : 0.55;
+    this.threatFar.material.opacity = colorblind ? 0.45 : 0.3;
   }
 
   /** Frost on the tiles that are difficult terrain (a Set of tile keys). */
@@ -875,7 +879,7 @@ export class Board {
 
   /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
   showOverlays(on) {
-    for (const l of [...this.layers, this.threatMelee, this.threatRanged, this.spot]) l.material.visible = on;
+    for (const l of [...this.layers, this.threatMelee, this.threatRanged, this.threatFar, this.spot]) l.material.visible = on;
   }
 
   dispose() {

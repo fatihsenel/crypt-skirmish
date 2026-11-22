@@ -51,6 +51,7 @@ export function installDebug(app) {
         on, focus: focus?.name ?? null,
         melee: board?.threatMelee.meshes.filter((m) => m.visible).length ?? 0,
         ranged: board?.threatRanged.meshes.filter((m) => m.visible).length ?? 0,
+        far: board?.threatFar.meshes.filter((m) => m.visible).length ?? 0,
       };
     },
     views: app.views,

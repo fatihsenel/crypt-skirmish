@@ -43,10 +43,27 @@ describe('tips for new players', () => {
   });
 
   it('every tip reads for both mouse and touch', () => {
-    const ctx = { unit: hero(), cmd: { type: 'attack' }, report: {} };
+    const ctx = { unit: hero(), cmd: { type: 'attack' }, report: {}, dyingAlly: hero({ name: 'Ysolde' }), paralysed: hero(), rules: 2 };
     for (const t of TIPS) {
       expect(t.text({ ...ctx, touch: false })).not.toMatch(/undefined/);
       expect(t.text({ ...ctx, touch: true })).not.toMatch(/\bclick\b|Space/i);
     }
+  });
+
+  it('explains dying, paralysis and concentration when they come up', () => {
+    const seen = new Set(['move']);
+    const ally = hero({ name: 'Ysolde' });
+    const dying = pickTip('heroTurn', { unit: hero(), dyingAlly: ally }, seen);
+    expect(dying.id).toBe('dying');
+    expect(dying.text({ unit: hero(), dyingAlly: ally })).toContain('Ysolde');
+    expect(pickTip('heroTurn', { unit: hero(), paralysed: ally }, seen).id).toBe('paralysis');
+    expect(pickTip('acted', { unit: hero({ concentrating: 'hex' }), cmd: { type: 'spell' } }, seen).id).toBe('concentration');
+    expect(pickTip('acted', { unit: hero(), cmd: { type: 'spell' } }, seen).id).toBe('end');
+  });
+
+  it('tells the potion tip the rules the fight is under', () => {
+    const tip = TIPS.find((t) => t.id === 'potion');
+    expect(tip.text({ unit: hero(), rules: 2 })).toContain('dying');
+    expect(tip.text({ unit: hero(), rules: 1 })).toContain('back up after the fight');
   });
 });

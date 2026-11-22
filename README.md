@@ -82,7 +82,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   while the caster concentrates. Taking damage calls for a CON save (DC 10, or half the
   damage); a failure, dropping, being paralysed or casting another of them ends it.
 - **Long range:** bows and javelins shoot up to four times their range, at disadvantage past
-  it. The Monster shot overlay shows normal range.
+  it. Enemy reach marks the tiles only a long shot reaches with smaller, fainter dots.
 - **Water and braziers:** shallow water costs double to wade through (fliers skip it). A hero
   next to a lit brazier can tip it over with their action: its coals land on the tiles past
   it, and whoever stands there makes a DC 12 DEX save against 2d6 fire (half on a success).
@@ -210,8 +210,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Past runs:** your last 20 runs, from the title screen. Each keeps its last fight to watch
   again or copy as a link. Your deepest win (such as Hard NG+2) is kept and shown above them.
 - **Tips for new players:** short hints the first time something matters, such as a brazier
-  to tip, water in sight, foes hunting out of sight (Ready) or a hurt ally next to you. They
-  can be turned off.
+  to tip, water in sight, foes hunting out of sight (Ready), a hurt ally next to you, a dying or
+  paralysed hero, or a spell to concentrate on. They can be turned off.
 - **Offline and on your Home Screen:** once everything has loaded, the foot of the title says
   "Saved for offline play", and the game then opens without a signal ("No signal: playing the
   saved copy"). On an iPhone it says how to add it to the Home Screen (Share, then Add to Home
@@ -227,7 +227,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Dice on the board:** on your heroes' turns you throw the d20 yourself by clicking,
   tapping or pressing Space. Monsters' rolls and saving throws show too.
 - **Enemy reach** (T): marks the tiles monsters could reach and hit next turn. A red
-  crosshatch means melee and amber dots mean ranged. Settings can switch them to purple and
+  crosshatch means melee, amber dots mean ranged, and fainter dots a long shot at disadvantage. Settings can switch them to purple and
   yellow for colour-blind players.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does. Small
   labels (spell slots, potions, Action / Bonus / Reaction, the replay buttons' keys) show a

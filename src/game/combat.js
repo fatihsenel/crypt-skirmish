@@ -1014,15 +1014,18 @@ export class Game extends Spellcasting {
    * `melee`, the tiles it could step next to and strike; `ranged`, the tiles it could shoot
    * from somewhere it could stand, with a line of sight. Both are Sets of tile keys. `ignore`
    * is a unit to leave out of the way: the hero deciding where to go, who won't be there.
+   * `far` (rules 2): the tiles only a long-range shot reaches, at disadvantage.
    * Monsters that haven't noticed the party, or are fleeing a Turn Undead, threaten nothing.
    */
   threatOf(monster, { ignore = null } = {}) {
     const melee = new Set();
     const ranged = new Set();
-    if (!monster.alive || monster.unaware || monster.turned) return { melee, ranged };
+    const far = new Set();
+    if (!monster.alive || monster.unaware || monster.turned) return { melee, ranged, far };
     const ready = monster.attacks.filter((a) => !monster.spent?.[a.name]);
     const reach = Math.max(0, ...ready.filter((a) => a.reach > 1).map((a) => a.reach));
-    if (!ready.length) return { melee, ranged };
+    const long = this.rules >= 2 ? Math.max(reach, ...ready.filter((a) => a.reach > 1).map(longReach)) : reach;
+    if (!ready.length) return { melee, ranged, far };
 
     let moves = monster.speed;
     if (this.has(monster, 'restrained')) moves = 0;
@@ -1050,11 +1053,13 @@ export class Game extends Spellcasting {
         for (let x = 0; x < this.grid.width; x++) {
           if (this.grid.isSolid(x, z) || melee.has(key(x, z))) continue;
           const t = { x, z };
-          if (spots.some((p) => gridDistance(p, t) <= reach && this.grid.lineOfSight(p.x, p.z, x, z))) ranged.add(key(x, z));
+          const within = (r) => spots.some((p) => gridDistance(p, t) <= r && this.grid.lineOfSight(p.x, p.z, x, z));
+          if (within(reach)) ranged.add(key(x, z));
+          else if (long > reach && within(long)) far.add(key(x, z));
         }
       }
     }
-    return { melee, ranged };
+    return { melee, ranged, far };
   }
 
   /** Tiles the unit could end its move on (excludes its own tile). */

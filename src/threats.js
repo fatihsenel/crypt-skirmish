@@ -22,7 +22,7 @@ export function createThreats({ game, board, unseen, showing, refresh }) {
     /* storage unavailable: starts off */
   }
   let focus = null; // a monster whose portrait is hovered (or tapped): just its zone
-  let cache = { sig: '', melee: [], ranged: [] };
+  let cache = { sig: '', melee: [], ranged: [], far: [] };
   const $toggle = document.getElementById('threats-toggle');
   $toggle.setAttribute('aria-pressed', String(on));
 
@@ -56,14 +56,19 @@ export function createThreats({ game, board, unseen, showing, refresh }) {
     if (sig === cache.sig) return cache;
     const melee = new Set();
     const ranged = new Set();
+    const far = new Set(); // only a long-range shot reaches, at disadvantage
     for (const m of from) {
       const t = g.threatOf(m, { ignore: u?.team === 'heroes' ? u : null });
       t.melee.forEach((k) => melee.add(k));
       t.ranged.forEach((k) => ranged.add(k));
+      t.far.forEach((k) => far.add(k));
     }
     const explored = (set) => [...set].map((k) => k.split(',').map(Number)).map(([x, z]) => ({ x, z }))
       .filter((t) => board().isExplored(t.x, t.z));
-    cache = { sig, melee: explored(melee), ranged: explored([...ranged].filter((k) => !melee.has(k))) };
+    cache = {
+      sig, melee: explored(melee), ranged: explored([...ranged].filter((k) => !melee.has(k))),
+      far: explored([...far].filter((k) => !melee.has(k) && !ranged.has(k))),
+    };
     return cache;
   }
 
@@ -72,11 +77,13 @@ export function createThreats({ game, board, unseen, showing, refresh }) {
     if (!(game() && !game().over && showing() && (on || focus))) {
       b.threatMelee.clear();
       b.threatRanged.clear();
+      b.threatFar.clear();
       return;
     }
-    const { melee, ranged } = tiles();
+    const { melee, ranged, far } = tiles();
     b.threatMelee.set(melee);
     b.threatRanged.set(ranged);
+    b.threatFar.set(far);
   }
 
   /** The monsters in sight that could strike a hero standing on (x, z) next turn. */

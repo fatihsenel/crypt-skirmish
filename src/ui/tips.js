@@ -9,7 +9,8 @@
 const STORAGE_KEY = 'crypt-skirmish:tips';
 
 /** What the player can see right now, from main.js. */
-// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, foeNext, foesComing, hurtAllyNext, touch, report }
+// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, foeNext, foesComing, hurtAllyNext,
+//        dyingAlly, paralysed, rules, touch, report }
 const click = (ctx, word = 'click') => (ctx.touch ? word.replace('click', 'tap').replace('Click', 'Tap') : word);
 
 /**
@@ -29,7 +30,22 @@ export const TIPS = [
     on: 'heroTurn',
     when: (c) => c.unit.hp <= c.unit.maxHp / 2 && c.unit.potions > 0,
     text: (c) => `<b>${c.unit.name}</b> is badly hurt. The <b>Potion</b> button heals 2d4 + 2 HP, using their action. ` +
-      'A hero at 0 HP falls, and is back up after the fight.',
+      (c.rules >= 2 ? 'A hero at 0 HP is dying, and any healing brings them back.' : 'A hero at 0 HP falls, and is back up after the fight.'),
+  },
+  {
+    id: 'dying',
+    on: 'heroTurn',
+    when: (c) => !!c.dyingAlly,
+    text: (c) => `<b>${c.dyingAlly.name}</b> is <b>dying</b>. As each of their turns comes round they roll a death save: ` +
+      '10 or more is a success, and the pips on their portrait count them. Three failures and they’re out for the fight. ' +
+      'Any healing gets them back up: a healing spell, Lay on Hands, or <b>Give potion</b> from next to them.',
+  },
+  {
+    id: 'paralysis',
+    on: 'heroTurn',
+    when: (c) => !!c.paralysed,
+    text: (c) => `<b>${c.paralysed.name}</b> is <b>paralysed</b> by a ghoul’s claws: no move, action or reaction, ` +
+      'and any hit from next to them is a critical. A CON save as each of their turns starts ends it. Keep the ghouls off them.',
   },
   {
     id: 'chest',
@@ -92,6 +108,13 @@ export const TIPS = [
     when: (c) => c.cmd.type === 'move' && !c.unit.actionUsed,
     text: (c) => `Now <b>attack</b>: ${click(c)} an enemy on a red tile. Before you commit, the line above the buttons ` +
       'shows the bonus to hit against its armour (AC) and the damage. Walls, barrels and crates between you give it cover.',
+  },
+  {
+    id: 'concentration',
+    on: 'acted',
+    when: (c) => c.cmd.type === 'spell' && !!c.unit.concentrating,
+    text: (c) => `<b>${c.unit.name}</b> is <b>concentrating</b> on that spell, and it lasts while they do. ` +
+      'Taking damage calls for a CON save to hold on; dropping, being paralysed or casting another such spell ends it.',
   },
   {
     id: 'end',
