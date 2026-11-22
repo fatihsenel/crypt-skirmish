@@ -3,6 +3,7 @@
 // attacks, the odds of an attack or shove, a spell's targets and blast.
 
 import { key, pathFrom } from './game/grid.js';
+import { SPILL_DC, BURN_TURNS } from './game/combat.js';
 import { signed, abilityMod } from './game/dice.js';
 import { SPELLS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { tips } from './ui/tips.js';
@@ -76,6 +77,18 @@ export function createPreview(deps) {
       } else {
         hud.hint(`${foe.name}: ${game.attackProblem(u, foe, atk ?? u.attacks[0])}`);
       }
+      return;
+    }
+    const prop = game.grid.props.get(key(hovered.x, hovered.z));
+    if (prop?.kind === 'brazier') {
+      const why = game.brazierProblem(u, hovered.x, hovered.z);
+      if (why) return void hud.hint(why);
+      const tiles = game.spillTiles(u, prop);
+      board.cone.set(tiles);
+      const caught = tiles.map((t) => visibleUnitAt(t.x, t.z)).filter(Boolean);
+      hud.hint(`Tip the brazier (your action): coals land on ${tiles.length} tile${tiles.length === 1 ? '' : 's'}`
+        + (caught.length ? `, catching ${listNames(caught.map((c) => c.name))} (DEX save DC ${SPILL_DC}, 2d6 fire)` : '')
+        + `, and burn whoever steps on them (1d6) for ${BURN_TURNS} turns`, true, { warn: caught.some((c) => c.team === u.team) });
       return;
     }
     if (game.grid.chests.has(key(hovered.x, hovered.z))) {

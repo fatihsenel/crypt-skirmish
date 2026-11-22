@@ -151,6 +151,11 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return { cmd: { type: 'attack', target: unitRef(game, other), attack: u.attacks.indexOf(atk) } };
   }
 
+  if (game.grid.props.get(key(t.x, t.z))?.kind === 'brazier') {
+    const why = game.brazierProblem(u, t.x, t.z);
+    return why ? { toast: why } : { cmd: { type: 'brazier', x: t.x, z: t.z } };
+  }
+
   if (game.grid.chests.has(key(t.x, t.z))) {
     const why = game.chestProblem(u, t.x, t.z);
     return why ? { toast: why } : { cmd: { type: 'chest', x: t.x, z: t.z } };
@@ -207,6 +212,10 @@ export function tileSummary(game, t, { unitAt, explored }) {
   const u = unitAt(t.x, t.z);
   if (u) return `${u.name}${u === game.current ? ' (your turn)' : ''}, ${u.hp} of ${u.maxHp} HP`;
   if (game.grid.chests.has(key(t.x, t.z))) return 'A chest';
+  const prop = game.grid.props.get(key(t.x, t.z));
+  if (prop?.kind === 'brazier') return prop.tipped ? 'A brazier on its side' : 'A lit brazier, to tip over from next to it';
+  if (game.burningTiles().has(key(t.x, t.z))) return 'Burning coals';
+  if (game.grid.water.has(key(t.x, t.z))) return 'Shallow water, double movement';
   return 'Floor';
 }
 
@@ -234,5 +243,7 @@ export function surroundings(game, u, { seen }) {
     : 'No enemies in sight.');
   const down = game.units.filter((h) => h.team === u.team && !h.alive);
   if (down.length) parts.push(`Down: ${down.map((h) => h.name).join(', ')}.`);
+  const brazier = [...game.grid.props.values()].find((p) => p.kind === 'brazier' && !p.tipped && gridDistance(u, p) <= 1);
+  if (brazier) parts.push('A lit brazier stands next to you: you can tip it over.');
   return parts.join(' ');
 }

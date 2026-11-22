@@ -130,6 +130,11 @@ server on 5173.
   apply it through an attack `rider` or a spell's `condition`.
 - **Elite trait:** `ELITE_TRAITS` and `makeElite` in `combat.js`; the bestiary lists them.
 - **Room:** a map in `LEVELS` (`game/maps.js`) and a node in `NODES` (`game/campaign.js`).
+  Map symbols are listed in `Grid` (`game/grid.js`): `'~'` shallow water (double cost, through
+  `moveCost`; a room without water or ice keeps the plain paths, so its old saves still
+  replay), `'*'` a brazier (the `brazier` command, `tipBrazier`; its coals are `this.fire`, a
+  `burn` move step). Adding either to an existing room changes its paths or dice, so its old
+  saves and links fall back.
 - **Relic:** `RELICS` in `game/items.js` (its `boss` is the room that drops it) and its rule in
   `Game` (`this.relics`) or `completeFight`. Relics ride in the fight record and links (`rl`).
 - **Stop with no fight:** a node of `kind: 'event'` in `NODES`, its words and options in

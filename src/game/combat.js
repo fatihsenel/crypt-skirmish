@@ -11,6 +11,11 @@ import { Spellcasting, NOISE, dexSaveDamage } from './spells.js';
 
 export const TRAP_DC = 13;
 export const TRAP_DAMAGE = '2d6';
+/** A tipped brazier: coals land on three tiles past it (DEX save for half), and burn there. */
+export const SPILL_DC = 12;
+export const SPILL_DAMAGE = '2d6';
+export const BURN_DAMAGE = '1d6'; // walking onto burning coals, once a turn
+export const BURN_TURNS = 3;      // the coals burn until the end of the tipper's third turn
 
 // Monster senses, in tiles (5 ft). In the dim crypt, unaware monsters spot heroes within
 // 40 ft (a Skulker only within 15 ft; a hidden hero only if their passive Perception beats
@@ -600,6 +605,7 @@ export class Game extends Spellcasting {
     if (u.turned > 0) u.turned--;
     this.tickConditions(u);
     this.thawIce(u);
+    this.coolCoals(u);
     this.emit('turnEnd', { unit: u });
     do {
       this.turn++;
@@ -790,6 +796,7 @@ export class Game extends Spellcasting {
       if (unit.team === 'heroes') {
         const t = this.grid.traps.get(key(x, z));
         if (t && t.revealed && !t.sprung) return false;
+        if (this.fire?.length && this.burningTiles().has(key(x, z))) return false; // the party walks around coals
       }
       return true;
     };
@@ -804,7 +811,7 @@ export class Game extends Spellcasting {
     return this.grid.flood(unit.x, unit.z, unit.movesLeft, this.passableFor(unit), this.moveCost(unit));
   }
 
-  // --- difficult terrain (Ice Storm) ----------------------------------------
+  // --- difficult terrain (Ice Storm, shallow water) -----------------------------
   /** Keys of the tiles that are difficult terrain right now. */
   icyTiles() {
     const out = new Set();
@@ -813,13 +820,15 @@ export class Game extends Spellcasting {
   }
 
   /**
-   * What entering a tile costs `unit` (2 on difficult ground), or null when nothing slows it:
-   * no ice, or a flier (specters, wraiths, Ysolde) passing over it.
+   * What entering a tile costs `unit` (2 on difficult ground: ice or water), or null when
+   * nothing slows it: no ice or water in the room, or a flier (specters, wraiths, Ysolde) passing
+   * over it. Null keeps the plain breadth-first paths, so rooms without either never change.
    */
   moveCost(unit = null) {
-    if (!this.ice?.length || unit?.flies) return null;
+    const water = this.grid.water;
+    if ((!this.ice?.length && !water.size) || unit?.flies) return null;
     const icy = this.icyTiles();
-    return (x, z) => (icy.has(key(x, z)) ? 2 : 1);
+    return (x, z) => (icy.has(key(x, z)) || water.has(key(x, z)) ? 2 : 1);
   }
 
   /** Ice Storm's ground stays difficult until the end of the caster's next turn. */
@@ -982,6 +991,13 @@ export class Game extends Spellcasting {
           return { steps, path: path.slice(0, i + 2), interrupted: true };
         }
       }
+      if (this.fire?.length && !unit.flies && this.burningTiles().has(key(to.x, to.z)) && unit.burnTurn !== this.turnId()) {
+        flush(to);
+        unit.x = to.x;
+        unit.z = to.z;
+        steps.push({ type: 'burn', result: this.burn(unit) });
+        if (!unit.alive || this.over) return stop(i + 1);
+      }
     }
     flush(path[path.length - 1]);
     unit.movesLeft -= node.dist;
@@ -1055,6 +1071,103 @@ export class Game extends Spellcasting {
       }
     }
     return found;
+  }
+
+  // --- braziers and burning coals ---------------------------------------------
+  /** This turn, as a key: walking onto coals burns a creature once a turn. */
+  turnId() {
+    return `${this.round}.${this.turn}`;
+  }
+
+  /** Keys of the tiles where coals burn right now. */
+  burningTiles() {
+    const out = new Set();
+    for (const f of this.fire ?? []) for (const k of f.tiles) out.add(k);
+    return out;
+  }
+
+  /**
+   * Where a brazier's coals land when `unit` tips it: the tile straight past it, away from
+   * `unit`, and the two beside that one (for a push along a diagonal, the two it leans
+   * between). Walls, props, chests and water are left out.
+   */
+  spillTiles(unit, b) {
+    const dx = Math.sign(b.x - unit.x);
+    const dz = Math.sign(b.z - unit.z);
+    const spots = dx && dz
+      ? [[dx, dz], [dx, 0], [0, dz]]
+      : [[dx, dz], [dx + (dz ? 1 : 0), dz + (dx ? 1 : 0)], [dx - (dz ? 1 : 0), dz - (dx ? 1 : 0)]];
+    return spots.map(([ox, oz]) => ({ x: b.x + ox, z: b.z + oz }))
+      .filter((t) => !this.grid.isSolid(t.x, t.z) && !this.grid.water.has(key(t.x, t.z)));
+  }
+
+  brazierProblem(unit, x, z) {
+    const b = this.grid.props.get(key(x, z));
+    if (b?.kind !== 'brazier') return 'Nothing to tip over here';
+    if (unit.team !== 'heroes') return 'Only heroes tip braziers';
+    if (b.tipped) return 'The brazier is already on its side';
+    if (gridDistance(unit, b) > 1) return 'Move next to the brazier to tip it';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (!this.spillTiles(unit, b).length) return 'The coals would have nowhere to land';
+    return null;
+  }
+
+  /**
+   * Tip a brazier over (the action): its coals spill onto the tiles past it. Anyone there makes
+   * a DEX save against SPILL_DAMAGE (half on a success), and the coals burn for BURN_TURNS of
+   * the tipper's turns: whoever walks onto them takes BURN_DAMAGE, once a turn.
+   */
+  tipBrazier(unit, x, z) {
+    const problem = this.brazierProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    const b = this.grid.props.get(key(x, z));
+    const tiles = this.spillTiles(unit, b);
+    unit.actionUsed = true;
+    b.tipped = true;
+    b.from = { x: unit.x, z: unit.z }; // which way it fell (the board draws it so)
+    this.reveal(unit, 'attack');
+    (this.fire ??= []).push({ by: unit, turns: BURN_TURNS, tiles: new Set(tiles.map((t) => key(t.x, t.z))) });
+    const result = { ok: true, unit, brazier: b, tiles, hits: [] };
+    this.emit('brazier', result);
+    this.cause = 'burning coals';
+    this.via = 'fire';
+    const caught = this.units.filter((u) => u.alive && !u.corpse && tiles.some((t) => t.x === u.x && t.z === u.z));
+    for (const u of caught) {
+      const { d20, total, success } = this.save(u, 'dex', SPILL_DC);
+      const roll = rollExpr(SPILL_DAMAGE, { rng: this.rng });
+      const damage = dexSaveDamage(u, success, roll.total);
+      u.burnTurn = this.turnId();
+      const hit = { unit: u, d20, total, dc: SPILL_DC, success, roll, damage };
+      result.hits.push(hit);
+      this.emit('spill', hit); // before the damage lands, so the log tells it first
+      this.applyDamage(u, damage, u.team === 'monsters' ? unit : null);
+    }
+    this.noise(b, 4); // a crash and a roar of sparks
+    this.updateAwareness();
+    return result;
+  }
+
+  /** `unit` walks onto burning coals: BURN_DAMAGE, credited to whoever tipped them. */
+  burn(unit) {
+    const k = key(unit.x, unit.z);
+    const fire = this.fire.find((f) => f.tiles.has(k));
+    unit.burnTurn = this.turnId();
+    const roll = rollExpr(BURN_DAMAGE, { rng: this.rng });
+    this.cause = 'burning coals';
+    this.via = 'fire';
+    const result = { unit, roll, damage: roll.total };
+    this.emit('burn', result);
+    this.applyDamage(unit, roll.total, unit.team === 'monsters' ? fire?.by ?? null : null);
+    return result;
+  }
+
+  /** At the end of `unit`'s turn: coals it tipped (or a fallen tipper's) burn lower, and go out. */
+  coolCoals(unit) {
+    if (!this.fire?.length) return;
+    const before = this.fire.length;
+    for (const f of this.fire) if (f.by === unit || !f.by.alive) f.turns--;
+    this.fire = this.fire.filter((f) => f.turns > 0);
+    if (this.fire.length !== before) this.emit('coals', { tiles: this.burningTiles(), out: true });
   }
 
   // --- object interaction -----------------------------------------------------

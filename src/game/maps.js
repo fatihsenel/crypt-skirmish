@@ -9,7 +9,8 @@
 // `mimics` lists chest tiles ('x,z') that are really mimics; give those chests [] loot.
 // `final` marks the last room of the campaign; `outro` is its victory text.
 // Props: '&' barrels and '=' crates (half cover: +2 AC against attacks across them), '|' columns
-// (block movement and sight).
+// (block movement and sight), '*' braziers (a hero next to one can tip it: burning coals).
+// '~' shallow water: costs double to wade through.
 // `asleep` lists monsters asleep at the start, by tile ('x,z'); `patrols` maps a monster's
 // tile to the waypoints it walks between while it hasn't noticed the party.
 // The campaign map that links these levels lives in campaign.js.
@@ -89,11 +90,11 @@ export const LEVELS = [
       '################',
       '#F.R..#.|....|.#',
       '#.....+..%..s..#',
-      '#W.C..#........#',
+      '#W.C..#.....*..#',
       '#.....##..##...#',
       '###+###...##.%.#',
       '#.....#.|......#',
-      '#..^..+...n....#',
+      '#..^..+.*.n....#',
       '#.....#..%...|.#',
       '#.$...##..o....#',
       '#.....#...s..>.#',
@@ -185,10 +186,10 @@ LEVELS.push({
     '#.....#..h..#..#',
     '###+###.....#$.#',
     '#.....##+####..#',
-    '#..u..#......&.#',
-    '#.....+..u.....#',
-    '#.$...#.|...u..#',
-    '#.....#......>.#',
+    '#..u..#...~~.&.#',
+    '#.....+..u~~...#',
+    '#.$...#.|.~~u..#',
+    '#.....#...~~.>.#',
     '################',
   ],
   loot: [['weaponPlus1', 'potion'], ['potion', 'potion']],
@@ -319,7 +320,7 @@ LEVELS.push(
       '#W.C..+........#',
       '#.....#.|....|.#',
       '###+###........#',
-      '#.....#...l....#',
+      '#.....#.*.l.*..#',
       '#..^..+........#',
       '#.....#.|....|.#',
       '#.$...#..s..s..#',

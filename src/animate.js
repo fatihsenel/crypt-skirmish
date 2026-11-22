@@ -228,6 +228,20 @@ export function createAnimations(app) {
           await animateAttack(r, step.at);
           break;
         }
+        case 'burn': { // walked onto a tipped brazier's coals
+          const r = step.result;
+          sfx.fireImpact();
+          if (unseen(unit)) {
+            view(unit).updateHp();
+            if (!unit.alive) view(unit).die();
+            break;
+          }
+          floatText(stage.scene, r.unit, `Burns −${r.damage}`, 'crit');
+          hitFx(stage.scene, r.unit);
+          await damageReaction(r.unit);
+          hud.renderInitiative(app.game());
+          break;
+        }
         case 'trap': {
           const r = step.result;
           sfx.trap();
@@ -283,6 +297,24 @@ export function createAnimations(app) {
     if (items.length) sfx.discover();
     floatText(stage.scene, { x, z }, text || 'Empty', 'heal');
     await wait(300);
+  }
+
+  /** A tipped brazier: it goes over, coals spill, and whoever stood there is burned. */
+  async function playBrazier(unit, r) {
+    const { x, z } = r.brazier;
+    await view(unit).turnTowards(x, z);
+    sfx.brazier();
+    await app.board().tipBrazier(x, z, unit.x, unit.z);
+    app.board().setFire(app.game().burningTiles());
+    stage.shake(0.12, 250);
+    for (const h of r.hits) {
+      if (unseen(h.unit)) continue;
+      floatText(stage.scene, h.unit, h.success ? `Save −${h.damage}` : `Burned −${h.damage}`, 'crit');
+      hitFx(stage.scene, h.unit);
+    }
+    await Promise.all(r.hits.map((h) => damageReaction(h.unit)));
+    hud.renderInitiative(app.game());
+    await wait(250);
   }
 
   async function playShove(r) {
@@ -623,6 +655,7 @@ export function createAnimations(app) {
       case 'attack': return animateAttack(r);
       case 'shove': return playShove(r);
       case 'chest': return playChest(unit, r);
+      case 'brazier': return playBrazier(unit, r);
       case 'bonus':
       case 'action': return playAction(unit, r);
       case 'spell': return playSpell(r);

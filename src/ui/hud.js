@@ -721,6 +721,20 @@ export class Hud {
       (!r.success && r.unit.hp > r.damage ? ' and is <b class="cond prone">knocked prone</b>.' : '.'));
   }
 
+  logBrazier({ unit, tiles }) {
+    this.log(`${who(unit)} tips the brazier over: <b class="crit">burning coals</b> spill across ${tiles.length} tile${tiles.length === 1 ? '' : 's'}.`);
+  }
+
+  /** Someone was where the coals landed. */
+  logSpill(r) {
+    this.log(`${who(r.unit)} is caught in the coals. DEX save DC ${r.dc}: ${saveText(r)}, takes <b class="hit">${r.damage} fire</b> ${dice(r.roll)}.`);
+  }
+
+  /** Someone walked onto the coals. */
+  logBurn(r) {
+    this.log(`${who(r.unit)} steps onto the coals and takes <b class="hit">${r.damage} fire</b> ${dice(r.roll)}.`);
+  }
+
   logTrapFound({ unit }) {
     this.log(`${who(unit)} spots a <b class="opp">hidden trap</b>. Heroes will walk around it.`);
   }

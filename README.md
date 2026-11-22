@@ -55,6 +55,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Conditions:** prone, poisoned, frightened, restrained and rotting (a mummy's fist: no
   healing takes for two turns), each shown as a tag on the figure.
 - **Cover:** barrels and crates give +2 AC against attacks that pass over them.
+- **Water and braziers:** shallow water costs double to wade through (fliers skip it). A hero
+  next to a lit brazier can tip it over with their action: its coals land on the tiles past
+  it, and whoever stands there makes a DC 12 DEX save against 2d6 fire (half on a success).
+  The coals burn for 3 of the tipper's turns, 1d6 to anyone who steps on them.
 - **Stealth:** a hidden hero is only found by a monster whose Perception beats their roll.
   Attacking gives you away.
 - **Undo:** a move can be taken back until the hero does something else, as long as it rolled
@@ -319,6 +323,9 @@ A few things differ from the SRD to keep the game simple:
 - Relics are not from the SRD. The Phylactery works like Death Ward on the first hero to drop,
   once between long rests. The Veil hides the party at 15 + Stealth bonus, with no roll and
   no penalty for noisy armor.
+- Tipping a brazier is not from the SRD: the spill is a DC 12 DEX save against 2d6 fire, and
+  the coals deal 1d6 to whoever enters them (once a turn) until the end of the tipper's third
+  turn.
 - The Periapt of Wound Closure doubles all healing its wearer receives (the SRD's doubles
   Hit Dice and stabilizes; there are no Hit Dice or death saves here).
 

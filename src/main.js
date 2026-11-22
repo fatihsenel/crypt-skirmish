@@ -711,6 +711,8 @@ function startFight(resume, watch = null) {
   board.setThreatColors(settings.colorblind);
   stage.scene.add(board.group);
   board.setIce(game.icyTiles()); // a restored fight may have icy ground
+  board.setFire(game.burningTiles()); // and coals from a tipped brazier
+  for (const p of game.grid.props.values()) if (p.tipped) board.tipBrazier(p.x, p.z, p.from.x, p.from.z, true);
   views = new Map();
   for (const u of game.units) addView(u);
 
@@ -814,6 +816,16 @@ function startFight(resume, watch = null) {
     else hud.logTrap(r);
   });
   game.on('chest', (r) => hud.logChest(r));
+  game.on('brazier', (r) => hud.logBrazier(r));
+  game.on('spill', (r) => { if (!unseen(r.unit)) hud.logSpill(r); });
+  game.on('burn', (r) => {
+    if (unseen(r.unit)) hud.log('Something blunders onto the coals in the dark.', 'sys');
+    else hud.logBurn(r);
+  });
+  game.on('coals', (r) => {
+    board.setFire(r.tiles);
+    hud.log('The spilled coals burn out.', 'sys');
+  });
   game.on('mimic', (r) => hud.logMimic(r));
   game.on('mimicFound', (r) => pendingReveals.push(r));
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
@@ -1211,6 +1223,7 @@ function stepNote(step) {
   if (step.type === 'move') return 'moves';
   if (step.type === 'shove') return 'shoves';
   if (step.type === 'chest') return 'opens a chest';
+  if (step.type === 'brazier') return 'tips a brazier';
   if (step.type === 'spell') return `casts ${SPELLS[step.id]?.name ?? 'a spell'}`;
   if (step.type === 'action' || step.type === 'bonus') return STEP_VERBS[step.id] ?? ACTIONS[step.id]?.name.toLowerCase() ?? null;
   return null;

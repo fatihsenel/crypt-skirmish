@@ -551,6 +551,15 @@ class Sfx {
     });
   }
 
+  /** A brazier going over: an iron clang, then the coals' roar and sparks. */
+  brazier() {
+    this.play((t) => {
+      this.tone(t, { type: 'triangle', freq: 340, freqEnd: 300, dur: 0.5, gain: 0.25, attack: 0.002 });
+      this.tone(t, { type: 'square', freq: 523, freqEnd: 500, dur: 0.18, gain: 0.06, attack: 0.002 });
+    });
+    this.fireCone();
+  }
+
   /** Lightning Bolt: a crackling crack and a rolling rumble. */
   thunder() {
     this.play((t) => {

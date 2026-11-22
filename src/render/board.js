@@ -99,6 +99,8 @@ function bannerSpots(grid, torches) {
   return spots;
 }
 
+const WATER_GEO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+
 const overlay = (color, opacity) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
@@ -198,6 +200,16 @@ export class Board {
       }
     }
 
+    // Shallow water: a dark, glossy sheet just over the floor.
+    for (const k of grid.water) {
+      const [x, z] = k.split(',').map(Number);
+      const sheet = new THREE.Mesh(WATER_GEO, mat(0x1c4a5e, { transparent: true, opacity: 0.78, roughness: 0.12, metalness: 0.2, emissive: 0x08202c }));
+      sheet.position.set(x, 0.035, z);
+      sheet.receiveShadow = true;
+      this.group.add(sheet);
+      this.addToCell(x, z, sheet);
+    }
+
     this.torches = [];
     const torches = torchSpots(grid);
     for (const spot of torches) this.addTorch(spot);
@@ -206,9 +218,10 @@ export class Board {
     this.doors = new Map();
     for (const d of grid.doors.values()) this.doors.set(key(d.x, d.z), { ...this.addDoor(d), opened: d.open });
     this.candles = [];
+    this.braziers = new Map();
+    this.pickables = []; // props the mouse can click (chests, braziers), tagged with userData.tile
     for (const p of grid.props.values()) this.addProp(p);
     this.chests = new Map();
-    this.pickables = []; // props the mouse can click (chests), tagged with userData.tile
     for (const c of grid.chests.values()) this.chests.set(key(c.x, c.z), this.addChest(c));
     this.traps = new Map();
     for (const s of grid.stairs) this.stairs = this.addStairs(s);
@@ -223,6 +236,12 @@ export class Board {
       for (const { light, seed, cell } of this.candles) {
         light.intensity = (1.1 + Math.sin(t * 11 + seed) * 0.15) * cell.f;
       }
+      for (const b of this.braziers.values()) {
+        if (!b.lit) continue;
+        b.light.intensity = (3 + Math.sin(t * 8 + b.seed) * 0.5 + Math.sin(t * 19 + b.seed) * 0.3) * b.cell.f;
+        b.coals.material.emissiveIntensity = 1.6 * b.cell.f; // no glow from a room not yet seen
+      }
+      if (this.fireLit) this.fire.material.opacity = 0.8 + Math.sin(t * 6) * 0.1 + Math.sin(t * 15) * 0.06;
       if (this.stairs?.lit) this.stairs.light.intensity = 3 + Math.sin(t * 3) * 0.8;
     };
     stage.tickers.add(this.tick);
@@ -253,6 +272,7 @@ export class Board {
     this.threatRanged = new TileLayer(this.group, stripes(THREAT_COLORS.normal.ranged, 0.55, 4, 'dots'), 0.98, 0.0102);
     // Ice Storm's ground (difficult terrain): frost under everything else.
     this.ice = new TileLayer(this.group, stripes(0xd8f0ff, 0.6, 3), 0.98, 0.0106);
+    this.fire = new TileLayer(this.group, overlay(0xff4a10, 0.8), 0.9, 0.0108); // a tipped brazier's coals
     // The figure a name in the combat log points at (hovered or clicked), over everything.
     this.spot = new TileLayer(this.group, overlay(0xffc93c, 0.7), 0.98, 0.018);
   }
@@ -267,6 +287,15 @@ export class Board {
   }
 
   /** Frost on the tiles that are difficult terrain (a Set of tile keys). */
+  /** The tiles where a tipped brazier's coals burn (`keys`: tile keys), or none. */
+  setFire(keys) {
+    this.fire.set([...keys].map((k) => {
+      const [x, z] = k.split(',').map(Number);
+      return { x, z };
+    }));
+    this.fireLit = keys.size > 0;
+  }
+
   setIce(keys) {
     this.ice.set([...keys].map((k) => {
       const [x, z] = k.split(',').map(Number);
@@ -386,6 +415,7 @@ export class Board {
       m.castShadow = m.receiveShadow = true;
       parts.push(m);
     };
+    if (kind === 'brazier') return this.addBrazier(x, z);
     if (kind === 'barrel') {
       if (!kitPiece('barrel_small', 0.5, -0.12, -0.1)) box(0.5, 0.5, 0x6b4a2c);
       else if (hash(x, z, 6) > 0.4) kitPiece('barrel_small', 0.36, 0.24, 0.2);
@@ -411,6 +441,56 @@ export class Board {
       for (const p of parts) p.traverse((o) => { if (o.isMesh) meshes.push(o); });
       this.walls.push({ x, z, meshes, opacity: 1 });
     }
+  }
+
+  /** A brazier: an iron bowl of coals on a stem, lit, that a hero can tip over (tipBrazier). */
+  addBrazier(x, z) {
+    const iron = mat(0x2e2a28, { roughness: 0.55, metalness: 0.6 });
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    const part = (geo, m, y) => {
+      const mesh = new THREE.Mesh(geo, m);
+      mesh.position.y = y;
+      mesh.castShadow = mesh.receiveShadow = true;
+      g.add(mesh);
+      return mesh;
+    };
+    part(new THREE.CylinderGeometry(0.2, 0.24, 0.06, 14), iron, 0.03);
+    part(new THREE.CylinderGeometry(0.035, 0.05, 0.5, 8), iron, 0.3);
+    part(new THREE.CylinderGeometry(0.27, 0.13, 0.2, 14), iron, 0.62);
+    const coals = part(new THREE.CylinderGeometry(0.23, 0.23, 0.03, 14),
+      new THREE.MeshStandardMaterial({ color: 0x5a1a08, emissive: 0xff5a14, emissiveIntensity: 1.6, roughness: 0.9 }), 0.71);
+    coals.castShadow = false;
+    const light = new THREE.PointLight(0xff7a2a, 3, 3.6, 2);
+    light.position.set(0, 1.0, 0);
+    g.add(light);
+    g.userData.tile = { x, z };
+    this.group.add(g);
+    this.pickables.push(g);
+    const cell = this.addToCell(x, z, g);
+    this.braziers.set(key(x, z), { g, light, coals, cell, lit: true, seed: hash(x, z, 9) * 10 });
+  }
+
+  /**
+   * The brazier at (x, z) goes over, away from (fromX, fromZ), and its fire goes out (the coals
+   * on the floor are the fire layer). `instant` for a restored fight.
+   */
+  async tipBrazier(x, z, fromX, fromZ, instant = false) {
+    const b = this.braziers.get(key(x, z));
+    if (!b || !b.lit) return;
+    b.lit = false;
+    const dx = Math.sign(x - fromX);
+    const dz = Math.sign(z - fromZ);
+    const norm = Math.hypot(dx, dz) || 1;
+    const fall = (t) => {
+      b.g.rotation.z = -(dx / norm) * (Math.PI / 2) * t;
+      b.g.rotation.x = (dz / norm) * (Math.PI / 2) * t;
+      b.g.position.y = 0.2 * t; // the bowl's rim rests on the floor
+      b.light.intensity = 3 * (1 - t);
+      b.coals.material.emissiveIntensity = 1.6 * (1 - t);
+    };
+    if (instant) return fall(1);
+    await tween(380, (t) => fall(t), (t) => t * t);
   }
 
   // --- tile kit ------------------------------------------------------------------

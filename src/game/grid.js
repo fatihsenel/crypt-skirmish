@@ -12,6 +12,7 @@ const PROPS = {
   '&': { kind: 'barrel', cover: 'half' },
   '=': { kind: 'crate', cover: 'half' },
   '|': { kind: 'column', cover: 'full' },
+  '*': { kind: 'brazier', cover: null, tipped: false },
 };
 
 // 5e grid distance: diagonals cost the same as straight moves.
@@ -23,7 +24,8 @@ export class Grid {
    *   '#' wall, '.' floor, '+' closed door, '^' hidden trap, '$' chest, '>' stairs,
    *   '%' corpse (a dead goblin), letters = spawn points.
    *   Props: '&' barrels, '=' crates (in the way, and half cover), '|' a column (in the way,
-   *   and it blocks sight like a wall).
+   *   and it blocks sight like a wall), '*' a lit brazier (in the way; a hero can tip it over).
+   *   '~' shallow water: floor that costs double to wade through.
    */
   constructor(rows) {
     this.height = rows.length;
@@ -35,7 +37,8 @@ export class Grid {
     this.traps = new Map();  // key -> {x, z, revealed, sprung}
     this.chests = new Map(); // key -> {x, z, opened, loot}
     this.stairs = [];
-    this.props = new Map();  // key -> {x, z, kind, cover: 'half' | 'full'}
+    this.props = new Map();  // key -> {x, z, kind, cover: 'half' | 'full' | null}
+    this.water = new Set();  // keys of shallow water tiles
     rows.forEach((row, z) => {
       if (row.length !== this.width) throw new Error(`Map row ${z} has wrong width`);
       this.walls[z] = [...row].map((ch, x) => {
@@ -45,6 +48,7 @@ export class Grid {
         else if (ch === '$') this.chests.set(key(x, z), { x, z, opened: false, loot: [] });
         else if (ch === '>') this.stairs.push({ x, z });
         else if (ch === '%') this.corpses.push({ code: 'g', x, z });
+        else if (ch === '~') this.water.add(key(x, z));
         else if (PROPS[ch]) this.props.set(key(x, z), { x, z, ...PROPS[ch] });
         return ch === '#';
       });

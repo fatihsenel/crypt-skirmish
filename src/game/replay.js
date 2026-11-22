@@ -32,7 +32,7 @@ const fail = (reason) => ({ ok: false, reason });
 
 /**
  * Carry out one of the player's commands for the unit whose turn it is.
- * Commands: move {x, z}, attack {target, attack}, shove {target}, chest {x, z},
+ * Commands: move {x, z}, attack {target, attack}, shove {target}, chest {x, z}, brazier {x, z},
  * action {id}, spell {id, unit | x, z}, smite, rebuke, end. Returns the engine's result.
  */
 export function applyCommand(game, cmd) {
@@ -56,6 +56,8 @@ export function applyCommand(game, cmd) {
     }
     case 'chest':
       return game.openChest(u, cmd.x, cmd.z);
+    case 'brazier':
+      return game.tipBrazier(u, cmd.x, cmd.z);
     case 'action':
       return game.doAction(u, cmd.id);
     case 'spell':
