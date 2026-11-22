@@ -54,6 +54,12 @@ export function createPreview(deps) {
     if (selected?.kind === 'spell') return refreshSpell(u, selected.id);
     if (selected?.kind === 'shove') return refreshShove(u);
     if (selected?.kind === 'help') return refreshHelp(u);
+    if (selected?.kind === 'grapple') return refreshGrapple(u);
+    if (selected?.kind === 'feed') return refreshFeed(u);
+    if (selected?.kind === 'ready') {
+      hud.hint('Ready: pick the attack to hold · a melee one strikes a foe stepping into reach, a ranged one a foe stepping into view · Esc to cancel');
+      return;
+    }
 
     const reach = game.reachable(u);
     board.reach.set(game.destinations(u).filter((t) => board.isExplored(t.x, t.z)));
@@ -110,6 +116,33 @@ export function createPreview(deps) {
       hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
         + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : ''), true);
     }
+  }
+
+  /** Grapple targeting: adjacent enemies light up, the hint shows the contest. */
+  function refreshGrapple(u) {
+    board.targets.set(game.enemiesOf(u).filter((f) => !unseen(f) && !game.grappleProblem(u, f)));
+    const foe = hovered && visibleUnitAt(hovered.x, hovered.z);
+    if (!foe || foe.team === u.team) {
+      hud.hint('Grapple: click an enemy next to you · Esc to cancel');
+      return;
+    }
+    board.hover.set([hovered]);
+    const why = game.grappleProblem(u, foe);
+    hud.hint(why ? `${foe.name}: ${why}`
+      : `Grapple → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and it can’t move while you stay next to it`, !why);
+  }
+
+  /** Giving a potion: hurt allies next to the hero light up. */
+  function refreshFeed(u) {
+    board.targets.set(game.alliesOf(u).filter((a) => !game.feedProblem(u, a)));
+    const ally = hovered && visibleUnitAt(hovered.x, hovered.z);
+    if (!ally || ally.team !== u.team || ally === u) {
+      hud.hint('Give potion: click an ally next to you · Esc to cancel');
+      return;
+    }
+    board.hover.set([hovered]);
+    const why = game.feedProblem(u, ally);
+    hud.hint(why ? `${ally.name}: ${why}` : `Give potion → ${ally.name}: 2d4 + 2 HP (${ally.hp}/${ally.maxHp} now)`, !why);
   }
 
   /** Help targeting: adjacent enemies light up, the hint says who it helps. */

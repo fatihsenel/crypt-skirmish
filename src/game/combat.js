@@ -571,10 +571,12 @@ export class Game extends Spellcasting {
       strikeUsed: false,
       interacted: false,
       readied: false,
+      readiedAttack: null,
     });
     if (u.helping) this.endHelp(u); // Help lasts until the helper's next turn
     this.standUp(u);
     if (this.has(u, 'restrained')) u.movesLeft = 0;
+    if (u.grappledBy) this.struggle(u);
     this.recharge(u);
     if (u.elite === 'regenerating' && u.alive && u.hp < u.maxHp) {
       const amount = this.heal(u, ELITE_REGEN);
@@ -702,6 +704,8 @@ export class Game extends Spellcasting {
       target.alive = false;
       for (const u of this.units) if (u.faithFrom === target.id) u.faithFrom = null; // Shield of Faith drops
       target.spiritWeapon = null; // and a fallen cleric's spectral weapon fades
+      if (target.grappling) this.letGo(target, 'fell');
+      if (target.grappledBy?.grappling === target) this.letGo(target.grappledBy, 'fell');
       let unmarked = null;
       if (target.mark) { // a fallen ranger's Hunter's Mark ends
         unmarked = this.units.find((u) => u.id === target.mark.id) ?? null;
@@ -918,9 +922,9 @@ export class Game extends Spellcasting {
     return { near: gridDistance(hero, at) <= 1, saw: this.grid.lineOfSight(hero.x, hero.z, at.x, at.z) };
   }
 
-  /** The attack a hero readies: their main weapon or cantrip, the first in their stat block. */
+  /** The attack a hero readies: the one they picked, else their first (main weapon or cantrip). */
   readyWeapon(hero) {
-    return hero.attacks[0];
+    return hero.readiedAttack ?? hero.attacks[0];
   }
 
   /**
@@ -1048,6 +1052,7 @@ export class Game extends Spellcasting {
     unit.movesLeft -= node.dist;
     unit.x = x;
     unit.z = z;
+    if (unit.grappling && gridDistance(unit, unit.grappling) > 1) this.letGo(unit); // walked off
     this.emit('move', { unit, path });
     if (unit.team === 'heroes') this.markSeen(unit, path); // ducking out of view mid-move
     this.revealTraps();
@@ -1555,6 +1560,129 @@ export class Game extends Spellcasting {
     return result;
   }
 
+  // --- giving a potion ---------------------------------------------------------
+  /** Why `unit` can't pour a potion into `target`, or null. */
+  feedProblem(unit, target) {
+    if (this.over) return 'The battle is over';
+    if (unit.team !== 'heroes') return 'Only heroes carry potions';
+    if (!(unit.potions > 0)) return 'No potions left';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    if (!target?.alive || target.team !== unit.team || target === unit) return 'Choose an ally next to you';
+    if (gridDistance(unit, target) > 1) return 'Must stand next to them';
+    if (target.hp >= target.maxHp) return `${target.name} is at full HP`;
+    if (this.has(target, 'rotting')) return `${target.name} is rotting: no healing takes`;
+    return null;
+  }
+
+  /** Pour one of `unit`'s potions into an ally next to it: 2d4 + 2 HP. Uses the action. */
+  feedPotion(unit, target) {
+    const problem = this.feedProblem(unit, target);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    unit.potions--;
+    this.drunk++;
+    const roll = rollExpr('2d4+2', { rng: this.rng });
+    const healed = this.heal(target, roll.total, unit);
+    const result = { ok: true, kind: 'feed', unit, target, roll, healed };
+    this.emit('feed', result);
+    return result;
+  }
+
+  // --- grappling ------------------------------------------------------------
+  /** Grapple: like Shove, it takes one attack of the Attack action. */
+  grappleProblem(attacker, target) {
+    if (this.over) return 'The battle is over';
+    if (attacker.team !== 'heroes') return 'Only heroes grapple';
+    if (!this.canAttack(attacker)) return 'Action already used this turn';
+    if (attacker.actionUsed && attacker.extraAttackWith) return `Only ${attacker.extraAttackWith} fires again`;
+    if (attacker.turned) return 'Turned: can only flee';
+    if (!target?.alive || target.team === attacker.team) return 'Choose an enemy';
+    if (target.hidden) return `${target.name} is hidden: Search to find it`;
+    if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
+    if (target.huge) return `${target.name} is too big to grapple`;
+    if (target.grappledBy === attacker) return `Already holding ${target.name}`;
+    return null;
+  }
+
+  /**
+   * Athletics against the target's best of STR or DEX (the target wins ties). Won: its speed is 0
+   * while the grappler stays next to it. Returns { ok, kind: 'grapple', attacker, target, roll, resist, success }.
+   */
+  grapple(attacker, target) {
+    const problem = this.grappleProblem(attacker, target);
+    if (problem) return { ok: false, reason: problem };
+    this.reveal(attacker, 'attack');
+    if (!attacker.actionUsed) {
+      attacker.actionUsed = true;
+      attacker.attacksLeft = this.followUps(attacker, null);
+    } else {
+      attacker.attacksLeft--;
+    }
+    const { roll, resist } = this.contest(attacker, target);
+    const result = { ok: true, kind: 'grapple', attacker, target, roll, resist, success: roll.total > resist.total };
+    this.emit('grapple', result);
+    this.alert(target, 'hurt');
+    if (result.success) {
+      if (attacker.grappling) this.letGo(attacker); // one hold at a time
+      if (target.grappledBy) this.letGo(target.grappledBy);
+      attacker.grappling = target;
+      target.grappledBy = attacker;
+      target.movesLeft = 0;
+    }
+    this.noise(attacker);
+    this.updateAwareness();
+    return result;
+  }
+
+  /** Athletics (d20 + STR + proficiency) against the defender's best of STR or DEX. */
+  contest(attacker, defender) {
+    const a = this.rollD20(this.has(attacker, 'poisoned') ? 'dis' : 'normal');
+    const b = rollDice(1, 20, this.rng).total;
+    const bonus = this.shoveBonus(attacker);
+    const resistBonus = this.shoveResist(defender);
+    return {
+      roll: { d20: a.d20, rolls: a.rolls, bonus, total: a.d20 + bonus },
+      resist: { d20: b, bonus: resistBonus, total: b + resistBonus },
+    };
+  }
+
+  /** Whether `unit`'s grappler still holds it: alive, and next to it. */
+  held(unit) {
+    const g = unit.grappledBy;
+    return !!g && g.alive && g.grappling === unit && gridDistance(g, unit) <= 1;
+  }
+
+  /** `grappler` lets go (it moved off, fell, or its hold was broken). */
+  letGo(grappler, why = 'let go') {
+    const t = grappler.grappling;
+    if (!t) return;
+    grappler.grappling = null;
+    if (t.grappledBy === grappler) t.grappledBy = null;
+    this.emit('grappleEnd', { unit: t, by: grappler, why });
+  }
+
+  /**
+   * Start of a grappled creature's turn: free if the hold has lapsed, else it tries to break
+   * free at once (its best of STR or DEX against the grappler's Athletics), without spending
+   * its action. Still held: speed 0 this turn.
+   */
+  struggle(u) {
+    const g = u.grappledBy;
+    if (!this.held(u)) {
+      if (g?.grappling === u) this.letGo(g, 'gone');
+      else u.grappledBy = null;
+      return;
+    }
+    const d20 = rollDice(1, 20, this.rng).total;
+    const bonus = this.shoveResist(u);
+    const hold = rollDice(1, 20, this.rng).total + this.shoveBonus(g);
+    const result = { unit: u, by: g, d20, bonus, total: d20 + bonus, hold, success: d20 + bonus > hold };
+    this.emit('struggle', result);
+    if (result.success) this.letGo(g, 'broken');
+    else u.movesLeft = 0;
+  }
+
   // --- the Help action -------------------------------------------------------
   /** Why `unit` can't Help against `target` (a foe next to it), or null. */
   helpProblem(unit, target) {
@@ -1705,7 +1833,8 @@ export class Game extends Spellcasting {
     return null;
   }
 
-  doAction(unit, id) {
+  /** `attack`: for Ready, the index of the attack to hold (the first when left out). */
+  doAction(unit, id, { attack } = {}) {
     const problem = this.actionProblem(unit, id);
     if (problem) return { ok: false, reason: problem };
     const def = ACTIONS[id];
@@ -1717,13 +1846,15 @@ export class Game extends Spellcasting {
       case 'dash':
       case 'cunningDash':
       case 'aggressive':
-        if (!this.has(unit, 'restrained')) unit.movesLeft += unit.speed; // speed 0 doubled is 0
+        if (!this.has(unit, 'restrained') && !this.held(unit)) unit.movesLeft += unit.speed; // speed 0 doubled is 0
         break;
       case 'dodge':
         unit.dodging = true;
         break;
       case 'ready':
         unit.readied = true;
+        unit.readiedAttack = unit.attacks[attack] ?? null;
+        result.attack = this.readyWeapon(unit);
         break;
       case 'hide':
       case 'cunningHide':

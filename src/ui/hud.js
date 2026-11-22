@@ -3,7 +3,7 @@
 import { EndBanner } from './banner.js';
 import { announce } from './announce.js';
 import { signed } from '../game/dice.js';
-import { ACTIONS, SPELLS, PASSIVES, SHOVE, HELP, CONDITION_INFO } from '../game/abilities.js';
+import { ACTIONS, SPELLS, PASSIVES, SHOVE, HELP, FEED, GRAPPLE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { AbilityTip } from './abilityTip.js';
@@ -565,6 +565,27 @@ export class Hud {
     this.log(`${who(r.unit)} distracts ${who(r.target)}: the next ally to attack it has <b class="adv">advantage</b>.`);
   }
 
+  logFeed(r) {
+    this.log(`${who(r.unit)} pours a <b>potion of healing</b> into ${who(r.target)}: <b class="heal">+${r.healed} HP</b> ${dice(r.roll)}.`);
+  }
+
+  logGrapple(r) {
+    const roll = `<span class="dice">${r.roll.rolls.length > 1 ? `d20 [${r.roll.rolls.join(', ')}] → ${r.roll.d20}` : `d20 ${r.roll.d20}`} ${signed(r.roll.bonus)} = ${r.roll.total}</span>`;
+    const resist = `<span class="dice">${r.resist.d20} ${signed(r.resist.bonus)} = ${r.resist.total}</span>`;
+    this.log(`${who(r.attacker)} grapples ${who(r.target)}: ${roll} vs ${resist}. ` +
+      (r.success ? '<b class="cond">Held: speed 0.</b>' : '<b class="miss">It twists free.</b>'));
+  }
+
+  logStruggle(r) {
+    this.log(`${who(r.unit)} strains against ${who(r.by)}’s grip: <span class="dice">d20 ${r.d20} ${signed(r.bonus)} = ${r.total}</span> vs ${r.hold}. ` +
+      (r.success ? '<b class="miss">It breaks free.</b>' : '<b class="cond">Still held.</b>'));
+  }
+
+  logGrappleEnd({ unit, by, why }) {
+    if (why === 'broken') return; // told with the struggle
+    this.log(why === 'let go' ? `${who(by)} lets go of ${who(unit)}.` : `${who(unit)} is no longer held.`);
+  }
+
   logShove(r) {
     const roll = `<span class="dice">${r.roll.rolls.length > 1 ? `d20 [${r.roll.rolls.join(', ')}] → ${r.roll.d20}` : `d20 ${r.roll.d20}`} ${signed(r.roll.bonus)} = ${r.roll.total}</span>`;
     const resist = `<span class="dice">${r.resist.d20} ${signed(r.resist.bonus)} = ${r.resist.total}</span>`;
@@ -757,10 +778,7 @@ export class Hud {
     const text = {
       dash: 'Dashes, doubling movement this turn.',
       dodge: 'takes the Dodge action. Attacks against it have disadvantage.',
-      ready: (() => {
-        const a = r.unit.attacks[0];
-        return `readies <b>${esc(a.name)}</b>: the first foe to step into ${a.reach === 1 ? 'reach' : 'view'} takes it.`;
-      })(),
+      ready: r.attack && `readies <b>${esc(r.attack.name)}</b>: the first foe to step into ${r.attack.reach === 1 ? 'reach' : 'view'} takes it.`,
       disengage: 'Disengages. Moving won’t provoke opportunity attacks.',
       nimbleEscape: 'uses <b>Nimble Escape</b> to slip away.',
       secondWind: `uses <b>Second Wind</b> and regains <b class="heal">${r.healed} HP</b> ${r.roll && dice(r.roll)}.`,
@@ -813,6 +831,7 @@ export class Hud {
 
   renderActionBar(game, { selected, busy }) {
     const u = game.current;
+    this.readying = selected?.kind === 'ready'; // the next attack clicked is the one to hold
     if (!u) return;
     const mine = u.team === 'heroes' && !game.over;
     if (!mine && !game.over && this.hidden?.(u)) {
@@ -939,6 +958,16 @@ export class Hud {
       disabled: !!attackWhy,
       active: selected?.kind === 'shove',
     }));
+    if (u.team === 'heroes') {
+      atks.push(button({
+        kind: 'grapple', id: 'grapple', name: GRAPPLE.name, cls: 'act',
+        sub: `${signed(game.shoveBonus(u))} · hold in place · 5 ft`,
+        tip: { kind: 'Takes one attack', chips: [`${signed(game.shoveBonus(u))} Athletics`, '5 ft'], desc: GRAPPLE.desc, how: this.howTo('an enemy') },
+        problem: attackWhy,
+        disabled: !!attackWhy,
+        active: selected?.kind === 'grapple',
+      }));
+    }
 
     const spells = u.spells.map((id) => {
       const s = SPELLS[id];
@@ -972,16 +1001,18 @@ export class Hud {
       const a = ACTIONS[id];
       const problem = game.actionProblem(u, id);
       return button({
-        kind: 'action', id, name: a.name, cls: a.time === 'bonus' ? 'bonus' : 'act',
+        kind: id === 'ready' ? 'ready' : 'action', id, name: a.name, cls: a.time === 'bonus' ? 'bonus' : 'act',
         sub: (a.time === 'bonus' ? 'bonus' : 'action') + (id === 'potion' ? ` · ${u.potions} left` : ''),
         tip: {
           kind: `${a.time === 'bonus' ? 'Bonus action' : 'Action'}${a.feature ? ' · class feature' : ''}`,
           chips: [id === 'potion' ? `${u.potions} left` : null, a.range ? `${a.range * 5} ft` : null,
-            id === 'ready' ? `${u.attacks[0].name} · ${u.attacks[0].reach === 1 ? 'into reach' : 'into view'}` : null].filter(Boolean),
+            id === 'ready' ? 'melee: into reach' : null, id === 'ready' ? 'ranged: into view' : null].filter(Boolean),
           desc: a.desc,
+          how: id === 'ready' ? `${this.touch ? 'Tap' : 'Click'} it, then the attack to hold.` : null,
         },
         problem: problem && `${problem}.`,
         disabled: !!problem,
+        active: id === 'ready' && selected?.kind === 'ready',
       });
     });
 
@@ -995,6 +1026,17 @@ export class Hud {
         disabled: !!helpWhy,
         active: selected?.kind === 'help',
       }));
+      if (u.potions > 0) {
+        const feedWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
+        acts.push(button({
+          kind: 'feed', id: 'feed', name: FEED.name, cls: 'act',
+          sub: `action · ${u.potions} left`,
+          tip: { kind: 'Action', chips: [`${u.potions} left`, '2d4 + 2 HP', '5 ft'], desc: FEED.desc, how: this.howTo('an ally next to you') },
+          problem: feedWhy,
+          disabled: !!feedWhy,
+          active: selected?.kind === 'feed',
+        }));
+      }
     }
 
     const html = group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts);
@@ -1060,8 +1102,9 @@ export class Hud {
     const b = ev.target.closest('button.ability');
     if (!b || b.disabled) return;
     const { kind, id } = b.dataset;
-    if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (kind === 'shove' || kind === 'help' || kind === 'smite' || kind === 'rebuke') this.handlers.onChoose({ kind });
+    if (kind === 'attack' && this.readying) this.handlers.onChoose({ kind: 'readyAttack', attack: Number(id) });
+    else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
+    else if (['shove', 'grapple', 'help', 'feed', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

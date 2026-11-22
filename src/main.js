@@ -831,6 +831,13 @@ function startFight(resume, watch = null) {
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
   game.on('shove', (r) => hud.logShove(r));
   game.on('help', (r) => hud.logHelp(r));
+  game.on('feed', (r) => hud.logFeed(r));
+  game.on('grapple', (r) => hud.logGrapple(r));
+  game.on('struggle', (r) => { if (!unseen(r.unit)) hud.logStruggle(r); });
+  game.on('grappleEnd', (r) => {
+    if (!unseen(r.unit)) hud.logGrappleEnd(r);
+    view(r.unit)?.updateStatus();
+  });
   game.on('stench', (r) => {
     hud.logStench(r);
     floatText(stage.scene, r.target, r.rider.success ? 'Resists the stench' : 'Gagging!', r.rider.success ? 'miss' : 'cond');
@@ -1224,6 +1231,8 @@ function stepNote(step) {
   if (step.type === 'move') return 'moves';
   if (step.type === 'shove') return 'shoves';
   if (step.type === 'help') return 'helps';
+  if (step.type === 'grapple') return 'grapples';
+  if (step.type === 'feed') return 'gives a potion';
   if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'brazier') return 'tips a brazier';
   if (step.type === 'spell') return `casts ${SPELLS[step.id]?.name ?? 'a spell'}`;
@@ -1470,6 +1479,11 @@ function choose(choice) {
   const u = game.current;
   if (choice.kind === 'action') {
     heroCommand({ type: 'action', id: choice.id });
+    return;
+  }
+  if (choice.kind === 'readyAttack') { // Ready, then the attack to hold
+    selected = null;
+    heroCommand({ type: 'action', id: 'ready', attack: choice.attack });
     return;
   }
   if (choice.kind === 'smite') {

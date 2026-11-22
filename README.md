@@ -51,12 +51,15 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   gives advantage. Shooting with an enemy next to you, or at someone Dodging, gives
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
-- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Help, Ready and drinking a potion.
+- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Grapple, Help, Ready, drinking a
+  potion or giving one to an ally next to you.
+- **Grapple:** instead of one attack, Athletics against the foe's STR or DEX. Win and it can't
+  move while you stay next to it; it tries to break free at the start of each of its turns.
 - **Help:** a hero distracts a foe next to them; the next ally to attack it before the
   helper's next turn has advantage.
-- **Ready:** a hero holds their main attack until their next turn and makes it with their
-  reaction: a melee weapon strikes the first foe to step into reach, Fire Bolt or Eldritch
-  Blast the first to step into view. Good for holding a doorway.
+- **Ready:** pick Ready, then the attack to hold until your next turn; it's made with your
+  reaction. A melee weapon strikes the first foe to step into reach, a bow, javelin or Fire
+  Bolt the first to step into view. Good for holding a doorway.
 - **Conditions:** prone, poisoned, frightened, restrained and rotting (a mummy's fist: no
   healing takes for two turns), each shown as a tag on the figure.
 - **Cover:** barrels and crates give +2 AC against attacks that pass over them.
@@ -320,8 +323,9 @@ A few things differ from the SRD to keep the game simple:
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
 - Ready has two fixed triggers instead of one you name: a foe stepping into reach (a melee
-  weapon) or into view (Fire Bolt, Eldritch Blast). It always readies the hero's first attack,
-  and a readied cantrip needs no concentration.
+  attack) or into view (a ranged one). A readied cantrip needs no concentration.
+- A grappled monster tries to break free at the start of its turn without spending its
+  action, and a grappler who moves away lets go instead of dragging it. Only heroes grapple.
 - New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the
   difficulty's), and from the first tier their weapon attack and damage rolls get +1.
 - Elites (NG+2 and deeper) are not from the SRD: the room's monster worth the most XP gets a

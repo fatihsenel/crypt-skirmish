@@ -12,7 +12,7 @@ export const ACTIONS = {
   },
   ready: {
     name: 'Ready', time: 'action',
-    desc: 'Hold your main attack until your next turn, and make it with your reaction. A melee weapon strikes the first foe to step into your reach; a spell like Fire Bolt hits the first foe to step into view.',
+    desc: 'Hold an attack until your next turn, and make it with your reaction. A melee weapon strikes the first foe to step into your reach; a bow, javelin or Fire Bolt the first to step into view.',
   },
   potion: { name: 'Potion', time: 'action', desc: 'Drink a potion of healing: regain 2d4 + 2 HP.' },
   // Fighter
@@ -45,6 +45,18 @@ export const SHOVE = {
 export const HELP = {
   name: 'Help', reach: 1,
   desc: 'Distract a foe next to you: the next attack an ally makes against it, before your next turn, has advantage.',
+};
+
+/** Give a potion: pour one of your potions into an ally next to you. */
+export const FEED = {
+  name: 'Give potion', reach: 1,
+  desc: 'Pour one of your potions of healing into an ally next to you: they regain 2d4 + 2 HP. Takes your action.',
+};
+
+/** Grapple sits with the attacks: it takes one attack of the Attack action. */
+export const GRAPPLE = {
+  name: 'Grapple', reach: 1,
+  desc: 'Instead of one attack: Athletics (STR + proficiency) against the target’s STR or DEX. Win and its speed is 0 while you stay next to it. At the start of each of its turns it tries to break free.',
 };
 
 /** What each condition does, for tooltips and the log. */

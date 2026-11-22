@@ -138,6 +138,20 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return why ? { toast: why } : { cmd: { type: 'spell', id, ...targetRef(game, target) } };
   }
 
+  if (selected?.kind === 'ready') return { toast: 'Pick the attack to hold from the bar' };
+
+  if (selected?.kind === 'feed') {
+    if (!other || other.team !== u.team || other === u) return { toast: 'Click an ally next to you' };
+    const why = game.feedProblem(u, other);
+    return why ? { toast: why } : { cmd: { type: 'feed', target: unitRef(game, other) } };
+  }
+
+  if (selected?.kind === 'grapple') {
+    if (!other || other.team === u.team) return { toast: 'Click an enemy next to you' };
+    const why = game.grappleProblem(u, other);
+    return why ? { toast: why } : { cmd: { type: 'grapple', target: unitRef(game, other) } };
+  }
+
   if (selected?.kind === 'help') {
     if (!other || other.team === u.team) return { toast: 'Click an enemy next to you' };
     const why = game.helpProblem(u, other);

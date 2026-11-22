@@ -342,6 +342,29 @@ export function createAnimations(app) {
     hud.renderInitiative(app.game());
   }
 
+  async function playGrapple(r) {
+    const { attacker, target } = r;
+    await view(attacker).swing(target, () => {
+      if (r.success) {
+        sfx.hit(target.code);
+        floatText(stage.scene, target, 'Grappled!', 'cond');
+      } else {
+        floatText(stage.scene, target, 'Twists free', 'miss');
+      }
+      view(target).updateStatus();
+    });
+    hud.renderInitiative(app.game());
+  }
+
+  async function playFeed(r) {
+    sfx.potion();
+    await view(r.unit).turnTowards(r.target.x, r.target.z);
+    floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
+    view(r.target).updateHp();
+    await healFx(stage.scene, r.target);
+    hud.renderInitiative(app.game());
+  }
+
   async function playHelp(r) {
     sfx.maneuver();
     await view(r.unit).turnTowards(r.target.x, r.target.z);
@@ -681,6 +704,8 @@ export function createAnimations(app) {
       case 'attack': return animateAttack(r);
       case 'shove': return playShove(r);
       case 'help': return playHelp(r);
+      case 'grapple': return playGrapple(r);
+      case 'feed': return playFeed(r);
       case 'chest': return playChest(unit, r);
       case 'brazier': return playBrazier(unit, r);
       case 'bonus':

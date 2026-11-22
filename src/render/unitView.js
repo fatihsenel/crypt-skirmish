@@ -249,6 +249,7 @@ export class UnitView {
       u.dodging && ['dodge', 'Dodging'],
       u.readied && u.alive && ['ready', 'Ready'],
       u.helped?.alive && u.alive && ['helped', 'Distracted'],
+      u.grappledBy && u.alive && ['grappled', 'Grappled'],
       u.shielded && ['shield', 'Shield +5'],
       u.disengaged && ['disengage', 'Disengaged'],
       u.turned && ['turned', 'Turned'],
