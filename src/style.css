@@ -1008,6 +1008,10 @@ body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle)
 /* Mouse and keys, or touch: never both. */
 #help .help-touch, body.touch #help .help-mouse { display: none; }
 body.touch #help .help-touch { display: block; }
+#help .help-pad, body.pad #help .help-mouse, body.pad #help .help-touch { display: none; }
+body.pad #help .help-pad { display: block; }
+/* Focus moved by a gamepad (gamepad.js) always shows, as from the keyboard. */
+body.pad :focus:not(#banner .card, #log-list) { outline: 2px solid var(--gold); outline-offset: 2px; }
 body.touch #end-turn kbd, body.touch #undo kbd, body.touch #help summary kbd { display: none; }
 body.touch button.ability { padding: 7px 10px; min-height: 40px; }
 body.touch #end-turn, body.touch #undo { min-height: 44px; padding: 8px 14px; }

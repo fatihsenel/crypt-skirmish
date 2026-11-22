@@ -356,6 +356,17 @@ Everything is generated in the browser, with no recordings:
 | Log button (top right) | Open the combat log (its number counts new lines); tap a name in it to see that figure, hold it for only its lines |
 | Camera button (top right) | Photo mode: one finger turns, two pan and pinch |
 
+| Gamepad | Action |
+| --- | --- |
+| Left stick or D-pad | Move the board's cursor; on the title, in camp, on the end banner and in panels, go to the nearest button that way (left and right turn a volume slider) |
+| A | Put the cursor on your hero, pick its tile, then do it (like Enter); press the focused button |
+| B | Cancel or close (like Esc); back from the new campaign's setup |
+| X | End turn (or throw the die) |
+| Y | Undo the last move |
+| LB / RB | Pick the previous / next action bar button |
+| Start | Settings |
+| Back / View | Show or hide the controls panel, which then lists the pad's buttons |
+
 ## House rules
 
 A few things differ from the SRD to keep the game simple:
@@ -556,6 +567,7 @@ src/
   boot.js            the entry: the title and the saves, before three.js and main.js load
   main.js            controller: game → animations → HUD
   controls.js        mouse, touch and keyboard: the arrow-key cursor and the shortcut keys
+  gamepad.js         gamepads: the keyboard's keys on the board, focus moves in the menus
   preview.js         what a click on the hovered tile would do: the path, the odds, a spell's blast
   fightEnd.js        a finished fight's records: runs, achievements, dailies, the end banner's facts
   animate.js         plays back resolved attacks, moves, chests, actions and spells

@@ -42,6 +42,7 @@ import { createLinks } from './links.js';
 import { createThreats } from './threats.js';
 import { createAnimations } from './animate.js';
 import { createControls } from './controls.js';
+import { createGamepad } from './gamepad.js';
 import { createPhotoMode } from './photo.js';
 import { cleanRelics, RELICS } from './game/items.js';
 import { createPreview } from './preview.js';
@@ -1663,6 +1664,8 @@ const controls = createControls({
   isHeroTurn, refresh, heroCommand, endHeroTurn, undoMove, endReplay, keepInView,
   toggleSound, toggleMusic, visibleUnitAt, spellTargetAt, photo: () => photo.active,
 });
+// A gamepad drives the same cursor and keys, and moves focus in the menus (gamepad.js).
+createGamepad({ hud, hovered: () => hovered, onBoard: () => !!game && !!board && !camp.open });
 // Photo mode (P): no HUD, a free camera and Save image. Monster turns wait for it (whileAway).
 const photo = createPhotoMode(stage, {
   canEnter: () => !!game && !!board && !camp.open && document.getElementById('title').hidden,

@@ -114,6 +114,11 @@ server on 5173.
   The log can show one figure's lines (`filterLog`: double-click, F or a long press on a name);
   rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
+  A gamepad (`gamepad.js`, polled on a 16 ms timer while one is connected) presses those same
+  keys on the board (A is Enter, after an arrow puts the cursor out), and outside a fight moves
+  focus to the nearest control in a direction (`nearest`, inside `layer()`: an open overlay, the
+  settings, the banner, the title or the camp). A new key shortcut that a pad should reach needs a
+  button in `press`; `body.pad` shows the pad's help and focus rings, and the hint says A.
 - Speech bubbles: `speech.js` has the lines and picks the moment (`attackMoment`: a kill, a
   crit, a hero's first blow, a monster now and then; `spellMoment`: a big spell, a heal on a
   friend, a monster's spell; `downSpeaker` when a hero falls; `thanks` from `rises`, `intro`

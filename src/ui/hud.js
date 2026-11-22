@@ -1222,7 +1222,8 @@ export class Hud {
       if (act) text += ' · tap again to confirm';
     } else if (this.keys && text) { // the keyboard: the cursor picks, Enter confirms
       text = text.replace(/\bclick\b/g, 'pick').replace(/\bClick\b/g, 'Pick').replace(/ with the mouse/g, '');
-      if (act) text += this.armed ? ' · Enter again to confirm' : ' · Enter to choose';
+      const ok = this.pad ? 'A' : 'Enter'; // a gamepad presses Enter with A (gamepad.js)
+      if (act) text += this.armed ? ` · ${ok} again to confirm` : ` · ${ok} to choose`;
     }
     $('#hint').textContent = text;
     $('#hint').classList.toggle('show', !!text);
