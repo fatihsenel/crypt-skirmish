@@ -51,7 +51,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   gives advantage. Shooting with an enemy next to you, or at someone Dodging, gives
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
-- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Ready and drinking a potion.
+- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Help, Ready and drinking a potion.
+- **Help:** a hero distracts a foe next to them; the next ally to attack it before the
+  helper's next turn has advantage.
 - **Ready:** a hero holds their main attack until their next turn and makes it with their
   reaction: a melee weapon strikes the first foe to step into reach, Fire Bolt or Eldritch
   Blast the first to step into view. Good for holding a doorway.

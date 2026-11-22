@@ -830,6 +830,7 @@ function startFight(resume, watch = null) {
   game.on('mimicFound', (r) => pendingReveals.push(r));
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
   game.on('shove', (r) => hud.logShove(r));
+  game.on('help', (r) => hud.logHelp(r));
   game.on('stench', (r) => {
     hud.logStench(r);
     floatText(stage.scene, r.target, r.rider.success ? 'Resists the stench' : 'Gagging!', r.rider.success ? 'miss' : 'cond');
@@ -1222,6 +1223,7 @@ const STEP_VERBS = { dash: 'dashes', dodge: 'dodges', disengage: 'disengages', h
 function stepNote(step) {
   if (step.type === 'move') return 'moves';
   if (step.type === 'shove') return 'shoves';
+  if (step.type === 'help') return 'helps';
   if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'brazier') return 'tips a brazier';
   if (step.type === 'spell') return `casts ${SPELLS[step.id]?.name ?? 'a spell'}`;

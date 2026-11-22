@@ -59,6 +59,7 @@ export function createAnimations(app) {
       }
     }
     const onImpact = () => {
+      if (r.mods?.adv.some((a) => a.startsWith('help from'))) tv.updateStatus(); // the Help is used up
       if (attack.projectile === 'fire') fireBurstFx(stage.scene, pos);
       if (r.shielded) {
         sfx.shield();
@@ -338,6 +339,15 @@ export function createAnimations(app) {
         floatText(stage.scene, target, 'Holds firm', 'miss');
       }
     });
+    hud.renderInitiative(app.game());
+  }
+
+  async function playHelp(r) {
+    sfx.maneuver();
+    await view(r.unit).turnTowards(r.target.x, r.target.z);
+    floatText(stage.scene, r.target, 'Distracted', 'spell');
+    view(r.target).updateStatus();
+    await wait(450);
     hud.renderInitiative(app.game());
   }
 
@@ -670,6 +680,7 @@ export function createAnimations(app) {
       case 'move': return playMove(unit, r);
       case 'attack': return animateAttack(r);
       case 'shove': return playShove(r);
+      case 'help': return playHelp(r);
       case 'chest': return playChest(unit, r);
       case 'brazier': return playBrazier(unit, r);
       case 'bonus':

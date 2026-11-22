@@ -572,6 +572,7 @@ export class Game extends Spellcasting {
       interacted: false,
       readied: false,
     });
+    if (u.helping) this.endHelp(u); // Help lasts until the helper's next turn
     this.standUp(u);
     if (this.has(u, 'restrained')) u.movesLeft = 0;
     this.recharge(u);
@@ -1320,6 +1321,8 @@ export class Game extends Spellcasting {
     if (attacker.passives.includes('packTactics') && this.allyNextTo(attacker, target)) adv.push('pack tactics');
     if (opportunity && target.passives.includes('escapeTheHorde')) dis.push('escape the horde');
     if (target.turned) adv.push('target is fleeing');
+    const helper = this.helperFor(attacker, target);
+    if (helper) adv.push(`help from ${helper.name}`);
     if (target.asleep) adv.push('asleep');
     else if (target.unaware) adv.push('unaware');
     if (attacker.hidden && !opportunity) adv.push('hidden');
@@ -1454,6 +1457,7 @@ export class Game extends Spellcasting {
     if (problem) return { ok: false, reason: problem };
 
     const mods = this.attackMods(attacker, target, attack, { opportunity, ambush });
+    this.useHelp(attacker, target);
     this.reveal(attacker, 'attack');
     if (opportunity || readied) {
       attacker.reactionUsed = true;
@@ -1549,6 +1553,53 @@ export class Game extends Spellcasting {
     this.alert(target, 'hurt'); // a miss gives you away too
     this.noise(attacker);
     return result;
+  }
+
+  // --- the Help action -------------------------------------------------------
+  /** Why `unit` can't Help against `target` (a foe next to it), or null. */
+  helpProblem(unit, target) {
+    if (this.over) return 'The battle is over';
+    if (unit.team !== 'heroes') return 'Only heroes help';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    if (!target?.alive || target.team === unit.team) return 'Choose an enemy';
+    if (target.hidden) return `${target.name} is hidden: Search to find it`;
+    if (gridDistance(unit, target) > 1) return 'Must stand next to them';
+    if (target.helped === unit) return `Already distracting ${target.name}`;
+    return null;
+  }
+
+  /**
+   * Help: distract `target`, so the next attack an ally of `unit` makes against it, before
+   * `unit`'s next turn, has advantage. Uses the action; rolls nothing.
+   */
+  help(unit, target) {
+    const problem = this.helpProblem(unit, target);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    if (unit.helping) this.endHelp(unit);
+    if (target.helped) this.endHelp(target.helped); // one distraction at a time: the latest
+    unit.helping = target;
+    target.helped = unit;
+    const result = { ok: true, kind: 'help', unit, target };
+    this.emit('help', result);
+    return result;
+  }
+
+  /** The hero whose Help gives `attacker` advantage against `target`, or null. */
+  helperFor(attacker, target) {
+    const h = target.helped;
+    return h && h !== attacker && h.alive && h.team === attacker.team ? h : null;
+  }
+
+  /** An attack roll against a helped foe uses the Help up. */
+  useHelp(attacker, target) {
+    if (this.helperFor(attacker, target)) this.endHelp(target.helped);
+  }
+
+  endHelp(helper) {
+    if (helper.helping?.helped === helper) helper.helping.helped = null;
+    helper.helping = null;
   }
 
   /** Shove: knock an adjacent enemy prone. Takes one attack of the Attack action. */

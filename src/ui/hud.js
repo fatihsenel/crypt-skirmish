@@ -3,7 +3,7 @@
 import { EndBanner } from './banner.js';
 import { announce } from './announce.js';
 import { signed } from '../game/dice.js';
-import { ACTIONS, SPELLS, PASSIVES, SHOVE, CONDITION_INFO } from '../game/abilities.js';
+import { ACTIONS, SPELLS, PASSIVES, SHOVE, HELP, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { AbilityTip } from './abilityTip.js';
@@ -561,6 +561,10 @@ export class Hud {
     this.logRider(r);
   }
 
+  logHelp(r) {
+    this.log(`${who(r.unit)} distracts ${who(r.target)}: the next ally to attack it has <b class="adv">advantage</b>.`);
+  }
+
   logShove(r) {
     const roll = `<span class="dice">${r.roll.rolls.length > 1 ? `d20 [${r.roll.rolls.join(', ')}] → ${r.roll.d20}` : `d20 ${r.roll.d20}`} ${signed(r.roll.bonus)} = ${r.roll.total}</span>`;
     const resist = `<span class="dice">${r.resist.d20} ${signed(r.resist.bonus)} = ${r.resist.total}</span>`;
@@ -981,6 +985,18 @@ export class Hud {
       });
     });
 
+    if (u.team === 'heroes') {
+      const helpWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
+      acts.push(button({
+        kind: 'help', id: 'help', name: HELP.name, cls: 'act',
+        sub: 'action · ally advantage',
+        tip: { kind: 'Action', chips: ['5 ft', 'advantage for an ally'], desc: HELP.desc, how: this.howTo('an enemy next to you') },
+        problem: helpWhy,
+        disabled: !!helpWhy,
+        active: selected?.kind === 'help',
+      }));
+    }
+
     const html = group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts);
     // The first ten buttons answer the number keys 1-9 and 0, in the order shown (see pickByNumber).
     let n = 0;
@@ -1045,7 +1061,7 @@ export class Hud {
     if (!b || b.disabled) return;
     const { kind, id } = b.dataset;
     if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (kind === 'shove' || kind === 'smite' || kind === 'rebuke') this.handlers.onChoose({ kind });
+    else if (kind === 'shove' || kind === 'help' || kind === 'smite' || kind === 'rebuke') this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

@@ -53,6 +53,7 @@ export function createPreview(deps) {
 
     if (selected?.kind === 'spell') return refreshSpell(u, selected.id);
     if (selected?.kind === 'shove') return refreshShove(u);
+    if (selected?.kind === 'help') return refreshHelp(u);
 
     const reach = game.reachable(u);
     board.reach.set(game.destinations(u).filter((t) => board.isExplored(t.x, t.z)));
@@ -109,6 +110,20 @@ export function createPreview(deps) {
       hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
         + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : ''), true);
     }
+  }
+
+  /** Help targeting: adjacent enemies light up, the hint says who it helps. */
+  function refreshHelp(u) {
+    board.targets.set(game.enemiesOf(u).filter((f) => !unseen(f) && !game.helpProblem(u, f)));
+    const foe = hovered && visibleUnitAt(hovered.x, hovered.z);
+    if (!foe || foe.team === u.team) {
+      hud.hint('Help: click an enemy next to you · Esc to cancel');
+      return;
+    }
+    board.hover.set([hovered]);
+    const why = game.helpProblem(u, foe);
+    hud.hint(why ? `${foe.name}: ${why}`
+      : `Help → ${foe.name}: the next ally to attack it before your next turn has advantage`, !why);
   }
 
   /** Shove targeting: adjacent enemies light up, the hint shows the contest. */

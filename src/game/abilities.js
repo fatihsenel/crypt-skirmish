@@ -41,6 +41,12 @@ export const SHOVE = {
   desc: 'Instead of one attack: Athletics (STR + proficiency) against the target’s STR or DEX. Win and it is knocked prone: melee attacks against it have advantage until it gets up on its turn.',
 };
 
+/** Help sits with the actions but needs a target: a foe next to the helper. */
+export const HELP = {
+  name: 'Help', reach: 1,
+  desc: 'Distract a foe next to you: the next attack an ally makes against it, before your next turn, has advantage.',
+};
+
 /** What each condition does, for tooltips and the log. */
 export const CONDITION_INFO = {
   prone: 'Prone: melee attacks against it have advantage, ranged ones disadvantage; its own attacks have disadvantage. Standing up costs half its movement.',

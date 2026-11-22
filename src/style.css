@@ -105,6 +105,7 @@ html, body {
 .tag.hexed { color: #d070e0; }
 .tag.rebuke { color: #ff7a4a; }
 .tag.ready { color: #ffd27a; }
+.tag.helped { color: #9fd8ff; }
 .tag.ward { color: #f4e3a0; }
 /* conditions: on figure labels, the action bar and in the log */
 .tag.prone, .cond.prone { color: #e0a060; }

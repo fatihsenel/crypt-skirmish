@@ -198,6 +198,7 @@ export class Spellcasting {
     let t = target;
     for (let i = 0; i < count && t; i++) {
       const mods = this.attackMods(caster, t, ray);
+      this.useHelp(caster, t);
       const { d20, rolls } = this.rollD20(mods.mode);
       const cover = this.coverBonus(caster, t);
       const ac = this.acOf(t) + cover;

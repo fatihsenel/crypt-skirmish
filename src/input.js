@@ -138,6 +138,12 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return why ? { toast: why } : { cmd: { type: 'spell', id, ...targetRef(game, target) } };
   }
 
+  if (selected?.kind === 'help') {
+    if (!other || other.team === u.team) return { toast: 'Click an enemy next to you' };
+    const why = game.helpProblem(u, other);
+    return why ? { toast: why } : { cmd: { type: 'help', target: unitRef(game, other) } };
+  }
+
   if (selected?.kind === 'shove') {
     if (!other || other.team === u.team) return { toast: 'Click an enemy next to you' };
     const why = game.shoveProblem(u, other);
