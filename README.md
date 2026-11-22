@@ -34,14 +34,18 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 | Wren | Rogue | Sneak Attack, Cunning Action, hides as a bonus action, spots traps |
 | | *or* Ranger | Longbow with Archery, Hunter's Mark, Colossus Slayer |
 | Maela | Cleric | Healing, Sacred Flame, Turn Undead, Spiritual Weapon |
+| | *or* Bard | Bardic Inspiration, Cutting Words, Vicious Mockery, Shatter, Healing Word, Fear |
 
-- Pick Paladin, Warlock or Ranger and rename the heroes under New campaign on the title screen.
+- Pick Paladin, Warlock, Ranger or Bard and rename the heroes under New campaign on the title screen.
 - The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
   or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
 - Ice Storm leaves its area icy: difficult terrain (each tile costs 10 ft of movement) until
   the end of the caster's next turn. Specters, wraiths and Ysolde fly over it.
 - The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
 - The Warlock has two pact slots that come back after every room.
+- The Bard's Bardic Inspiration is a die given to an ally, used by itself on the first attack
+  that misses, or save that fails, by no more than the die. Cutting Words spends a use and the
+  Bard's reaction to take the die off a foe's hit, when it could turn it into a miss.
 
 ## Rules
 
@@ -61,10 +65,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Ready:** pick Ready, then the attack to hold until your next turn; it's made with your
   reaction. A melee weapon strikes the first foe to step into reach, a bow, javelin or Fire
   Bolt the first to step into view. Good for holding a doorway. A spell cast at one foe
-  (Magic Missile, Sacred Flame, Scorching Ray, Dread) can be readied too: its slot is spent
+  (Magic Missile, Sacred Flame, Scorching Ray, Dread, Vicious Mockery) can be readied too: its slot is spent
   when you ready it, and it goes off at the first foe to step into view.
-- **Conditions:** prone, poisoned, frightened, restrained and rotting (a mummy's fist: no
-  healing takes for two turns), each shown as a tag on the figure.
+- **Conditions:** prone, poisoned, frightened, restrained, rotting (a mummy's fist: no
+  healing takes for two turns) and mocked (Vicious Mockery: disadvantage on the next attack),
+  each shown as a tag on the figure.
 - **Cover:** barrels, crates and a lowered portcullis give +2 AC against attacks that pass
   over or through them.
 - **Water and braziers:** shallow water costs double to wade through (fliers skip it). A hero
@@ -170,7 +175,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 ## Modes and extras
 
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
-  are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory.
+  are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory, and
+  from 23 November its party (and the weekly's) can bring the Bard.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button. Watch your best replays the day's fastest win from
   the title, and its Copy link and Copy challenge link share it.
@@ -331,6 +337,10 @@ A few things differ from the SRD to keep the game simple:
 - Hex has no ability-check part and lasts the whole fight, with no concentration.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
+- Bardic Inspiration uses come back every fight, and the die is rolled after the attack or save
+  misses (only when it could turn it). Cutting Words only answers attack rolls.
+- Fear spares the Bard's allies, has no concentration, and doesn't make foes drop anything.
+  Greater Invisibility lasts the fight, with no concentration, and only changes attack rolls.
 - Ready has two fixed triggers instead of one you name: a foe stepping into reach (a melee
   attack) or into view (a ranged one, or a spell). A readied spell needs no concentration.
 - Levers and portcullises are not from the SRD: pulling a lever is a free object interaction,
@@ -398,7 +408,7 @@ run with elites slain. Nothing is saved.
 - `npm run sim -- 300 full` plays whole runs, first room to the Tomb, and says where they end.
 - Runs are split over one worker thread per core; `JOBS=1` plays them on one thread (the same
   numbers as before threads, for a given `SEED`).
-- `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `PALADIN=1`, `RANGER=1` and `WARLOCK=1` change the run.
+- `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `PALADIN=1`, `RANGER=1`, `WARLOCK=1` and `BARD=1` change the run.
 - `RELICS=horn,veil` gives the party exactly those relics in every fight (`RELICS=` for none);
   without it they're earned from the bosses as in a real run.
 - `EVENTS=1` takes the stops with no fight on the way (tends the pilgrim, bleeds at the altar,

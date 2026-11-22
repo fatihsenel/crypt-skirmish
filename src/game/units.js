@@ -110,6 +110,20 @@ export const TEMPLATES = {
       { name: 'Mace', stat: 'str', damage: '1d6', reach: 1 },
     ],
   },
+  B: {
+    name: 'Maela', cls: 'Bard', team: 'heroes', color: 0x4f7fd0,
+    hp: 24, ac: 14, speed: 6, prof: 2, level: 3, // leather armour
+    castStat: 'cha',
+    spells: ['viciousMockery', 'bardicInspiration', 'healingWord', 'cureWounds', 'shatter'],
+    slots: { 1: 4, 2: 2 },
+    inspiration: 3, // Bardic Inspiration uses (the CHA modifier), back every fight
+    inspirationDie: 6,
+    passives: ['cuttingWords'],
+    stats: { str: 8, dex: 14, con: 14, int: 10, wis: 12, cha: 16 },
+    attacks: [
+      { name: 'Rapier', stat: 'dex', damage: '1d8', reach: 1 },
+    ],
+  },
   g: {
     name: 'Goblin', cls: 'Goblin', team: 'monsters', color: 0x5f8f2a,
     hp: 7, ac: 15, speed: 6, prof: 2, xp: 50, cr: 0.25,
@@ -385,6 +399,8 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     colossusUsed: false, // Colossus Slayer, once per turn
     strikeUsed: false,  // Divine Strike, once per turn
     deathWard: false,   // Death Ward: the next drop to 0 HP leaves 1 instead
+    inspired: null,     // a bard's Bardic Inspiration on it: { die, by }, until used
+    invisibleFrom: null, // the bard whose Greater Invisibility is on it
     conditions: {},     // prone / poisoned / frightened (combat.js)
   };
 }
@@ -465,6 +481,16 @@ export const PROGRESSION = {
       note: 'Wisdom 20, Divine Strike (+1d8 on a weapon hit), Destroy Undead up to CR 1 and a second 4th-level slot',
     },
   },
+  B: {
+    4: { hp: 7, stats: { cha: 2 }, slots: { 2: 3 }, inspiration: 4, note: 'Charisma 18, a fourth Bardic Inspiration and a third 2nd-level slot' },
+    5: {
+      hp: 7, prof: 3, slots: { 3: 2 }, spells: ['fear'], inspirationDie: 8,
+      note: 'Fear, a d8 Bardic Inspiration die and two 3rd-level slots',
+    },
+    6: { hp: 7, slots: { 3: 3 }, spells: ['massHealingWord'], note: 'Magical Secrets: Mass Healing Word, and a third 3rd-level slot' },
+    7: { hp: 7, slots: { 4: 1 }, spells: ['greaterInvisibility'], note: 'Greater Invisibility and a 4th-level slot' },
+    8: { hp: 7, stats: { cha: 2 }, slots: { 4: 2 }, inspiration: 5, note: 'Charisma 20, a fifth Bardic Inspiration and a second 4th-level slot' },
+  },
 };
 
 export const MAX_LEVEL = 8;
@@ -493,7 +519,7 @@ export function applyLevel(unit, level) {
 }
 
 /** Classes that can fill each hero slot: the first is the default. */
-export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W', 'K'], R: ['R', 'A'], C: ['C'] };
+export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W', 'K'], R: ['R', 'A'], C: ['C', 'B'] };
 
 /** The class (template code) a party record plays in a slot. */
 export const classOf = (slot, rec) => (CLASS_CHOICES[slot]?.includes(rec?.cls) ? rec.cls : slot);

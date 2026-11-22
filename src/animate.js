@@ -6,7 +6,7 @@ import { ACTIONS } from './game/abilities.js';
 import { ITEMS } from './game/items.js';
 import { shootProjectile, floatText } from './render/unitView.js';
 import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
-import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon } from './render/effects.js';
+import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, SHATTER_TINT } from './render/effects.js';
 import { wait } from './render/tween.js';
 import { sfx } from './audio/sfx.js';
 import { voices } from './audio/voices.js';
@@ -61,6 +61,15 @@ export function createAnimations(app) {
     const onImpact = () => {
       if (r.mods?.adv.some((a) => a.startsWith('help from'))) tv.updateStatus(); // the Help is used up
       if (attack.projectile === 'fire') fireBurstFx(stage.scene, pos);
+      if (r.inspired) {
+        floatText(stage.scene, { x: attacker.x, z: attacker.z - 0.6 }, `Inspired +${r.inspired.total}`, 'spell');
+        view(attacker).updateStatus();
+      }
+      if (r.cutting) {
+        sfx.lute(false);
+        floatText(stage.scene, r.cutting.by, `Cutting Words −${r.cutting.total}`, 'spell');
+        view(r.cutting.by).updateStatus();
+      }
       if (r.shielded) {
         sfx.shield();
         shieldFx(stage.scene, pos);
@@ -184,7 +193,7 @@ export function createAnimations(app) {
     }));
   }
 
-  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!' };
+  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!' };
 
   function damageReaction(unit) {
     const v = view(unit);
@@ -625,6 +634,66 @@ export function createAnimations(app) {
         floatText(stage.scene, r.target, r.save.success ? 'Resists' : 'Frightened!', r.save.success ? 'miss' : 'cond');
         view(r.target).updateStatus();
         await wait(300);
+        break;
+      case 'viciousMockery':
+        await cv.cast(r.target, async () => {
+          sfx.lute(false);
+          floatText(stage.scene, caster, '♪', 'spell');
+          await wait(350);
+        });
+        if (r.damage) {
+          sfx.hit(r.target.code);
+          floatText(stage.scene, r.target, `−${r.damage} Mocked!`, 'cond');
+          hitFx(stage.scene, r.target);
+          view(r.target).updateStatus();
+          await damageReaction(r.target);
+        } else {
+          floatText(stage.scene, r.target, 'Shrugs it off', 'miss');
+        }
+        break;
+      case 'bardicInspiration':
+        await cv.cast(r.target, async () => {
+          sfx.lute();
+          floatText(stage.scene, r.target, `Inspired d${r.die}`, 'spell');
+          view(r.target).updateStatus();
+          await radiantFx(stage.scene, r.target);
+        });
+        break;
+      case 'shatter':
+        await cv.cast(r.center, async () => {
+          sfx.shatter();
+          stage.shake(0.3, 450);
+          await turnFx(stage.scene, r.center, r.spell.radius + 0.5, SHATTER_TINT);
+        });
+        await showSaves(r.saves, 'CON', r.dc);
+        await Promise.all(r.saves.map((s) => {
+          floatText(stage.scene, s.unit, s.success ? `Save −${s.damage}` : `−${s.damage}`, 'crit');
+          if (s.damage) hitFx(stage.scene, s.unit);
+          return damageReaction(s.unit);
+        }));
+        break;
+      case 'fear': {
+        const aim = { x: caster.x + r.dir.x, z: caster.z + r.dir.z };
+        await cv.cast(aim, async () => {
+          sfx.necro();
+          await coneFx(stage.scene, caster, r.tiles, 'fear');
+        });
+        await showSaves(r.saves, 'WIS', r.dc);
+        for (const s of r.saves) {
+          floatText(stage.scene, s.unit, s.success ? 'Resists' : 'Frightened!', s.success ? 'miss' : 'cond');
+          view(s.unit).updateStatus();
+        }
+        await wait(300);
+        break;
+      }
+      case 'greaterInvisibility':
+        await cv.cast(r.target === caster ? null : r.target, async () => {
+          sfx.teleport();
+          mistFx(stage.scene, r.target);
+          floatText(stage.scene, r.target, 'Invisible', 'spell');
+          for (const u of app.game().units) view(u)?.updateStatus();
+          await wait(300);
+        });
         break;
       case 'layOnHands':
         await cv.cast(r.target === caster ? null : r.target, async () => {

@@ -33,6 +33,7 @@ const PROFILES = {
   R: { f0: 182, size: 1.1, rasp: 0.05, breath: 0.35, speed: 1.3 },    // the rogue: breathy, fast
   A: { f0: 150, size: 1.02, rasp: 0.1, breath: 0.3, speed: 1.1 },     // the ranger: low and even
   C: { f0: 196, size: 1.12, rasp: 0, breath: 0.18, speed: 1 },        // the cleric: warm
+  B: { f0: 220, size: 1.1, rasp: 0, breath: 0.12, speed: 1.2 },       // the bard: bright and quick
   g: { f0: 330, size: 1.38, rasp: 0.15, breath: 0.15, speed: 1.7 },   // goblins: high, nasal chatter
   b: { f0: 228, size: 1.25, rasp: 0.4, breath: 0.15, speed: 1.4 },    // Grukk: a bigger goblin
   o: { f0: 84, size: 0.78, rasp: 0.9, breath: 0.2, speed: 0.85 },     // the orc: a growl

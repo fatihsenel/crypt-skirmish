@@ -31,10 +31,11 @@ const castLevel = (s, u) => (u.pactMagic && s.level ? Math.max(s.level, pactLeve
 function spellChips(s, u) {
   const chips = [];
   const up = castLevel(s, u) - s.level;
-  const damage = s.targeting === 'cone' && up ? s.damage.replace(/^(\d+)/, (n) => +n + up) : s.damage;
+  const damage = s.targeting === 'cone' && up && s.damage ? s.damage.replace(/^(\d+)/, (n) => +n + up) : s.damage;
   if (s.damage) chips.push(`${s.darts ? `${s.darts + up} × ` : s.rays ? `${s.rays + up} × ` : ''}${damage} damage`);
   if (s.heal) chips.push(`heal ${s.heal[0]}d${s.heal[1]} + WIS`);
   if (s.pool) chips.push(`${u.layOnHands} HP in the pool`);
+  if (s.uses) chips.push(`d${u.inspirationDie}, ${u.inspiration} left`);
   if (s.save) chips.push(`${s.save.toUpperCase()} save`);
   if (s.range) chips.push(s.range === 1 ? 'touch' : s.targeting === 'cone' ? `${s.range * 5}-ft cone` : `range ${s.range * 5} ft`);
   return chips;
@@ -53,8 +54,8 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 // (logAction builds every action's text, so this must cope with results that have no roll)
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
-  `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
-const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', rotting: 'is wracked by mummy rot!' };
+  `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}${s.inspired ? ` (inspired +${s.inspired.total})` : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
@@ -522,6 +523,8 @@ export class Hud {
             ? r.attack.damage ? `<b class="hit">Hit</b> for ${r.damage} damage` : `<b class="hit">Hit</b>`
             : `<b class="miss">Miss</b>`;
     const dmg = r.damageRoll ? ` <span class="dice">[${r.damageRoll.rolls.join('+')}]</span>` : '';
+    const bard = r.inspired ? ` <b class="spell">Bardic Inspiration</b> <span class="dice">+${r.inspired.total} (d${r.inspired.die})</span>`
+      : r.cutting ? ` ${who(r.cutting.by)}’s <b class="spell">Cutting Words</b> <span class="dice">−${r.cutting.total} (d${r.cutting.die})</span>` : '';
     const d20 = r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`;
     const why = r.mods.mode === 'adv'
       ? ` <span class="adv">advantage: ${esc(r.mods.adv.join(', '))}</span>`
@@ -542,7 +545,7 @@ export class Hud {
     this.turnNote(r.attacker === this.turn?.unit ? did : `${who(r.attacker)} ${did}`);
     this.log(
       `${tag}${who(r.attacker)} → ${who(r.target)} · ${esc(r.attack.name)}${why}<br> ` +
-        `<span class="dice">${d20} ${signed(r.toHit)} = ${r.total}</span> vs AC ${r.ac}${r.cover ? ' <span class="cover">(half cover +2)</span>' : ''}. ${outcome}${dmg}${sneak}`,
+        `<span class="dice">${d20} ${signed(r.toHit)}</span>${bard} <span class="dice">= ${r.total}</span> vs AC ${r.ac}${r.cover ? ' <span class="cover">(half cover +2)</span>' : ''}. ${outcome}${dmg}${sneak}`,
     );
   }
 
@@ -597,12 +600,13 @@ export class Hud {
 
   /** A condition starts or ends. (Starting ones from riders and spells are logged with them.) */
   logCondition({ unit, name, on, cause }) {
-    if (on) return;
+    if (on || cause === 'used') return; // (a mockery spent on an attack shows in its line)
     const text = {
       stand: `gets up off the floor (half movement).`,
       save: `shakes off the fear.`,
       expired: name === 'poisoned' ? 'is no longer poisoned.' : name === 'frightened' ? 'is no longer frightened.'
-        : name === 'restrained' ? 'tears free of the web.' : name === 'rotting' ? 'is free of the rot.' : 'recovers.',
+        : name === 'restrained' ? 'tears free of the web.' : name === 'rotting' ? 'is free of the rot.'
+          : name === 'mocked' ? 'shakes off the mockery.' : 'recovers.',
     }[cause] ?? 'recovers.';
     this.log(`${who(unit)} ${text}`, 'sys');
   }
@@ -737,6 +741,27 @@ export class Hud {
     } else if (r.id === 'dread') {
       this.log(`${who(r.caster)} whispers ${name} at ${who(r.target)}. WIS save DC ${r.dc}: ` +
         `${saveText({ ...r.save, unit: r.target }, 'is frightened')}. ${slot}`);
+    } else if (r.id === 'viciousMockery') {
+      const out = r.save.success ? '' : `, <b class="hit">${r.damage} psychic damage</b> ${dice(r.roll)} and disadvantage on its next attack`;
+      this.log(`${who(r.caster)} hurls ${name} at ${who(r.target)}. WIS save DC ${r.dc}: ` +
+        `${saveText({ ...r.save, unit: r.target })}${out}. ${slot}`);
+    } else if (r.id === 'bardicInspiration') {
+      this.log(`${who(r.caster)} gives ${who(r.target)} <b class="spell">Bardic Inspiration</b>: a d${r.die} for a near miss or a failed save. ` +
+        `<span class="dice">bonus action, ${r.left} left</span>`);
+    } else if (r.id === 'shatter') {
+      const saves = r.saves.length
+        ? r.saves.map((s) => `${who(s.unit)} <span class="dice">CON ${s.total}</span> ` +
+            (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b>`)).join('<br>')
+        : '<span class="miss">The ringing hurts no one.</span>';
+      this.log(`${who(r.caster)} casts ${name} <span class="dice">${r.roll.total} thunder [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
+    } else if (r.id === 'fear') {
+      const saves = r.saves.length
+        ? r.saves.map((s) => saveText(s, 'is frightened')).join('<br>')
+        : '<span class="miss">No foe stands in the cone.</span>';
+      this.log(`${who(r.caster)} casts ${name}, WIS save DC ${r.dc}. ${slot}<br>${saves}`);
+    } else if (r.id === 'greaterInvisibility') {
+      const self = r.target === r.caster ? 'themself' : who(r.target);
+      this.log(`${who(r.caster)} casts ${name} on ${self}: invisible for the rest of the fight. ${slot}`);
     } else if (r.id === 'animateDead') {
       this.log(`${who(r.caster)} casts ${name}. The ${esc(r.corpse.cls.toLowerCase())} corpse rises as ` +
         `<span class="monsters">${esc(r.risen.name)}</span>! ${slot}`, 'death');
@@ -876,7 +901,7 @@ export class Hud {
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span data-hint="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
       </div>
-      ${u.passives.length || u.items?.length || conds.length || u.marked ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.marked ? `<span class="passive-tag cond" data-hint="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
+      ${u.passives.length || u.items?.length || conds.length || u.marked || u.inspired || u.invisibleFrom ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.inspired ? `<span class="passive-tag item" data-hint="${esc(SPELLS.bardicInspiration.desc)}">Inspired d${u.inspired.die}</span>` : ''}${u.invisibleFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.greaterInvisibility.desc)}">Invisible</span>` : ''}${u.marked ? `<span class="passive-tag cond" data-hint="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
         `<span class="passive-tag cond ${c}" data-hint="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
         `<span class="passive-tag" data-hint="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
         `<span class="passive-tag item" data-hint="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
@@ -997,13 +1022,14 @@ export class Hud {
       return button({
         kind: 'spell', id, name: s.name, cls: 'spell',
         sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
+          : s.uses ? `${u.inspiration} left · bonus`
           : id === 'spiritualWeapon' && u.spiritWeapon ? 'strike again · bonus' : `${s.level ? ordinal(castLevel(s, u)) : 'cantrip'} · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
         tip: {
           kind: `${spellLevel(s)} · ${s.time === 'bonus' ? 'bonus action' : 'action'}`,
           chips: spellChips(s, u),
           desc: s.desc,
           how: s.targeting === 'enemy' || s.targeting === 'cone' ? this.howTo(s.targeting === 'cone' ? 'where to aim' : 'an enemy')
-            : s.targeting === 'ally' ? this.howTo('an ally (or yourself)') : s.targeting === 'tile' ? this.howTo('a spot') : null,
+            : s.targeting === 'ally' ? this.howTo(id === 'bardicInspiration' ? 'an ally' : 'an ally (or yourself)') : s.targeting === 'tile' ? this.howTo('a spot') : null,
         },
         problem: problem && `${problem}.`,
         disabled: !!problem,

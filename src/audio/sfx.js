@@ -614,6 +614,26 @@ class Sfx {
     });
   }
 
+  /** A bard's spell: a quick run of plucked strings, up for a gift, down for a jibe. */
+  lute(up = true) {
+    this.play((t) => {
+      const notes = up ? [392, 494, 587, 784] : [622, 523, 415, 311];
+      notes.forEach((f, i) => {
+        this.tone(t + i * 0.07, { type: 'triangle', freq: f, dur: 0.5, gain: 0.07, attack: 0.003 });
+        this.tone(t + i * 0.07, { type: 'sine', freq: f * 2, dur: 0.25, gain: 0.02, attack: 0.003 });
+      });
+    });
+  }
+
+  /** Shatter: a ringing crack. */
+  shatter() {
+    this.play((t) => {
+      this.noise(t, { dur: 0.5, filter: 'highpass', freq: 2500, gain: 0.3, attack: 0.002 });
+      for (const f of [1320, 1980, 2640]) this.tone(t, { type: 'sine', freq: f, freqEnd: f * 0.97, dur: 1.1, gain: 0.05, attack: 0.002 });
+      this.tone(t, { type: 'sine', freq: 90, freqEnd: 50, dur: 0.4, gain: 0.3 });
+    });
+  }
+
   /** Fireball: a hiss as the bead flies. */
   fireballLaunch() {
     this.play((t) => {

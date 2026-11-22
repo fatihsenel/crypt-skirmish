@@ -43,10 +43,10 @@ export const PATROL_PACE = 3;
 //   restrained  speed 0; attacks against it have advantage, its own attacks and DEX saves
 //               disadvantage (a spider's web).
 // `turns` counts the victim's own turns: it ticks down at the end of each of them.
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting'];
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked'];
 /** Conditions that simply run out after their `turns`. */
 
-const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting'];
+const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
@@ -290,7 +290,36 @@ export class Game extends Spellcasting {
       luck = rollDice(1, 10, this.rng).total;
       total += luck;
     }
-    return { unit, d20, total, aura, luck, success: total >= dc };
+    const inspired = total < dc ? this.useInspiration(unit, dc - total) : null;
+    if (inspired) total += inspired.total;
+    return { unit, d20, total, aura, luck, inspired, success: total >= dc };
+  }
+
+  /**
+   * Bardic Inspiration: an inspired unit's attack or save that falls `short` of what it needed
+   * by no more than the die rolls it and adds it. Dice are only rolled when they could help.
+   */
+  useInspiration(unit, short) {
+    const ins = unit.inspired;
+    if (!ins || short > ins.die) return null;
+    unit.inspired = null;
+    const roll = rollDice(1, ins.die, this.rng);
+    return { by: ins.by, die: ins.die, total: roll.total };
+  }
+
+  /**
+   * Cutting Words: a bard who can see `attacker` (within 60 ft) and has a reaction and an
+   * inspiration use left takes the die off a hit the die could turn into a miss (`over`: how
+   * far the roll beat the AC, plus one).
+   */
+  cuttingWords(attacker, over) {
+    const bard = this.enemiesOf(attacker).find((b) => b.passives.includes('cuttingWords') && !b.reactionUsed
+      && b.inspiration > 0 && b.inspirationDie >= over && this.inSight(b, attacker, 12));
+    if (!bard) return null;
+    bard.reactionUsed = true;
+    bard.inspiration--;
+    const roll = rollDice(1, bard.inspirationDie, this.rng);
+    return { by: bard, die: bard.inspirationDie, total: roll.total };
   }
 
   /** Aura of Protection: the best CHA modifier (min +1) of a living paladin of its side within 10 ft. */
@@ -1369,6 +1398,9 @@ export class Game extends Spellcasting {
       else dis.push('target prone');
     }
     if (this.has(attacker, 'poisoned')) dis.push('poisoned');
+    if (this.has(attacker, 'mocked')) dis.push('mocked');
+    if (attacker.invisibleFrom) adv.push('invisible');
+    if (target.invisibleFrom) dis.push('target invisible');
     if (this.has(attacker, 'restrained')) dis.push('restrained');
     if (this.has(target, 'restrained')) adv.push('target restrained');
     const fear = this.fearSource(attacker);
@@ -1525,9 +1557,10 @@ export class Game extends Spellcasting {
     }
     if (attack.recharge) (attacker.spent ??= {})[attack.name] = true;
 
+    if (this.has(attacker, 'mocked')) this.removeCondition(attacker, 'mocked', 'used');
     const { d20, rolls } = this.rollD20(mods.mode);
     const toHit = this.toHitBonus(attacker, attack);
-    const total = d20 + toHit;
+    let total = d20 + toHit;
     // Improved Critical: a fighter's weapon crits on 19 too.
     const crit = d20 >= (isWeapon(attack) && attacker.critRange ? attacker.critRange : 20);
     const fumble = d20 === 1;
@@ -1535,6 +1568,23 @@ export class Game extends Spellcasting {
     const cover = this.coverBonus(attacker, target);
     const ac = this.acOf(target) + cover;
     let hit = crit || (!fumble && total >= ac);
+
+    // Bardic Inspiration turns a near miss; Cutting Words a near hit.
+    let inspired = null;
+    let cutting = null;
+    if (!hit && !fumble) {
+      inspired = this.useInspiration(attacker, ac - total);
+      if (inspired) {
+        total += inspired.total;
+        hit = total >= ac;
+      }
+    } else if (hit && !crit) {
+      cutting = this.cuttingWords(attacker, total - ac + 1);
+      if (cutting) {
+        total -= cutting.total;
+        hit = total >= ac;
+      }
+    }
 
     // Shield: a reaction that turns a would-be hit into a miss.
     let shielded = false;
@@ -1591,7 +1641,7 @@ export class Game extends Spellcasting {
     const result = {
       ok: true, kind: 'attack', attacker, target, attack, opportunity, readied,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
-      hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
+      hit, crit, fumble, shielded, inspired, cutting, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
     };
     this.emit('attack', result);
     if (shielded) {

@@ -108,12 +108,15 @@ html, body {
 .tag.helped { color: #9fd8ff; }
 .tag.grappled { color: #e8a0ff; }
 .tag.ward { color: #f4e3a0; }
+.tag.inspired { color: #8fc0ff; }
+.tag.invisible { color: #cfe4ff; font-style: italic; }
 /* conditions: on figure labels, the action bar and in the log */
 .tag.prone, .cond.prone { color: #e0a060; }
 .tag.poisoned, .cond.poisoned { color: #9ad45a; }
 .tag.frightened, .cond.frightened { color: #c79bff; }
 .tag.restrained, .cond.restrained { color: #e8e2d0; }
 .tag.rotting, .cond.rotting { color: #b8a060; }
+.tag.mocked, .cond.mocked { color: #f08aa0; }
 .passive-tag.cond { border-color: currentColor; }
 .float-text.cond { font-size: calc(15px * var(--t)); color: #d6c27a; }
 .float-text.heal { color: var(--heal); }

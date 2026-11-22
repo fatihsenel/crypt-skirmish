@@ -96,7 +96,7 @@ function keepOnScreen(el, box) {
 /** What an attack roll says: the line under the die and the outcome. */
 export function attackRoll(r) {
   const line = r.d20 === 20 ? 'Natural 20' : r.d20 === 1 ? 'Natural 1'
-    : `${r.toHit >= 0 ? '+' : '−'}${Math.abs(r.toHit)} = ${r.total} vs AC ${r.ac}`;
+    : `${r.toHit >= 0 ? '+' : '−'}${Math.abs(r.toHit)}${r.inspired ? ` +${r.inspired.total}` : ''}${r.cutting ? ` −${r.cutting.total}` : ''} = ${r.total} vs AC ${r.ac}`;
   const [result, tone] = r.crit ? ['Critical hit', 'crit']
     : r.fumble ? ['Miss', 'fumble']
       : r.shielded ? ['Blocked', 'miss']

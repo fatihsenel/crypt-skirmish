@@ -28,8 +28,8 @@ player.
 | `perf` | Once a visit, after about 300 frames of movement on the board | `fps` (50+, 30-50, under 30), `dpr` (the pixel ratio drawn at, to a half) |
 | `error` | A crash in the game's own code, up to 3 a visit, each place once | `type` (TypeError, …), `file`, `line`, `col`, `browser` (chrome, safari, firefox, edge, samsung, other) |
 
-`party` is the class letters in hero order: F W R C, with P (Paladin), K (Warlock) and
-A (Ranger) in place of their slot's usual class. `mode` is campaign, daily, weekly or challenge.
+`party` is the class letters in hero order: F W R C, with P (Paladin), K (Warlock),
+A (Ranger) and B (Bard) in place of their slot's usual class. `mode` is campaign, daily, weekly or challenge.
 `standing` counts heroes on their feet at the end; `downed` counts how often any hero dropped.
 `input` is what the player pressed most in that fight: touch, mouse, keys (or none).
 

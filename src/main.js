@@ -1608,7 +1608,7 @@ if (levelParam >= 1 && levelParam <= LEVELS.length) {
     saving = false;
     const q = new URLSearchParams(location.search);
     const d = q.get('difficulty'); // e.g. &difficulty=hard
-    campaign = partyAt(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('warlock') && { W: 'K' }), ...(q.has('ranger') && { R: 'A' }) }), Number(q.get('party')));
+    campaign = partyAt(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('warlock') && { W: 'K' }), ...(q.has('ranger') && { R: 'A' }), ...(q.has('bard') && { C: 'B' }) }), Number(q.get('party')));
     campaign.tier = Math.max(0, Math.min(99, Math.floor(Number(q.get('tier')) || 0))); // &tier=2: New Game+
     campaign.relics = cleanRelics((q.get('relics') ?? '').split(',')); // &relics=veil,horn
     nodeId = LEVELS[levelParam - 1].id;

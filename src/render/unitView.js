@@ -258,6 +258,9 @@ export class UnitView {
       u.conditions?.frightened && ['frightened', 'Frightened'],
       u.conditions?.restrained && ['restrained', 'Webbed'],
       u.conditions?.rotting && ['rotting', 'Rotting'],
+      u.conditions?.mocked && ['mocked', 'Mocked'],
+      u.inspired && u.alive && ['inspired', `Inspired d${u.inspired.die}`],
+      u.invisibleFrom && u.alive && ['invisible', 'Invisible'],
       u.marked && u.alive && (u.marked === 'hex' ? ['marked hexed', 'Hexed'] : ['marked', 'Marked']),
       u.rebukeArmed && u.alive && ['rebuke', 'Rebuke'],
       u.deathWard && u.alive && ['ward', u.elite === 'relentless' ? 'Relentless' : 'Warded'],
@@ -268,7 +271,7 @@ export class UnitView {
     this.label.element.querySelector('.tags').innerHTML =
       tags.map(([cls, text]) => `<i class="tag ${cls}">${text}</i>`).join('');
     this.setProne(!!u.conditions?.prone && u.alive);
-    if (u.team === 'monsters' && !this.gone) this.setGhost(!!u.hidden && u.alive);
+    if (!this.gone) this.setGhost(u.alive && (u.team === 'monsters' ? !!u.hidden : !!u.invisibleFrom));
   }
 
   /** A hidden monster: a faint shape where the heroes saw it duck down. */

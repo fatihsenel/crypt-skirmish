@@ -224,6 +224,12 @@ export function createPreview(deps) {
         const [n, d] = s.heal;
         return `${s.name} → ${t === u ? 'yourself' : t.name}: heal ${n}d${d}${signed(abilityMod(u.stats[u.castStat]))} (HP ${t.hp}/${t.maxHp})`;
       }
+      case 'viciousMockery':
+        return `Vicious Mockery → ${t.name}: ${s.damage} psychic and disadvantage on its next attack, WIS save DC ${game.spellDC(u)} negates (their WIS ${signed(abilityMod(t.stats.wis))})`;
+      case 'bardicInspiration':
+        return `Bardic Inspiration → ${t.name}: a d${u.inspirationDie} for a near miss or a failed save · ${u.inspiration} left`;
+      case 'greaterInvisibility':
+        return `${s.name} → ${t === u ? 'yourself' : t.name}: advantage on their attacks, disadvantage on attacks against them · a ${ordinalSlot(u, s.level)}-level slot`;
       case 'deathWard':
         return `${s.name} → ${t === u ? 'yourself' : t.name}: the next drop to 0 HP leaves 1 instead (${ordinalSlot(u, s.level)}-level slot)`;
       default:
@@ -266,6 +272,12 @@ export function createPreview(deps) {
         const caught = tiles.map((t) => visibleUnitAt(t.x, t.z)).filter(Boolean);
         const allies = caught.filter((c) => c.team === u.team);
         const foes = caught.filter((c) => c.team !== u.team);
+        if (id === 'fear') {
+          hud.hint(`${s.name}: WIS save DC ${game.spellDC(u)} or frightened for ${s.turns} turns · ` +
+            (foes.length ? `catches ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the cone') +
+            (allies.length ? ' · the party is spared' : ''), true);
+          break;
+        }
         hud.hint(
           `${s.name}: ${2 + lowestSlot(u, 1)}d6 fire, DEX save DC ${game.spellDC(u)} for half · ` +
             (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies in the cone') +
@@ -311,10 +323,10 @@ export function createPreview(deps) {
         const allies = caught.filter((c) => c.team === u.team);
         const foes = caught.filter((c) => c.team !== u.team);
         hud.hint(
-          `${s.name}: ${s.damage} ${id === 'iceStorm' ? 'hail and cold' : 'fire'} in ${s.radius * 5} ft, DEX save DC ${game.spellDC(u)} for half · ` +
+          `${s.name}: ${id === 'shatter' ? `${2 + lowestSlot(u, 2)}d8` : s.damage} ${{ iceStorm: 'hail and cold', shatter: 'thunder' }[id] ?? 'fire'} in ${s.radius * 5} ft, ${(s.save ?? 'dex').toUpperCase()} save DC ${game.spellDC(u)} for half · ` +
             (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies caught') +
             (allies.length ? (u.sculpt ? ' · Sculpt Spells: the party is spared'
-              : ` · ⚠ also ${id === 'iceStorm' ? 'pounds' : 'burns'} ${allies.map((a) => a.name).join(', ')}!`) : ''),
+              : ` · ⚠ also ${{ iceStorm: 'pounds', shatter: 'deafens' }[id] ?? 'burns'} ${allies.map((a) => a.name).join(', ')}!`) : ''),
           true,
         );
         break;

@@ -45,6 +45,9 @@ export function prevDay(key) {
   return dayKey(new Date(y, m - 1, d - 1));
 }
 
+/** The first day a daily can bring the Bard (earlier days keep the party they had). */
+export const BARD_FROM = '2026-11-23';
+
 /** Today's crypt (or any day's): room, party level, class swaps and dice seed. */
 export function dailyPlan(key = dayKey()) {
   const seed = hash(`crypt-skirmish daily ${key}`);
@@ -54,6 +57,7 @@ export function dailyPlan(key = dayKey()) {
   if ((seed >>> 8) & 1) classes.F = 'P';
   if ((seed >>> 9) & 1) classes.R = 'A';
   if ((seed >>> 10) & 1) classes.W = 'K';
+  if (key >= BARD_FROM && (seed >>> 11) & 1) classes.C = 'B';
   return { key, seed, node, level, classes };
 }
 

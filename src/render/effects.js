@@ -60,10 +60,11 @@ export async function missileFx(scene, from, to, i = 0, total = 3) {
 }
 
 /** Burning Hands: flames roll outward across the cone tiles. */
-export async function coneFx(scene, origin, tiles) {
+export async function coneFx(scene, origin, tiles, kind = 'fire') {
+  const fear = kind === 'fear'; // Fear: the same cone in a dark violet
   const group = new THREE.Group();
   scene.add(group);
-  const light = new THREE.PointLight(0xff7a1a, 0, 6, 1.4);
+  const light = new THREE.PointLight(fear ? 0x9a5cff : 0xff7a1a, 0, 6, 1.4);
   const center = tiles.reduce((c, t) => c.add(new THREE.Vector3(t.x, 0, t.z)), new THREE.Vector3())
     .divideScalar(Math.max(1, tiles.length));
   light.position.set(center.x, 0.8, center.z);
@@ -73,7 +74,7 @@ export async function coneFx(scene, origin, tiles) {
   for (const t of tiles) {
     const d = Math.hypot(t.x - origin.x, t.z - origin.z);
     for (let k = 0; k < 4; k++) {
-      const color = [0xffd36b, 0xff9a3c, 0xff5a1a, 0xff7a1a][k];
+      const color = (fear ? [0xc9a6ff, 0x8a4fe0, 0x5a2aa8, 0x7a3fd0] : [0xffd36b, 0xff9a3c, 0xff5a1a, 0xff7a1a])[k];
       const m = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.55, 7), glow(color, 0));
       m.position.set(t.x + (Math.random() - 0.5) * 0.6, 0.2, t.z + (Math.random() - 0.5) * 0.6);
       m.userData = { delay: d * 0.12 + Math.random() * 0.08, h: 0.6 + Math.random() * 0.7 };
@@ -313,15 +314,15 @@ export function spiritWeapon(scene, at) {
 }
 
 /** Turn Undead: a golden ring of holy light sweeping outward. */
-export async function turnFx(scene, at, radius) {
+export async function turnFx(scene, at, radius, tint = [0xffe08a, 0xffd060, 0xffd070]) {
   const group = new THREE.Group();
   group.position.set(at.x, 0, at.z);
   scene.add(group);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64).rotateX(-Math.PI / 2), glow(0xffe08a, 0));
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 64).rotateX(-Math.PI / 2), glow(tint[0], 0));
   ring.position.y = 0.04;
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5, 48, 1, true), glow(0xffd060, 0));
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5, 48, 1, true), glow(tint[1], 0));
   wall.position.y = 0.25;
-  const light = new THREE.PointLight(0xffd070, 0, radius + 2, 1.2);
+  const light = new THREE.PointLight(tint[2], 0, radius + 2, 1.2);
   light.position.y = 1;
   group.add(ring, wall, light);
   await tween(1000, (t) => {
@@ -336,6 +337,9 @@ export async function turnFx(scene, at, radius) {
   scene.remove(group);
   dispose(group);
 }
+
+/** Shatter's ring of sound: Turn Undead's ring in a cold blue. */
+export const SHATTER_TINT = [0xbfe6ff, 0x8cc8ff, 0x9fd4ff];
 
 /** Animate Dead: green wisps spiralling down into a corpse. */
 export async function raiseFx(scene, at) {

@@ -57,10 +57,11 @@ export class Spellcasting {
     return out;
   }
 
-  /** DEX saves for everyone caught in an area: half damage on a success. */
-  areaSaves(victims, dc, damage) {
+  /** Saves (DEX unless `stat` says) for everyone caught in an area: half damage on a success. */
+  areaSaves(victims, dc, damage, stat = 'dex') {
     return victims.map((v) => {
-      const s = this.save(v, 'dex', dc);
+      const s = this.save(v, stat, dc);
+      if (stat !== 'dex') return { ...s, damage: s.success ? Math.floor(damage / 2) : damage, evasion: false };
       return { ...s, damage: dexSaveDamage(v, s.success, damage), evasion: hasEvasion(v) };
     });
   }
@@ -96,6 +97,7 @@ export class Spellcasting {
     const again = id === 'spiritualWeapon' && free; // strikes again for free
     if (!free && !this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
     if (s.pool && !(caster.layOnHands > 0)) return 'Your healing pool is spent';
+    if (s.uses && !(caster.inspiration > 0)) return 'No Bardic Inspiration left this fight';
     if (s.targeting === 'self') {
       if (id === 'massHealingWord' && !this.massHealTargets(caster).length) return 'No one nearby is hurt';
       return null;
@@ -120,6 +122,9 @@ export class Spellcasting {
         if ((s.heal || s.pool) && this.has(target, 'rotting')) return `${target.name} is rotting: no healing takes`;
         if (id === 'shieldOfFaith' && target.faithFrom === caster.id) return `${target.name} already has it`;
         if (id === 'deathWard' && target.deathWard) return `${target.name} is already warded`;
+        if (id === 'bardicInspiration' && target === caster) return 'Inspire an ally, not yourself';
+        if (id === 'bardicInspiration' && target.inspired) return `${target.name} is already inspired`;
+        if (id === 'greaterInvisibility' && target.invisibleFrom === caster.id) return `${target.name} is already invisible`;
         if (!inRange(target)) return s.range === 1 ? 'Must touch: stand next to them' : `Out of range (${s.range * 5} ft)`;
         break;
       case 'corpse':
@@ -319,6 +324,59 @@ export class Spellcasting {
         this.emit('spell', result);
         for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
         this.addIce(caster, tiles);
+        break;
+      }
+      case 'shatter': {
+        const tiles = areaTiles(this.grid, target, spell.radius);
+        const roll = rollExpr(`${3 + upcast}d8`, { rng: this.rng });
+        const dc = this.spellDC(caster);
+        const victims = this.blastVictims(caster, tiles);
+        Object.assign(result, { center: { x: target.x, z: target.z }, tiles, roll, dc });
+        result.saves = this.areaSaves(victims, dc, roll.total, 'con');
+        this.emit('spell', result);
+        for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        break;
+      }
+      case 'fear': {
+        // Foes only: the party knows the bard's tricks.
+        const dir = directionTo(caster, target);
+        const tiles = coneTiles(this.grid, caster, dir, spell.range);
+        const dc = this.spellDC(caster);
+        const victims = this.blastVictims(caster, tiles).filter((v) => v.team !== caster.team);
+        Object.assign(result, { dir, tiles, dc });
+        result.saves = victims.map((v) => this.save(v, 'wis', dc));
+        this.emit('spell', result);
+        for (const s of result.saves) {
+          if (!s.success) this.addCondition(s.unit, 'frightened', { turns: spell.turns, by: caster, dc });
+          this.alert(s.unit, 'hurt');
+        }
+        break;
+      }
+      case 'viciousMockery': {
+        const dc = this.spellDC(caster);
+        const { d20, total, success } = this.save(target, 'wis', dc);
+        const roll = rollExpr(spell.damage, { rng: this.rng });
+        Object.assign(result, { target, dc, save: { d20, total, success }, roll, damage: success ? 0 : roll.total });
+        this.emit('spell', result);
+        if (result.damage) {
+          this.applyDamage(target, result.damage, caster);
+          this.addCondition(target, 'mocked', { turns: 1, by: caster });
+        }
+        break;
+      }
+      case 'bardicInspiration': {
+        caster.inspiration--;
+        target.inspired = { die: caster.inspirationDie, by: caster };
+        Object.assign(result, { target, die: caster.inspirationDie, left: caster.inspiration });
+        this.emit('spell', result);
+        break;
+      }
+      case 'greaterInvisibility': {
+        // One at a time: casting it again moves it.
+        for (const u of this.units) if (u.invisibleFrom === caster.id) u.invisibleFrom = null;
+        target.invisibleFrom = caster.id;
+        result.target = target;
+        this.emit('spell', result);
         break;
       }
       case 'deathWard': {

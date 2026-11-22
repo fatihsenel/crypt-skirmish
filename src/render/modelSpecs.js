@@ -60,6 +60,14 @@ export const SPECS = {
     tint: 0xfff3dc,
     clips: { melee: '1H_Melee_Attack_Chop' },
   },
+  // The Bard: the mage without her hat, robes dyed a sea blue, a wand and an open book of songs.
+  B: {
+    file: 'Mage', height: 1.33,
+    show: ['1H_Wand', 'Spellbook_open'],
+    hide: ['Mage_Hat'],
+    recolor: { hue: 205, sat: 1.3, light: 0.95, from: [190, 350] },
+    clips: { melee: '1H_Melee_Attack_Stab' },
+  },
   s: {
     file: 'Skeleton_Warrior', height: 1.3, blade: true,
     clips: { melee: '1H_Melee_Attack_Chop', walk: 'Walking_D_Skeletons', rise: 'Spawn_Ground_Skeletons' },

@@ -153,7 +153,7 @@ server on 5173.
 ## Testing in the browser
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
-  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&relics=veil,horn`, `&paladin`, `&ranger`, `&warlock`,
+  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&relics=veil,horn`, `&paladin`, `&ranger`, `&warlock`, `&bard`,
   `&seed=S` (the same dice every time; `SEED=S npm run touch-check` uses it).
 - `?losses` lists real players' lost fights (needs the Worker's read key, kept under
   `crypt-skirmish:loss-key`).

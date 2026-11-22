@@ -53,6 +53,8 @@ const CLASS_BLURB = {
   K: 'Warlock: two strong pact slots that come back after every room, Eldritch Blast, Hex and Hellish Rebuke, and temporary HP for every kill. Fireball and two beams at level 5.',
   R: 'Rogue: Sneak Attack, hides as a bonus action and slips past monsters unseen, spots traps.',
   A: 'Ranger: a longbow with Archery, Hunter’s Mark for extra damage on one foe, spots traps. Extra Attack and Colossus Slayer at level 5.',
+  C: 'Cleric: heavy armour and the party’s healer: Cure Wounds, Healing Word, Sacred Flame and Turn Undead. Spiritual Weapon and Mass Healing Word at level 5.',
+  B: 'Bard: Bardic Inspiration turns an ally’s near miss or failed save, Cutting Words spoils a foe’s hit, Vicious Mockery, Shatter and Healing Word. Fear at level 5.',
 };
 
 /** A selector for a camp control that a redraw replaces, to focus its new copy (null: leave focus). */

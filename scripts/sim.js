@@ -3,13 +3,13 @@
 //   node scripts/sim.js [runs] [act2|act3|act4|full]
 // Runs are split over worker threads, one per core; JOBS=n sets how many (JOBS=1: one thread).
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
-// RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's).
+// RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's), BARD=1 (a Bard in the Cleric's).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
 // way the campaign does (short rests between fights, a long rest at the well).
 
 import { Game } from '../src/game/combat.js';
 import { nextMonsterStep } from '../src/game/ai.js';
-import { areaTiles, lineTiles } from '../src/game/abilities.js';
+import { areaTiles, lineTiles, coneTiles, directionTo, SPELLS } from '../src/game/abilities.js';
 import { levelById } from '../src/game/maps.js';
 import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem } from '../src/game/campaign.js';
 import { ITEMS, cleanRelics } from '../src/game/items.js';
@@ -18,7 +18,7 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 import { availableParallelism } from 'node:os';
 
 const CLASSES = {
-  ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }), ...(process.env.WARLOCK && { W: 'K' }),
+  ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }), ...(process.env.WARLOCK && { W: 'K' }), ...(process.env.BARD && { C: 'B' }),
 };
 /** TIER=N plays every fight at New Game+ tier N (0 by default). */
 const TIER = Math.max(0, Math.floor(Number(process.env.TIER) || 0));
@@ -61,15 +61,16 @@ function foesIn(game, u, p) {
   return game.living().filter((t) => t.team !== u.team && !t.unaware && tiles.has(`${t.x},${t.z}`)).length;
 }
 
-/** Where a 20-ft burst (Fireball, or `id`: Ice Storm) catches the most foes, or null below two. */
+/** Where a burst (Fireball, or `id`: Ice Storm, Shatter) catches the most foes, or null below two. */
 function bestFireball(game, u, id = 'fireball') {
+  const radius = SPELLS[id].radius;
   if (game.spellProblem(u, id)) return null;
   let best = null;
   for (let z = u.z - 30; z <= u.z + 30; z++) {
     for (let x = u.x - 30; x <= u.x + 30; x++) {
       const p = { x, z };
       if (game.spellProblem(u, id, p)) continue;
-      const tiles = new Set(areaTiles(game.grid, p, 4).map((t) => `${t.x},${t.z}`));
+      const tiles = new Set(areaTiles(game.grid, p, radius).map((t) => `${t.x},${t.z}`));
       const inside = game.living().filter((t) => tiles.has(`${t.x},${t.z}`));
       const foes = inside.filter((t) => t.team !== u.team && !t.unaware).length;
       const friends = inside.filter((t) => t.team === u.team).length;
@@ -149,6 +150,7 @@ function heroOpening(game, u) {
   if (u.code === 'P') paladinOpening(game, u, heroes);
   if (u.code === 'A') rangerOpening(game, u);
   if (u.code === 'K') warlockOpening(game, u);
+  if (u.code === 'B') bardOpening(game, u, heroes, hurt);
   if (!u.actionUsed && u.hp < u.maxHp * 0.35 && u.potions > 0 && !game.actionProblem(u, 'potion')) game.doAction(u, 'potion');
 }
 
@@ -198,6 +200,46 @@ function warlockOpening(game, u) {
   }
   const close = foes.some((e) => gridDistanceTo(u, e) <= e.speed + 1);
   if (close && !u.rebukeArmed && !game.rebukeProblem(u)) game.toggleRebuke(u);
+}
+
+/**
+ * Healing Word (or Mass Healing Word) for the hurt, Bardic Inspiration on a fighting ally,
+ * then Fear or Shatter on a crowd, Greater Invisibility on the front line against a boss, and
+ * Vicious Mockery from range. Cutting Words is automatic.
+ */
+function bardOpening(game, u, heroes, hurt) {
+  if (hurt.length >= 2 && !game.spellProblem(u, 'massHealingWord')) game.castSpell(u, 'massHealingWord');
+  else for (const h of hurt) if (!game.spellProblem(u, 'healingWord', h)) { game.castSpell(u, 'healingWord', h); break; }
+  const foes = game.knownFoes(u).filter((e) => !e.unaware);
+  if (!foes.length) return;
+  if (!u.bonusUsed) {
+    const order = ['F', 'P', 'R', 'A', 'K', 'W'];
+    const ally = heroes.filter((h) => !game.spellProblem(u, 'bardicInspiration', h))
+      .sort((a, b) => order.indexOf(a.code) - order.indexOf(b.code))[0];
+    if (ally) game.castSpell(u, 'bardicInspiration', ally);
+  }
+  if (u.actionUsed) return;
+  if (!game.spellProblem(u, 'fear')) {
+    let best = null;
+    for (const aim of foes) {
+      if (aim.x === u.x && aim.z === u.z) continue;
+      const caught = coneTiles(game.grid, u, directionTo(u, aim), SPELLS.fear.range)
+        .map((t) => game.unitAt(t.x, t.z)).filter((v) => v?.alive && v.team !== u.team && !v.immune?.includes('frightened')).length;
+      if (caught >= 3 && (!best || caught > best.caught)) best = { aim, caught };
+    }
+    if (best) { game.castSpell(u, 'fear', { x: best.aim.x, z: best.aim.z }); return; }
+  }
+  const p = bestFireball(game, u, 'shatter');
+  if (p) { game.castSpell(u, 'shatter', p); return; }
+  const front = heroes.find((h) => ['F', 'P'].includes(h.code) && !h.invisibleFrom);
+  if (front && foes.some((e) => (e.cr ?? 0) >= 3) && !game.spellProblem(u, 'greaterInvisibility', front)) {
+    game.castSpell(u, 'greaterInvisibility', front);
+    return;
+  }
+  if (!game.isAdjacentToEnemy(u)) {
+    const t = game.spellTargets(u, 'viciousMockery').filter((e) => !e.unaware).sort((a, b) => a.hp - b.hp)[0];
+    if (t) game.castSpell(u, 'viciousMockery', t);
+  }
 }
 
 const gridDistanceTo =(a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));

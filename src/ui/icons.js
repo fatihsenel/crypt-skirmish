@@ -40,6 +40,12 @@ const ICONS = {
     <g stroke-width="1.9" fill="none">
       <path d="M12 2.2v3.2M12 18.6v3.2M2.2 12h3.2M18.6 12h3.2M5.1 5.1l2.2 2.2M16.7 16.7l2.2 2.2M5.1 18.9l2.2-2.2M16.7 7.3l2.2-2.2"/>
     </g>`),
+  // Two beamed notes: the bard's song.
+  B: svg(`<path stroke="none" d="M7.6 5.2 20.4 2.2v3.4L7.6 8.6z"/>
+    <rect stroke="none" x="7.6" y="5.6" width="1.9" height="12"/>
+    <rect stroke="none" x="18.5" y="2.6" width="1.9" height="12"/>
+    <ellipse stroke="none" cx="5.8" cy="17.8" rx="3.2" ry="2.4" transform="rotate(-20 5.8 17.8)"/>
+    <ellipse stroke="none" cx="16.7" cy="15" rx="3.2" ry="2.4" transform="rotate(-20 16.7 15)"/>`),
   // --- monsters -----------------------------------------------------------------
   g: svg(`<path stroke="none" d="M12 6c-3.3 0-5.6 2.4-5.9 5.4L1 8.5l3.4 5.4c.6 3.8 3.8 6.6 7.6 6.6s7-2.8 7.6-6.6L23 8.5l-5.1 2.9C17.6 8.4 15.3 6 12 6z"/>
     <path fill="var(--icon-hole)" stroke="none" d="M8.6 12.2l2.6 1.1-.5 1.2zm6.8 0-2.6 1.1.5 1.2zM10 17.2h4l-.8 1h-2.4z"/>`),

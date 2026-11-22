@@ -65,11 +65,13 @@ export const CONDITION_INFO = {
   poisoned: 'Poisoned: disadvantage on attack rolls and Stealth.',
   frightened: 'Frightened: disadvantage on attacks while it can see the source of its fear, and it can’t move closer to it. A WIS save at the end of each turn ends it.',
   restrained: 'Restrained: can’t move; attacks against it have advantage, its own attacks and DEX saves disadvantage. Wears off at the end of its next turn.',
+  mocked: 'Mocked: disadvantage on its next attack roll. Wears off after it attacks or at the end of its next turn.',
   rotting: 'Rotting (mummy rot): can’t regain hit points. Wears off after two of its own turns.',
 };
 
 /** Passive features (no button): documented here for the HUD tooltips. */
 export const PASSIVES = {
+  cuttingWords: 'Cutting Words: when a foe within 60 ft that you can see hits you or an ally, you can spend your reaction and a Bardic Inspiration use to roll the die and take it off the attack roll. Used automatically when the die could turn the hit into a miss.',
   sneakAttack: 'Sneak Attack: extra d6s (2d6; 3d6 from level 5, 4d6 from 6) once per turn when you have advantage, or an ally is next to the target.',
   extraAttack: 'Extra Attack: the Attack action lets you attack twice.',
   uncannyDodge: 'Uncanny Dodge: reaction to halve the damage of a hit (used automatically on hits of 6+).',
@@ -192,6 +194,29 @@ export const SPELLS = {
     name: 'Dread', level: 1, time: 'action', range: 12, targeting: 'enemy',
     save: 'wis', condition: 'frightened', turns: 2,
     desc: 'A whisper from the grave: one foe within 60 ft makes a WIS save or is frightened for 2 turns.',
+  },
+  viciousMockery: {
+    name: 'Vicious Mockery', level: 0, time: 'action', range: 12, targeting: 'enemy',
+    damage: '1d4', save: 'wis',
+    desc: 'Cantrip: a string of insults laced with magic. A foe within 60 ft makes a WIS save or takes 1d4 psychic and has disadvantage on its next attack before the end of its next turn.',
+  },
+  bardicInspiration: {
+    name: 'Bardic Inspiration', level: 0, time: 'bonus', range: 12, targeting: 'ally', uses: true,
+    desc: 'Bonus action: inspire an ally (not yourself) within 60 ft with a d6 (d8 from level 5). The first time this fight one of their attacks misses, or a save fails, by no more than the die, they roll it and add it. One die per ally; your uses (your CHA modifier) come back each fight.',
+  },
+  shatter: {
+    name: 'Shatter', level: 2, time: 'action', range: 12, radius: 2, targeting: 'area',
+    damage: '3d8', save: 'con',
+    desc: 'A painful ringing bursts in a 10-ft radius: 3d8 thunder, CON save for half. +1d8 per slot level above 2nd. Hits allies too!',
+  },
+  fear: {
+    name: 'Fear', level: 3, time: 'action', range: 6, targeting: 'cone',
+    save: 'wis', condition: 'frightened', turns: 2,
+    desc: 'A 30-ft cone of dread: each foe in it makes a WIS save or is frightened of you for 2 turns. Allies are spared.',
+  },
+  greaterInvisibility: {
+    name: 'Greater Invisibility', level: 4, time: 'action', range: 1, targeting: 'ally',
+    desc: 'Touch an ally (or yourself): they turn invisible for the rest of the fight. Their attacks have advantage, and attacks against them disadvantage. One at a time.',
   },
   animateDead: {
     name: 'Animate Dead', level: 3, time: 'action', range: 6, targeting: 'corpse',

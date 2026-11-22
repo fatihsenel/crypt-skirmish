@@ -30,6 +30,9 @@ export function prevWeek(key) {
   return dayKey(new Date(y, m - 1, d - 7));
 }
 
+/** The first week a weekly can bring the Bard (earlier weeks keep the party they had). */
+const BARD_FROM = '2026-11-23';
+
 /** This week's crypt (or any week's): its elite trait, room, party level, class swaps and dice seed. */
 export function weeklyPlan(key = weekKey()) {
   const seed = hash(`crypt-skirmish weekly ${key}`);
@@ -40,6 +43,7 @@ export function weeklyPlan(key = weekKey()) {
   if ((seed >>> 8) & 1) classes.F = 'P';
   if ((seed >>> 9) & 1) classes.R = 'A';
   if ((seed >>> 10) & 1) classes.W = 'K';
+  if (key >= BARD_FROM && (seed >>> 11) & 1) classes.C = 'B';
   return { key, seed, node, level, classes, tier: WEEKLY_TIER, trait, weekly: true };
 }
 
