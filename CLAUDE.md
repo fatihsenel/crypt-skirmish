@@ -103,6 +103,8 @@ server on 5173.
   (`floorBehind`). Screen readers hear log lines, turns and the cursor's tile
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
   press the action bar's first ten buttons (`pickByNumber` in `hud.js`); R reads `surroundings()`.
+  The log can show one figure's lines (`filterLog`: double-click, F or a long press on a name);
+  rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
 - Photo mode (`src/photo.js`, P or the camera button) hides the HUD and the board's highlights,
   centres the view on the current figure and lets the camera turn; Save image renders a frame and

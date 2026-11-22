@@ -173,12 +173,12 @@ export class EndBanner {
     const el = $('#banner-recap');
     el.classList.toggle('won', !!win);
     if (win) {
-      const lines = [['recap-best', win.best], ['recap-closest', win.closest], ['recap-fell', win.fell], ['recap-potions', win.potions]].filter(([, l]) => l);
-      el.hidden = !win.best && !win.closest && !win.fell; // potions alone aren't a story
+      const lines = [['recap-totals', win.totals], ['recap-best', win.best], ['recap-closest', win.closest], ['recap-fell', win.fell], ['recap-potions', win.potions]].filter(([, l]) => l);
+      el.hidden = !win.totals && !win.best && !win.closest && !win.fell; // potions alone aren't a story
       el.innerHTML = el.hidden ? '' : `<h2>How it went</h2>${lines.map(([cls, l]) => `<p class="${cls}">${esc(l)}</p>`).join('')}`;
       return;
     }
-    const lines = recap ? [['recap-worst', recap.worst], ['recap-left', recap.left]].filter(([, l]) => l) : [];
+    const lines = recap ? [['recap-totals', recap.totals], ['recap-worst', recap.worst], ['recap-left', recap.left]].filter(([, l]) => l) : [];
     el.hidden = !recap || (!recap.falls.length && !lines.length);
     el.innerHTML = el.hidden ? '' : `<h2>How it went</h2>`
       + (recap.falls.length ? `<ol>${recap.falls.map((f) => `<li>${esc(f)}</li>`).join('')}</ol>` : '')

@@ -46,7 +46,7 @@ export function fightRecap(game) {
     : `${us.length} ${plural(kind)} (${us.map(hp).join(', ')} HP)`));
   const left = parts.length ? `Still standing: ${parts.join(', ')}.` : null;
 
-  return { falls, worst, left, tip: lossTip(game, byKind) };
+  return { falls, worst, left, totals: fightTotals(game), tip: lossTip(game, byKind) };
 }
 
 const HEALS = ['cureWounds', 'healingWord'];
@@ -141,5 +141,19 @@ export function winRecap(game) {
 
   const n = game.drunk ?? 0;
   const potions = n ? `${n} potion${n === 1 ? '' : 's'} drunk.` : 'No potions needed.';
-  return { best, closest, fell, potions };
+  return { best, closest, fell, potions, totals: fightTotals(game) };
+}
+
+/** The whole fight's HP in one line, from the same tally as the log's round headings:
+    "The party dealt 66 damage and took 28 over 5 rounds." (null before anything landed) */
+export function fightTotals(game) {
+  let dealt = 0;
+  let took = 0;
+  for (const r of Object.values(game.hurtBy ?? {})) {
+    dealt += r.monsters ?? 0;
+    took += r.heroes ?? 0;
+  }
+  if (!dealt && !took) return null;
+  const rounds = Math.max(1, game.round ?? 1);
+  return `The party dealt ${dealt} damage and took ${took} over ${rounds} round${rounds === 1 ? '' : 's'}.`;
 }

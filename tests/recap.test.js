@@ -67,6 +67,7 @@ describe('a lost fight’s recap', () => {
       ],
       worst: 'Skeletons hit hardest: 9 damage to the party.',
       left: 'Still standing: Wight (12/45 HP), 2 Skeletons (13/13, 4/13 HP).',
+      totals: null, // no HP tally in this fake
       tip: null, // no one kind or kind of attack did half the damage
     });
   });
@@ -166,6 +167,7 @@ describe('a lost fight’s recap', () => {
         closest: 'Closest call: Maela held on at 2/31 HP in round 4.',
         fell: null,
         potions: '2 potions drunk.',
+        totals: null,
       });
     });
 
@@ -181,6 +183,7 @@ describe('a lost fight’s recap', () => {
         closest: null,
         fell: 'Wren fell in round 3 but the party won through.',
         potions: 'No potions needed.',
+        totals: null,
       });
     });
 

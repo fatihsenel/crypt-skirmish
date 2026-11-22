@@ -110,7 +110,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   each hero fell, which foe hit hardest and who was still standing, with a tip for next time
   (a trap, unused potions, the healer falling first, a knock prone or a web before the last blow,
   a hero cut off alone, archers, spells, a foe to focus, spell slots left unspent). A won room says who led the way, the closest
-  call, who fell and how many potions were drunk.
+  call, who fell and how many potions were drunk; won or lost, it sums the HP the party dealt
+  and took.
 - **Watch replay:** after any fight you played yourself, the end screen can play it again from
   the start, move by move with the same dice. Pause, step to the next turn, speed it up to 4×,
   or exit back to the end screen (keys: Space, →, + and −, Esc). Copy replay link puts the
@@ -238,13 +239,15 @@ Everything is generated in the browser, with no recordings:
 - The title, camp and New Game+ work from the keyboard alone: Tab to a room on the map, Enter
   to choose it, and focus stays where it was when the camp redraws.
 - Tab to the combat log, and the arrow keys step from name to name in it (each is read out
-  with its line); Enter looks at that figure.
+  with its line); Enter looks at that figure, and F shows only the lines naming it.
 - The end banner's Copy log puts the whole fight's log on the clipboard as plain text (on a
   phone, the share sheet). Where a browser won't let the game copy, Copy log, Copy result and
   the link buttons open the text selected in a panel, to copy by hand (or Save as file).
 - Scrolled up in the combat log to read, new lines don't pull it back down; a button counts
   them and goes back. Each earlier round folds under a heading with who fell and the HP the
   party dealt and took.
+- Double-click a name in the combat log (or hold it on a phone) to see only the lines naming
+  that figure; "Only Wren ✕" above the log, or the same name again, shows every line.
 
 ## Controls
 
@@ -255,7 +258,7 @@ Everything is generated in the browser, with no recordings:
 | Attack / spell / action buttons | Pick a specific attack, spell or action |
 | Click a chest | Open it when standing next to it |
 | Right-drag / wheel | Pan / zoom |
-| A name in the combat log | Hover marks that figure's tile, click looks at it; a monster's turn is one line, click it for the rolls |
+| A name in the combat log | Hover marks that figure's tile, click looks at it, double-click shows only its lines; a monster's turn is one line, click it for the rolls |
 | Hover a figure | Its last line in the combat log lights up; earlier rounds fold under their heading (click to open) |
 | Arrow keys | Move a cursor over the board, starting at your hero |
 | Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
@@ -269,7 +272,7 @@ Everything is generated in the browser, with no recordings:
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel (or click its header) |
 | L | Fold or open the combat log (or click its header); remembered, and a folded log counts new lines |
-| Tab to the combat log, then arrows / Enter | Step through the names in it / look at that figure |
+| Tab to the combat log, then arrows / Enter / F | Step through the names in it / look at that figure / only its lines |
 | K | On the title, or a defeat or the won campaign: the skull plays its next move |
 | Tab / Esc in a panel | Tab stays inside the panel; Esc closes it |
 
@@ -282,7 +285,7 @@ Everything is generated in the browser, with no recordings:
 | Hold a button, or tap a tag or label | Show its tooltip or note |
 | Swipe the row of attacks and spells | See the rest; a faded edge means there are more |
 | Tap a portrait or hold a figure | Show the character card |
-| Log button (top right) | Open the combat log (its number counts new lines); tap a name in it to see that figure |
+| Log button (top right) | Open the combat log (its number counts new lines); tap a name in it to see that figure, hold it for only its lines |
 | Camera button (top right) | Photo mode: one finger turns, two pan and pinch |
 
 ## House rules
@@ -415,7 +418,7 @@ src/
     spells.js        spell slots, targeting, saves and casting (Game builds on it)
     ai.js            monster brains
     replay.js        fight saves: commands replayed from a seed
-    recap.js         a fight told back: who fell to what and a tip, or who led a win
+    recap.js         a fight told back: who fell to what and a tip, or who led a win; HP totals
     history.js       past runs and the last fight of each
     fightLink.js     a fight as a #watch= link, checked by replaying it; #play= challenges and their end text
     achievements.js  achievements and their checks

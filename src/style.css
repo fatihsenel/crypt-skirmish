@@ -282,7 +282,18 @@ html, body {
   font-size: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
-#log.folded #log-latest { display: none; }
+#log.folded #log-latest, #log.folded #log-only { display: none; }
+/* The log filtered to one figure (hud.js filterLog): the bar says whose; click it for every line. */
+#log-only {
+  align-self: flex-start;
+  flex: none;
+  margin: 0 14px 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+#log-only b { color: var(--gold); font-weight: 600; }
+#log-list li.off { display: none; }
 #log-list li { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 /* Each round: its heading, then its lines; earlier rounds fold under their heading (hud.js). */
 #log-list li.round-block { padding: 0; border-bottom: 0; }
@@ -837,7 +848,7 @@ body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle)
 #banner-recap.won { border-color: #d9b45a55; background: #d9b45a10; }
 @media (max-height: 520px) {
   #banner-recap { margin-bottom: 10px; padding: 6px 10px; font-size: 12px; }
-  #banner-recap h2, #banner-recap .recap-worst, #banner-recap .recap-potions { display: none; }
+  #banner-recap h2, #banner-recap .recap-worst, #banner-recap .recap-potions, #banner-recap .recap-totals { display: none; }
   #banner-recap li, #banner-recap p { margin: 1px 0; }
 }
 #banner .banner-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }

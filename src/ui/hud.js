@@ -146,12 +146,44 @@ export class Hud {
       } else if (ev.key === 'Enter' && this.kbdName) {
         ev.preventDefault();
         this.onLogName?.(Number(this.kbdName.dataset.unit), 'go');
+      } else if ((ev.key === 'f' || ev.key === 'F') && this.kbdName) {
+        ev.preventDefault();
+        ev.stopPropagation(); // F isn't a game key here
+        this.filterLog(Number(this.kbdName.dataset.unit));
       } else if (ev.key === 'Escape') list.blur();
     });
+    // One figure's lines only: double-click a name, F on it, or a long press on a touch screen.
+    list.addEventListener('dblclick', (ev) => {
+      const name = named(ev);
+      if (!name) return;
+      ev.preventDefault();
+      getSelection()?.removeAllRanges(); // a double-click selects the word
+      this.filterLog(Number(name.dataset.unit));
+    });
+    let press = null;
+    list.addEventListener('pointerdown', (ev) => {
+      const name = named(ev);
+      if (ev.pointerType === 'mouse' || !name) return;
+      clearTimeout(press);
+      press = setTimeout(() => {
+        press = 'held';
+        this.filterLog(Number(name.dataset.unit));
+      }, 500);
+    });
+    for (const type of ['pointerup', 'pointercancel', 'pointermove']) {
+      list.addEventListener(type, (ev) => {
+        if (press === 'held' || (type === 'pointermove' && Math.hypot(ev.movementX, ev.movementY) < 4)) return;
+        clearTimeout(press);
+        press = null;
+      });
+    }
+    list.addEventListener('contextmenu', (ev) => named(ev) && ev.pointerType !== 'mouse' && ev.preventDefault());
+    $('#log-only').addEventListener('click', () => this.filterLog(null));
     $('#log-list').addEventListener('click', (ev) => {
       const name = named(ev);
       if (!name) return;
       ev.preventDefault(); // a name in a monster turn's summary doesn't open it
+      if (press === 'held') return void (press = null); // the long press filtered instead
       if (matchMedia(NARROW).matches) this.panelLog(false); // the panel would cover the board
       this.onLogName?.(Number(name.dataset.unit), 'go');
     });
@@ -240,8 +272,64 @@ export class Hud {
     }
   }
 
+  /** Show only the lines that name figure `id` (and the turns they're in), or every line again
+      (`null`, or the same figure again). The bar above the list says whose, and clears it. */
+  filterLog(id) {
+    if (id === this.only) id = null;
+    const list = $('#log-list');
+    const name = id == null ? null : list.querySelector(`[data-unit="${id}"]`)?.textContent;
+    this.only = name ? id : null;
+    const btn = $('#log-only');
+    btn.hidden = !name;
+    if (name) {
+      btn.innerHTML = 'Only <b></b> <span aria-hidden="true">✕</span>';
+      btn.querySelector('b').textContent = name;
+      btn.setAttribute('aria-label', `Showing only lines naming ${name}. Show every line`);
+    } else {
+      for (const d of list.querySelectorAll('details[data-was-open]')) { // fold back what was folded
+        d.open = d.dataset.wasOpen === '1';
+        delete d.dataset.wasOpen;
+      }
+    }
+    this.applyFilter();
+    this.logToEnd();
+    announce(name ? `Only lines naming ${name}. F or the Only button shows every line.` : 'Every line shown.');
+  }
+
+  /** Hide the lines that don't name the figure the log is filtered to (`this.only`), opening
+      the rounds and turns so their lines show; folding waits until the filter is cleared. */
+  applyFilter() {
+    const list = $('#log-list');
+    for (const li of list.querySelectorAll('li.off')) li.classList.remove('off');
+    if (this.only == null) return;
+    const has = (el) => !!el.querySelector(`[data-unit="${this.only}"]`);
+    const walk = (ol) => {
+      for (const li of ol.children) {
+        const d = li.querySelector(':scope > details');
+        if (!has(li)) li.classList.add('off');
+        else if (d) {
+          if (!d.dataset.wasOpen) {
+            d.dataset.wasOpen = d.open ? '1' : '0';
+            d.open = true;
+          }
+          // A round's lines, and a turn that only mentions them, are sifted; their own turn shows whole.
+          if (li.classList.contains('round-block') || !has(d.querySelector(':scope > summary'))) walk(d.querySelector(':scope > ol'));
+        }
+      }
+    };
+    walk(list);
+  }
+
+  /** Fold a round or turn, or note it to fold once the log is no longer filtered. */
+  fold(details) {
+    if (this.only != null) details.dataset.wasOpen = '0';
+    else details.open = false;
+  }
+
   reset() {
     $('#log-list').innerHTML = '';
+    this.only = null;
+    $('#log-only').hidden = true;
     this.turn = null;
     this.round = null;
     this.litLine = this.litUnit = null;
@@ -285,6 +373,7 @@ export class Hud {
       btn.textContent = `${this.behind} new line${this.behind === 1 ? '' : 's'} ↓`;
       btn.hidden = false;
     } else this.logToEnd();
+    if (this.only != null) this.applyFilter();
     if (this.litUnit) this.markLine(this.litUnit, false); // the figure under the mouse may be in this line
     announce(li.textContent); // read out even while the log panel is closed
   }
@@ -333,7 +422,7 @@ export class Hud {
   startRound(html) {
     const last = this.round;
     if (last) {
-      last.details.open = false;
+      this.fold(last.details);
       const hurt = last.n ? this.game?.roundHurt?.(last.n) : null;
       const notes = [
         last.fallen.length && `${last.fallen.join(', ')} fell`,
@@ -357,7 +446,7 @@ export class Hud {
     this.litLine = null;
     this.litUnit = u;
     if (!u || this.unknown?.(u)) return;
-    const name = [...document.querySelectorAll(`#log-list [data-unit="${u.id}"]`)].at(-1);
+    const name = [...document.querySelectorAll(`#log-list [data-unit="${u.id}"]`)].filter((e) => !e.closest('.off')).at(-1);
     if (!name) return;
     // The line itself, or the heading of the folded turn or round it's in.
     let line = name.closest('li');
@@ -384,7 +473,7 @@ export class Hud {
 
   /** The turn is over: a hero's, open while they act, folds like a monster's. */
   endTurn() {
-    if (this.turn) this.turn.details.open = false;
+    if (this.turn) this.fold(this.turn.details);
     this.turn = null;
   }
 
