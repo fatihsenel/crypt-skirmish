@@ -112,7 +112,8 @@ server on 5173.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
   A short note on a small label is `data-hint="…"`, never `title=`: `ui/hints.js` shows it
-  as a card on hover, focus or a tap. The Text size setting is CSS `zoom` on the panels
+  as a card on hover, focus or a tap, and gives it to screen readers (a control's
+  `aria-description`, else hidden text in a `.hint-read` span). The Text size setting is CSS `zoom` on the panels
   (`data-text` on `<html>`), so cards placed by script divide by the element's zoom; the
   board's labels scale their type by `--t` instead, since zoom would move them. Copying text
   goes through `copyText` (`ui/copyBox.js`), which falls back to a panel with it selected.

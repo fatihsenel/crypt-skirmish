@@ -112,7 +112,7 @@ export class Hud {
     $('#log-close').addEventListener('click', () => this.panelLog(false));
     $('#log-fold').addEventListener('click', () => this.toggleLog());
     // Scrolled up to read: new lines don't pull the log down; a button goes back to them.
-    $('#log-list').addEventListener('scroll', () => this.atLogEnd() && ($('#log-latest').hidden = true), { passive: true });
+    $('#log-list').addEventListener('scroll', () => this.atLogEnd() && this.hideLatest(), { passive: true });
     $('#log-latest').addEventListener('click', () => this.logToEnd());
     // A name in the log points at its figure: hover to mark its tile, click to look at it.
     const named = (ev) => ev.target.closest?.('#log-list [data-unit]');
@@ -235,7 +235,7 @@ export class Hud {
     $('#app').classList.toggle('log-open', open);
     $('#log-toggle').setAttribute('aria-expanded', String(open));
     if (open) {
-      $('#log-toggle').classList.remove('unread');
+      this.setUnread(0);
       this.logToEnd(); // a hidden list can't scroll, so catch up now
     }
   }
@@ -247,7 +247,8 @@ export class Hud {
     this.litLine = this.litUnit = null;
     this.newLines = 0;
     $('#log-new').hidden = true;
-    $('#log-latest').hidden = true;
+    this.hideLatest();
+    this.setUnread(0);
     $('#banner').hidden = true;
     this.hint('');
   }
@@ -278,11 +279,14 @@ export class Hud {
       turn.list.appendChild(li);
       if (cls === 'death') this.turnNote(html.replace(/\.$/, ''));
     } else this.addLine(li);
-    if (reading) $('#log-latest').hidden = false;
-    else this.logToEnd();
+    if (reading) {
+      this.behind = (this.behind ?? 0) + 1;
+      const btn = $('#log-latest');
+      btn.textContent = `${this.behind} new line${this.behind === 1 ? '' : 's'} ↓`;
+      btn.hidden = false;
+    } else this.logToEnd();
     if (this.litUnit) this.markLine(this.litUnit, false); // the figure under the mouse may be in this line
     announce(li.textContent); // read out even while the log panel is closed
-    if (!this.logOpen) $('#log-toggle').classList.add('unread');
   }
 
   /** Whether the log shows its last line (or can't be seen, so it has nowhere to be). */
@@ -295,26 +299,48 @@ export class Hud {
   logToEnd() {
     const list = $('#log-list');
     list.scrollTop = list.scrollHeight;
+    this.hideLatest();
+  }
+
+  /** Put away the button back to the newest lines (the log is there). */
+  hideLatest() {
+    this.behind = 0;
     $('#log-latest').hidden = true;
   }
 
-  /** A line of the log's own (not one inside a monster's turn); counted while the log is folded. */
+  /** The log button's count of lines that came in while its panel was closed (a phone). */
+  setUnread(n) {
+    this.unread = n;
+    const btn = $('#log-toggle');
+    btn.classList.toggle('unread', n > 0);
+    btn.dataset.count = n > 99 ? '99+' : String(n);
+  }
+
+  /** A line of the log's own (not one inside a turn): counted on the log button while its panel
+      is closed, or on the header while the log is folded. */
   addLine(li) {
     (this.round?.list ?? $('#log-list')).appendChild(li);
-    if (!this.logFolded || matchMedia(NARROW).matches) return;
+    if (matchMedia(NARROW).matches) return void (!this.logOpen && this.setUnread((this.unread ?? 0) + 1));
+    if (!this.logFolded) return;
     this.newLines = (this.newLines ?? 0) + 1;
     const badge = $('#log-new');
     badge.textContent = `${this.newLines} new`;
     badge.hidden = false;
   }
 
-  /** A new round: the one before folds under its heading, which then names who fell in it.
-      Its heading opens it again. */
+  /** A new round: the one before folds under its heading, which then names who fell in it and
+      the HP the party dealt and took. Its heading opens it again. */
   startRound(html) {
     const last = this.round;
     if (last) {
       last.details.open = false;
-      if (last.fallen.length) last.summary.insertAdjacentHTML('beforeend', ` <span class="round-note">· ${last.fallen.join(', ')} fell</span>`);
+      const hurt = last.n ? this.game?.roundHurt?.(last.n) : null;
+      const notes = [
+        last.fallen.length && `${last.fallen.join(', ')} fell`,
+        hurt?.monsters && `dealt ${hurt.monsters}`,
+        hurt?.heroes && `took ${hurt.heroes}`,
+      ].filter(Boolean);
+      if (notes.length) last.summary.insertAdjacentHTML('beforeend', ` <span class="round-note">· ${notes.join(' · ')}</span>`);
     }
     const li = document.createElement('li');
     li.className = 'round-block';
@@ -322,7 +348,7 @@ export class Hud {
     this.round = null; // the heading itself goes at the top level
     this.addLine(li);
     const details = li.querySelector('details');
-    this.round = { details, summary: details.querySelector('summary'), list: details.querySelector('ol'), fallen: [] };
+    this.round = { details, summary: details.querySelector('summary'), list: details.querySelector('ol'), fallen: [], n: Number(html.match(/\d+/)?.[0]) }; // "Round 3"
   }
 
   /** Light the last line that names `u` (a figure under the mouse), or none. */

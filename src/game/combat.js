@@ -165,10 +165,16 @@ export class Game extends Spellcasting {
     this.found = [];  // non-potion loot taken from chests, for the party's pack
     this.ice = []; // Ice Storm ground: { by, turns, tiles } (see addIce)
     this.stats = {};  // per hero slot: { damage, kills, crits, healing, downed } (for the run's ending)
+    this.hurtBy = {}; // per round: HP each side lost, { heroes, monsters } (the log's round headings)
     this.blows = [];  // every hit a hero took: { round, to, by, byId, kind, code, how, via, damage, hp, down } (for the fight's recap)
     this.drunk = 0;   // potions the heroes drank this fight
     this.cause = null; // what is dealing damage right now: an attack's or spell's name, or 'a trap'
     this.via = null;   // and how: 'melee', 'ranged', 'spell' or 'trap'
+  }
+
+  /** HP each side lost in `round` (temporary HP and overkill aside). */
+  roundHurt(round) {
+    return { heroes: 0, monsters: 0, ...this.hurtBy[round] };
   }
 
   /** The tally for a hero, or null for monsters. */
@@ -666,6 +672,10 @@ export class Game extends Spellcasting {
     }
     const t = target.team === 'monsters' ? this.tally(source) : null;
     if (t) t.damage += before - target.hp; // only what landed, not overkill
+    if (before > target.hp) {
+      const hurt = (this.hurtBy[this.round] ??= { heroes: 0, monsters: 0 });
+      hurt[target.team] = (hurt[target.team] ?? 0) + before - target.hp;
+    }
     if (target.team === 'heroes' && before > target.hp) {
       const down = target.hp <= 0 && target.alive;
       // A fall also notes, for the recap's tip, whether no other hero standing was within 10 ft

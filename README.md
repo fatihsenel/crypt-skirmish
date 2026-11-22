@@ -192,7 +192,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   yellow for colour-blind players.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does. Small
   labels (spell slots, potions, Action / Bonus / Reaction, the replay buttons' keys) show a
-  short note on hover, focus or a tap.
+  short note on hover, focus or a tap; screen readers read every note with its label.
 - **Turn order:** portraits along the top, each with its initiative number. Long names
   shrink to fit, like "G. Spider 2" or "R. Mummy". On an upright phone the whole party fits
   across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
@@ -241,8 +241,10 @@ Everything is generated in the browser, with no recordings:
   with its line); Enter looks at that figure.
 - The end banner's Copy log puts the whole fight's log on the clipboard as plain text (on a
   phone, the share sheet). Where a browser won't let the game copy, Copy log, Copy result and
-  the link buttons open the text selected in a panel, to copy by hand.
-- Scrolled up in the combat log to read, new lines don't pull it back down; New lines ↓ does.
+  the link buttons open the text selected in a panel, to copy by hand (or Save as file).
+- Scrolled up in the combat log to read, new lines don't pull it back down; a button counts
+  them and goes back. Each earlier round folds under a heading with who fell and the HP the
+  party dealt and took.
 
 ## Controls
 
@@ -280,7 +282,7 @@ Everything is generated in the browser, with no recordings:
 | Hold a button, or tap a tag or label | Show its tooltip or note |
 | Swipe the row of attacks and spells | See the rest; a faded edge means there are more |
 | Tap a portrait or hold a figure | Show the character card |
-| Log button (top right) | Open the combat log; tap a name in it to see that figure |
+| Log button (top right) | Open the combat log (its number counts new lines); tap a name in it to see that figure |
 | Camera button (top right) | Photo mode: one finger turns, two pan and pinch |
 
 ## House rules

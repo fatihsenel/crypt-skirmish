@@ -642,13 +642,17 @@ body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
   border-color: var(--panel-edge);
   font-size: 12px;
 }
-#log-toggle.unread::after {
-  content: '';
+#log-toggle.unread::after { /* lines that came in while the panel was closed (hud.js setUnread) */
+  content: attr(data-count);
   position: absolute;
-  top: 4px; right: 4px;
-  width: 7px; height: 7px;
-  border-radius: 50%;
+  top: 1px; right: 1px; /* inside the button: nothing may spill out of it (touch-check) */
+  min-width: 14px; height: 14px; box-sizing: border-box;
+  padding: 0 3px;
+  border-radius: 7px;
   background: var(--gold);
+  color: #1a1410;
+  font: 700 9px/14px var(--body);
+  text-align: center;
 }
 /* The corner buttons' tooltip cards (buttonTips.js): on hover after a pause, on focus,
    or held on touch. They match .tipcard, with an arrow at their button. */
@@ -1217,6 +1221,7 @@ b.loot { color: var(--gold); }
 }
 .overlay-card.narrow { width: min(620px, 100%); }
 #copy-box { z-index: 30; } /* over the end banner */
+.copy-box-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
 .copy-box-note { margin: 4px 0 10px; font-size: 13px; color: #d8cfc0; }
 #copy-box textarea {
   width: 100%; box-sizing: border-box; resize: vertical;
