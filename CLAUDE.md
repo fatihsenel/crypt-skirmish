@@ -115,8 +115,10 @@ server on 5173.
   rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
 - Speech bubbles: `speech.js` has the lines and picks the moment (`attackMoment`: a kill, a
-  crit, a hero's first blow, a monster now and then; `downSpeaker` when a hero falls) with
-  `Math.random`, never the fight's dice; `quip` in `animate.js` shows them through
+  crit, a hero's first blow, a monster now and then; `spellMoment`: a big spell, a heal on a
+  friend, a monster's spell; `downSpeaker` when a hero falls; `thanks` from `rises`, `intro`
+  when the ticker in `main.js` first sees a named foe) with `Math.random`, never the fight's
+  dice; `quip` in `animate.js` shows them through
   `render/speechBubble.js` (one at a time, inside the speaker's label, the `bubbles` setting;
   its styles are `speechBubble.css`, loaded with the game to keep them off the title's budget).
   A new talking monster or class needs its lines in `speech.js`.

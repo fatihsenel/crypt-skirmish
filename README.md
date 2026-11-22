@@ -248,9 +248,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   speed, attacks with to-hit and damage, conditions and traits.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
-  falling ("Hold on, Maela!"), and now and then a monster's attack (most of a named foe's).
-  Each class and talking monster has its own voice; beasts, skeletons and spirits stay silent.
-  One bubble at a time, and they never hold up a turn.
+  falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
+  one."), a named foe's first sight of the party ("You trespass in my barrow."), and now and
+  then a monster's attack or spell (one of a pack a round; most of a named foe's). Each class
+  and talking monster has its own voice; beasts, skeletons and spirits stay silent. One
+  bubble at a time, and they never hold up a turn.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
   motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log,
   cards and the names and numbers over the figures), speech bubbles, colour-blind friendly

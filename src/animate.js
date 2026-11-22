@@ -10,7 +10,7 @@ import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx
 import { wait } from './render/tween.js';
 import { sfx } from './audio/sfx.js';
 import { voices } from './audio/voices.js';
-import { attackMoment, lineFor, downSpeaker } from './speech.js';
+import { attackMoment, spellMoment, lineFor, downSpeaker } from './speech.js';
 import { speak } from './render/speechBubble.js';
 
 /**
@@ -24,6 +24,7 @@ export function createAnimations(app) {
   let risings = []; // Nekhet's house rising, shown once the blow that bloodied him has played
   const attacked = new WeakMap(); // each fight's attackers so far: a hero's first attack speaks
   const recentLines = new Map(); // the last line of each kind of speaker, so it doesn't repeat
+  const spokeIn = new WeakMap(); // each fight's monster kinds -> the round one last spoke in (a pack takes turns)
 
   /** `unit` says a line for `moment` in a speech bubble (speech.js), if it's in sight. */
   function quip(unit, moment, name) {
@@ -54,7 +55,10 @@ export function createAnimations(app) {
     const first = !attacked.get(fight).has(attacker.id);
     attacked.get(fight).add(attacker.id);
     const landed = r.hit && !r.shielded;
-    const moment = attackMoment({ attacker, target, hit: landed, crit: r.crit, killed: landed && !target.alive, first });
+    if (!spokeIn.has(fight)) spokeIn.set(fight, new Map());
+    const kindSpoke = spokeIn.get(fight).get(attacker.code) === fight.round;
+    const moment = attackMoment({ attacker, target, hit: landed, crit: r.crit, killed: landed && !target.alive, first, kindSpoke });
+    if (moment === 'attack' && attacker.team === 'monsters') spokeIn.get(fight).set(attacker.code, fight.round);
     if (moment === 'first' || moment === 'attack') quip(attacker, moment);
     // The roll pops up over the attacker; on the hero's own turn the player throws it.
     // (Settings can turn both off; then only natural 20s and 1s get a die, thrown on the board.)
@@ -407,6 +411,7 @@ export function createAnimations(app) {
   async function rises(unit) {
     if (!unit.alive || !view(unit)?.down) return;
     await view(unit).getUp();
+    quip(unit, 'thanks');
     hud.renderInitiative(app.game());
   }
 
@@ -496,6 +501,10 @@ export function createAnimations(app) {
       hud.renderInitiative(app.game());
       return;
     }
+    // A big spell, a heal on a friend, or now and then a monster's spell, said as it's cast.
+    const healed = r.heals ? r.heals.map((h) => h.unit) : r.healed != null && r.target ? [r.target] : [];
+    const said = spellMoment({ caster, id, healed });
+    if (said) quip(caster, said.moment, said.friend?.name);
     switch (id) {
       case 'magicMissile':
         await cv.cast(r.target, async () => {
@@ -836,6 +845,8 @@ export function createAnimations(app) {
 
   return {
     play, damageReaction, throwsOwn,
+    /** A named foe comes into view for the first time this fight: it says who it is. */
+    intro: (unit) => quip(unit, 'intro'),
     /** A rising to show after the step that set it off (see flushRisings). */
     queueRising: (r) => risings.push(r),
     clearRisings: () => { risings = []; },

@@ -594,6 +594,7 @@ stage.tickers.add(() => {
       kinds.push(u.code);
       spotted = true;
       if (u.elite) elite = u;
+      anim.intro(u); // a named foe says who it is
     }
   }
   if (spotted) hud.renderInitiative(game);
