@@ -8,6 +8,7 @@ import { unitCard, OUT_OF_FIGHT } from './unitCard.js';
 import { reachedNewGamePlus, loadDeepest, loadHistory } from '../game/history.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { Overlay } from './overlay.js';
+import { bestiaryLabel } from './bestiaryLabel.js';
 import { loadWeekly } from '../game/weekly.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -43,13 +44,9 @@ export class Bestiary {
     this.panel = new Overlay($('#bestiary'));
   }
 
-  /** A button that opens it: "Bestiary (met/all)", with a dot while new entries wait. */
+  /** A button that opens it (see bestiaryLabel). */
   static label(button) {
-    const fresh = unread().length;
-    button.textContent = `Bestiary (${loadBestiary().length}/${MONSTERS.length})`;
-    button.classList.toggle('has-new', fresh > 0);
-    if (fresh) button.setAttribute('aria-label', `${button.textContent}, ${fresh} new`);
-    else button.removeAttribute('aria-label');
+    bestiaryLabel(button);
   }
 
   open(opener) {

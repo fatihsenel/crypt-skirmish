@@ -7,6 +7,7 @@ import { ITEMS, applyItems, relicFrom, cleanRelics } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
 import { ELITE_TRAITS, eliteTrait, RULES } from './combat.js';
+import { goldFor, cleanGold } from './shop.js';
 
 export const SAVE_VERSION = 1;
 export const HERO_CODES = ['F', 'W', 'R', 'C'];
@@ -375,7 +376,7 @@ export function newCampaign(difficulty = 'normal', names = {}, classes = {}) {
     const name = cleanName(names[code]);
     if (name) party[code].name = name;
   }
-  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], relics: [], done: false, difficulty, tier: 0, stats: blankStats() };
+  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], relics: [], done: false, difficulty, tier: 0, gold: 0, stats: blankStats() };
 }
 
 /** The items each hero may carry into New Game+: what they have equipped, if a fresh hero of their class can use it. */
@@ -466,6 +467,8 @@ export function completeFight(prev, id, game) {
 
   const xp = game.xpEarned();
   state.xp += xp;
+  const gold = goldFor(id);
+  state.gold = (state.gold ?? 0) + gold;
   const target = levelForXp(state.xp);
   const levelUps = [];
   for (const code of HERO_CODES) {
@@ -509,14 +512,16 @@ export function completeFight(prev, id, game) {
   state.pack.push(...loot);
   // A boss leaves its relic behind (once a run: New Game+ may bring it along already).
   state.relics = cleanRelics(state.relics);
-  let relic = NODES[id].boss ? relicFrom(NODES[id].level) : null;
+  // A floor of the Endless Crypt (game/endless.js) isn't on the map: no relic, no act's end.
+  const node = NODES[id] ?? { next: [id] };
+  let relic = node.boss ? relicFrom(node.level) : null;
   if (relic && state.relics.includes(relic)) relic = null;
   if (relic) state.relics = cleanRelics([...state.relics, relic]);
   state.cleared.push(id);
   state.at = id;
-  if (NODES[id].next.length === 0) state.done = true;
+  if (node.next.length === 0) state.done = true;
   // The end of an act: a long rest before the next one (casters would start it empty).
-  const longRest = !!NODES[id].actBreak;
+  const longRest = !!node.actBreak;
   // The altar's blessing lasts one won fight.
   const blessed = HERO_CODES.some((c) => state.party[c].items.includes('altarBlessing'));
   for (const code of HERO_CODES) state.party[code].items = state.party[code].items.filter((i) => i !== 'altarBlessing');
@@ -531,7 +536,7 @@ export function completeFight(prev, id, game) {
   const spent = !!state.phylacterySpent;
   if (longRest) restParty(state);
   const phylactery = !spent ? null : longRest ? 'ready' : game.phylacteryUsed ? 'spent' : null;
-  return { state, report: { xp, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery, blessed, pilgrim } };
+  return { state, report: { xp, gold, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery, blessed, pilgrim } };
 }
 
 /** The relics the next fight starts with: the run's, less a Phylactery spent this act. */
@@ -540,7 +545,7 @@ export function fightRelics(state) {
 }
 
 /** Everyone back to full HP and spell slots, and a spent Phylactery wakes. */
-function restParty(state) {
+export function restParty(state) {
   delete state.phylacterySpent;
   for (const code of HERO_CODES) {
     const rec = state.party[code];
@@ -692,7 +697,7 @@ export function parseSave(text) {
       s.done = false;
       restParty(s);
     }
-    return s;
+    return cleanGold(s); // saves from before gold start with none
   } catch {
     return null;
   }

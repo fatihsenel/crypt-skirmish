@@ -134,6 +134,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
     until they attack or cast, get hurt, or a sharp-eyed monster spots them.
   - Nekhet's Embalming Jar: the rest after each room gives back three-quarters of the missing
     HP, not half (New Game+ only, since Nekhet is the last boss).
+- **Gold and the pedlar:** every room cleared pays gold, more the deeper it is and twice
+  for a boss. A pedlar follows the party down and trades at the rest stops and in camp after
+  each act's boss (Visit the pedlar): potions (30 gold, to whoever carries fewest) and two
+  pieces of gear that change from stop to stop, better ones in later acts. He buys spare gear
+  from the pack at half price. Saves from before gold start with none.
 - **Stops with no fight:** three side trips on the map, each one choice and no dice. Visit one
   on the way, or walk past it; the fork after it is still there.
   - The Wounded Pilgrim (after the Crypt): give up a potion and he finds you after the
@@ -174,6 +179,14 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The relics
   come along too. The title
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
+- **Endless Crypt:** after beating Nekhet, the title also offers a dive below the tomb with the
+  same heroes, their gear, relics and gold. Each floor is a room made from the dive's seed: six
+  chambers joined by doors and gaps, with barrels, crates, columns, water, traps, chests and more
+  monsters the deeper it goes. Every third floor ends in a long rest and the pedlar; monsters
+  get tougher every three floors (as New Game+), elites from floor 7, and a named foe waits on
+  every fifth. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
+  when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
+  watched again, but has no replay or challenge link.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
   its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift,
   Warded or Barbed. The trait depends on the room and the tier: the camp map marks each room ahead
@@ -441,6 +454,8 @@ run with elites slain. Nothing is saved.
 - `npm run sim -- 300 act2`, `act3` or `act4` plays just that act, starting from real parties
   that finished the act before.
 - `npm run sim -- 300 full` plays whole runs, first room to the Tomb, and says where they end.
+- `npm run sim -- 100 endless` dives into the Endless Crypt with parties that won the Tomb, and
+  shows each floor's win rate and where the dives end.
 - Runs are split over one worker thread per core; `JOBS=1` plays them on one thread (the same
   numbers as before threads, for a given `SEED`).
 - `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `PALADIN=1`, `RANGER=1`, `WARLOCK=1` and `BARD=1` change the run.
@@ -488,6 +503,8 @@ src/
     items.js         magic items and the bosses' relics
     abilities.js     actions and spells
     campaign.js      the dungeon map, XP, the pack, rests, New Game+, save data
+    shop.js          gold for each room, and what the pedlar sells and pays
+    endless.js       the Endless Crypt: floors made from a seed, the dive's state and its save
     maps.js          the rooms as ASCII maps
     combat.js        Game: turns, movement, attacks, events
     spells.js        spell slots, targeting, saves and casting (Game builds on it)
@@ -526,7 +543,9 @@ src/
     abilityTip.js    tooltip cards for attacks, spells and actions
     unitTip.js       the character card over figures and portraits
     unitCard.js      the character card's text
-    bestiary.js      the bestiary screen and its lore
+    bestiary.js      the bestiary screen and its lore (loaded with the game)
+    bestiaryLabel.js the bestiary buttons' label: how many met, and the new-entry dot
+    shop.js          the pedlar's panel: buy and sell (loaded with the game, with shop.css)
     banner.js        the end-of-fight banner: result, recap, run summary, Copy result, Save image, Copy log
     overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order

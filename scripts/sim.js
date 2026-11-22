@@ -1,6 +1,6 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
-//   node scripts/sim.js [runs] [act2|act3|act4|full]
+//   node scripts/sim.js [runs] [act2|act3|act4|full|endless]
 // Runs are split over worker threads, one per core; JOBS=n sets how many (JOBS=1: one thread).
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
 // RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's), BARD=1 (a Bard in the Cleric's),
@@ -15,6 +15,7 @@ import { levelById } from '../src/game/maps.js';
 import { newCampaign, completeFight, takeRest, heroUnit, equip, equipProblem, HERO_CODES, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem } from '../src/game/campaign.js';
 import { ITEMS, cleanRelics } from '../src/game/items.js';
 import { seeded } from '../src/game/dice.js';
+import { levelOf, newEndless, nextFloor, afterFloor } from '../src/game/endless.js';
 import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 import { availableParallelism } from 'node:os';
 
@@ -258,7 +259,7 @@ function playTurn(game, u) {
 
 /** One fight. Returns { won, rounds, downed, state }. */
 export function fight(levelId, campaign, rng) {
-  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER), relics: fightRelics(campaign), ...(process.env.RULES && { rules: Number(process.env.RULES) }) });
+  const game = new Game(levelOf(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, campaign.endless ? campaign.tier : TIER), relics: fightRelics(campaign), ...(process.env.RULES && { rules: Number(process.env.RULES) }) });
   game.start();
   let turns = 0;
   while (!game.over && turns++ < 600) {
@@ -454,6 +455,30 @@ const MODES = {
     }
     return { stats: {}, whole: { all: [won, runs] }, ends };
   },
+
+  /** The Endless Crypt, from a pool of parties that won the tomb: floor by floor until they fall. */
+  endless(runs, rng, poolSize = 20) {
+    const full = (t) => [...ACT_ONE[t % 3], ...ACT_TWO[t % 4], ...ACT_THREE[t % 2], ...ACT_FOUR[Math.floor(t / 2) % 2]];
+    const parties = pool(poolSize, full, 'tomb', rng);
+    const stats = {};
+    const ends = {};
+    for (let i = 0; i < runs; i++) {
+      let state = newEndless(parties[i % parties.length], Math.floor(rng() * 2 ** 32));
+      for (;;) {
+        const floor = state.endless.floor;
+        const r = fight(nextFloor(state), state, rng);
+        r.level = state.party.F.level;
+        add(stats, `floor ${String(floor).padStart(2)}`, r);
+        if (!r.won || floor >= 30) {
+          const key = r.won ? 'still going at 30' : `floor ${String(floor).padStart(2)}`;
+          ends[key] = (ends[key] ?? 0) + 1;
+          break;
+        }
+        state = equipAll(afterFloor(r.state).state);
+      }
+    }
+    return { stats, whole: {}, ends };
+  },
 };
 
 /** Fold the workers' results together. */
@@ -482,6 +507,12 @@ function print(mode, data, runs, seed, jobs) {
     const [won, total] = data.whole.all;
     console.log(`Whole campaigns, ${total} runs (${process.env.DIFFICULTY ?? 'normal'}, ${how})`);
     console.log(`  won ${pct(won, total)}; lost at`, Object.fromEntries(Object.entries(data.ends).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k, pct(v, total)])));
+    return;
+  }
+  if (mode === 'endless') {
+    console.log(`Endless Crypt, ${runs} dives (${process.env.DIFFICULTY ?? 'normal'}, ${how})`);
+    for (const [room, list] of Object.entries(data.stats).sort()) report(room, list);
+    console.log('  dives ended on', Object.fromEntries(Object.entries(data.ends).sort().map(([k, v]) => [k, pct(v, runs)])));
     return;
   }
   if (mode === 'campaign') {
@@ -514,7 +545,7 @@ function report(name, results) {
   console.log(`  ${name.padEnd(20)} win ${pct(wins.length, results.length).padStart(4)}  rounds ${avg((r) => r.rounds)}  heroes down ${avg((r) => r.downed)}  hp left ${pct(wins.reduce((s, r) => s + r.hpLeft, 0), wins.length)}`);
 }
 
-const POOLS = { act2: 60, act3: 40, act4: 40 };
+const POOLS = { act2: 60, act3: 40, act4: 40, endless: 20 };
 
 /** Split `runs` over `jobs` worker threads (each with its own seed and a share of the pool). */
 async function inThreads(mode, runs, seed, jobs) {
@@ -534,7 +565,7 @@ async function inThreads(mode, runs, seed, jobs) {
 
 async function main() {
   const runs = Number(process.argv[2]) || 500;
-  const mode = ['act2', 'act3', 'act4', 'full'].includes(process.argv[3]) ? process.argv[3] : 'campaign';
+  const mode = ['act2', 'act3', 'act4', 'full', 'endless'].includes(process.argv[3]) ? process.argv[3] : 'campaign';
   const seed = Number(process.env.SEED) || 1;
   // JOBS=1 plays everything on this thread with one dice stream (the numbers from before threads).
   const jobs = Math.max(1, Math.min(Number(process.env.JOBS) || availableParallelism(), runs));

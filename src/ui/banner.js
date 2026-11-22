@@ -21,7 +21,7 @@ export class EndBanner {
   }
 
   /** End-of-fight banner. `final`: the last room of the campaign. */
-  show(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], relic = null, jar = false, daily = null, challenge = null, share = null, recap = null, win = null, replay = false, ngplus = false, ease = null }) {
+  show(result, { round, level, final, xp, outro = '', longRest = false, summary = null, awards = [], relic = null, jar = false, daily = null, challenge = null, share = null, recap = null, win = null, replay = false, ngplus = false, ease = null, deep = null, links = true }) {
     this.renderSummary(summary);
     this.renderRecap(recap, win);
     this.cardSummary = summary;
@@ -29,9 +29,9 @@ export class EndBanner {
     $('#save-card').textContent = 'Save image';
     $('#watch').hidden = !replay;
     $('#watch').textContent = 'Watch replay';
-    $('#copy-link').hidden = !replay;
+    $('#copy-link').hidden = !replay || !links; // a floor of the Endless Crypt has no link
     $('#copy-link').textContent = 'Copy replay link';
-    $('#copy-challenge').hidden = !replay;
+    $('#copy-challenge').hidden = !replay || !links;
     $('#copy-challenge').textContent = 'Copy challenge link';
     $('#watch-theirs').hidden = !challenge; // the link's fight, once yours is done
     $('#ngplus').hidden = !ngplus;
@@ -58,6 +58,7 @@ export class EndBanner {
     $('#banner').setAttribute('aria-describedby', relic ? 'banner-text banner-relic' : 'banner-text');
     if (relic) $('#banner-relic').innerHTML = `Relic found: <b>${RELICS[relic].name}</b>. ${RELICS[relic].desc}`;
     $('#next').hidden = !won || final;
+    $('#next').textContent = deep ? 'Back to camp' : 'Continue to the map';
     $('#to-map').hidden = won;
     $('#restart').textContent = won ? 'New campaign' : 'Try again';
     $('#restart').hidden = won && !final;
@@ -65,6 +66,11 @@ export class EndBanner {
     $('#ease').hidden = !ease;
     if (ease) $('#ease').textContent = `Try again on ${ease.name}`;
     this.setShare(share);
+    if (deep && !won) { // the dive is over
+      $('#banner-text').textContent = `Your party has fallen on floor ${deep.floor} of the Endless Crypt. The deepest floor ever cleared: ${deep.best || 'none yet'}.`;
+      $('#restart').hidden = true;
+      $('#to-map').textContent = 'Back to the title';
+    }
     if (daily) this.dailyBanner(daily, level);
     if (challenge) this.challengeBanner(challenge);
     $('#banner').dataset.result = result;

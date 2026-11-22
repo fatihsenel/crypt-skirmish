@@ -1,7 +1,8 @@
 // Between fights: the dungeon map, the party, the pack of loot, and what just happened.
 // Also the title screen. Plain HTML/SVG; all state changes go through the handlers.
 
-import { Bestiary } from './bestiary.js';
+import { bestiaryLabel } from './bestiaryLabel.js';
+import { canTrade } from '../game/shop.js';
 import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
@@ -19,6 +20,7 @@ import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
 import { dayKey, dailyPlan, loadDaily, streak, bestFight, loadBestFights, resultFor } from '../game/daily.js';
 import { weekKey, weeklyPlan, loadWeekly, weekStreak } from '../game/weekly.js';
 import { ELITE_TRAITS } from '../game/combat.js';
+import { loadEndless, loadBestFloor, nextFloor, levelOf, restFloor, floorTier } from '../game/endless.js';
 
 const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -70,8 +72,8 @@ function focusKey(el) {
 const nameLabel = (cls) => `${TEMPLATES[cls].cls}’s name (${TEMPLATES[cls].name} if left blank)`;
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -96,6 +98,7 @@ export class Camp {
       const b = ev.target.closest('button');
       if (b?.id === 'title-continue') this.h.onContinue();
       if (b?.id === 'title-ngplus') this.h.onNewGamePlus(b);
+      if (b?.id === 'title-endless') this.h.onEndless();
       if (b?.id === 'title-daily-play') this.h.onDaily();
       if (b?.id === 'title-weekly-play') this.h.onWeekly();
       if (b?.dataset.best) {
@@ -205,6 +208,13 @@ export class Camp {
     $('#title-continue').hidden = !save;
     $('#title-ngplus').hidden = !won;
     $('#title-ngplus').textContent = won ? `New Game+ (${difficultyLabel(won.difficulty, (won.tier ?? 0) + 1)})` : 'New Game+';
+    // The Endless Crypt opens with a won campaign, and stays open while a dive is under way.
+    const dive = loadEndless();
+    const best = loadBestFloor();
+    $('#title-endless').hidden = !won && !dive;
+    $('#title-endless').textContent = dive ? `Endless Crypt: floor ${dive.endless.floor}` : 'Endless Crypt';
+    if (best) $('#title-endless').dataset.hint = `Deepest floor cleared: ${best}`;
+    else delete $('#title-endless').dataset.hint;
     $('#title-tips').checked = tips.on;
     tips.hide();
     $('#title-save').textContent = save
@@ -216,7 +226,7 @@ export class Camp {
     $('#title-setup').hidden = true;
     this.renderHistory(loadHistory());
     this.renderAwards(loadAchievements());
-    Bestiary.label($('#title-bestiary'));
+    bestiaryLabel($('#title-bestiary'));
     this.best = {};
     this.renderDaily();
     this.renderWeekly();
@@ -345,18 +355,19 @@ export class Camp {
     const had = focusKey(document.activeElement); // the redraw replaces it: put focus back after
     this.state = state;
     this.report = report;
-    const options = choices(state);
+    const deep = !!state.endless; // a dive in the Endless Crypt: its floors instead of the map
+    const options = deep ? ['deep'] : choices(state);
     if (!options.includes(this.selected)) this.selected = options[0] ?? null;
     this.confirmNew = false;
     $('#title').hidden = true;
     $('#camp').hidden = false;
     $('#camp-report').innerHTML = this.reportHtml(state, report);
     const map = $('#camp-map');
-    map.innerHTML = this.mapSvg(state, options);
+    map.innerHTML = deep ? this.floorsHtml(state) : this.mapSvg(state, options);
     // The acts don't fit a narrow panel at a readable size: scroll to where the party is.
-    const here = state.at ? pos(state.at).x : 0;
+    const here = state.at && !deep ? pos(state.at).x : 0;
     map.scrollLeft = Math.max(0, here * (map.scrollWidth / MAP_W) - map.clientWidth / 2);
-    $('#camp-room').innerHTML = this.roomHtml(state);
+    $('#camp-room').innerHTML = deep ? this.floorHtml(state) : this.roomHtml(state);
     $('#camp-party').innerHTML = this.partyHtml(state);
     $('#camp-pack').innerHTML = this.packHtml(state);
     $('#camp-pack-box').hidden = !state.pack.length; // nothing to hand out
@@ -366,8 +377,10 @@ export class Camp {
       const asleep = id === 'phylactery' && state.phylacterySpent;
       return `<div class="relic-item${asleep ? ' asleep' : ''}"><b class="relic">${esc(RELICS[id].name)}</b>${asleep ? ' <span class="relic-state">spent until the next long rest</span>' : ''}<small>${esc(RELICS[id].desc)}</small></div>`;
     }).join('');
-    $('#camp-new').textContent = 'Abandon run';
-    Bestiary.label($('#camp-bestiary'));
+    $('#camp-new').textContent = deep ? 'End the dive' : 'Abandon run';
+    bestiaryLabel($('#camp-bestiary'));
+    // The pedlar trades at the rest stops and after each act's boss.
+    $('#camp-trade').hidden = !canTrade(state);
     const returned = had?.includes('data-unequip') && document.querySelector('#camp-pack .pack-item:last-child [data-equip]:not([disabled])');
     if (had) (document.querySelector(had) ?? (returned || this.firstControl()))?.focus();
   }
@@ -381,7 +394,7 @@ export class Camp {
     const news = [...$('#camp-report').children].filter((e) => !e.classList.contains('xp'))
       .map((e) => e.textContent.replace(/\s+/g, ' ').trim()).join(' ');
     announce(`Camp. Party level ${lvl}, ${state.xp}${next ? ` of ${next}` : ''} XP. ${news}`
-      + (this.selected ? ` Next: ${nodeName(this.selected)}.` : ''));
+      + (state.endless ? ` Next: floor ${state.endless.floor}.` : this.selected ? ` Next: ${nodeName(this.selected)}.` : ''));
   }
 
   /** Where focus goes when the camp opens or a focused control is gone: the way on, or the pack. */
@@ -397,7 +410,7 @@ export class Camp {
     const bar = `<div class="xp" data-hint="Party XP">
       <span>Party level <b>${lvl}</b></span>
       <span class="xpbar"><i style="width:${pct}%"></i></span>
-      <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · ${esc(difficultyLabel(state.difficulty ?? 'normal', state.tier))}</span>
+      <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · <b class="gold">${state.gold ?? 0} gold</b> · ${esc(difficultyLabel(state.difficulty ?? 'normal', state.tier))}</span>
     </div>`;
     let news = '';
     if (report?.event) {
@@ -409,7 +422,7 @@ export class Camp {
         ...(report.potions ? [`<b class="loot">${report.potions} potion${report.potions > 1 ? 's' : ''} of healing</b> (shared out)`] : []),
         ...report.loot.map((i) => `<b class="loot">${esc(ITEMS[i].name)}</b>`),
       ];
-      const parts = [`<p>Room cleared: <b>+${report.xp} XP</b>. ${report.longRest
+      const parts = [`<p>${report.floor ? `Floor ${report.floor} cleared` : 'Room cleared'}: <b>+${report.xp} XP</b>${report.gold ? `, <b class="gold">+${report.gold} gold</b>` : ''}. ${report.longRest
         ? 'Long rest: full HP and every spell slot back.'
         : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: three-quarters of everyone’s missing HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
       if (report.banter) parts.push(`<p>${report.banter.map(([n, l]) => `<b>${esc(n)}:</b> “${esc(l)}”`).join('<br>')}</p>`);
@@ -423,6 +436,8 @@ export class Camp {
           `<li><b>${esc(l.name)}</b> reaches level ${l.level}: ${esc(l.note)}</li>`).join('')}</ul></div>`);
       }
       news = parts.join('');
+    } else if (!state.at && state.endless) {
+      news = '<p>Below the tomb the stairs go on down, into rooms no map shows. Every floor is deeper and deadlier; every third ends in a long rest, and the pedlar. The dive ends when the party falls.</p>';
     } else if (!state.at) {
       news = '<p>The crypt waits below. Choose your way on the map; the party rests and shares XP between rooms. Progress is saved after every room.</p>';
     }
@@ -494,6 +509,31 @@ export class Camp {
       <button type="button" class="primary" data-enter="${id}">${esc(verb)}</button>`;
   }
 
+  /** The Endless Crypt's floors around the party's: cleared, this one, and the next few. */
+  floorsHtml(state) {
+    const now = state.endless.floor;
+    const best = loadBestFloor();
+    const floors = [];
+    for (let f = Math.max(1, now - 3); f <= now + 6; f++) floors.push(f);
+    return `<ol class="deep-track" aria-label="Floors of the Endless Crypt">${floors.map((f) => {
+      const cls = [f < now ? 'cleared' : f === now ? 'here' : '', f % 5 === 0 ? 'boss' : '', restFloor(f) ? 'rest' : ''].join(' ');
+      const what = [f < now ? 'cleared' : f === now ? 'next' : '', f % 5 === 0 ? 'a named foe' : '', restFloor(f) ? 'then a long rest and the pedlar' : ''].filter(Boolean).join(', ');
+      return `<li class="${cls}" aria-label="Floor ${f}${what ? `, ${what}` : ''}"><b>${f}</b></li>`;
+    }).join('')}</ol>
+    <p class="muted deep-best">Deepest floor ever cleared: ${best || 'none yet'}.</p>`;
+  }
+
+  /** The next floor of the Endless Crypt and the way down. */
+  floorHtml(state) {
+    const floor = state.endless.floor;
+    const level = levelOf(nextFloor(state));
+    const tier = floorTier(floor);
+    return `<h3>${esc(level.name)}</h3>
+      <p>${esc(level.intro)}</p>
+      <p class="teaser">${tier ? `Monsters here are as tough as New Game+ ${tier}${tier >= 2 ? ', and one is an elite' : ''}. ` : ''}${restFloor(floor) ? 'A long rest after this floor, and the pedlar.' : `A long rest after floor ${Math.ceil(floor / 3) * 3}.`}</p>
+      <button type="button" class="primary" data-enter="deep">Go down to floor ${floor}</button>`;
+  }
+
   partyHtml(state) {
     return HERO_CODES.map((code) => {
       const rec = state.party[code];
@@ -542,7 +582,8 @@ export class Camp {
     }
     const b = ev.target.closest('button');
     if (!b) return;
-    if (b.dataset.enter) this.h.onEnter(b.dataset.enter);
+    if (b.id === 'camp-trade') this.h.onTrade(b);
+    else if (b.dataset.enter) this.h.onEnter(b.dataset.enter);
     else if (b.dataset.equip) {
       const [i, code] = b.dataset.equip.split(':');
       const what = `${ITEMS[this.state.pack[i]].name} given to ${heroUnit(code, this.state.party[code]).name}.`;
@@ -556,10 +597,11 @@ export class Camp {
     } else if (b.id === 'camp-new') {
       if (!this.confirmNew) {
         this.confirmNew = true;
-        b.textContent = 'Press again to abandon this run';
+        b.textContent = this.state.endless ? 'Press again to end the dive' : 'Press again to abandon this run';
         return;
       }
-      this.h.onNewCampaign();
+      if (this.state.endless) this.h.onEndDive();
+      else this.h.onNewCampaign();
     }
   }
 }

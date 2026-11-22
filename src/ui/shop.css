@@ -1,0 +1,12 @@
+/* The pedlar's panel (ui/shop.js), loaded with it. */
+.shop-gold { margin: 4px 0 10px; }
+.shop-list { list-style: none; margin: 0 0 12px; padding: 0; }
+.shop-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; border: 1px dashed rgba(217, 180, 90, 0.4);
+}
+.shop-list small { display: block; color: var(--muted); font-size: 12px; }
+.shop-list button { flex: none; white-space: nowrap; }
+@media (max-width: 600px) {
+  .shop-list li { flex-direction: column; align-items: stretch; }
+}

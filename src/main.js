@@ -4,7 +4,7 @@
 import { camp, later, loadSave, loadWonRun, hideBoot, SAVE_KEY, WON_KEY } from './boot.js';
 import * as THREE from 'three';
 import { Game, ELITE_TRAITS, RULES } from './game/combat.js';
-import { LEVELS, levelById } from './game/maps.js';
+import { LEVELS } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, serialize,
@@ -25,6 +25,8 @@ import { spiritWeapon } from './render/effects.js';
 import { wait, playback, calm, setMotion, onSystemMotion, keepAwake } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Bestiary } from './ui/bestiary.js';
+import { Shop } from './ui/shop.js';
+import { levelOf, newEndless, nextFloor, afterFloor, loadEndless, saveBestFloor, clearEndless, ENDLESS_KEY } from './game/endless.js';
 import { meet, metBefore, slay, slayElite } from './game/bestiary.js';
 import { TEMPLATES } from './game/units.js';
 import { sfx } from './audio/sfx.js';
@@ -70,7 +72,8 @@ const perfCheck = setInterval(() => {
 let saving = true;
 function writeSave(state) {
   if (!saving) return;
-  try { localStorage.setItem(SAVE_KEY, serialize(state)); } catch { /* not saved */ }
+  // A dive in the Endless Crypt is kept apart from the campaign's save.
+  try { localStorage.setItem(state.endless ? ENDLESS_KEY : SAVE_KEY, serialize(state)); } catch { /* not saved */ }
 }
 function setWonRun(state) {
   try {
@@ -119,7 +122,7 @@ let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, 
 const $loading = document.getElementById('loading');
 let undoState = null; // { undo, unit }: the last move, while it can still be taken back (see undoMove)
 let fightTicket = 0; // the latest fight asked for while its figures were loading
-const roomFiles = (id, party) => filesForRoom(levelById(NODES[id].level).rows, party);
+const roomFiles = (id, party) => filesForRoom(levelOf(id).rows, party);
 
 /** Save the campaign together with the fight in progress. */
 function saveFight() {
@@ -156,12 +159,20 @@ const hud = new Hud({
   },
   onNext: () => leaveRoom(),
   onMap: () => {
-    if (daily || challenge) return backToTitle();
+    if (daily || challenge || (campaign?.endless && game?.over === 'defeat')) return backToTitle(); // a dive ends where it falls
     sfx.ui();
     showCamp(null);
   },
   onToggleMusic: () => toggleMusic(),
   onToggleSound: () => toggleSound(),
+});
+
+// The pedlar's panel: a trade is saved at once, like handing out an item.
+const shop = new Shop(() => campaign, (state) => {
+  sfx.chest();
+  campaign = state;
+  writeSave(campaign);
+  camp.show(campaign);
 });
 
 // The camp itself is made in boot.js, which put the title up before this file arrived.
@@ -179,6 +190,12 @@ Object.assign(later, {
     writeSave(campaign);
     camp.show(campaign);
   },
+  onTrade: (opener) => {
+    sfx.ui();
+    shop.open(opener);
+  },
+  onEndless: () => startEndless(),
+  onEndDive: () => endDive(),
   onNewCampaign: (difficulty, names, classes) => startCampaign(difficulty, names, classes),
   onDaily: () => startDaily(),
   onWeekly: () => startDaily(true),
@@ -279,6 +296,38 @@ const heirlooms = new Heirlooms((won, keep) => {
   showCamp(null);
 });
 
+/**
+ * The Endless Crypt after a won campaign: the dive in progress, or a new one with the won
+ * party, floor after floor of rooms made from its seed (game/endless.js), until it falls.
+ */
+function startEndless() {
+  const dive = loadEndless();
+  const won = loadWonRun();
+  if (!dive && !won) return;
+  sfx.ui();
+  saving = true;
+  daily = null;
+  challenge = null;
+  campaign = dive ?? newEndless(won, newSeed());
+  const saved = campaign.fight;
+  delete campaign.fight;
+  if (!dive) writeSave(campaign);
+  if (saved) {
+    camp.hide();
+    nodeId = saved.node;
+    newGame(saved);
+  } else {
+    showCamp(null);
+  }
+}
+
+/** Give up the dive in progress (from camp), back to the title. */
+function endDive() {
+  if (!campaign?.endless) return;
+  clearEndless();
+  backToTitle();
+}
+
 /** Today's daily crypt (or, `weekly`, this week's elite crypt): its room and party, apart from the campaign (nothing is saved). */
 function startDaily(weekly = false) {
   sfx.ui();
@@ -340,6 +389,15 @@ function showCamp(report) {
 
 function enterRoom(id) {
   sfx.ui();
+  // The Endless Crypt's next floor.
+  if (id === 'deep') {
+    if (!campaign?.endless) return;
+    camp.hide();
+    tips.hide();
+    nodeId = nextFloor(campaign);
+    newGame();
+    return;
+  }
   // A stop with no fight: the choice is made from the camp ("altar:offer").
   if (id.includes(':')) {
     const [node, opt] = id.split(':');
@@ -372,7 +430,7 @@ function enterRoom(id) {
 // real runs, dailies and linked fights, not test fights or replays.
 let leftFor = null;
 window.addEventListener('pagehide', () => {
-  if (!game || game.over || replay || !campaign || !(saving || daily || challenge) || leftFor === game) return;
+  if (!game || game.over || replay || !campaign || campaign.endless || !(saving || daily || challenge) || leftFor === game) return;
   leftFor = game;
   const mode = challenge ? 'challenge' : daily ? (daily.weekly ? 'weekly' : 'daily') : 'campaign';
   track(...leftEvent({ game, nodeId, campaign, mode, input: takeInput() }));
@@ -382,7 +440,13 @@ window.addEventListener('pagehide', () => {
 function leaveRoom() {
   if (game?.over !== 'victory') return;
   sfx.ui();
-  const { state, report } = completeFight(campaign, nodeId, game);
+  let { state, report } = completeFight(campaign, nodeId, game);
+  if (state.endless) { // a floor of the Endless Crypt: its gold, the next floor, a long rest every third
+    const f = afterFloor(state);
+    state = f.state;
+    Object.assign(report, { gold: f.gold, longRest: f.longRest, floor: f.floor });
+    saveBestFloor(f.floor);
+  }
   campaign = state;
   writeSave(campaign);
   // Two heroes trade a line in camp (with speech bubbles on).
@@ -679,7 +743,7 @@ function startFight(resume, watch = null) {
     stage.scene.remove(v.group);
   }
 
-  const level = levelById(NODES[nodeId].level);
+  const level = levelOf(nodeId);
   // A daily always starts from the day's seed, so every try (and everyone) faces the same dice.
   // A linked fight played yourself starts from the link's seed: the same dice it had.
   const seed = watch?.seed ?? resume?.seed ?? daily?.seed ?? challenge?.rec.seed ?? testSeed ?? newSeed();
@@ -1211,7 +1275,7 @@ async function checkGameOver() {
   const g = game;
   if (anim.lastWords(game.over)) await wait(1400); // the last word, before the banner
   if (game !== g) return true;
-  const end = settleFight({ game, nodeId, campaign, record, daily, challenge, saving, feats, store: { writeSave, clearSave, setWonRun } });
+  const end = settleFight({ game, nodeId, campaign, record, daily, challenge, saving, feats, store: { writeSave, clearSave, setWonRun, clearEndless } });
   campaign = end.campaign;
   hud.renderActionBar(game, { selected: null, busy: false });
   if (game.over === 'victory') {

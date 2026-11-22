@@ -3,7 +3,7 @@
 // fights, and what the end banner shows. main.js plays the sounds and shows the banner.
 
 import { ELITE_TRAITS } from './game/combat.js';
-import { levelById } from './game/maps.js';
+import { levelOf, isFloor, loadBestFloor, restFloor } from './game/endless.js';
 import { relicFrom } from './game/items.js';
 import { NODES, DIFFICULTIES, completeFight, recordDefeat, easeOffer, runSummary, runShareText } from './game/campaign.js';
 import { fightCheck } from './game/replay.js';
@@ -27,14 +27,16 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
   const won = game.over === 'victory';
   recordBlows(game.blows); // the bestiary's deadliest foes
   if (record) Object.assign(record, { result: game.over, check: fightCheck(game) }); // how it ended, for a link
-  if (saving && record) saveLastFight({ ...record, log: [...record.log] }); // kept with the run when it ends
-  const level = levelById(NODES[nodeId].level);
+  // A floor of the Endless Crypt (game/endless.js): no relic, no Past runs, no play stats.
+  const deep = isFloor(nodeId);
+  if (saving && record && !deep) saveLastFight({ ...record, log: [...record.log] }); // kept with the run when it ends
+  const level = levelOf(nodeId);
   const final = !!level.final && !challenge; // a linked fight is one room, not the campaign's end
   let summary = null;
   let awards = []; // achievements unlocked by this fight (none on test runs)
   let share = null; // a won campaign's text to share
   // A boss leaves its relic behind (completeFight adds it to the run).
-  const dropped = won && campaign && !daily && !challenge && NODES[nodeId].boss ? relicFrom(level.id) : null;
+  const dropped = won && campaign && !daily && !challenge && NODES[nodeId]?.boss ? relicFrom(level.id) : null;
   const relic = dropped && !(campaign.relics ?? []).includes(dropped) ? dropped : null;
   if (won) {
     if (saving || daily) awards = unlock('room', { game, node: nodeId, feats, daily: !!daily, met: loadBestiary().length, slain: slainTotal(), eliteKinds: Object.keys(loadElitesSlain()).length });
@@ -50,13 +52,15 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
       summary = runSummary(campaign);
       if (saving) share = runShareText(summary);
     }
+  } else if (campaign && deep) {
+    store.clearEndless(); // the dive ends where the party falls
   } else if (campaign) {
     campaign = recordDefeat(campaign, game, nodeId);
     store.writeSave(campaign);
   }
   // Anonymous play stats: real runs, dailies and linked fights, not test fights. A lost run or
   // daily also sends its replay, without names (the ?losses page).
-  if (saving || daily || challenge) {
+  if ((saving && !deep) || daily || challenge) {
     const mode = challenge ? 'challenge' : daily ? (daily.weekly ? 'weekly' : 'daily') : 'campaign';
     trackAll(fightEvents({ game, nodeId, campaign, mode, final: final && won, input: takeInput() }));
     if (!won && record && !challenge) {
@@ -67,9 +71,11 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
   const dailyResult = daily ? settleDaily(game, nodeId, daily, level, record, awards) : null;
   const versus = challenge && challengeText(challenge.theirs, { won, rounds: game.round }, level.name);
   // Lost this room again and again in a real run: offer the rest of it one difficulty down.
-  const ease = !won && saving && campaign && !daily && !challenge ? easeOffer(campaign, nodeId) : null;
+  const ease = !won && saving && campaign && !daily && !challenge && !deep ? easeOffer(campaign, nodeId) : null;
   const banner = {
-    round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro, longRest: !!NODES[nodeId].actBreak,
+    round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro,
+    longRest: deep ? restFloor(campaign.endless.floor) : !!NODES[nodeId]?.actBreak,
+    deep: deep && { floor: campaign.endless.floor, best: loadBestFloor() }, links: !deep,
     summary, awards, relic, jar: !!campaign?.relics?.includes('jar') && !daily && !challenge, daily: dailyResult, challenge: versus, share, replay: !!record, recap: won ? null : fightRecap(game),
     win: won && !summary ? winRecap(game) : null,
     ngplus: !!summary && saving && !!campaign?.done,

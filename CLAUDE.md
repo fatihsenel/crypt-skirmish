@@ -139,7 +139,7 @@ server on 5173.
   board's labels scale their type by `--t` instead, since zoom would move them. Copying text
   goes through `copyText` (`ui/copyBox.js`), which falls back to a panel with it selected.
 - Settings and progress live in localStorage under `crypt-skirmish:*` keys (`settings`,
-  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `heard`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, `loss-key`, …).
+  `threats`, `tips`, `history`, `achievements`, `daily`, `weekly`, `best-fights`, `bestiary`, `bestiary-read`, `slain`, `elites-slain`, `hurt`, `heard`, `last-fight`, `won-run`, `deepest`, `skull-poked`, `install-tip`, `loss-key`, `endless`, `endless-best`, …).
 
 ## Adding content
 
@@ -158,6 +158,16 @@ server on 5173.
   paths or dice, so its old saves and links fall back.
 - **Relic:** `RELICS` in `game/items.js` (its `boss` is the room that drops it) and its rule in
   `Game` (`this.relics`) or `completeFight`. Relics ride in the fight record and links (`rl`).
+- **Endless Crypt:** `game/endless.js`. A floor is the room id `deep:<seed>:<floor>`, rebuilt
+  by `makeFloor` (`levelOf(id)` finds any room, campaign or floor; use it, not
+  `levelById(NODES[id].level)`, where a fight's room is looked up). The dive is a campaign state
+  with `endless: { seed, floor, rested }`, saved under `crypt-skirmish:endless` (`writeSave`
+  picks the key); `afterFloor` follows `completeFight`. Changing `makeFloor`, `POOL` or
+  `floorBudget` changes every floor, so a saved mid-floor fight falls back to camp.
+  `npm run sim -- 100 endless` checks its balance.
+- **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,
+  `PRICES`); `ui/shop.js` is the panel, opened from camp through `onTrade`. A new item for sale
+  needs a price in `PRICES` and a place in `STOCK`.
 - **Stop with no fight:** a node of `kind: 'event'` in `NODES`, its words and options in
   `EVENTS`, and its rule in `takeEvent` and `eventProblem` (`game/campaign.js`); the camp
   draws its options as buttons (`data-enter="altar:offer"`) and `EVENT_NEWS` in `camp.js` says

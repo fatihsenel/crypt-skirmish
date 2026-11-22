@@ -1019,7 +1019,7 @@ button.primary:hover:not(:disabled) { background: rgba(217, 180, 90, 0.32); }
 button.quiet { background: none; border-color: transparent; color: var(--muted); font-size: 12px; padding: 4px 8px; }
 .muted { color: var(--muted); }
 .passive-tag.item { color: var(--gold); }
-b.loot { color: var(--gold); }
+b.loot, b.gold { color: var(--gold); }
 
 /* --- title screen ------------------------------------------------------------ */
 #title {
@@ -1229,6 +1229,7 @@ b.loot { color: var(--gold); }
 }
 .camp-head { display: flex; justify-content: space-between; align-items: center; }
 .camp-head h2 { margin: 0; font: 700 26px var(--display); color: var(--gold); }
+#camp-trade { margin: 0 10px 0 auto; } /* the pedlar, beside the bestiary */
 .camp-foot { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
 .camp-foot button { font-size: 12px; color: var(--muted); }
 #camp-pack-box[hidden], #camp-relics-box[hidden] { display: none; }
@@ -1341,6 +1342,15 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 .camp-left, .camp-right { min-width: 0; } /* let the map scroll instead of widening its column */
 #camp-map { overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
 #camp-map svg { width: 100%; min-width: 820px; height: auto; display: block; } /* about 75% scale at the narrowest */
+/* The Endless Crypt's floors, in place of the map. */
+.deep-track { display: flex; gap: 8px; list-style: none; margin: 14px 0 6px; padding: 0; flex-wrap: wrap; }
+.deep-track li { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.2); background: #1c1720; color: var(--muted); }
+.deep-track li.cleared { border-color: rgba(217, 180, 90, 0.55); background: #2a2318; }
+.deep-track li.here { border-color: var(--gold); color: var(--ink); box-shadow: 0 0 0 3px rgba(217, 180, 90, 0.25); }
+.deep-track li.boss { border-color: var(--monster); }
+.deep-track li.rest { border-style: double; border-width: 4px; }
+.deep-best { margin: 0 0 4px; }
+@media (max-width: 420px) { .deep-track { gap: 6px; } .deep-track li { width: 34px; height: 34px; } }
 #camp-map .edge { stroke: rgba(255, 255, 255, 0.16); stroke-width: 2; stroke-dasharray: 4 5; }
 #camp-map .edge.done { stroke: var(--gold); stroke-dasharray: none; opacity: 0.7; }
 #camp-map .edge.open { stroke: var(--gold); stroke-dasharray: 4 5; opacity: 0.9; }
