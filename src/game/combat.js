@@ -2,7 +2,7 @@
 // features (doors, traps, chests); spells are in spells.js. Knows nothing about three.js; the controller
 // animates the results it returns.
 
-import { rollDice, rollExpr, abilityMod, hash } from './dice.js';
+import { rollDice, rollExpr, parseDice, abilityMod, hash } from './dice.js';
 import { Grid, key, gridDistance, pathFrom } from './grid.js';
 import { createUnit, applyLevel, classOf, TEMPLATES } from './units.js';
 import { applyItems } from './items.js';
@@ -69,6 +69,29 @@ export const isMelee = (attack) => isWeapon(attack) && attack.reach === 1;
  * A ranged weapon's long range (rules 2): bows and javelins reach four times as far, at
  * disadvantage past their normal range (a spider's web, `long`, its own). Spells don't.
  */
+/**
+ * The chance (0 to 1) that d20 + `bonus` hits `ac`: a natural 1 always misses, a roll of
+ * `critOn` or more always hits. With advantage the better of two dice, with disadvantage the worse.
+ */
+export function hitChance(bonus, ac, mode = 'normal', critOn = 20) {
+  let faces = 0;
+  for (let f = 2; f <= 20; f++) if (f >= critOn || f + bonus >= ac) faces++;
+  const p = faces / 20;
+  return mode === 'adv' ? 1 - (1 - p) ** 2 : mode === 'dis' ? p * p : p;
+}
+
+/** The chance (0 to 1) that a save of d20 + `bonus` falls short of `dc` (no natural 1s or 20s on saves). */
+export function failChance(bonus, dc, mode = 'normal') {
+  const p = Math.min(1, Math.max(0, (dc - bonus - 1) / 20));
+  return mode === 'adv' ? p * p : mode === 'dis' ? 1 - (1 - p) ** 2 : p;
+}
+
+/** The lowest and highest a dice expression can roll, plus `bonus` (at least 1, like a hit). */
+export function diceRange(expr, bonus = 0) {
+  const d = parseDice(expr);
+  return { min: Math.max(1, d.count + d.bonus + bonus), max: Math.max(1, d.count * d.sides + d.bonus + bonus) };
+}
+
 export const longReach = (attack) => (isWeapon(attack) && attack.reach > 1 ? attack.long ?? attack.reach * 4 : attack.reach);
 
 /**
@@ -1668,6 +1691,31 @@ export class Game extends Spellcasting {
     const spell = m.spell ?? 'huntersMark';
     if (spell === 'huntersMark' && !isWeapon(attack)) return null;
     return { ...rollExpr(SPELLS[spell].damage, { crit, rng: this.rng }), spell };
+  }
+
+  /**
+   * The odds of an attack before it's made, for the preview: `chance` to hit (cover counted, the
+   * reactions that might turn it left out), and the damage a hit does, `min` to `max` (no crit).
+   */
+  attackOdds(attacker, target, attack) {
+    const mods = this.attackMods(attacker, target, attack);
+    const cover = this.coverBonus(attacker, target);
+    const critOn = isWeapon(attack) && attacker.critRange ? attacker.critRange : 20;
+    const chance = hitChance(this.toHitBonus(attacker, attack), this.acOf(target) + cover, mods.mode, critOn);
+    const dmg = attack.damage ? diceRange(attack.damage, this.damageBonus(attacker, attack)) : { min: 0, max: 0 };
+    if (attack.damage && this.canSneak(attacker, target, mods)) {
+      const n = attacker.sneakDice ?? 2;
+      dmg.min += n;
+      dmg.max += n * 6;
+    }
+    return { chance, cover, mods, ...dmg };
+  }
+
+  /** The chance `unit` fails a `stat` save against `dc`, for the preview (luck and inspiration left out). */
+  saveOdds(unit, stat, dc) {
+    if ((stat === 'str' || stat === 'dex') && this.has(unit, 'paralyzed')) return 1;
+    const bonus = abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0) + this.auraBonus(unit);
+    return failChance(bonus, dc, stat === 'dex' && this.has(unit, 'restrained') ? 'dis' : 'normal');
   }
 
   canSneak(attacker, target, mods) {

@@ -868,7 +868,9 @@ export class Hud {
   renderInitiative(game) {
     this.game = game;
     this.unitTip.refresh();
-    $('#initiative').innerHTML = game.order
+    // The round, first and pinned while the portraits scroll: timed effects count by it.
+    const round = game.round >= 1 ? `<div class="round"><span class="sr-only">Round ${game.round}</span><small aria-hidden="true">Rd</small><b aria-hidden="true">${game.round}</b></div>` : '';
+    $('#initiative').innerHTML = round + game.order
       .map((u) => {
         const cls = ['chip', u.team, u === game.current ? 'current' : '', u.alive ? '' : 'dead', u.dying ? 'dying' : ''].join(' ');
         const pct = Math.max(0, (u.hp / u.maxHp) * 100);

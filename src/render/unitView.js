@@ -95,7 +95,7 @@ export class UnitView {
 
     const el = document.createElement('div');
     el.className = `unit-label ${unit.team}`;
-    el.innerHTML = `<span class="tags"></span><span class="name"></span><span class="hpbar"><i></i><b></b></span>`;
+    el.innerHTML = `<span class="tags"></span><span class="name"></span><span class="hpbar"><i></i><b></b><s class="may"></s><s class="sure"></s></span>`;
     el.querySelector('.name').textContent = unit.name;
     this.label = new CSS2DObject(el);
     this.label.position.y = this.model.height + 0.2;
@@ -236,6 +236,25 @@ export class UnitView {
     // Temporary HP: a pale band laid over the bar, as a share of max HP.
     const temp = this.label.element.querySelector('.hpbar b');
     temp.style.width = `${Math.min(100, ((this.unit.tempHp ?? 0) / this.unit.maxHp) * 100)}%`;
+  }
+
+  /**
+   * The hovered attack's damage on the bar: `sure` (its lowest roll) and `may` (up to its
+   * highest) shaded off the end, after any temporary HP soaks it; a skull when even the lowest
+   * roll would drop the figure. `null` clears it.
+   */
+  previewDamage(range) {
+    const el = this.label.element;
+    const [may, sure] = el.querySelectorAll('.hpbar s');
+    const u = this.unit;
+    const band = (node, dmg) => {
+      const lost = range ? Math.min(u.hp, Math.max(0, dmg - (u.tempHp ?? 0))) : 0;
+      node.style.left = `${((u.hp - lost) / u.maxHp) * 100}%`;
+      node.style.width = `${(lost / u.maxHp) * 100}%`;
+    };
+    band(may, range?.max ?? 0);
+    band(sure, range?.min ?? 0);
+    el.classList.toggle('lethal', !!range && range.min - (u.tempHp ?? 0) >= u.hp);
   }
 
   setActive(on) {

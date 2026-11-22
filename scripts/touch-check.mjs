@@ -206,8 +206,10 @@ try {
       if (Math.min(a.right, c.right) - Math.max(a.left, c.left) > 2 && Math.min(a.bottom, c.bottom) - Math.max(a.top, c.top) > 2) out.push('${where}: #' + fixed[i].id + ' runs into #' + fixed[j].id);
     }
     // The whole party in the turn order (more past them scroll).
-    const bar = document.getElementById('initiative'), chips = [...bar.children];
-    if (!${SIDEWAYS} && chips.length >= 4 && chips[0].offsetWidth * 4 + 3 * parseFloat(getComputedStyle(bar).columnGap) > bar.clientWidth + 1) out.push('${where}: four portraits do not fit across the turn order');
+    // The round box comes first, pinned: it and four portraits fit across.
+    const bar = document.getElementById('initiative'), chips = [...bar.querySelectorAll('.chip')], round = bar.querySelector('.round');
+    const roundW = round ? round.offsetWidth + parseFloat(getComputedStyle(bar).columnGap) : 0;
+    if (!${SIDEWAYS} && chips.length >= 4 && roundW + chips[0].offsetWidth * 4 + 3 * parseFloat(getComputedStyle(bar).columnGap) > bar.clientWidth + 1) out.push('${where}: four portraits do not fit across the turn order');
     // A banner's card starts below the corner buttons.
     const card = document.querySelector('#banner:not([hidden]) .card');
     if (card && card.getBoundingClientRect().top < document.getElementById('audio').getBoundingClientRect().bottom) out.push('${where}: the card starts under the sound and settings buttons');

@@ -72,6 +72,11 @@ html, body {
 }
 .unit-label .hpbar i { display: block; height: 100%; transition: width 0.3s; }
 .unit-label .hpbar { position: relative; }
+/* A hovered attack's damage, shaded off the end of the bar: up to its highest roll, and (darker) its lowest. */
+.unit-label .hpbar s { position: absolute; top: 0; height: 100%; width: 0; text-decoration: none; }
+.unit-label .hpbar s.may { background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 2px, rgba(0, 0, 0, 0.2) 2px 4px); }
+.unit-label .hpbar s.sure { background: rgba(0, 0, 0, 0.7); }
+.unit-label.lethal .name::before { content: '☠ '; color: #ff6b5b; }
 .unit-label .hpbar b { position: absolute; top: 0; left: 0; height: 100%; width: 0; background: rgba(200, 220, 255, 0.75); transition: width 0.3s; }
 .temp-hp { color: #c8dcff; }
 .hpbar i[data-level='high'] { background: var(--hp-high); }
@@ -165,10 +170,21 @@ html, body {
      under the buttons, full width, and the controls panel moves down to match. */
   #initiative { top: 56px; max-width: calc(100% - 24px); gap: 4px; }
   /* Four chips across, so the whole party shows; monsters past them scroll. */
-  #initiative .chip { width: calc((100vw - 24px - 14px - 12px) / 4); column-gap: 4px; padding: 3px 4px 3px 2px; }
+  #initiative .chip { width: calc((100vw - 24px - 14px - 12px - 30px) / 4); column-gap: 4px; padding: 3px 4px 3px 2px; } /* 30px: the round */
+  #initiative .round { min-width: 26px; }
   #initiative .chip .pic { width: 24px; height: 24px; }
   #initiative .chip .pic svg { width: 16px; height: 16px; }
 }
+/* The round number, pinned at the start of the turn order while the portraits scroll. */
+#initiative .round {
+  position: sticky; left: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 32px; padding: 0 4px; border-radius: 7px;
+  background: var(--panel); border: 1px solid var(--panel-edge);
+  line-height: 1.05;
+}
+#initiative .round small { font-size: 9px; letter-spacing: 0.04em; color: #a89c84; text-transform: uppercase; }
+#initiative .round b { font-size: 15px; color: var(--gold); }
 /* More portraits or buttons past an edge: that edge fades (hud.js sets the classes). */
 #initiative.more-right, #attacks.more-right, #who.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
 #initiative.more-left, #attacks.more-left, #who.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }

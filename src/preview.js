@@ -3,7 +3,7 @@
 // attacks, the odds of an attack or shove, a spell's targets and blast.
 
 import { key, pathFrom } from './game/grid.js';
-import { SPILL_DC, BURN_TURNS } from './game/combat.js';
+import { SPILL_DC, BURN_TURNS, hitChance, diceRange } from './game/combat.js';
 import { signed, abilityMod } from './game/dice.js';
 import { SPELLS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { tips } from './ui/tips.js';
@@ -11,7 +11,7 @@ import { listNames } from './threats.js';
 
 /**
  * `deps`: hud, unseen(u), isHeroTurn(), threats, and getters for the controller's state:
- * game(), board(), hovered(), selected(), busy(), touching(). Returns { refresh,
+ * game(), board(), hovered(), selected(), busy(), touching(), view(u). Returns { refresh,
  * visibleUnitAt, spellTargetAt }.
  */
 export function createPreview(deps) {
@@ -24,6 +24,15 @@ export function createPreview(deps) {
     selected = deps.selected();
     busy = deps.busy();
   };
+
+  const pct = (p) => `${Math.round(p * 100)}%`;
+  const coverText = (c) => (c ? ` +${c} cover` : '');
+  // The figure whose HP bar shows the hovered attack's damage: cleared on every refresh.
+  let shaded = null;
+  function shade(u, range) {
+    shaded = deps.view(u);
+    shaded?.previewDamage(range);
+  }
 
   /** Indices of path tiles where leaving provokes an opportunity attack. */
   function provokingSteps(u, path) {
@@ -42,6 +51,8 @@ export function createPreview(deps) {
 
   function refresh() {
     sync();
+    shaded?.previewDamage(null);
+    shaded = null;
     hud.renderActionBar(game, { selected, busy });
     board.clearHighlights();
     threats.draw();
@@ -81,7 +92,11 @@ export function createPreview(deps) {
         const barbs = game.barbsAgainst(u, foe, atk);
         const drops = barbs && barbs >= u.hp + (u.tempHp ?? 0);
         const cut = barbs ? ` · its barbs cut you for ${barbs} on a hit${drops ? ', enough to drop you' : ''}` : '';
-        hud.hint(`${atk.name} → ${foe.name}: ${signed(game.toHitBonus(u, atk))} to hit vs AC ${game.acOf(foe)}, ${atk.damage} damage${modsText(m)}${cut}`, true, { warn: !!drops });
+        const o = game.attackOdds(u, foe, atk);
+        if (atk.damage) shade(foe, o);
+        const bonus = game.damageBonus(u, atk);
+        const dmg = atk.damage ? `, ${atk.damage}${bonus ? signed(bonus) : ''} damage (${o.min}–${o.max})` : '';
+        hud.hint(`${atk.name} → ${foe.name}: ${pct(o.chance)} to hit (${signed(game.toHitBonus(u, atk))} vs AC ${game.acOf(foe)}${coverText(o.cover)})${dmg}${modsText(m)}${cut}`, true, { warn: !!drops });
       } else {
         hud.hint(`${foe.name}: ${game.attackProblem(u, foe, atk ?? u.attacks[0])}`);
       }
@@ -201,12 +216,20 @@ export function createPreview(deps) {
   function spellPreview(u, id, t) {
     const s = SPELLS[id];
     switch (id) {
-      case 'magicMissile':
-        return `Magic Missile → ${t.name}: 3 darts × 1d4+1, never misses`;
+      case 'magicMissile': {
+        const darts = s.darts + lowestSlot(u, 1) - 1;
+        const one = diceRange(s.damage);
+        shade(t, { min: one.min * darts, max: one.max * darts });
+        return `Magic Missile → ${t.name}: ${darts} darts × 1d4+1 (${one.min * darts}–${one.max * darts}), never misses`;
+      }
       case 'spiritualWeapon': {
         const mod = abilityMod(u.stats[u.castStat]);
         const cost = u.spiritWeapon ? 'no slot' : `a ${u.slots[2] ? '2nd' : '3rd'}-level slot`;
-        return `Spiritual Weapon → ${t.name}: ${signed(u.prof + mod)} vs AC ${game.acOf(t)}, 1d8${signed(mod)} force · ${cost}`;
+        const slot = u.spiritWeapon?.slot ?? lowestSlot(u, 2);
+        const dice = 1 + Math.floor(Math.max(0, slot - 2) / 2);
+        const range = diceRange(`${dice}d8`, mod);
+        shade(t, range);
+        return `Spiritual Weapon → ${t.name}: ${pct(hitChance(u.prof + mod, game.acOf(t)))} to hit (${signed(u.prof + mod)} vs AC ${game.acOf(t)}), ${dice}d8${signed(mod)} force (${range.min}–${range.max}) · ${cost}`;
       }
       case 'huntersMark':
         return `Hunter’s Mark → ${t.name}: +1d6 on your weapon hits against it · a 1st-level slot`;
@@ -215,17 +238,24 @@ export function createPreview(deps) {
       case 'scorchingRay': {
         const slot = lowestSlot(u, 2);
         const toHit = u.prof + abilityMod(u.stats[u.castStat]);
-        return `Scorching Ray → ${t.name}: ${s.rays + slot - 2} rays, each ${signed(toHit)} vs AC ${game.acOf(t)} for 2d6 fire · a ${ordinalSlot(u, 2)}-level slot`;
+        const cover = game.coverBonus(u, t);
+        const each = hitChance(toHit, game.acOf(t) + cover, game.attackMods(u, t, { name: s.name, reach: s.range }).mode);
+        return `Scorching Ray → ${t.name}: ${s.rays + slot - 2} rays, each ${pct(each)} to hit (${signed(toHit)} vs AC ${game.acOf(t)}${coverText(cover)}) for 2d6 fire · a ${ordinalSlot(u, 2)}-level slot`;
       }
       case 'sacredFlame':
-        return `Sacred Flame → ${t.name}: ${s.damage} radiant, DEX save DC ${game.spellDC(u)} negates (their DEX ${signed(abilityMod(t.stats.dex))})`;
+      case 'viciousMockery': {
+        const stat = s.save;
+        const range = diceRange(s.damage);
+        shade(t, range);
+        const what = id === 'sacredFlame' ? 'radiant' : 'psychic and disadvantage on its next attack';
+        return `${s.name} → ${t.name}: ${pct(game.saveOdds(t, stat, game.spellDC(u)))} it fails · ${s.damage} ${what} (${range.min}–${range.max}), ` +
+          `${stat.toUpperCase()} save DC ${game.spellDC(u)} negates (their ${stat.toUpperCase()} ${signed(abilityMod(t.stats[stat]))})`;
+      }
       case 'cureWounds':
       case 'healingWord': {
         const [n, d] = s.heal;
         return `${s.name} → ${t === u ? 'yourself' : t.name}: heal ${n}d${d}${signed(abilityMod(u.stats[u.castStat]))} (HP ${t.hp}/${t.maxHp})`;
       }
-      case 'viciousMockery':
-        return `Vicious Mockery → ${t.name}: ${s.damage} psychic and disadvantage on its next attack, WIS save DC ${game.spellDC(u)} negates (their WIS ${signed(abilityMod(t.stats.wis))})`;
       case 'bardicInspiration':
         return `Bardic Inspiration → ${t.name}: a d${u.inspirationDie} for a near miss or a failed save · ${u.inspiration} left`;
       case 'greaterInvisibility':

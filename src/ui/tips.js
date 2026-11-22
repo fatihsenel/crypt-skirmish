@@ -107,7 +107,7 @@ export const TIPS = [
     on: 'acted',
     when: (c) => c.cmd.type === 'move' && !c.unit.actionUsed,
     text: (c) => `Now <b>attack</b>: ${click(c)} an enemy on a red tile. Before you commit, the line above the buttons ` +
-      'shows the bonus to hit against its armour (AC) and the damage. Walls, barrels and crates between you give it cover.',
+      'shows the chance to hit and the damage, and its HP bar shades what a hit would take off. Walls, barrels and crates between you give it cover.',
   },
   {
     id: 'concentration',

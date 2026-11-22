@@ -227,12 +227,17 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Dice on the board:** on your heroes' turns you throw the d20 yourself by clicking,
   tapping or pressing Space. Monsters' rolls and saving throws show too.
 - **Enemy reach** (T): marks the tiles monsters could reach and hit next turn. A red
-  crosshatch means melee, amber dots mean ranged, and fainter dots a long shot at disadvantage. Settings can switch them to purple and
-  yellow for colour-blind players.
+  crosshatch means melee, amber dots mean ranged, and fainter dots a long shot at disadvantage.
+  Settings can switch them to purple and yellow for colour-blind players.
+- **Odds:** hovering (or first tapping) a foe says the chance to hit, with advantage,
+  disadvantage and cover counted, and the damage a hit does. Its HP bar shades what the hit
+  would take off: dark for the lowest roll, striped up to the highest, and a ☠ by its name when
+  even the lowest roll drops it. Spells with a save say the chance it fails. Reactions like
+  Shield or Bardic Inspiration can still change the outcome.
 - **Tooltips:** hover or long-press any attack, spell or tag to see what it does. Small
   labels (spell slots, potions, Action / Bonus / Reaction, the replay buttons' keys) show a
   short note on hover, focus or a tap; screen readers read every note with its label.
-- **Turn order:** portraits along the top, each with its initiative number. Long names
+- **Turn order:** the round, then portraits along the top, each with its initiative number. Long names
   shrink to fit, like "G. Spider 2" or "R. Mummy". On an upright phone the whole party fits
   across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
 - **Photo mode** (P, or the camera button): the HUD goes and the monsters wait. Drag to turn

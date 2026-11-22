@@ -1169,7 +1169,7 @@ const drawThreats = () => threats.draw();
 const preview = createPreview({
   hud, unseen, isHeroTurn, threats,
   game: () => game, board: () => board, hovered: () => hovered, selected: () => selected,
-  busy: () => busy, touching: () => controls.touching,
+  busy: () => busy, touching: () => controls.touching, view: (u) => view(u),
 });
 /** Redraw the highlights and the hint for the current hero, selection and hovered tile. */
 function refresh() { preview.refresh(); }
