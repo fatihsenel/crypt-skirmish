@@ -4,7 +4,7 @@
 import { signed } from '../game/dice.js';
 import { SPELLS, PASSIVES, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
-import { Game, ELITE_TRAITS } from '../game/combat.js';
+import { Game, ELITE_TRAITS, RULES, longReach } from '../game/combat.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const markOf = (u) => (u.marked === true ? 'huntersMark' : u.marked);
@@ -23,8 +23,9 @@ const cap = (s) => s[0].toUpperCase() + s.slice(1);
 function attackLine(game, u, a) {
   const bonus = game.damageBonus(u, a);
   const dmg = a.damage ? `${a.damage}${bonus ? ` ${signed(bonus).replace(/^([+-])/, '$1 ')}` : ''}` : 'no damage';
-  const reach = a.reach > 1 ? `range ${a.reach * 5} ft` : 'melee';
-  const r = a.rider;
+  const long = (game.rules ?? RULES) >= 2 ? longReach(a) : a.reach;
+  const reach = a.reach > 1 ? `range ${a.reach * 5}${long > a.reach ? `/${long * 5}` : ''} ft` : 'melee';
+  const r = a.rider?.v2 && (game.rules ?? RULES) >= 2 ? a.rider.v2 : a.rider; // a ghoul's claws paralyse under rules 2
   const rider = !r ? '' : r.save ? ` · ${r.save.toUpperCase()} DC ${r.dc} or ${r.condition}` : ` · ${r.condition} on a hit`;
   const recharge = a.recharge ? ` · recharge ${a.recharge}–6${u.spent?.[a.name] ? ', spent' : ''}` : '';
   return `<li><b>${esc(a.name)}</b> ${signed(game.toHitBonus(u, a))} · ${esc(dmg)} · ${reach}${esc(rider)}${recharge}</li>`;

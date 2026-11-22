@@ -67,6 +67,7 @@ export const CONDITION_INFO = {
   restrained: 'Restrained: can’t move; attacks against it have advantage, its own attacks and DEX saves disadvantage. Wears off at the end of its next turn.',
   mocked: 'Mocked: disadvantage on its next attack roll. Wears off after it attacks or at the end of its next turn.',
   rotting: 'Rotting (mummy rot): can’t regain hit points. Wears off after two of its own turns.',
+  paralyzed: 'Paralysed (a ghoul’s claws): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage, and a hit from within 5 ft is a critical hit. A CON save as each of its turns starts ends it, in time to act.',
 };
 
 /** Passive features (no button): documented here for the HUD tooltips. */
@@ -139,18 +140,18 @@ export const SPELLS = {
     desc: 'Touch an ally (or yourself) and heal from a pool of 5 HP per paladin level, as much as they are missing. The pool refills after a long rest.',
   },
   shieldOfFaith: {
-    name: 'Shield of Faith', level: 1, time: 'bonus', range: 12, targeting: 'ally',
-    desc: 'Bonus action, 60 ft: a shimmering field gives an ally (or yourself) +2 AC for the rest of the fight. One at a time.',
+    name: 'Shield of Faith', level: 1, time: 'bonus', range: 12, targeting: 'ally', concentration: true,
+    desc: 'Bonus action, 60 ft: a shimmering field gives an ally (or yourself) +2 AC for the rest of the fight. One at a time. Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
   },
   huntersMark: {
-    name: 'Hunter’s Mark', level: 1, time: 'bonus', range: 18, targeting: 'enemy',
+    name: 'Hunter’s Mark', level: 1, time: 'bonus', range: 18, targeting: 'enemy', concentration: true,
     damage: '1d6',
-    desc: 'Bonus action, 90 ft: mark a foe. Your weapon hits on it deal an extra 1d6 for the rest of the fight. One mark at a time; marking another foe, even after this one drops, takes a new slot. The foe feels it: marking wakes a sleeping or unaware one.',
+    desc: 'Bonus action, 90 ft: mark a foe. Your weapon hits on it deal an extra 1d6 for the rest of the fight. One mark at a time; marking another foe, even after this one drops, takes a new slot. The foe feels it: marking wakes a sleeping or unaware one. Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
   },
   hex: {
-    name: 'Hex', level: 1, time: 'bonus', range: 18, targeting: 'enemy',
+    name: 'Hex', level: 1, time: 'bonus', range: 18, targeting: 'enemy', concentration: true,
     damage: '1d6',
-    desc: 'Bonus action, 90 ft: curse a foe. Every hit you land on it deals an extra 1d6 necrotic for the rest of the fight. One curse at a time; cursing another foe, even after this one drops, takes a new slot. Cursing wakes a sleeping or unaware foe.',
+    desc: 'Bonus action, 90 ft: curse a foe. Every hit you land on it deals an extra 1d6 necrotic for the rest of the fight. One curse at a time; cursing another foe, even after this one drops, takes a new slot. Cursing wakes a sleeping or unaware foe. Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
   },
   hellishRebuke: {
     name: 'Hellish Rebuke', level: 1, time: 'reaction', range: 12, targeting: 'none',
@@ -211,12 +212,12 @@ export const SPELLS = {
   },
   fear: {
     name: 'Fear', level: 3, time: 'action', range: 6, targeting: 'cone',
-    save: 'wis', condition: 'frightened', turns: 2,
-    desc: 'A 30-ft cone of dread: each foe in it makes a WIS save or is frightened of you for 2 turns. Allies are spared.',
+    save: 'wis', condition: 'frightened', turns: 2, concentration: true,
+    desc: 'A 30-ft cone of dread: each foe in it makes a WIS save or is frightened of you for 2 turns. Allies are spared. Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
   },
   greaterInvisibility: {
-    name: 'Greater Invisibility', level: 4, time: 'action', range: 1, targeting: 'ally',
-    desc: 'Touch an ally (or yourself): they turn invisible for the rest of the fight. Their attacks have advantage, and attacks against them disadvantage. One at a time.',
+    name: 'Greater Invisibility', level: 4, time: 'action', range: 1, targeting: 'ally', concentration: true,
+    desc: 'Touch an ally (or yourself): they turn invisible for the rest of the fight. Their attacks have advantage, and attacks against them disadvantage. One at a time. Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
   },
   animateDead: {
     name: 'Animate Dead', level: 3, time: 'action', range: 6, targeting: 'corpse',

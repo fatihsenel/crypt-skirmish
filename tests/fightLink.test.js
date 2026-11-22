@@ -38,7 +38,7 @@ function playFight(node, seed, party, tier = 0, relics = []) {
     }
     if (game.current === u && !game.over) give({ type: 'end' });
   }
-  return { node, seed, party, difficulty: 'normal', ...(tier && { tier }), ...(relics.length && { relics }), log, result: game.over, check: fightCheck(game), rounds: game.round };
+  return { node, seed, rules: game.rules, party, difficulty: 'normal', ...(tier && { tier }), ...(relics.length && { relics }), log, result: game.over, check: fightCheck(game), rounds: game.round };
 }
 
 describe('a fight as a link', () => {

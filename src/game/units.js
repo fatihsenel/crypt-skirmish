@@ -202,8 +202,9 @@ export const TEMPLATES = {
     undead: true,
     stats: { str: 13, dex: 15, con: 10, int: 7, wis: 10, cha: 6 },
     attacks: [
-      // SRD ghoul claws paralyse; here the grave-filth only poisons (DC 10 CON).
-      { name: 'Claws', stat: 'dex', damage: '2d4', reach: 1, rider: { save: 'con', dc: 10, condition: 'poisoned', turns: 2 } },
+      // SRD ghoul claws paralyse (rules 2: a CON save as each turn starts ends it, 10 turns
+      // at most). Fights under the first rules keep the old poison (DC 10 CON).
+      { name: 'Claws', stat: 'dex', damage: '2d4', reach: 1, rider: { save: 'con', dc: 10, condition: 'poisoned', turns: 2, v2: { save: 'con', dc: 10, condition: 'paralyzed', turns: 10 } } },
     ],
   },
   // The ghouls' elder: tougher, and its stench turns the stomach of anyone close by.
@@ -257,7 +258,7 @@ export const TEMPLATES = {
     stats: { str: 14, dex: 16, con: 12, int: 2, wis: 11, cha: 4 },
     attacks: [
       { name: 'Bite', stat: 'dex', damage: '1d8', reach: 1, rider: { save: 'con', dc: 11, condition: 'poisoned', turns: 1 } },
-      { name: 'Web', stat: 'dex', damage: null, reach: 6, recharge: 5, projectile: 'web', rider: { condition: 'restrained', turns: 1 } },
+      { name: 'Web', stat: 'dex', damage: null, reach: 6, long: 12, recharge: 5, projectile: 'web', rider: { condition: 'restrained', turns: 1 } },
     ],
   },
   // SRD specter: a Life Drain touch (3d6 necrotic). Here its chill frightens (WIS save)

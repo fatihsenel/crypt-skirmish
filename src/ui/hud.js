@@ -13,7 +13,7 @@ import { unitCard, shortName } from './unitCard.js';
 
 /** A turn-order name, short enough to tell apart: "Giant Spider 2" shows as "G. Spider 2". */
 const chipName = (name) => esc(shortName(name));
-import { isWeapon, isMelee } from '../game/combat.js';
+import { isWeapon, isMelee, longReach } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
 /** Standard actions few turns need: they sit behind More with Grapple, Help and Give potion. */
@@ -54,8 +54,8 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 // (logAction builds every action's text, so this must cope with results that have no roll)
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
-  `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}${s.inspired ? ` (inspired +${s.inspired.total})` : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
-const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!' };
+  `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}${s.inspired ? ` (inspired +${s.inspired.total})` : ''}${s.paralyzed ? ' (paralysed: fails)' : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
@@ -64,6 +64,15 @@ const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">B
 function markOverflow(row) {
   row.classList.toggle('more-left', row.scrollLeft > 2);
   row.classList.toggle('more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 2);
+}
+
+/** A dying hero's death saves, for screen readers. */
+const dyingText = (d) => (d.stable ? 'stable at 0 HP' : `dying: ${d.successes} of 3 successes, ${d.failures} of 3 failures`);
+
+/** A dying hero's death saves as pips: three for successes, three for failures. */
+function savePips(d) {
+  const pip = (n, kind) => [0, 1, 2].map((i) => `<i class="${i < n ? kind : ''}"></i>`).join('');
+  return `<span class="pips${d.stable ? ' stable' : ''}" aria-hidden="true">${pip(d.successes, 'ok')}<b></b>${pip(Math.min(3, d.failures), 'no')}</span>`;
 }
 
 export class Hud {
@@ -603,10 +612,11 @@ export class Hud {
     if (on || cause === 'used') return; // (a mockery spent on an attack shows in its line)
     const text = {
       stand: `gets up off the floor (half movement).`,
-      save: `shakes off the fear.`,
+      save: name === 'paralyzed' ? 'shakes off the paralysis.' : `shakes off the fear.`,
+      concentration: 'is no longer frightened: the spell ended.',
       expired: name === 'poisoned' ? 'is no longer poisoned.' : name === 'frightened' ? 'is no longer frightened.'
         : name === 'restrained' ? 'tears free of the web.' : name === 'rotting' ? 'is free of the rot.'
-          : name === 'mocked' ? 'shakes off the mockery.' : 'recovers.',
+          : name === 'mocked' ? 'shakes off the mockery.' : name === 'paralyzed' ? 'can move again.' : 'recovers.',
     }[cause] ?? 'recovers.';
     this.log(`${who(unit)} ${text}`, 'sys');
   }
@@ -836,12 +846,31 @@ export class Hud {
     this.log(`${who(r.unit)} ${text ?? `uses ${esc(r.name)}.`}`);
   }
 
+  /** A concentration save, or concentration lost (rules 2). A switch to another spell says nothing. */
+  logConcentration(r) {
+    if (r.cause === 'switch' || r.cause === 'fell') return;
+    const name = `<b class="spell">${esc(SPELLS[r.spell].name)}</b>`;
+    if (!r.save) return this.log(`${who(r.unit)} loses concentration (${esc(r.cause)}): ${name} ends.`);
+    const save = `<span class="dice">CON d20 ${r.save.d20} → ${r.save.total} vs DC ${r.save.dc}</span>`;
+    this.log(r.broken ? `${who(r.unit)} loses concentration ${save}: ${name} ends.` : `${who(r.unit)} holds concentration on ${name} ${save}.`);
+  }
+
+  /** A death save, as the log tells it. */
+  logDeathSave(r) {
+    const roll = `<span class="dice">d20 ${r.d20}</span>`;
+    const tail = r.result === 'rally' ? ': a 20, back up with <b class="heal">1 HP</b>!'
+      : r.result === 'stable' ? ': a success. <b>Stable</b>, out of danger.'
+        : r.result === 'dead' ? `: ${r.d20 === 1 ? 'a 1, two failures' : 'a failure'}. Out of the fight.`
+          : `: ${r.d20 >= 10 ? 'a success' : r.d20 === 1 ? 'a 1, two failures' : 'a failure'} (${r.successes} ✓ ${r.failures} ✗).`;
+    this.log(`${who(r.unit)} makes a <b>death save</b> ${roll}${tail}`, r.result === 'dead' ? 'death' : '');
+  }
+
   renderInitiative(game) {
     this.game = game;
     this.unitTip.refresh();
     $('#initiative').innerHTML = game.order
       .map((u) => {
-        const cls = ['chip', u.team, u === game.current ? 'current' : '', u.alive ? '' : 'dead'].join(' ');
+        const cls = ['chip', u.team, u === game.current ? 'current' : '', u.alive ? '' : 'dead', u.dying ? 'dying' : ''].join(' ');
         const pct = Math.max(0, (u.hp / u.maxHp) * 100);
         if (this.unknown?.(u)) {
           return `<div class="${cls} unknown" aria-label="Something you haven't seen yet">
@@ -850,10 +879,10 @@ export class Hud {
         }
         const color = `#${(u.color ?? 0x777777).toString(16).padStart(6, '0')}`;
         // New Game+ 2 and deeper: the elite's portrait wears the same gold as its band.
-        return `<div class="${cls}${u.elite ? ' elite' : ''}" data-unit="${u.id}" aria-label="${esc(u.name)} (${esc(u.cls)})${u.elite ? ' · elite' : ''} · initiative ${u.initiative}">
+        return `<div class="${cls}${u.elite ? ' elite' : ''}" data-unit="${u.id}" aria-label="${esc(u.name)} (${esc(u.cls)})${u.elite ? ' · elite' : ''} · initiative ${u.initiative}${u.dying ? ` · ${dyingText(u.dying)}` : ''}">
           <span class="pic" style="--c:${color}">${unitIcon(u)}<b class="init">${u.initiative}</b></span>
           <span class="nm">${chipName(u.name)}</span>
-          <span class="mini"><i style="width:${pct}%"></i></span>
+          ${u.dying ? savePips(u.dying) : `<span class="mini"><i style="width:${pct}%"></i></span>`}
         </div>`;
       })
       .join('');
@@ -901,7 +930,7 @@ export class Hud {
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span data-hint="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
       </div>
-      ${u.passives.length || u.items?.length || conds.length || u.marked || u.inspired || u.invisibleFrom ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.inspired ? `<span class="passive-tag item" data-hint="${esc(SPELLS.bardicInspiration.desc)}">Inspired d${u.inspired.die}</span>` : ''}${u.invisibleFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.greaterInvisibility.desc)}">Invisible</span>` : ''}${u.marked ? `<span class="passive-tag cond" data-hint="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
+      ${u.passives.length || u.items?.length || conds.length || u.marked || u.inspired || u.invisibleFrom || u.concentrating ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.inspired ? `<span class="passive-tag item" data-hint="${esc(SPELLS.bardicInspiration.desc)}">Inspired d${u.inspired.die}</span>` : ''}${u.invisibleFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.greaterInvisibility.desc)}">Invisible</span>` : ''}${u.concentrating ? `<span class="passive-tag item" data-hint="${esc(SPELLS[u.concentrating].desc)}">Concentrating: ${esc(SPELLS[u.concentrating].name)}</span>` : ''}${u.marked ? `<span class="passive-tag cond" data-hint="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
         `<span class="passive-tag cond ${c}" data-hint="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
         `<span class="passive-tag" data-hint="${esc(PASSIVES[p])}">${esc(PASSIVES[p].split(':')[0])}</span>`).join('')}${(u.items ?? []).map((i) =>
         `<span class="passive-tag item" data-hint="${esc(ITEMS[i].desc)}">${esc(ITEMS[i].name)}</span>`).join('')}</div>` : ''}
@@ -1122,7 +1151,7 @@ export class Hud {
     const bonus = game.damageBonus(u, atk);
     const notes = [];
     if (melee) notes.push('Advantage when an ally stands on the far side of the target (flanking).');
-    else notes.push('Disadvantage while an enemy is next to you.');
+    else notes.push(`Disadvantage while an enemy is next to you${weapon && game.rules >= 2 ? `, or past ${atk.reach * 5} ft (long range, up to ${longReach(atk) * 5} ft)` : ''}.`);
     if (u.passives.includes('extraAttack') && weapon) notes.push('Extra Attack: the Attack action gives you two attacks.');
     if (u.passives.includes('sneakAttack')) {
       notes.push(`Sneak Attack: +${u.sneakDice ?? 2}d6 once a turn with advantage, or with an ally next to the target.${u.sneakUsed ? ' Used this turn.' : ''}`);
@@ -1139,7 +1168,7 @@ export class Hud {
       kind: weapon ? `${melee ? 'Melee' : 'Ranged'} weapon · ${atk.stat === 'str' ? 'Strength' : 'Dexterity'}`
         : `Cantrip · ranged spell attack`,
       chips: [`${signed(game.toHitBonus(u, atk))} to hit`, `${atk.damage}${bonus ? signed(bonus) : ''} damage`,
-        melee ? 'reach 5 ft' : `range ${atk.reach * 5} ft`],
+        melee ? 'reach 5 ft' : `range ${atk.reach * 5}${weapon && game.rules >= 2 ? `/${longReach(atk) * 5}` : ''} ft`],
       desc: notes.shift(),
       notes,
       how: this.touch ? 'Tap it, then tap an enemy (or tap an enemy for your best weapon).'

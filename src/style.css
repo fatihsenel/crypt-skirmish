@@ -110,11 +110,13 @@ html, body {
 .tag.ward { color: #f4e3a0; }
 .tag.inspired { color: #8fc0ff; }
 .tag.invisible { color: #cfe4ff; font-style: italic; }
+.tag.focus { color: #c9b6ff; }
 /* conditions: on figure labels, the action bar and in the log */
 .tag.prone, .cond.prone { color: #e0a060; }
 .tag.poisoned, .cond.poisoned { color: #9ad45a; }
 .tag.frightened, .cond.frightened { color: #c79bff; }
 .tag.restrained, .cond.restrained { color: #e8e2d0; }
+.tag.paralyzed, .cond.paralyzed { color: #b7d98a; }
 .tag.rotting, .cond.rotting { color: #b8a060; }
 .tag.mocked, .cond.mocked { color: #f08aa0; }
 .passive-tag.cond { border-color: currentColor; }
@@ -223,6 +225,15 @@ html, body {
 .chip.dead .pic { filter: grayscale(1); }
 .chip.unknown .mini i { background: #4a4552; }
 .chip.dead .nm { text-decoration: line-through; }
+/* A dying hero (death saves): dimmed, not crossed out, with three pips a side. */
+.chip.dying { opacity: 0.7; }
+.chip.dying .nm { text-decoration: none; }
+.chip .pips { display: flex; gap: 2px; justify-content: center; height: 5px; }
+.chip .pips i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+.chip .pips b { width: 3px; }
+.chip .pips i.ok { background: var(--hp-high); }
+.chip .pips i.no { background: #d0463c; }
+.chip .pips.stable i { background: var(--hp-high); }
 
 #log {
   position: absolute;

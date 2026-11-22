@@ -3,7 +3,8 @@
 //   node scripts/sim.js [runs] [act2|act3|act4|full]
 // Runs are split over worker threads, one per core; JOBS=n sets how many (JOBS=1: one thread).
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
-// RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's), BARD=1 (a Bard in the Cleric's).
+// RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's), BARD=1 (a Bard in the Cleric's),
+// RULES=1 (the first rules: no death saves, concentration, long range or creature cover).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
 // way the campaign does (short rests between fights, a long rest at the well).
 
@@ -113,7 +114,8 @@ function heroOpening(game, u) {
     if (!u.alive || game.over) return;
   }
   const heroes = game.living('heroes');
-  const hurt = heroes.filter((h) => h.hp < h.maxHp / 2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp);
+  // A dying hero first (rules 2: death saves), then the worst hurt.
+  const hurt = [...game.units.filter((h) => h.dying), ...heroes.filter((h) => h.hp < h.maxHp / 2).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)];
   if (u.code === 'C') {
     if (hurt.length >= 2 && !game.spellProblem(u, 'massHealingWord')) game.castSpell(u, 'massHealingWord');
     else for (const h of hurt) if (!game.spellProblem(u, 'healingWord', h)) { game.castSpell(u, 'healingWord', h); break; }
@@ -256,7 +258,7 @@ function playTurn(game, u) {
 
 /** One fight. Returns { won, rounds, downed, state }. */
 export function fight(levelId, campaign, rng) {
-  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER), relics: fightRelics(campaign) });
+  const game = new Game(levelById(levelId), { party: campaign.party, rng, difficulty: runDifficulty(campaign.difficulty, TIER), relics: fightRelics(campaign), ...(process.env.RULES && { rules: Number(process.env.RULES) }) });
   game.start();
   let turns = 0;
   while (!game.over && turns++ < 600) {

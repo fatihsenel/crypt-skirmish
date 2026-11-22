@@ -6,7 +6,7 @@ import { TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLeve
 import { ITEMS, applyItems, relicFrom, cleanRelics } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
-import { ELITE_TRAITS, eliteTrait } from './combat.js';
+import { ELITE_TRAITS, eliteTrait, RULES } from './combat.js';
 
 export const SAVE_VERSION = 1;
 export const HERO_CODES = ['F', 'W', 'R', 'C'];
@@ -638,6 +638,7 @@ function validFight(f) {
   return !!f && typeof f === 'object'
     && !!NODES[f.node]?.level
     && Number.isInteger(f.seed)
+    && (f.rules === undefined || (Number.isInteger(f.rules) && f.rules >= 2 && f.rules <= RULES))
     && Array.isArray(f.log) && f.log.every((c) => c && typeof c.type === 'string')
     && (f.check === null || typeof f.check === 'string')
     && Array.isArray(f.explored) && f.explored.every((k) => typeof k === 'string')

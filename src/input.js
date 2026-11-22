@@ -141,6 +141,7 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
   if (selected?.kind === 'ready') return { toast: 'Pick the attack to hold from the bar' };
 
   if (selected?.kind === 'feed') {
+    const other = unitAt(t.x, t.z) ?? game.dyingAt(t.x, t.z); // a dying ally lies there too
     if (!other || other.team !== u.team || other === u) return { toast: 'Click an ally next to you' };
     const why = game.feedProblem(u, other);
     return why ? { toast: why } : { cmd: { type: 'feed', target: unitRef(game, other) } };

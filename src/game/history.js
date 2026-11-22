@@ -24,6 +24,7 @@ export function watchable(fight) {
     || typeof difficulty !== 'string' || !Array.isArray(log) || !['victory', 'defeat'].includes(result)) return null;
   const kept = { node, seed, party, difficulty, log, result };
   if (Number.isInteger(fight.tier) && fight.tier > 0) kept.tier = fight.tier; // New Game+ (none means 0)
+  if (Number.isInteger(fight.rules) && fight.rules > 1) kept.rules = fight.rules; // its rules (none means the first)
   const relics = cleanRelics(fight.relics); // the bosses' relics the party had (none means none)
   if (relics.length) kept.relics = relics;
   if (typeof fight.check === 'string') kept.check = fight.check; // its end, for a link (fightLink.js)

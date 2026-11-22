@@ -68,10 +68,21 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   (Magic Missile, Sacred Flame, Scorching Ray, Dread, Vicious Mockery) can be readied too: its slot is spent
   when you ready it, and it goes off at the first foe to step into view.
 - **Conditions:** prone, poisoned, frightened, restrained, rotting (a mummy's fist: no
-  healing takes for two turns) and mocked (Vicious Mockery: disadvantage on the next attack),
-  each shown as a tag on the figure.
-- **Cover:** barrels, crates and a lowered portcullis give +2 AC against attacks that pass
-  over or through them.
+  healing takes for two turns), mocked (Vicious Mockery: disadvantage on the next attack) and
+  paralysed (a ghoul's claws: no move, action or reaction, and hits from next to you are
+  critical), each shown as a tag on the figure.
+- **Cover:** barrels, crates, a lowered portcullis and other creatures give +2 AC against
+  attacks that pass over or through them (not one right next to the attacker).
+- **Death saves:** a hero at 0 HP is dying and rolls a d20 as each of their turns comes round:
+  10 or more is a success, three successes and they're stable, three failures and they're out
+  for the fight. A 1 counts twice; a 20 brings them back with 1 HP. Any healing (a spell, Lay
+  on Hands, a potion from an ally) gets them back up, prone. The pips on their initiative chip
+  count the saves.
+- **Concentration:** Hex, Hunter's Mark, Shield of Faith, Fear and Greater Invisibility last
+  while the caster concentrates. Taking damage calls for a CON save (DC 10, or half the
+  damage); a failure, dropping, being paralysed or casting another of them ends it.
+- **Long range:** bows and javelins shoot up to four times their range, at disadvantage past
+  it. The Monster shot overlay shows normal range.
 - **Water and braziers:** shallow water costs double to wade through (fliers skip it). A hero
   next to a lit brazier can tip it over with their action: its coals land on the tiles past
   it, and whoever stands there makes a DC 12 DEX save against 2d6 fire (half on a success).
@@ -319,7 +330,9 @@ Everything is generated in the browser, with no recordings:
 
 A few things differ from the SRD to keep the game simple:
 
-- Goblin arrows and rat bites poison (DC 10 CON). Ghoul claws poison instead of paralysing.
+- Goblin arrows and rat bites poison (DC 10 CON). Ghoul claws paralyse (DC 10 CON). The save to end
+  it comes at the start of each turn rather than the end, so a hero who makes it still acts
+  (10 turns at most); the ghast's claws still only poison.
 - The mimic knocks you prone instead of grappling.
 - Only Grukk's second attack has disadvantage.
 - Sculpt Spells and Sneak Attack 4d6 arrive at level 6. Sculpt spares every ally.
@@ -334,13 +347,13 @@ A few things differ from the SRD to keep the game simple:
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.
-- Hex has no ability-check part and lasts the whole fight, with no concentration.
+- Hex has no ability-check part.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
 - Bardic Inspiration uses come back every fight, and the die is rolled after the attack or save
   misses (only when it could turn it). Cutting Words only answers attack rolls.
-- Fear spares the Bard's allies, has no concentration, and doesn't make foes drop anything.
-  Greater Invisibility lasts the fight, with no concentration, and only changes attack rolls.
+- Fear spares the Bard's allies and doesn't make foes drop anything. Greater Invisibility only
+  changes attack rolls.
 - Ready has two fixed triggers instead of one you name: a foe stepping into reach (a melee
   attack) or into view (a ranged one, or a spell). A readied spell needs no concentration.
 - Levers and portcullises are not from the SRD: pulling a lever is a free object interaction,
@@ -360,7 +373,12 @@ A few things differ from the SRD to keep the game simple:
   the coals deal 1d6 to whoever enters them (once a turn) until the end of the tipper's third
   turn.
 - The Periapt of Wound Closure doubles all healing its wearer receives (the SRD's doubles
-  Hit Dice and stabilizes; there are no Hit Dice or death saves here).
+  Hit Dice and stabilizes; there are no Hit Dice here).
+- Death saves: monsters leave a dying hero alone, and a hero who fails three is out until the
+  fight ends (back afterwards, as before). Monsters die at 0 HP.
+- A creature gives half cover like a barrel: not one right next to the attacker.
+- Fights saved, replayed or linked from before death saves, concentration, ghoul paralysis, long
+  range and creature cover keep the old rules (`RULES` in `combat.js`).
 
 ## For developers
 

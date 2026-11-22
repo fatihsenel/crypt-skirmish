@@ -143,8 +143,8 @@ export function createPreview(deps) {
 
   /** Giving a potion: hurt allies next to the hero light up. */
   function refreshFeed(u) {
-    board.targets.set(game.alliesOf(u).filter((a) => !game.feedProblem(u, a)));
-    const ally = hovered && visibleUnitAt(hovered.x, hovered.z);
+    board.targets.set(game.units.filter((a) => a.team === u.team && !game.feedProblem(u, a)));
+    const ally = hovered && (visibleUnitAt(hovered.x, hovered.z) ?? game.dyingAt(hovered.x, hovered.z));
     if (!ally || ally.team !== u.team || ally === u) {
       hud.hint('Give potion: click an ally next to you · Esc to cancel');
       return;
@@ -194,7 +194,7 @@ export function createPreview(deps) {
     if (!t) return null;
     game = deps.game();
     if (s.targeting === 'corpse') return game.corpses().find((c) => c.x === t.x && c.z === t.z) ?? null;
-    return visibleUnitAt(t.x, t.z);
+    return visibleUnitAt(t.x, t.z) ?? (s.targeting === 'ally' ? game.dyingAt(t.x, t.z) : null);
   }
 
   /** One-line preview of what a unit-targeted spell will do to `t`. */

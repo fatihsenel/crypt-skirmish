@@ -9,6 +9,13 @@ import { applyItems } from './items.js';
 import { ACTIONS, STANDARD_ACTIONS, SPELLS } from './abilities.js';
 import { Spellcasting, NOISE, dexSaveDamage } from './spells.js';
 
+/**
+ * The rules new fights are played by. 1: as first released. 2: death saves, concentration,
+ * ghoul claws that paralyse, long range and creatures giving cover. A saved fight, replay or
+ * link carries the number it began under (none means 1), so it plays back by its own rules.
+ */
+export const RULES = 2;
+
 export const TRAP_DC = 13;
 export const TRAP_DAMAGE = '2d6';
 /** A tipped brazier: coals land on three tiles past it (DEX save for half), and burn there. */
@@ -43,10 +50,13 @@ export const PATROL_PACE = 3;
 //   restrained  speed 0; attacks against it have advantage, its own attacks and DEX saves
 //               disadvantage (a spider's web).
 // `turns` counts the victim's own turns: it ticks down at the end of each of them.
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked'];
+//   paralyzed   (rules 2, a ghoul's claws) can't move, act or react; fails STR and DEX saves;
+//               attacks against it have advantage, and a hit from within 5 ft is a crit. A CON
+//               save at the start of each of its turns ends it (in time to act).
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed'];
 /** Conditions that simply run out after their `turns`. */
 
-const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked'];
+const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
@@ -55,6 +65,11 @@ const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'
 export const isWeapon = (attack) => attack.stat === 'str' || attack.stat === 'dex';
 /** A melee weapon attack (not a thrown javelin): what Dueling and Divine Smite need. */
 export const isMelee = (attack) => isWeapon(attack) && attack.reach === 1;
+/**
+ * A ranged weapon's long range (rules 2): bows and javelins reach four times as far, at
+ * disadvantage past their normal range (a spider's web, `long`, its own). Spells don't.
+ */
+export const longReach = (attack) => (isWeapon(attack) && attack.reach > 1 ? attack.long ?? attack.reach * 4 : attack.reach);
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits
@@ -88,8 +103,10 @@ export class Game extends Spellcasting {
    * @param party  hero state from the previous level, keyed by hero slot (F W R C)
    */
   /** senses: false makes every monster aware from the start (the old behaviour). */
-  constructor(level, { rng = Math.random, party = null, senses = true, difficulty = null, relics = [] } = {}) {
+  constructor(level, { rng = Math.random, party = null, senses = true, difficulty = null, relics = [], rules = RULES } = {}) {
     super();
+    // Which rules the fight is played by (see RULES): a saved fight, replay or link keeps its own.
+    this.rules = rules;
     this.relics = [...relics]; // the run's boss relics (items.js RELICS)
     const rows = Array.isArray(level) ? level : level.rows;
     // Every die rolled and every event (but a plain step) is counted, so a move that rolled
@@ -245,7 +262,7 @@ export class Game extends Spellcasting {
 
   /** Dead bodies that can still be raised. */
   corpses() {
-    return this.units.filter((u) => !u.alive && !u.raised);
+    return this.units.filter((u) => !u.alive && !u.raised && !u.dying);
   }
 
   toHitBonus(unit, attack) {
@@ -266,13 +283,16 @@ export class Game extends Spellcasting {
   }
 
   /**
-   * Half cover: +2 AC when a barrel, a crate or a lowered portcullis stands between attacker
-   * and target. One right next to the attacker doesn't count (you lean over your own barricade).
+   * Half cover: +2 AC when a barrel, a crate or a lowered portcullis (rules 2: or another
+   * creature, friend or foe) stands between attacker and target. One right next to the
+   * attacker doesn't count (you lean over your own barricade, or past your friend).
    */
-  coverBonus(attacker, target) {
+  coverBonus(attacker, target, gone = null) { // gone(u): already felled (the rays before)
     for (const [x, z] of this.grid.lineBetween(attacker.x, attacker.z, target.x, target.z)) {
-      const p = this.grid.props.get(key(x, z)) ?? this.grid.gates.get(key(x, z));
-      if ((p?.cover === 'half' || p?.down) && gridDistance(attacker, p) > 1) return 2;
+      const p = this.grid.props.get(key(x, z)) ?? this.grid.gates.get(key(x, z))
+        ?? (this.rules >= 2 ? this.unitAt(x, z) : null);
+      if (p?.team && (p.id === attacker.id || p.id === target.id || gone?.(p))) continue; // (a copy of either, standing elsewhere: the AI's what-ifs)
+      if ((p?.cover === 'half' || p?.down || p?.team) && gridDistance(attacker, p) > 1) return 2;
     }
     return 0;
   }
@@ -280,6 +300,10 @@ export class Game extends Spellcasting {
   /** Roll a saving throw: d20 + ability modifier + item bonuses + a paladin's aura. */
   save(unit, stat, dc) {
     let d20 = rollDice(1, 20, this.rng).total;
+    // Paralysed: STR and DEX saves fail, whatever the die says.
+    if ((stat === 'str' || stat === 'dex') && this.has(unit, 'paralyzed')) {
+      return { unit, d20, total: d20 + abilityMod(unit.stats[stat]), aura: 0, luck: null, inspired: null, success: false, paralyzed: true };
+    }
     if (stat === 'dex' && this.has(unit, 'restrained')) d20 = Math.min(d20, rollDice(1, 20, this.rng).total);
     const aura = this.auraBonus(unit);
     let total = d20 + abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0) + aura;
@@ -428,6 +452,15 @@ export class Game extends Spellcasting {
     unit.conditions[name] = { turns: turns + (own && turns !== Infinity ? 1 : 0), by, dc };
     if ((name === 'prone' || name === 'restrained') && own) unit.movesLeft = 0; // knocked down or caught mid-move
     if (fresh) this.emit('condition', { unit, name, on: true, by });
+    if (name === 'paralyzed') this.paralyze(unit);
+  }
+
+  /** Paralysed: no move, action, bonus action or reaction, and what it held or kept up ends. */
+  paralyze(unit) {
+    Object.assign(unit, { movesLeft: 0, actionUsed: true, bonusUsed: true, reactionUsed: true, interacted: true, dodging: false, readied: false, readiedAttack: null, readiedSpell: null });
+    if (unit.grappling) this.letGo(unit, 'paralyzed');
+    if (unit.helping) this.endHelp(unit);
+    this.endConcentration(unit, 'paralyzed');
   }
 
   removeCondition(unit, name, cause = 'expired') {
@@ -485,6 +518,7 @@ export class Game extends Spellcasting {
    * Returns { stat, dc, d20, total, success, condition } or null.
    */
   applyRider(attacker, target, rider) {
+    if (rider && this.rules >= 2 && rider.v2) rider = rider.v2; // a ghoul's claws paralyse under rules 2
     if (!rider || !target.alive || this.has(target, rider.condition) || target.immune?.includes(rider.condition)) return null;
     if (!rider.save) { // no save: a hit is enough (a web)
       this.addCondition(target, rider.condition, { turns: rider.turns ?? Infinity, by: attacker });
@@ -492,7 +526,7 @@ export class Game extends Spellcasting {
     }
     const s = this.save(target, rider.save, rider.dc);
     const out = { stat: rider.save, dc: rider.dc, d20: s.d20, total: s.total, success: s.success, condition: rider.condition };
-    if (!s.success) this.addCondition(target, rider.condition, { turns: rider.turns ?? Infinity, by: attacker });
+    if (!s.success) this.addCondition(target, rider.condition, { turns: rider.turns ?? Infinity, by: attacker, dc: rider.dc });
     return out;
   }
 
@@ -606,6 +640,11 @@ export class Game extends Spellcasting {
     if (u.helping) this.endHelp(u); // Help lasts until the helper's next turn
     this.standUp(u);
     if (this.has(u, 'restrained')) u.movesLeft = 0;
+    // Paralysed: a CON save as the turn starts shakes it off in time to act (the SRD's is at the end).
+    if (this.has(u, 'paralyzed')) {
+      if (this.save(u, 'con', u.conditions.paralyzed.dc).success) this.removeCondition(u, 'paralyzed', 'save');
+      else this.paralyze(u);
+    }
     if (u.grappledBy) this.struggle(u);
     this.recharge(u);
     if (u.elite === 'regenerating' && u.alive && u.hp < u.maxHp) {
@@ -648,8 +687,82 @@ export class Game extends Spellcasting {
         this.round++;
         this.emit('round', { round: this.round });
       }
+      if (this.current.dying && !this.current.dying.stable) this.deathSave(this.current);
     } while (!this.current.alive);
     this.beginTurn();
+  }
+
+  /**
+   * A dying hero's turn (rules 2): a d20, 10 or more a success. Three successes and they're
+   * stable; three failures and they're out for the fight. A 1 counts as two failures; a 20
+   * brings them round with 1 HP, in time to take the turn.
+   */
+  deathSave(u) {
+    const d = u.dying;
+    const d20 = rollDice(1, 20, this.rng).total;
+    let result = null;
+    if (d20 === 20) {
+      result = 'rally';
+      this.heal(u, 1, u, true);
+    } else {
+      if (d20 >= 10) d.successes++;
+      else d.failures += d20 === 1 ? 2 : 1;
+      if (d.failures >= 3) {
+        result = 'dead';
+        u.dying = null;
+      } else if (d.successes >= 3) {
+        result = 'stable';
+        d.stable = true;
+      }
+    }
+    this.emit('deathSave', { unit: u, d20, successes: d.successes, failures: Math.min(3, d.failures), result });
+  }
+
+  /**
+   * End what `caster` is concentrating on (rules 2): Hex or Hunter's Mark, Shield of Faith,
+   * Greater Invisibility, or Fear's frightened foes. `cause`: 'switch' (another such spell),
+   * 'damage' (a failed CON save) or 'fell'. Returns the units whose tags changed.
+   */
+  endConcentration(caster, cause, save = null) {
+    const id = caster.concentrating;
+    if (!id) return [];
+    caster.concentrating = null;
+    const touched = [];
+    if (caster.mark && (id === 'hex' || id === 'huntersMark')) {
+      const old = this.units.find((u) => u.id === caster.mark.id);
+      if (old?.marked === caster.mark.spell) { old.marked = false; touched.push(old); }
+      caster.mark = null;
+    }
+    for (const u of this.units) {
+      if (id === 'shieldOfFaith' && u.faithFrom === caster.id) { u.faithFrom = null; touched.push(u); }
+      if (id === 'greaterInvisibility' && u.invisibleFrom === caster.id) { u.invisibleFrom = null; touched.push(u); }
+      if (id === 'fear' && u.conditions?.frightened?.by === caster) { this.removeCondition(u, 'frightened', 'concentration'); touched.push(u); }
+    }
+    this.emit('concentration', { unit: caster, spell: id, cause, save, broken: true, touched });
+    return touched;
+  }
+
+  /** Hurt while concentrating (rules 2): a CON save, DC 10 or half the damage, to keep it. */
+  concentrationCheck(unit, damage) {
+    if (!unit.concentrating || damage <= 0) return;
+    const dc = Math.max(10, Math.floor(damage / 2));
+    const s = this.save(unit, 'con', dc);
+    const save = { stat: 'con', dc, d20: s.d20, total: s.total, success: s.success };
+    if (s.success) this.emit('concentration', { unit, spell: unit.concentrating, cause: 'damage', save, broken: false, touched: [] });
+    else this.endConcentration(unit, 'damage', save);
+  }
+
+  /** A dying hero healed (or rallying on a 20) is back in the fight, prone, from 0 HP. */
+  revive(u, by) {
+    u.dying = null;
+    u.alive = true;
+    u.hp = 0;
+    if (this.unitAt(u.x, u.z) && this.unitAt(u.x, u.z) !== u) { // someone was shoved onto the body
+      const free = this.teleportTiles(u, 2).sort((a, b) => gridDistance(u, a) - gridDistance(u, b))[0];
+      if (free) Object.assign(u, { x: free.x, z: free.z });
+    }
+    this.addCondition(u, 'prone', { by });
+    this.emit('revive', { unit: u, by });
   }
 
   /** Make `u` an elite with the trait `id` (one of ELITE_TRAITS). */
@@ -694,6 +807,7 @@ export class Game extends Spellcasting {
     // Temporary HP soak up damage first.
     const soaked = Math.min(target.tempHp ?? 0, Math.max(0, amount));
     if (soaked) target.tempHp -= soaked;
+    const over = amount - soaked - target.hp; // damage past 0 HP
     target.hp = Math.max(0, target.hp - (amount - soaked));
     // Death Ward: the first blow that would drop the warded leaves them on 1 HP instead.
     if (target.hp <= 0 && target.alive && target.deathWard) {
@@ -732,6 +846,10 @@ export class Game extends Spellcasting {
       const down = this.tally(target);
       if (down) down.downed++;
       target.alive = false;
+      // Rules 2: a hero at 0 HP is dying, making death saves, unless what's left of the blow
+      // is as much as their HP maximum.
+      const dying = this.rules >= 2 && target.team === 'heroes' && !target.corpse && over < target.maxHp;
+      if (dying) target.dying = { successes: 0, failures: 0, stable: false };
       for (const u of this.units) if (u.faithFrom === target.id) u.faithFrom = null; // Shield of Faith drops
       target.spiritWeapon = null; // and a fallen cleric's spectral weapon fades
       if (target.grappling) this.letGo(target, 'fell');
@@ -742,6 +860,7 @@ export class Game extends Spellcasting {
         if (unmarked?.marked === target.mark.spell) unmarked.marked = false;
         target.mark = null;
       }
+      this.endConcentration(target, 'fell'); // rules 2: the rest of what they held ends too
       // Dark One's Blessing: a warlock who drops a foe gains CHA + level temporary HP.
       let blessing = null;
       if (source?.alive && source.team !== target.team && source.passives?.includes('darkOnesBlessing')) {
@@ -751,9 +870,10 @@ export class Game extends Spellcasting {
           blessing = { unit: source, tempHp: gain };
         }
       }
-      this.emit('death', { unit: target, source, unmarked, blessing });
+      this.emit('death', { unit: target, source, unmarked, blessing, ...(dying && { dying: true }), ...(this.rules >= 2 && !dying && target.team === 'heroes' && { outright: true }) });
       this.checkEnd();
     }
+    if (target.alive && amount > 0) this.concentrationCheck(target, amount);
     if (target.alive && target.rises && !target.roused && target.hp * 2 <= target.maxHp) this.houseRises(target);
   }
 
@@ -802,8 +922,10 @@ export class Game extends Spellcasting {
     this.updateAwareness();
   }
 
-  heal(target, amount, source = target) {
+  heal(target, amount, source = target, rally = false) {
     if (this.has(target, 'rotting')) return 0; // mummy rot: no HP back until it wears off
+    if (target.dying && amount > 0) this.revive(target, rally ? null : source);
+    if (!target.alive) return 0;
     const before = target.hp;
     if (target.healTwice) amount *= 2; // a Periapt of Wound Closure
     target.hp = Math.min(target.maxHp, target.hp + amount);
@@ -839,8 +961,13 @@ export class Game extends Spellcasting {
   }
 
   canEndOn(unit, x, z) {
-    const o = this.unitAt(x, z);
+    const o = this.unitAt(x, z) ?? this.dyingAt(x, z);
     return !o || o === unit;
+  }
+
+  /** The dying hero lying on a tile, if any (rules 2: death saves). */
+  dyingAt(x, z) {
+    return this.units.find((u) => u.dying && u.x === x && u.z === z) ?? null;
   }
 
   reachable(unit) {
@@ -1359,7 +1486,8 @@ export class Game extends Spellcasting {
     if (attacker.spent?.[attack.name]) return `${attack.name} hasn't recharged`;
     if (target.hidden && target.team === 'monsters') return `${target.name} is hidden: Search to find it`;
     const d = gridDistance(attacker, target);
-    if (d > attack.reach) return `Out of range (${d * 5} ft, ${attack.name} reaches ${attack.reach * 5} ft)`;
+    const far = this.rules >= 2 ? longReach(attack) : attack.reach;
+    if (d > far) return `Out of range (${d * 5} ft, ${attack.name} reaches ${far * 5} ft${far > attack.reach ? ' at long range' : ''})`;
     if (d > 1 && !this.grid.lineOfSight(attacker.x, attacker.z, target.x, target.z)) {
       return 'No line of sight';
     }
@@ -1390,6 +1518,7 @@ export class Game extends Spellcasting {
     const dis = [];
     if (ambush) adv.push('ambush');
     if (attack.reach > 1 && this.isAdjacentToEnemy(attacker)) dis.push('enemy adjacent');
+    if (this.rules >= 2 && attack.reach > 1 && gridDistance(attacker, target) > attack.reach) dis.push('long range');
     if (target.dodging) dis.push('target is dodging');
     if (attacker.clumsyMultiattack && attacker.actionUsed && !opportunity) dis.push('second attack');
     if (this.has(attacker, 'prone')) dis.push('prone');
@@ -1403,6 +1532,7 @@ export class Game extends Spellcasting {
     if (target.invisibleFrom) dis.push('target invisible');
     if (this.has(attacker, 'restrained')) dis.push('restrained');
     if (this.has(target, 'restrained')) adv.push('target restrained');
+    if (this.has(target, 'paralyzed')) adv.push('target paralyzed');
     const fear = this.fearSource(attacker);
     if (fear && this.inSight(attacker, fear, 99)) dis.push('frightened');
     if (attack.reach === 1 && this.isFlanking(attacker, target)) adv.push('flanking');
@@ -1562,7 +1692,7 @@ export class Game extends Spellcasting {
     const toHit = this.toHitBonus(attacker, attack);
     let total = d20 + toHit;
     // Improved Critical: a fighter's weapon crits on 19 too.
-    const crit = d20 >= (isWeapon(attack) && attacker.critRange ? attacker.critRange : 20);
+    let crit = d20 >= (isWeapon(attack) && attacker.critRange ? attacker.critRange : 20);
     const fumble = d20 === 1;
     if (crit && this.tally(attacker)) this.tally(attacker).crits++;
     const cover = this.coverBonus(attacker, target);
@@ -1593,6 +1723,11 @@ export class Game extends Spellcasting {
       shieldSlot = this.castShield(target);
       shielded = true;
       hit = false;
+    }
+    // Paralysed: any hit from within 5 ft is a critical hit.
+    if (hit && !crit && this.has(target, 'paralyzed') && gridDistance(attacker, target) <= 1) {
+      crit = true;
+      if (this.tally(attacker)) this.tally(attacker).crits++;
     }
 
     let damage = 0;
@@ -1669,7 +1804,7 @@ export class Game extends Spellcasting {
     if (!(unit.potions > 0)) return 'No potions left';
     if (unit.actionUsed) return 'Action already used this turn';
     if (unit.turned) return 'Turned: can only flee';
-    if (!target?.alive || target.team !== unit.team || target === unit) return 'Choose an ally next to you';
+    if (!(target?.alive || target?.dying) || target.team !== unit.team || target === unit) return 'Choose an ally next to you';
     if (gridDistance(unit, target) > 1) return 'Must stand next to them';
     if (target.hp >= target.maxHp) return `${target.name} is at full HP`;
     if (this.has(target, 'rotting')) return `${target.name} is rotting: no healing takes`;

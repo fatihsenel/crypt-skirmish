@@ -3,7 +3,7 @@
 
 import { camp, later, loadSave, loadWonRun, hideBoot, SAVE_KEY, WON_KEY } from './boot.js';
 import * as THREE from 'three';
-import { Game, ELITE_TRAITS } from './game/combat.js';
+import { Game, ELITE_TRAITS, RULES } from './game/combat.js';
 import { LEVELS, levelById } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
@@ -682,9 +682,13 @@ function startFight(resume, watch = null) {
   const tier = (watch ? watch.tier : campaign.tier) ?? 0; // New Game+
   // A saved fight keeps the relics it began with (none for one saved before relics).
   const relics = (watch ? watch.relics : resume ? resume.relics : fightRelics(campaign)) ?? [];
-  game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed), relics });
-  fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
-  if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };
+  // A saved fight, replay or played link keeps the rules it began under (none: the first).
+  const from = watch ?? resume ?? challenge?.rec;
+  const rules = from ? from.rules ?? 1 : RULES;
+  const ru = rules > 1 ? { rules } : {};
+  game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed), relics, rules });
+  fight = daily || challenge || watch ? null : { node: nodeId, seed, ...ru, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
+  if (!watch) record = { node: nodeId, seed, ...ru, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };
   feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false };
   if (!watch) takeInput(); // the fight's presses count from here (play stats)
   game.on('attack', (r) => {
@@ -786,7 +790,7 @@ function startFight(resume, watch = null) {
     else hud.logSpell(r);
   });
   game.on('action', (r) => { if (!unseen(r.unit)) hud.logAction(r); });
-  game.on('death', ({ unit, unmarked, blessing }) => {
+  game.on('death', ({ unit, unmarked, blessing, dying }) => {
     clearSpiritWeapon(unit.id); // a fallen cleric's weapon fades
     if (unit.team === 'monsters' && !replay) {
       slay(unit.code); // the bestiary's tally
@@ -794,6 +798,7 @@ function startFight(resume, watch = null) {
     }
     if (unmarked) view(unmarked)?.updateStatus(); // and a fallen ranger's mark
     if (unseen(unit)) hud.log('Something falls in the dark.', 'death');
+    else if (dying) hud.log(`<span class="${unit.team}" data-unit="${unit.id}">${unit.name}</span> falls, dying: death saves until healed.`, 'death');
     else hud.log(`<span class="${unit.team}" data-unit="${unit.id}">${unit.name}</span> falls.`, 'death');
     if (blessing) {
       hud.logBlessing(blessing);
@@ -803,6 +808,26 @@ function startFight(resume, watch = null) {
         view(blessing.unit)?.updateHp();
       });
     }
+  });
+  // Death saves (rules 2): rolled as a dying hero's turn comes round.
+  game.on('deathSave', (r) => {
+    hud.logDeathSave(r);
+    hud.renderInitiative(game);
+    const text = r.result === 'rally' ? 'Back up!' : r.result === 'stable' ? 'Stable' : r.result === 'dead' ? 'Gone' : r.d20 >= 10 ? 'Save ✓' : 'Save ✗';
+    floatText(stage.scene, r.unit, text, r.result === 'dead' || (!r.result && r.d20 < 10) ? 'crit' : 'heal');
+    if (r.result === 'rally') view(r.unit)?.getUp();
+    if (r.result === 'dead') view(r.unit)?.fadeMeshes(0.4);
+  });
+  game.on('concentration', (r) => {
+    hud.logConcentration(r);
+    // Shown once the blow has landed.
+    wait(500).then(() => {
+      if (r.cause === 'damage') floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, r.broken ? 'Concentration lost' : 'Concentration held', r.broken ? 'warn' : 'heal');
+      for (const u of [r.unit, ...r.touched]) view(u)?.updateStatus();
+    });
+  });
+  game.on('revive', ({ unit, by }) => {
+    if (by) hud.log(`<span class="heroes" data-unit="${unit.id}">${unit.name}</span> is back in the fight, prone.`, 'sys');
   });
   game.on('ward', (r) => {
     hud.logWard(r);
@@ -1109,6 +1134,7 @@ async function onTurnStart(unit) {
     sfx.turn();
     voices.bark(unit, 'turn'); // now and then
     saveFight(); // with the rooms seen so far
+    if (game.has(unit, 'paralyzed')) hud.toast(`${unit.name} is paralysed: no move or action this turn (a CON save next turn may end it).`);
     if (!debugAutoplay) {
       const chestInSight = [...game.grid.chests.keys()].some((k) => visible.has(k));
       const near = (t) => Math.max(Math.abs(t.x - unit.x), Math.abs(t.z - unit.z)) <= 1;

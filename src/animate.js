@@ -193,7 +193,7 @@ export function createAnimations(app) {
     }));
   }
 
-  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!' };
+  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!' };
 
   function damageReaction(unit) {
     const v = view(unit);
@@ -380,12 +380,20 @@ export function createAnimations(app) {
     hud.renderInitiative(app.game());
   }
 
+  /** A dying hero the heal reached gets back up (death saves). */
+  async function rises(unit) {
+    if (!unit.alive || !view(unit)?.down) return;
+    await view(unit).getUp();
+    hud.renderInitiative(app.game());
+  }
+
   async function playFeed(r) {
     sfx.potion();
     await view(r.unit).turnTowards(r.target.x, r.target.z);
     floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
     view(r.target).updateHp();
     await healFx(stage.scene, r.target);
+    await rises(r.target);
     hud.renderInitiative(app.game());
   }
 
@@ -576,6 +584,7 @@ export function createAnimations(app) {
             floatText(stage.scene, h.unit, `+${h.healed}`, 'heal');
             view(h.unit).updateHp();
             await healFx(stage.scene, h.unit);
+            await rises(h.unit);
           }));
           blessedHealerFx(caster, r.selfHeal);
         });
@@ -701,6 +710,7 @@ export function createAnimations(app) {
           floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
           view(r.target).updateHp();
           await healFx(stage.scene, r.target);
+          await rises(r.target);
         });
         break;
       case 'huntersMark':
@@ -728,6 +738,7 @@ export function createAnimations(app) {
           floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
           view(r.target).updateHp();
           await healFx(stage.scene, r.target);
+          await rises(r.target);
           blessedHealerFx(caster, r.selfHeal);
         });
         break;

@@ -48,6 +48,13 @@ server on 5173.
   The end banner's Watch replay plays the same record back (`startReplay` in `main.js`), and
   Past runs keep each run's last one (`history.js`). `#watch=` links carry the same record
   (`fightLink.js`, copied and opened by `links.js`) and are replayed headlessly first, so a rules change refuses old links.
+  To change the rules without breaking them, bump `RULES` in `combat.js` and gate the new rule
+  on `this.rules >= N`: records, saves and links carry their `rules` (`ru` in a link; none means
+  1) and are rebuilt with it, and `tests/rulesVersion.test.js` replays fights recorded under the
+  first rules (`tests/fixtures/v1-fights.json`, made by `scripts/v1-fixtures.mjs`). `RULES=1
+  npm run sim` plays the old rules. Rules 2: death saves (`dying`, `deathSave`, `revive`),
+  concentration (`concentrating`, `endConcentration`), ghoul paralysis (a rider's `v2`), long
+  range (`longReach`) and creatures giving cover.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
   motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):

@@ -3,7 +3,7 @@
 // goes to a server. A link is checked by replaying it headlessly before it's shown: one
 // made before the rules changed the dice order doesn't land where it ended, and is refused.
 
-import { Game } from './combat.js';
+import { Game, RULES } from './combat.js';
 import { replayFight, fightCheck } from './replay.js';
 import { seeded } from './dice.js';
 import { levelById } from './maps.js';
@@ -61,9 +61,9 @@ function cleanCommand(c) {
   return out;
 }
 
-/** The record as a plain object for a link: { v, n, s, d, t?, rl?, p, l, r, c }. */
+/** The record as a plain object for a link: { v, n, s, d, t?, ru?, rl?, p, l, r, c }. */
 function pack(f) {
-  return { v: LINK_VERSION, n: f.node, s: f.seed, d: f.difficulty, ...(f.tier && { t: f.tier }), ...(f.relics?.length && { rl: f.relics }), p: f.party, l: f.log, r: f.result, c: f.check };
+  return { v: LINK_VERSION, n: f.node, s: f.seed, d: f.difficulty, ...(f.tier && { t: f.tier }), ...(f.rules > 1 && { ru: f.rules }), ...(f.relics?.length && { rl: f.relics }), p: f.party, l: f.log, r: f.result, c: f.check };
 }
 
 /** A record read from a link, cleaned, or null if anything is missing or unknown. */
@@ -72,13 +72,14 @@ export function unpack(o) {
   if (typeof o.n !== 'string' || !NODES[o.n]?.level || !int(o.s, 0, 2 ** 32 - 1)) return null;
   if (!Object.hasOwn(DIFFICULTIES, o.d) || !['victory', 'defeat'].includes(o.r) || typeof o.c !== 'string') return null;
   if (o.t !== undefined && !int(o.t, 1, 99)) return null;
+  if (o.ru !== undefined && !int(o.ru, 2, RULES)) return null; // rules newer than these can't be played
   if (o.rl !== undefined && (!Array.isArray(o.rl) || cleanRelics(o.rl).length !== o.rl.length)) return null;
   const relics = cleanRelics(o.rl);
   const party = cleanParty(o.p);
   if (!party || !Array.isArray(o.l) || o.l.length > 5000) return null;
   const log = o.l.map(cleanCommand);
   if (log.includes(null)) return null;
-  return { node: o.n, seed: o.s, difficulty: o.d, ...(o.t && { tier: o.t }), ...(relics.length && { relics }), party, log, result: o.r, check: o.c };
+  return { node: o.n, seed: o.s, difficulty: o.d, ...(o.t && { tier: o.t }), ...(o.ru && { rules: o.ru }), ...(relics.length && { relics }), party, log, result: o.r, check: o.c };
 }
 
 /**
@@ -87,7 +88,7 @@ export function unpack(o) {
  */
 export function replayOutcome(f) {
   try {
-    const game = new Game(levelById(NODES[f.node].level), { party: f.party, difficulty: runDifficulty(f.difficulty, f.tier ?? 0), rng: seeded(f.seed), relics: f.relics ?? [] });
+    const game = new Game(levelById(NODES[f.node].level), { party: f.party, difficulty: runDifficulty(f.difficulty, f.tier ?? 0), rng: seeded(f.seed), relics: f.relics ?? [], rules: f.rules ?? 1 });
     const r = replayFight(game, f.log);
     return r.ok && game.over === f.result && fightCheck(game) === f.check ? { rounds: game.round } : null;
   } catch {

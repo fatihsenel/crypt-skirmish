@@ -69,7 +69,7 @@ export class Spellcasting {
   /** Mass Healing Word: up to six hurt allies (or self) within range and sight. */
   massHealTargets(caster) {
     const s = SPELLS.massHealingWord;
-    return this.living(caster.team)
+    return this.units.filter((t) => t.team === caster.team && (t.alive || t.dying))
       .filter((t) => t.hp < t.maxHp && !this.has(t, 'rotting') && gridDistance(caster, t) <= s.range
         && this.grid.lineOfSight(caster.x, caster.z, t.x, t.z))
       .slice(0, 6);
@@ -79,7 +79,7 @@ export class Spellcasting {
   spellTargets(caster, id) {
     const s = SPELLS[id];
     const pool = s.targeting === 'enemy' ? this.enemiesOf(caster)
-      : s.targeting === 'ally' ? this.living(caster.team)
+      : s.targeting === 'ally' ? this.units.filter((u) => u.team === caster.team && (u.alive || u.dying))
         : s.targeting === 'corpse' ? this.corpses() : [];
     return pool.filter((t) => !this.spellProblem(caster, id, t));
   }
@@ -117,7 +117,7 @@ export class Spellcasting {
         if ((id === 'huntersMark' || id === 'hex') && caster.mark?.id === target.id) return `${target.name} is already ${id === 'hex' ? 'hexed' : 'marked'}`;
         break;
       case 'ally':
-        if (!target.alive || target.team !== caster.team) return 'Choose an ally (or yourself)';
+        if (!(target.alive || (target.dying && (s.heal || s.pool))) || target.team !== caster.team) return 'Choose an ally (or yourself)';
         if ((s.heal || s.pool) && target.hp >= target.maxHp) return `${target.name} is unhurt`;
         if ((s.heal || s.pool) && this.has(target, 'rotting')) return `${target.name} is rotting: no healing takes`;
         if (id === 'shieldOfFaith' && target.faithFrom === caster.id) return `${target.name} already has it`;
@@ -206,7 +206,7 @@ export class Spellcasting {
       const mods = this.attackMods(caster, t, ray);
       this.useHelp(caster, t);
       const { d20, rolls } = this.rollD20(mods.mode);
-      const cover = this.coverBonus(caster, t);
+      const cover = this.coverBonus(caster, t, (u) => hpOf(u) <= 0);
       const ac = this.acOf(t) + cover;
       const crit = d20 === 20;
       const hit = crit || (d20 !== 1 && d20 + toHit >= ac);
@@ -245,6 +245,10 @@ export class Spellcasting {
     const slot = readied ?? (again ? caster.spiritWeapon.slot : this.spendSlot(caster, spell.level));
     const upcast = Math.max(0, slot - spell.level);
     this.reveal(caster, 'spell');
+    const focus = this.rules >= 2 && spell.concentration; // rules 2: one concentration spell at a time
+    // A new mark moves the old one itself (the case below clears its tag).
+    const moving = ['hex', 'huntersMark'].includes(id) && caster.concentrating === id;
+    if (focus && !moving) this.endConcentration(caster, 'switch');
     const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot, ...(readied !== null && { readied: true }) };
 
     switch (id) {
@@ -483,6 +487,7 @@ export class Spellcasting {
       default:
         throw new Error(`castSpell: no rules for "${id}"`);
     }
+    if (focus && (id !== 'fear' || result.saves.some((s) => !s.success))) caster.concentrating = id;
     if (id !== 'mistyStep') {
       if (result.target?.team && result.target.team !== caster.team) this.alert(result.target, 'hurt');
       this.noise(caster, spell.level >= 3 ? NOISE + 3 : NOISE);

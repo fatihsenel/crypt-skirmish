@@ -122,6 +122,7 @@ export class UnitView {
       return;
     }
     if (this.unit.corpse) return; // laid out in the constructor
+    this.down = true;
     this.label.visible = false;
     if (this.rig) this.rig.pose('dead');
     else this.deadPose(1);
@@ -259,10 +260,12 @@ export class UnitView {
       u.conditions?.restrained && ['restrained', 'Webbed'],
       u.conditions?.rotting && ['rotting', 'Rotting'],
       u.conditions?.mocked && ['mocked', 'Mocked'],
+      u.conditions?.paralyzed && ['paralyzed', 'Paralysed'],
       u.inspired && u.alive && ['inspired', `Inspired d${u.inspired.die}`],
       u.invisibleFrom && u.alive && ['invisible', 'Invisible'],
       u.marked && u.alive && (u.marked === 'hex' ? ['marked hexed', 'Hexed'] : ['marked', 'Marked']),
       u.rebukeArmed && u.alive && ['rebuke', 'Rebuke'],
+      u.concentrating && u.alive && ['focus', 'Concentrating'],
       u.deathWard && u.alive && ['ward', u.elite === 'relentless' ? 'Relentless' : 'Warded'],
       // A hero's own Stealth roll is theirs to see; a goblin's isn't.
       u.hidden && ['hidden', u.team === 'heroes' ? `Hidden · ${u.hidden}` : 'Hidden'],
@@ -504,6 +507,7 @@ export class UnitView {
   }
 
   async die() {
+    this.down = true;
     this.label.visible = false;
     this.marker.visible = false;
     this.walking = false;
@@ -519,6 +523,20 @@ export class UnitView {
     // little bounce on impact
     await tween(160, (t) => this.deadPose(1 - Math.sin(t * Math.PI) * 0.05));
     await tween(700, (t) => this.fadeMeshes(1 - t * 0.6));
+  }
+
+  /** A dying hero healed (or rallying on a 20) gets back up. */
+  async getUp() {
+    if (!this.down) return;
+    this.down = false;
+    this.fadeMeshes(1);
+    this.label.visible = true;
+    if (this.rig) {
+      this.rig.holdLast = false;
+      await this.rig.play('rise').done;
+    } else await tween(500, (t) => this.deadPose(1 - t), easeOut);
+    this.updateHp();
+    this.updateStatus();
   }
 
   dispose() {
