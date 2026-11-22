@@ -526,7 +526,8 @@ export class Hud {
       : r.mods.mode === 'dis'
         ? ` <span class="dis">disadvantage: ${esc(r.mods.dis.join(', '))}</span>`
         : '';
-    const tag = r.opportunity ? '<b class="opp">Opportunity attack!</b><br>' : '';
+    const tag = r.opportunity ? '<b class="opp">Opportunity attack!</b><br>'
+      : r.readied ? '<b class="opp">Readied attack!</b><br>' : '';
     const sneak = (r.sneak ? ` incl. <b class="sneak">Sneak Attack +${r.sneak.total}</b> ${dice(r.sneak)}` : '')
       + (r.smite ? ` incl. <b class="spell">Divine Smite +${r.smite.total} radiant</b> ${dice(r.smite.roll)}${r.target.undead ? ' (undead +1d8)' : ''} <span class="dice">${ordinal(r.smite.slot)}-level slot</span>` : '')
       + (r.mark ? ` incl. <b class="spell">${r.mark.spell === 'hex' ? 'Hex' : 'Hunter’s Mark'} +${r.mark.total}</b> ${dice(r.mark)}` : '')
@@ -752,6 +753,10 @@ export class Hud {
     const text = {
       dash: 'Dashes, doubling movement this turn.',
       dodge: 'takes the Dodge action. Attacks against it have disadvantage.',
+      ready: (() => {
+        const a = r.unit.attacks[0];
+        return `readies <b>${esc(a.name)}</b>: the first foe to step into ${a.reach === 1 ? 'reach' : 'view'} takes it.`;
+      })(),
       disengage: 'Disengages. Moving won’t provoke opportunity attacks.',
       nimbleEscape: 'uses <b>Nimble Escape</b> to slip away.',
       secondWind: `uses <b>Second Wind</b> and regains <b class="heal">${r.healed} HP</b> ${r.roll && dice(r.roll)}.`,
@@ -821,7 +826,7 @@ export class Hud {
       action: 'Action: one a turn, to attack, cast a spell, or Dash, Dodge, Disengage, Hide…',
       attacks: 'Attacks left from this turn’s Attack action.',
       bonus: 'Bonus action: one quick extra a turn, like Second Wind or a bonus-action spell.',
-      reaction: 'Reaction: one a round, for an opportunity attack or a spell like Shield. It comes back at the start of this figure’s turn.',
+      reaction: 'Reaction: one a round, for an opportunity attack, a readied attack or a spell like Shield. It comes back at the start of this figure’s turn.',
     };
     const spent = (text, used) => (used ? `${text} Used this turn.` : text);
     const conds = Object.keys(u.conditions ?? {});
@@ -967,7 +972,8 @@ export class Hud {
         sub: (a.time === 'bonus' ? 'bonus' : 'action') + (id === 'potion' ? ` · ${u.potions} left` : ''),
         tip: {
           kind: `${a.time === 'bonus' ? 'Bonus action' : 'Action'}${a.feature ? ' · class feature' : ''}`,
-          chips: [id === 'potion' ? `${u.potions} left` : null, a.range ? `${a.range * 5} ft` : null].filter(Boolean),
+          chips: [id === 'potion' ? `${u.potions} left` : null, a.range ? `${a.range * 5} ft` : null,
+            id === 'ready' ? `${u.attacks[0].name} · ${u.attacks[0].reach === 1 ? 'into reach' : 'into view'}` : null].filter(Boolean),
           desc: a.desc,
         },
         problem: problem && `${problem}.`,

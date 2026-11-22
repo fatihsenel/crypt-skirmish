@@ -242,11 +242,12 @@ export class UnitView {
     this.marker.visible = on && this.unit.alive;
   }
 
-  /** Small status tags above the name (Dodging, Shield, Disengaged). */
+  /** Small status tags above the name (Dodging, Ready, Shield, Disengaged). */
   updateStatus() {
     const u = this.unit;
     const tags = [
       u.dodging && ['dodge', 'Dodging'],
+      u.readied && u.alive && ['ready', 'Ready'],
       u.shielded && ['shield', 'Shield +5'],
       u.disengaged && ['disengage', 'Disengaged'],
       u.turned && ['turned', 'Turned'],

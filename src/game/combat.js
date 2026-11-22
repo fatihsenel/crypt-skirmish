@@ -570,6 +570,7 @@ export class Game extends Spellcasting {
       colossusUsed: false,
       strikeUsed: false,
       interacted: false,
+      readied: false,
     });
     this.standUp(u);
     if (this.has(u, 'restrained')) u.movesLeft = 0;
@@ -908,6 +909,35 @@ export class Game extends Spellcasting {
       && gridDistance(foe, from) <= 1 && gridDistance(foe, to) > 1;
   }
 
+  /**
+   * What a readied hero sees of a foe on `at`: whether it is in reach, and whether it is in sight.
+   * Taken before the foe steps on (and before a door on its way opens).
+   */
+  readyWatch(hero, at) {
+    return { near: gridDistance(hero, at) <= 1, saw: this.grid.lineOfSight(hero.x, hero.z, at.x, at.z) };
+  }
+
+  /** The attack a hero readies: their main weapon or cantrip, the first in their stat block. */
+  readyWeapon(hero) {
+    return hero.attacks[0];
+  }
+
+  /**
+   * The attack a readied hero makes as `foe` steps onto `at`, or null. A melee weapon strikes a
+   * foe stepping into reach; a ranged one (Fire Bolt, Eldritch Blast) a foe stepping into view
+   * (`before.saw` false) within range, so one already in sight can walk on. Needs the reaction.
+   */
+  readyAttack(hero, foe, at, before) {
+    if (!hero.readied || !hero.alive || hero.reactionUsed) return null;
+    const a = this.readyWeapon(hero);
+    const now = this.readyWatch(hero, at);
+    if (a.reach === 1 ? !now.near || before.near : !now.saw || before.saw) return null;
+    const there = Object.create(foe);
+    there.x = at.x;
+    there.z = at.z;
+    return this.attackProblem(hero, there, a, { opportunity: true }) ? null : a;
+  }
+
   /** Enemies that would get an opportunity attack if `unit` walked `path`. */
   provokers(unit, path) {
     const out = new Set();
@@ -924,7 +954,8 @@ export class Game extends Spellcasting {
    * traps spring on heroes, and leaving an enemy's reach provokes opportunity attacks.
    * Returns { steps, path, interrupted? } where steps is a list of
    *   { type: 'walk', path }  { type: 'door', x, z }
-   *   { type: 'opportunity', result, at }  { type: 'trap', result }
+   *   { type: 'opportunity', result, at }  { type: 'trap', result }  { type: 'burn', result }
+   *   { type: 'readied', result, at } (a readied hero's attack as the mover steps into it)
    * for the controller to animate in order; or null if the move is illegal.
    */
   move(unit, x, z) {
@@ -955,6 +986,8 @@ export class Game extends Spellcasting {
     for (let i = 0; i < path.length - 1; i++) {
       const from = path[i];
       const to = path[i + 1];
+      // Readied heroes, and what they saw of the mover before this step (and before a door opens).
+      const waiting = this.enemiesOf(unit).filter((h) => h.readied).map((h) => [h, this.readyWatch(h, from)]);
       for (const foe of this.enemiesOf(unit)) {
         if (!this.canOpportunityAttack(foe, unit, from, to)) continue;
         flush(from);
@@ -996,6 +1029,17 @@ export class Game extends Spellcasting {
         unit.x = to.x;
         unit.z = to.z;
         steps.push({ type: 'burn', result: this.burn(unit) });
+        if (!unit.alive || this.over) return stop(i + 1);
+      }
+      for (const [h, before] of waiting) {
+        const atk = this.readyAttack(h, unit, to, before);
+        if (!atk) continue;
+        flush(to);
+        unit.x = to.x;
+        unit.z = to.z;
+        h.readied = false;
+        const result = this.attack(h, unit, atk, { readied: true });
+        steps.push({ type: 'readied', result, at: { x: to.x, z: to.z } });
         if (!unit.alive || this.over) return stop(i + 1);
       }
     }
@@ -1405,13 +1449,13 @@ export class Game extends Spellcasting {
     return mods.mode === 'adv' || (mods.mode === 'normal' && this.allyNextTo(attacker, target));
   }
 
-  attack(attacker, target, attack, { opportunity = false, ambush = false } = {}) {
-    const problem = this.attackProblem(attacker, target, attack, { opportunity });
+  attack(attacker, target, attack, { opportunity = false, ambush = false, readied = false } = {}) {
+    const problem = this.attackProblem(attacker, target, attack, { opportunity: opportunity || readied });
     if (problem) return { ok: false, reason: problem };
 
     const mods = this.attackMods(attacker, target, attack, { opportunity, ambush });
     this.reveal(attacker, 'attack');
-    if (opportunity) {
+    if (opportunity || readied) {
       attacker.reactionUsed = true;
     } else if (!attacker.actionUsed) {
       attacker.actionUsed = true;
@@ -1485,7 +1529,7 @@ export class Game extends Spellcasting {
     }
 
     const result = {
-      ok: true, kind: 'attack', attacker, target, attack, opportunity,
+      ok: true, kind: 'attack', attacker, target, attack, opportunity, readied,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
       hit, crit, fumble, shielded, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
     };
@@ -1568,6 +1612,7 @@ export class Game extends Spellcasting {
   actionsFor(unit) {
     const list = [...STANDARD_ACTIONS, ...unit.features];
     if (unit.potions > 0) list.push('potion');
+    if (unit.team === 'heroes') list.push('ready'); // last, so the number keys before it stay put
     return list;
   }
 
@@ -1588,6 +1633,7 @@ export class Game extends Spellcasting {
       if (unit.hp >= unit.maxHp) return 'Already at full HP';
     }
     if (id === 'potion' && unit.hp >= unit.maxHp) return 'Already at full HP';
+    if (id === 'ready' && unit.readied) return 'Already readied';
     if ((id === 'secondWind' || id === 'potion') && this.has(unit, 'rotting')) return 'Rotting: you can’t regain HP';
     if (id === 'turnUndead') {
       if (unit.channelUsed >= (unit.channelUses ?? 1)) return 'Already used this fight';
@@ -1624,6 +1670,9 @@ export class Game extends Spellcasting {
         break;
       case 'dodge':
         unit.dodging = true;
+        break;
+      case 'ready':
+        unit.readied = true;
         break;
       case 'hide':
       case 'cunningHide':

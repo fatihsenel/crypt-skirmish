@@ -10,6 +10,10 @@ export const ACTIONS = {
     name: 'Hide', time: 'action',
     desc: 'Roll Stealth. Monsters only spot you if their passive Perception beats it, they are next to you, or they Search and roll high enough. Alert monsters lose track of you and hunt where they last saw you. Your first attack from hiding has advantage. Not while an alert enemy can see you.',
   },
+  ready: {
+    name: 'Ready', time: 'action',
+    desc: 'Hold your main attack until your next turn, and make it with your reaction. A melee weapon strikes the first foe to step into your reach; a spell like Fire Bolt hits the first foe to step into view.',
+  },
   potion: { name: 'Potion', time: 'action', desc: 'Drink a potion of healing: regain 2d4 + 2 HP.' },
   // Fighter
   secondWind: { name: 'Second Wind', time: 'bonus', feature: true, desc: 'Regain 1d10 + fighter level HP. Once per fight.' },

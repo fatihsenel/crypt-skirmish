@@ -1216,7 +1216,7 @@ async function runMonsterTurn(unit) {
 }
 
 const STEP_VERBS = { dash: 'dashes', dodge: 'dodges', disengage: 'disengages', hide: 'hides', nimbleHide: 'hides',
-  nimbleEscape: 'slips away', search: 'searches', aggressive: 'charges', potion: 'drinks a potion' };
+  nimbleEscape: 'slips away', search: 'searches', aggressive: 'charges', potion: 'drinks a potion', ready: 'readies' };
 
 /** What a step (a monster's, or a hero's command) adds to its turn's line in the log (attacks add their own). */
 function stepNote(step) {

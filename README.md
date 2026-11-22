@@ -51,7 +51,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   gives advantage. Shooting with an enemy next to you, or at someone Dodging, gives
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
-- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove and drinking a potion.
+- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Ready and drinking a potion.
+- **Ready:** a hero holds their main attack until their next turn and makes it with their
+  reaction: a melee weapon strikes the first foe to step into reach, Fire Bolt or Eldritch
+  Blast the first to step into view. Good for holding a doorway.
 - **Conditions:** prone, poisoned, frightened, restrained and rotting (a mummy's fist: no
   healing takes for two turns), each shown as a tag on the figure.
 - **Cover:** barrels and crates give +2 AC against attacks that pass over them.
@@ -314,6 +317,9 @@ A few things differ from the SRD to keep the game simple:
 - Hex has no ability-check part and lasts the whole fight, with no concentration.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
+- Ready has two fixed triggers instead of one you name: a foe stepping into reach (a melee
+  weapon) or into view (Fire Bolt, Eldritch Blast). It always readies the hero's first attack,
+  and a readied cantrip needs no concentration.
 - New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the
   difficulty's), and from the first tier their weapon attack and damage rolls get +1.
 - Elites (NG+2 and deeper) are not from the SRD: the room's monster worth the most XP gets a

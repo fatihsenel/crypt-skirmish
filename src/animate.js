@@ -228,7 +228,17 @@ export function createAnimations(app) {
           await animateAttack(r, step.at);
           break;
         }
-        case 'burn': { // walked onto a tipped brazier's coals
+        case 'readied': { // stepped into a readied hero's reach or view
+        const r = step.result;
+        sfx.alert();
+        alertFx(stage.scene, step.at);
+        floatText(stage.scene, r.attacker, 'Readied!', 'warn');
+        view(r.attacker).updateStatus();
+        await wait(250);
+        await animateAttack(r, step.at);
+        break;
+      }
+      case 'burn': { // walked onto a tipped brazier's coals
           const r = step.result;
           sfx.fireImpact();
           if (unseen(unit)) {
@@ -360,6 +370,12 @@ export function createAnimations(app) {
         else if (!unseen(unit)) floatText(stage.scene, unit, 'Hides!', 'warn');
         v.updateStatus();
         await wait(400);
+        break;
+      case 'ready':
+        sfx.maneuver();
+        floatText(stage.scene, unit, 'Ready', 'spell');
+        v.updateStatus();
+        await wait(450);
         break;
       case 'aggressive':
         sfx.roar();

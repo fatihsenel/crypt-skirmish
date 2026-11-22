@@ -40,7 +40,7 @@ server on 5173.
   `newGame` and `startReplay` wait for them (`kit` in `main.js`). A finished fight is settled in
   `fightEnd.js` (`settleFight`): records, achievements, dailies and the banner's facts.
 - The rules engine (`Game` in `combat.js`, built on `Spellcasting` in `spells.js`) resolves
-  everything instantly and emits events (`attack`, `move`, `spell`, `death`, …). `move()` returns steps. `src/main.js` turns them
+  everything instantly and emits events (`attack`, `move`, `spell`, `death`, …). `move()` returns steps (doors, traps, coals, and the opportunity and readied attacks it sets off). `src/main.js` turns them
   into HUD updates, and `src/animate.js` into animations and sound.
 - **Randomness in rules goes through `this.rng`** (or a passed-in `rng`), never
   `Math.random`. Fights are saved as a seed plus the heroes' commands and replayed on load
