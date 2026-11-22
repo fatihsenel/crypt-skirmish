@@ -109,7 +109,7 @@ let testSeed = new URLSearchParams(location.search).has('level') && new URLSearc
 /** A linked fight being played yourself ({ rec, theirs }: the link's record and how it went), else null. */
 let challenge = null;
 /** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
-let feats = { maxHit: 0, sneaks: 0, stayDown: false };
+let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false };
 
 // The character models load room by room: a fight waits only for the figures it needs.
 // Once the dungeon tiles are in (they gate the title), the next room's models come first,
@@ -685,7 +685,7 @@ function startFight(resume, watch = null) {
   game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed), relics });
   fight = daily || challenge || watch ? null : { node: nodeId, seed, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
   if (!watch) record = { node: nodeId, seed, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };
-  feats = { maxHit: 0, sneaks: 0, stayDown: false };
+  feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false };
   if (!watch) takeInput(); // the fight's presses count from here (play stats)
   game.on('attack', (r) => {
     if (r.attacker.team !== 'heroes' || !r.hit) return;
@@ -695,7 +695,23 @@ function startFight(resume, watch = null) {
   // A Relentless elite finished in the round it clung on at 1 HP.
   let clung = null;
   game.on('ward', (r) => { if (r.relentless) clung = { unit: r.unit, round: game.round }; });
-  game.on('death', ({ unit }) => { if (clung?.unit === unit && clung.round === game.round) feats.stayDown = true; });
+  // The board and the new actions: the hero attack that dropped a foe, coals, a hold.
+  let blow = null;
+  let scorched = null; // the last one the coals landed on or burned
+  game.on('attack', (r) => { blow = r.attacker.team === 'heroes' ? r : null; scorched = null; });
+  game.on('spell', () => { blow = null; scorched = null; });
+  game.on('spill', (r) => { blow = null; scorched = r.unit; });
+  game.on('burn', (r) => { blow = null; scorched = r.unit; });
+  game.on('grappleEnd', ({ unit, why }) => { if (why === 'fell' && unit.team === 'monsters' && !unit.alive) feats.pinned = true; });
+  game.on('death', ({ unit }) => {
+    if (clung?.unit === unit && clung.round === game.round) feats.stayDown = true;
+    if (unit.team !== 'monsters') return;
+    if (scorched === unit) feats.coals = true;
+    if (blow?.target === unit) {
+      if (blow.readied) feats.held = true;
+      if (blow.mods.adv.some((a) => a.startsWith('help from'))) feats.teamwork = true;
+    }
+  });
   if (resume && !replaySaved(resume)) {
     game = null;
     record = null;
@@ -1093,7 +1109,17 @@ async function onTurnStart(unit) {
     saveFight(); // with the rooms seen so far
     if (!debugAutoplay) {
       const chestInSight = [...game.grid.chests.keys()].some((k) => visible.has(k));
-      tips.notice('heroTurn', { unit, chestInSight, touch: controls.touching });
+      const near = (t) => Math.max(Math.abs(t.x - unit.x), Math.abs(t.z - unit.z)) <= 1;
+      const foes = game.enemiesOf(unit);
+      tips.notice('heroTurn', {
+        unit, chestInSight, touch: controls.touching,
+        brazierNext: [...game.grid.props.values()].some((p) => p.kind === 'brazier' && !p.tipped && near(p)),
+        waterInSight: [...game.grid.water].some((k) => visible.has(k)),
+        foeNext: foes.some((f) => !unseen(f) && near(f)),
+        // Foes on the hunt but none in sight: a moment to Ready.
+        foesComing: foes.length > 0 && foes.every((f) => unseen(f)) && foes.some((f) => !f.unaware),
+        hurtAllyNext: game.alliesOf(unit).some((a) => near(a) && a.hp * 2 <= a.maxHp),
+      });
     }
   }
   if (unit.team === 'monsters' || debugAutoplay) await runMonsterTurn(unit);

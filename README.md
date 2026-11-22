@@ -52,7 +52,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
 - **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Grapple, Help, Ready, drinking a
-  potion or giving one to an ally next to you.
+  potion or giving one to an ally next to you. Grapple, Disengage, Search, Help and Give potion
+  wait behind **More** on the action bar, so the moves most turns need stay in one row.
 - **Grapple:** instead of one attack, Athletics against the foe's STR or DEX. Win and it can't
   move while you stay next to it; it tries to break free at the start of each of its turns.
 - **Help:** a hero distracts a foe next to them; the next ally to attack it before the
@@ -170,7 +171,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
   If an update moves the week to another room, its best starts again there.
-- **Achievements:** 32 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 36 goals that carry across runs. Open them from the title screen.
 - **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
   follow the pointer (on a phone, your taps) and flare at the title's buttons. Click or tap it
   (or press K) to play its moves in turn, each with its own sound: gape, chatter, cocked head,
@@ -184,8 +185,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   kind has dealt your heroes and how many it dropped, with the three deadliest at the top.
 - **Past runs:** your last 20 runs, from the title screen. Each keeps its last fight to watch
   again or copy as a link. Your deepest win (such as Hard NG+2) is kept and shown above them.
-- **Tips for new players:** short hints the first time something matters. They can be turned
-  off.
+- **Tips for new players:** short hints the first time something matters, such as a brazier
+  to tip, water in sight, foes hunting out of sight (Ready) or a hurt ally next to you. They
+  can be turned off.
 - **Offline and on your Home Screen:** once everything has loaded, the foot of the title says
   "Saved for offline play", and the game then opens without a signal ("No signal: playing the
   saved copy"). On an iPhone it says how to add it to the Home Screen (Share, then Add to Home

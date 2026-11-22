@@ -16,6 +16,8 @@ const chipName = (name) => esc(shortName(name));
 import { isWeapon, isMelee } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
+/** Standard actions few turns need: they sit behind More with Grapple, Help and Give potion. */
+const RARE_ACTIONS = new Set(['disengage', 'search']);
 const LOG_KEY = 'crypt-skirmish:log'; // '0' when the log beside the board is folded
 const NARROW = '(max-width: 900px)'; // the log is a panel of its own (style.css)
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -831,6 +833,7 @@ export class Hud {
 
   renderActionBar(game, { selected, busy }) {
     const u = game.current;
+    this.lastBar = [game, { selected, busy }]; // More redraws the bar from it
     this.readying = selected?.kind === 'ready'; // the next attack clicked is the one to hold
     if (!u) return;
     const mine = u.team === 'heroes' && !game.over;
@@ -958,8 +961,10 @@ export class Hud {
       disabled: !!attackWhy,
       active: selected?.kind === 'shove',
     }));
+    // Moves most turns don't need wait behind More, so the bar stays short (on a phone, one row).
+    const more = [];
     if (u.team === 'heroes') {
-      atks.push(button({
+      more.push(button({
         kind: 'grapple', id: 'grapple', name: GRAPPLE.name, cls: 'act',
         sub: `${signed(game.shoveBonus(u))} · hold in place · 5 ft`,
         tip: { kind: 'Takes one attack', chips: [`${signed(game.shoveBonus(u))} Athletics`, '5 ft'], desc: GRAPPLE.desc, how: this.howTo('an enemy') },
@@ -997,10 +1002,11 @@ export class Hud {
       });
     });
 
-    const acts = game.actionsFor(u).map((id) => {
+    const acts = [];
+    for (const id of game.actionsFor(u)) {
       const a = ACTIONS[id];
       const problem = game.actionProblem(u, id);
-      return button({
+      (RARE_ACTIONS.has(id) ? more : acts).push(button({
         kind: id === 'ready' ? 'ready' : 'action', id, name: a.name, cls: a.time === 'bonus' ? 'bonus' : 'act',
         sub: (a.time === 'bonus' ? 'bonus' : 'action') + (id === 'potion' ? ` · ${u.potions} left` : ''),
         tip: {
@@ -1013,12 +1019,12 @@ export class Hud {
         problem: problem && `${problem}.`,
         disabled: !!problem,
         active: id === 'ready' && selected?.kind === 'ready',
-      });
-    });
+      }));
+    }
 
     if (u.team === 'heroes') {
       const helpWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
-      acts.push(button({
+      more.push(button({
         kind: 'help', id: 'help', name: HELP.name, cls: 'act',
         sub: 'action · ally advantage',
         tip: { kind: 'Action', chips: ['5 ft', 'advantage for an ally'], desc: HELP.desc, how: this.howTo('an enemy next to you') },
@@ -1028,7 +1034,7 @@ export class Hud {
       }));
       if (u.potions > 0) {
         const feedWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
-        acts.push(button({
+        more.push(button({
           kind: 'feed', id: 'feed', name: FEED.name, cls: 'act',
           sub: `action · ${u.potions} left`,
           tip: { kind: 'Action', chips: [`${u.potions} left`, '2d4 + 2 HP', '5 ft'], desc: FEED.desc, how: this.howTo('an ally next to you') },
@@ -1039,7 +1045,15 @@ export class Hud {
       }
     }
 
-    const html = group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts);
+    // Open while the player wants it, or while one of its moves is picked.
+    const open = this.moreOpen || more.some((b) => b.includes(' selected"'));
+    if (more.length) {
+      const names = [...more.join('').matchAll(/<span>([^<]*)<\/span>/g)].map((m) => m[1]);
+      acts.push(`<button type="button" class="ability more ${open ? 'open' : ''}" data-kind="more" data-id="more"
+        aria-expanded="${open}" aria-description="${esc(names.join(', '))}"><span>${open ? 'Less' : 'More'}</span><small>${open ? 'hide' : `${more.length} more`}</small></button>`);
+    }
+    const html = group('Attack', atks) + (spells.length ? group('Spells', spells) : '') + group('Actions', acts)
+      + (open && more.length ? group('More', more) : '');
     // The first ten buttons answer the number keys 1-9 and 0, in the order shown (see pickByNumber).
     let n = 0;
     return html.replace(/<button type="button" class="ability[^>]*>/g, (tag) => (++n > 10 ? tag
@@ -1102,6 +1116,14 @@ export class Hud {
     const b = ev.target.closest('button.ability');
     if (!b || b.disabled) return;
     const { kind, id } = b.dataset;
+    if (kind === 'more') {
+      this.moreOpen = b.getAttribute('aria-expanded') !== 'true';
+      // Folding it puts away a move picked from it (Grapple, Help, Give potion), which redraws the bar.
+      const picked = b.closest('#attacks').querySelector('.group:last-child button.selected');
+      if (!this.moreOpen && picked) this.handlers.onChoose({ kind: picked.dataset.kind });
+      else this.renderActionBar(...this.lastBar);
+      return;
+    }
     if (kind === 'attack' && this.readying) this.handlers.onChoose({ kind: 'readyAttack', attack: Number(id) });
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
     else if (['shove', 'grapple', 'help', 'feed', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });

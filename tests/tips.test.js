@@ -30,6 +30,17 @@ describe('tips for new players', () => {
     expect(pickTip('camp', { report: { xp: 50 } }, seen).id).toBe('camp');
   });
 
+  it('points out the board and the moves beyond attacking when they fit', () => {
+    const seen = new Set(['move']);
+    expect(pickTip('heroTurn', { unit: hero(), brazierNext: true }, seen).id).toBe('brazier');
+    expect(pickTip('heroTurn', { unit: hero(), waterInSight: true }, seen).id).toBe('water');
+    expect(pickTip('heroTurn', { unit: hero(), hurtAllyNext: true }, seen).id).toBe('feed');
+    expect(pickTip('heroTurn', { unit: hero({ potions: 0 }), hurtAllyNext: true }, seen)).toBeNull();
+    expect(pickTip('heroTurn', { unit: hero(), foesComing: true }, seen).id).toBe('ready');
+    expect(pickTip('heroTurn', { unit: hero({ actionUsed: true }), foesComing: true }, seen)).toBeNull();
+    expect(pickTip('heroTurn', { unit: hero(), foeNext: true }, seen).id).toBe('teamwork');
+  });
+
   it('every tip reads for both mouse and touch', () => {
     const ctx = { unit: hero(), cmd: { type: 'attack' }, report: {} };
     for (const t of TIPS) {

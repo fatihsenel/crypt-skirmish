@@ -72,6 +72,22 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ game }) => heroesUp(game) === 1,
   },
   {
+    id: 'hold-door', name: 'Hold the door', desc: 'Fell a foe with a readied attack.',
+    on: 'room', test: ({ feats }) => !!feats?.held,
+  },
+  {
+    id: 'hot-coals', name: 'Hot coals', desc: 'Let a tipped brazier’s coals finish a foe.',
+    on: 'room', test: ({ feats }) => !!feats?.coals,
+  },
+  {
+    id: 'pinned', name: 'Pinned', desc: 'Slay a foe a hero is still grappling.',
+    on: 'room', test: ({ feats }) => !!feats?.pinned,
+  },
+  {
+    id: 'teamwork', name: 'Teamwork', desc: 'Fell a foe with an attack another hero’s Help set up.',
+    on: 'room', test: ({ feats }) => !!feats?.teamwork,
+  },
+  {
     id: 'act-one', name: 'The necromancer', desc: 'Clear the Sanctum, the end of act one.',
     on: 'room', test: ({ node, daily }) => !daily && node === 'sanctum', // campaign progress, not a daily
   },

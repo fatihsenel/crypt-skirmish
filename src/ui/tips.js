@@ -9,7 +9,7 @@
 const STORAGE_KEY = 'crypt-skirmish:tips';
 
 /** What the player can see right now, from main.js. */
-// ctx: { unit, cmd, chestInSight, touch, report }
+// ctx: { unit, cmd, chestInSight, brazierNext, waterInSight, foeNext, foesComing, hurtAllyNext, touch, report }
 const click = (ctx, word = 'click') => (ctx.touch ? word.replace('click', 'tap').replace('Click', 'Tap') : word);
 
 /**
@@ -46,6 +46,40 @@ export const TIPS = [
       'The ◆ marks are spell slots; they come back when the party rests.',
   },
   {
+    id: 'brazier',
+    on: 'heroTurn',
+    when: (c) => c.brazierNext,
+    text: (c) => `<b>${c.unit.name}</b> stands by a lit <b>brazier</b>. ${click(c, 'Click')} it to tip it over (your action): ` +
+      'its coals spill on the tiles beyond, burn whoever stands there, and keep burning for 3 turns.',
+  },
+  {
+    id: 'water',
+    on: 'heroTurn',
+    when: (c) => c.waterInSight,
+    text: () => 'The dark tiles are <b>shallow water</b>: wading costs double movement. Flying foes skim over it.',
+  },
+  {
+    id: 'feed',
+    on: 'heroTurn',
+    when: (c) => c.hurtAllyNext && c.unit.potions > 0,
+    text: (c) => `An ally next to <b>${c.unit.name}</b> is badly hurt. <b>Give potion</b> (under <b>More</b>) pours one of ${c.unit.name}’s potions into them, ` +
+      'using the action: handy when theirs are gone.',
+  },
+  {
+    id: 'ready',
+    on: 'heroTurn',
+    when: (c) => c.foesComing && !c.unit.actionUsed,
+    text: (c) => 'Foes are hunting the party, out of sight. <b>Ready</b> holds an attack for their turn: ' +
+      `${click(c)} Ready, then an attack. A sword strikes the first foe to step into reach, a bow or Fire Bolt the first to step into view.`,
+  },
+  {
+    id: 'teamwork',
+    on: 'heroTurn',
+    when: (c) => c.foeNext,
+    text: () => 'With a foe next to you there’s more than hitting it. <b>Help</b> distracts it, so an ally’s next attack has advantage; ' +
+      '<b>Grapple</b> pins it in place, so it can’t reach the rest of the party. Both are under <b>More</b>.',
+  },
+  {
     id: 'attack',
     on: 'acted',
     when: (c) => c.cmd.type === 'move' && !c.unit.actionUsed,
@@ -63,7 +97,7 @@ export const TIPS = [
     id: 'provoke',
     on: 'provoke',
     text: () => 'Red dots on the path mean you’d leave an enemy’s reach, and it gets a free swing at you ' +
-      '(an <b>opportunity attack</b>). <b>Disengage</b> lets a hero walk away safely, at the cost of their action.',
+      '(an <b>opportunity attack</b>). <b>Disengage</b> (under <b>More</b>) lets a hero walk away safely, at the cost of their action.',
   },
   {
     id: 'camp',

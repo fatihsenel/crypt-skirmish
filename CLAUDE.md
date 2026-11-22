@@ -102,7 +102,8 @@ server on 5173.
   second tap (`enterStep`). A move click on a party member picks the free tile behind it
   (`floorBehind`). Screen readers hear log lines, turns and the cursor's tile
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
-  press the action bar's first ten buttons (`pickByNumber` in `hud.js`); R reads `surroundings()`.
+  press the action bar's first ten buttons (`pickByNumber` in `hud.js`; moves few turns need
+  fold behind its More button, `RARE_ACTIONS` and `more`); R reads `surroundings()`.
   The log can show one figure's lines (`filterLog`: double-click, F or a long press on a name);
   rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.

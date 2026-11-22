@@ -465,6 +465,9 @@ button.ability.spell { border-color: rgba(176, 124, 255, 0.35); }
 button.ability.spell.selected { border-color: var(--spell); background: rgba(176, 124, 255, 0.2); }
 button.ability.bonus { border-style: dashed; }
 button.ability.passive { border-style: dotted; }
+/* More: opens the moves few turns need (Grapple, Help, Give potion, Disengage, Search). */
+button.ability.more { border-color: transparent; background: rgba(255, 255, 255, 0.04); }
+button.ability.more.open { border-color: var(--muted); }
 button.ability.passive.armed:disabled { opacity: 0.75; }
 button.ability.passive.armed small { color: var(--shield); }
 /* Disabled buttons still need hover for their tooltip: let the row see the pointer. */
