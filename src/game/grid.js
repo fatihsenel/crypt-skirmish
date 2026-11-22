@@ -13,6 +13,7 @@ const PROPS = {
   '=': { kind: 'crate', cover: 'half' },
   '|': { kind: 'column', cover: 'full' },
   '*': { kind: 'brazier', cover: null, tipped: false },
+  '!': { kind: 'lever', cover: null, pulled: false },
 };
 
 // 5e grid distance: diagonals cost the same as straight moves.
@@ -26,6 +27,8 @@ export class Grid {
    *   Props: '&' barrels, '=' crates (in the way, and half cover), '|' a column (in the way,
    *   and it blocks sight like a wall), '*' a lit brazier (in the way; a hero can tip it over).
    *   '~' shallow water: floor that costs double to wade through.
+   *   ':' a raised portcullis: floor until a lever ('!', in the way like a prop) drops it. Down,
+   *   its bars block walking but not sight, and give half cover.
    */
   constructor(rows) {
     this.height = rows.length;
@@ -39,6 +42,7 @@ export class Grid {
     this.stairs = [];
     this.props = new Map();  // key -> {x, z, kind, cover: 'half' | 'full' | null}
     this.water = new Set();  // keys of shallow water tiles
+    this.gates = new Map();  // key -> {x, z, down}: portcullis tiles, all worked by the room's levers
     rows.forEach((row, z) => {
       if (row.length !== this.width) throw new Error(`Map row ${z} has wrong width`);
       this.walls[z] = [...row].map((ch, x) => {
@@ -49,6 +53,7 @@ export class Grid {
         else if (ch === '>') this.stairs.push({ x, z });
         else if (ch === '%') this.corpses.push({ code: 'g', x, z });
         else if (ch === '~') this.water.add(key(x, z));
+        else if (ch === ':') this.gates.set(key(x, z), { x, z, down: false });
         else if (PROPS[ch]) this.props.set(key(x, z), { x, z, ...PROPS[ch] });
         return ch === '#';
       });
@@ -63,9 +68,10 @@ export class Grid {
     return !this.inBounds(x, z) || this.walls[z][x];
   }
 
-  /** Can't be walked onto: walls, chests and props. */
+  /** Can't be walked onto: walls, chests, props and a portcullis that's down. */
   isSolid(x, z) {
-    return this.isWall(x, z) || this.chests.has(key(x, z)) || this.props.has(key(x, z));
+    const k = key(x, z);
+    return this.isWall(x, z) || this.chests.has(k) || this.props.has(k) || !!this.gates.get(k)?.down;
   }
 
   /** A column: blocks sight like a wall. */

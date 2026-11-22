@@ -33,7 +33,8 @@ const fail = (reason) => ({ ok: false, reason });
 /**
  * Carry out one of the player's commands for the unit whose turn it is.
  * Commands: move {x, z}, attack {target, attack}, shove {target}, grapple {target}, help {target},
- * feed {target} (give a potion), chest {x, z}, brazier {x, z}, action {id, attack?} (attack: Ready's pick),
+ * feed {target} (give a potion), chest {x, z}, brazier {x, z}, lever {x, z},
+ * action {id, attack?, spell?} (attack or spell: Ready's pick),
  * spell {id, unit | x, z}, smite, rebuke, end. Returns the engine's result.
  */
 export function applyCommand(game, cmd) {
@@ -63,8 +64,10 @@ export function applyCommand(game, cmd) {
       return game.openChest(u, cmd.x, cmd.z);
     case 'brazier':
       return game.tipBrazier(u, cmd.x, cmd.z);
+    case 'lever':
+      return game.pullLever(u, cmd.x, cmd.z);
     case 'action':
-      return game.doAction(u, cmd.id, { attack: cmd.attack });
+      return game.doAction(u, cmd.id, { attack: cmd.attack, spell: cmd.spell });
     case 'feed': {
       const target = unit(cmd.target);
       return target ? game.feedPotion(u, target) : fail('No such target');

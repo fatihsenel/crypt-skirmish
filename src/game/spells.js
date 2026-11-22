@@ -83,15 +83,16 @@ export class Spellcasting {
     return pool.filter((t) => !this.spellProblem(caster, id, t));
   }
 
-  spellProblem(caster, id, target) {
+  /** `readied`: a readied spell going off, its action and slot already spent. */
+  spellProblem(caster, id, target, { readied = false } = {}) {
     const s = SPELLS[id];
     if (!s || !caster.spells.includes(id)) return 'Unknown spell';
     if (this.over) return 'The battle is over';
     if (s.time === 'reaction') return 'Cast automatically as a reaction';
     if (caster.turned) return 'Turned: can only flee';
-    if (s.time === 'action' && caster.actionUsed) return 'Action already used this turn';
-    if (s.time === 'bonus' && caster.bonusUsed) return 'Bonus action already used this turn';
-    const free = this.freeRecast(caster, id);
+    if (!readied && s.time === 'action' && caster.actionUsed) return 'Action already used this turn';
+    if (!readied && s.time === 'bonus' && caster.bonusUsed) return 'Bonus action already used this turn';
+    const free = readied || this.freeRecast(caster, id);
     const again = id === 'spiritualWeapon' && free; // strikes again for free
     if (!free && !this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
     if (s.pool && !(caster.layOnHands > 0)) return 'Your healing pool is spent';
@@ -224,19 +225,22 @@ export class Spellcasting {
     return rays;
   }
 
-  castSpell(caster, id, target) {
-    const problem = this.spellProblem(caster, id, target);
+  /** `readied`: the slot a readied spell was given (see castReadied); its action is long spent. */
+  castSpell(caster, id, target, { readied = null } = {}) {
+    const problem = this.spellProblem(caster, id, target, { readied: readied !== null });
     if (problem) return { ok: false, reason: problem };
     const spell = SPELLS[id];
     this.cause = spell.name;
     this.via = 'spell';
-    if (spell.time === 'action') caster.actionUsed = true;
-    else caster.bonusUsed = true;
-    const again = this.freeRecast(caster, id);
-    const slot = again ? caster.spiritWeapon.slot : this.spendSlot(caster, spell.level);
+    if (readied === null) { // a readied spell's action went on Ready
+      if (spell.time === 'action') caster.actionUsed = true;
+      else caster.bonusUsed = true;
+    }
+    const again = readied === null && this.freeRecast(caster, id);
+    const slot = readied ?? (again ? caster.spiritWeapon.slot : this.spendSlot(caster, spell.level));
     const upcast = Math.max(0, slot - spell.level);
     this.reveal(caster, 'spell');
-    const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot };
+    const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot, ...(readied !== null && { readied: true }) };
 
     switch (id) {
       case 'magicMissile': {

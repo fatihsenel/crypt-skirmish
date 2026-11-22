@@ -729,6 +729,7 @@ function startFight(resume, watch = null) {
   board.setIce(game.icyTiles()); // a restored fight may have icy ground
   board.setFire(game.burningTiles()); // and coals from a tipped brazier
   for (const p of game.grid.props.values()) if (p.tipped) board.tipBrazier(p.x, p.z, p.from.x, p.from.z, true);
+  if ([...game.grid.gates.values()].some((g) => g.down)) board.setGates(true, true); // a portcullis already down
   views = new Map();
   for (const u of game.units) addView(u);
 
@@ -833,6 +834,7 @@ function startFight(resume, watch = null) {
   });
   game.on('chest', (r) => hud.logChest(r));
   game.on('brazier', (r) => hud.logBrazier(r));
+  game.on('lever', (r) => hud.logLever(r));
   game.on('spill', (r) => { if (!unseen(r.unit)) hud.logSpill(r); });
   game.on('burn', (r) => {
     if (unseen(r.unit)) hud.log('Something blunders onto the coals in the dark.', 'sys');
@@ -1114,6 +1116,7 @@ async function onTurnStart(unit) {
       tips.notice('heroTurn', {
         unit, chestInSight, touch: controls.touching,
         brazierNext: [...game.grid.props.values()].some((p) => p.kind === 'brazier' && !p.tipped && near(p)),
+        leverNext: [...game.grid.props.values()].some((p) => p.kind === 'lever' && near(p)),
         waterInSight: [...game.grid.water].some((k) => visible.has(k)),
         foeNext: foes.some((f) => !unseen(f) && near(f)),
         // Foes on the hunt but none in sight: a moment to Ready.
@@ -1261,6 +1264,7 @@ function stepNote(step) {
   if (step.type === 'feed') return 'gives a potion';
   if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'brazier') return 'tips a brazier';
+  if (step.type === 'lever') return 'pulls the lever';
   if (step.type === 'spell') return `casts ${SPELLS[step.id]?.name ?? 'a spell'}`;
   if (step.type === 'action' || step.type === 'bonus') return STEP_VERBS[step.id] ?? ACTIONS[step.id]?.name.toLowerCase() ?? null;
   return null;
@@ -1510,6 +1514,11 @@ function choose(choice) {
   if (choice.kind === 'readyAttack') { // Ready, then the attack to hold
     selected = null;
     heroCommand({ type: 'action', id: 'ready', attack: choice.attack });
+    return;
+  }
+  if (choice.kind === 'readySpell') { // or a spell, its slot spent now
+    selected = null;
+    heroCommand({ type: 'action', id: 'ready', spell: choice.id });
     return;
   }
   if (choice.kind === 'smite') {

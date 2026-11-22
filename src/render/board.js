@@ -219,8 +219,10 @@ export class Board {
     for (const d of grid.doors.values()) this.doors.set(key(d.x, d.z), { ...this.addDoor(d), opened: d.open });
     this.candles = [];
     this.braziers = new Map();
-    this.pickables = []; // props the mouse can click (chests, braziers), tagged with userData.tile
+    this.pickables = []; // props the mouse can click (chests, braziers, levers), tagged with userData.tile
+    this.levers = new Map();
     for (const p of grid.props.values()) this.addProp(p);
+    this.gates = [...grid.gates.values()].map((g) => this.addGate(g));
     this.chests = new Map();
     for (const c of grid.chests.values()) this.chests.set(key(c.x, c.z), this.addChest(c));
     this.traps = new Map();
@@ -416,6 +418,7 @@ export class Board {
       parts.push(m);
     };
     if (kind === 'brazier') return this.addBrazier(x, z);
+    if (kind === 'lever') return this.addLever(x, z);
     if (kind === 'barrel') {
       if (!kitPiece('barrel_small', 0.5, -0.12, -0.1)) box(0.5, 0.5, 0x6b4a2c);
       else if (hash(x, z, 6) > 0.4) kitPiece('barrel_small', 0.36, 0.24, 0.2);
@@ -491,6 +494,78 @@ export class Board {
     };
     if (instant) return fall(1);
     await tween(380, (t) => fall(t), (t) => t * t);
+  }
+
+  /** A lever on an iron post: thrown back when pulled (setGates). */
+  addLever(x, z) {
+    const iron = mat(0x2e2a28, { roughness: 0.55, metalness: 0.6 });
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.26), mat(0x7d766f));
+    base.position.y = 0.15;
+    base.castShadow = base.receiveShadow = true;
+    g.add(base);
+    const pivot = new THREE.Group();
+    pivot.position.y = 0.3;
+    pivot.rotation.x = -0.6;
+    g.add(pivot);
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 8), iron);
+    arm.position.y = 0.25;
+    arm.castShadow = true;
+    pivot.add(arm);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), mat(0x8a2a1a, { roughness: 0.5 }));
+    knob.position.y = 0.5;
+    pivot.add(knob);
+    g.userData.tile = { x, z };
+    this.group.add(g);
+    this.pickables.push(g);
+    this.addToCell(x, z, g);
+    this.levers.set(key(x, z), pivot);
+  }
+
+  /** Iron bars in a stone frame, spanning the tile like a door; raised, they hang overhead. */
+  addGate({ x, z, down }) {
+    const across = (dx, dz) => this.grid.isWall(x + dx, z + dz) || this.grid.gates.has(key(x + dx, z + dz));
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    if (!(across(-1, 0) || across(1, 0))) g.rotation.y = Math.PI / 2;
+    if (this.kit) g.scale.y = KIT_WALL / 0.78;
+    const iron = mat(0x34302d, { roughness: 0.5, metalness: 0.7 });
+    const bars = new THREE.Group();
+    for (let i = 0; i < 6; i++) {
+      const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.72, 6), iron);
+      bar.position.set(-0.42 + i * 0.168, 0.36, 0);
+      bar.castShadow = true;
+      bars.add(bar);
+    }
+    for (const y of [0.12, 0.62]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(1, 0.04, 0.05), iron);
+      rail.position.y = y;
+      bars.add(rail);
+    }
+    g.add(bars);
+    this.group.add(g);
+    this.addToCell(x, z, g);
+    const gate = { bars, x, z };
+    this.placeGate(gate, down ? 1 : 0);
+    return gate;
+  }
+
+  /** `t` 1: down on the floor; 0: raised overhead, the tips of the bars just showing. */
+  placeGate(gate, t) {
+    gate.t = t;
+    gate.bars.position.y = (1 - t) * 0.66;
+  }
+
+  /** Every portcullis drops (`down`) or rises, and the levers are thrown. `instant` for a restored fight. */
+  async setGates(down, instant = false) {
+    for (const pivot of this.levers.values()) pivot.rotation.x = down ? 0.6 : -0.6;
+    const to = down ? 1 : 0;
+    if (instant) return this.gates.forEach((g) => this.placeGate(g, to));
+    keepAwake(800);
+    const from = this.gates.map((g) => g.t);
+    await tween(down ? 260 : 700, (t) => this.gates.forEach((g, i) => this.placeGate(g, from[i] + (to - from[i]) * t)),
+      down ? (t) => t * t : easeOut);
   }
 
   // --- tile kit ------------------------------------------------------------------

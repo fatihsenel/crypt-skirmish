@@ -60,14 +60,21 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   helper's next turn has advantage.
 - **Ready:** pick Ready, then the attack to hold until your next turn; it's made with your
   reaction. A melee weapon strikes the first foe to step into reach, a bow, javelin or Fire
-  Bolt the first to step into view. Good for holding a doorway.
+  Bolt the first to step into view. Good for holding a doorway. A spell cast at one foe
+  (Magic Missile, Sacred Flame, Scorching Ray, Dread) can be readied too: its slot is spent
+  when you ready it, and it goes off at the first foe to step into view.
 - **Conditions:** prone, poisoned, frightened, restrained and rotting (a mummy's fist: no
   healing takes for two turns), each shown as a tag on the figure.
-- **Cover:** barrels and crates give +2 AC against attacks that pass over them.
+- **Cover:** barrels, crates and a lowered portcullis give +2 AC against attacks that pass
+  over or through them.
 - **Water and braziers:** shallow water costs double to wade through (fliers skip it). A hero
   next to a lit brazier can tip it over with their action: its coals land on the tiles past
   it, and whoever stands there makes a DC 12 DEX save against 2d6 fire (half on a success).
   The coals burn for 3 of the tipper's turns, 1d6 to anyone who steps on them.
+- **Levers and portcullises:** a hero next to a lever pulls it for free (once a turn, like
+  opening a chest), and every portcullis in the room crashes down, or rises again. Down, its
+  bars stop anyone walking through, but not seeing or shooting. The clang wakes the room. The
+  Black Armory has one, between its upper and lower halls.
 - **Stealth:** a hidden hero is only found by a monster whose Perception beats their roll.
   Attacking gives you away.
 - **Undo:** a move can be taken back until the hero does something else, as long as it rolled
@@ -325,7 +332,9 @@ A few things differ from the SRD to keep the game simple:
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
 - Hellish Rebuke is armed ahead of time and only answers attacks.
 - Ready has two fixed triggers instead of one you name: a foe stepping into reach (a melee
-  attack) or into view (a ranged one). A readied cantrip needs no concentration.
+  attack) or into view (a ranged one, or a spell). A readied spell needs no concentration.
+- Levers and portcullises are not from the SRD: pulling a lever is a free object interaction,
+  it works every portcullis in the room, and it won't drop one on anyone.
 - A grappled monster tries to break free at the start of its turn without spending its
   action, and a grappler who moves away lets go instead of dragging it. Only heroes grapple.
 - New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the

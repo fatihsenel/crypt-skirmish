@@ -289,14 +289,14 @@ LEVELS.push(
   {
     id: 'armory',
     name: 'The Black Armory',
-    intro: 'The knights who once guarded the tomb still keep its armory, their oaths rotted into something else.',
+    intro: 'The knights who once guarded the tomb still keep its armory, their oaths rotted into something else. A lever by the door still works the portcullis to the lower hall.',
     rows: [
       '################',
-      '#F.R..#..x..=..#',
+      '#F.R..#!.x..=..#',
       '#.....+.....$..#',
       '#W.C..#..|..|..#',
       '#.....#.....t..#',
-      '##+#####+###...#',
+      '##+#####+###:::#',
       '#......#....x..#',
       '#..x...+.......#',
       '#......#.|..|..#',

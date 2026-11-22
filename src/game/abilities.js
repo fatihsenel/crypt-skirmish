@@ -12,7 +12,7 @@ export const ACTIONS = {
   },
   ready: {
     name: 'Ready', time: 'action',
-    desc: 'Hold an attack until your next turn, and make it with your reaction. A melee weapon strikes the first foe to step into your reach; a bow, javelin or Fire Bolt the first to step into view.',
+    desc: 'Hold an attack until your next turn, and make it with your reaction. A melee weapon strikes the first foe to step into your reach; a bow, javelin or Fire Bolt the first to step into view. A spell cast at one foe (Magic Missile, Sacred Flame…) can be held too: its slot is spent now, and lost if no foe comes.',
   },
   potion: { name: 'Potion', time: 'action', desc: 'Drink a potion of healing: regain 2d4 + 2 HP.' },
   // Fighter

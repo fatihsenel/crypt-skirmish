@@ -233,10 +233,15 @@ export function createAnimations(app) {
         const r = step.result;
         sfx.alert();
         alertFx(stage.scene, step.at);
-        floatText(stage.scene, r.attacker, 'Readied!', 'warn');
-        view(r.attacker).updateStatus();
+        const hero = r.attacker ?? r.caster;
+        floatText(stage.scene, hero, 'Readied!', 'warn');
+        view(hero).updateStatus();
         await wait(250);
-        await animateAttack(r, step.at);
+        if (r.kind === 'spell') { // aimed where the foe stepped, though it may have walked on since
+          const there = Object.assign(Object.create(r.target), step.at);
+          const at = (t) => (t === r.target ? there : t);
+          await playSpell({ ...r, target: there, rays: r.rays?.map((ray) => ({ ...ray, target: at(ray.target) })) });
+        } else await animateAttack(r, step.at);
         break;
       }
       case 'burn': { // walked onto a tipped brazier's coals
@@ -308,6 +313,16 @@ export function createAnimations(app) {
     if (items.length) sfx.discover();
     floatText(stage.scene, { x, z }, text || 'Empty', 'heal');
     await wait(300);
+  }
+
+  /** A lever thrown: every portcullis crashes down (with a shake) or grinds back up. */
+  async function playLever(unit, r) {
+    const { x, z } = r.lever;
+    await view(unit).turnTowards(x, z);
+    sfx.portcullis(r.down);
+    await app.board().setGates(r.down);
+    if (r.down) stage.shake(0.1, 220);
+    await wait(200);
   }
 
   /** A tipped brazier: it goes over, coals spill, and whoever stood there is burned. */
@@ -708,6 +723,7 @@ export function createAnimations(app) {
       case 'feed': return playFeed(r);
       case 'chest': return playChest(unit, r);
       case 'brazier': return playBrazier(unit, r);
+      case 'lever': return playLever(unit, r);
       case 'bonus':
       case 'action': return playAction(unit, r);
       case 'spell': return playSpell(r);

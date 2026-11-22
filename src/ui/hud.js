@@ -657,6 +657,7 @@ export class Hud {
   }
 
   logSpell(r) {
+    if (r.readied) this.log(`<b class="opp">Readied spell!</b> ${who(r.target)} steps into ${who(r.caster)}’s view.`);
     const slot = r.slot ? `<span class="dice">${ordinal(r.slot)}-level slot</span>` : '<span class="dice">cantrip</span>';
     const name = `<b class="spell">${esc(r.spell.name)}</b>`;
     if (r.id === 'shield') {
@@ -749,6 +750,12 @@ export class Hud {
       (!r.success && r.unit.hp > r.damage ? ' and is <b class="cond prone">knocked prone</b>.' : '.'));
   }
 
+  logLever({ unit, gates, down }) {
+    this.log(`${who(unit)} pulls the lever: ${down
+      ? `the portcullis <b class="crit">crashes down</b>${gates.length > 1 ? ` across ${gates.length} tiles` : ''}. No way through, but the bars hide nothing.`
+      : 'the portcullis grinds back up.'}`);
+  }
+
   logBrazier({ unit, tiles }) {
     this.log(`${who(unit)} tips the brazier over: <b class="crit">burning coals</b> spill across ${tiles.length} tile${tiles.length === 1 ? '' : 's'}.`);
   }
@@ -780,7 +787,8 @@ export class Hud {
     const text = {
       dash: 'Dashes, doubling movement this turn.',
       dodge: 'takes the Dodge action. Attacks against it have disadvantage.',
-      ready: r.attack && `readies <b>${esc(r.attack.name)}</b>: the first foe to step into ${r.attack.reach === 1 ? 'reach' : 'view'} takes it.`,
+      ready: r.spell ? `readies <b class="spell">${esc(r.spell.name)}</b>: the first foe to step into view takes it.`
+        : r.attack && `readies <b>${esc(r.attack.name)}</b>: the first foe to step into ${r.attack.reach === 1 ? 'reach' : 'view'} takes it.`,
       disengage: 'Disengages. Moving won’t provoke opportunity attacks.',
       nimbleEscape: 'uses <b>Nimble Escape</b> to slip away.',
       secondWind: `uses <b>Second Wind</b> and regains <b class="heal">${r.healed} HP</b> ${r.roll && dice(r.roll)}.`,
@@ -984,7 +992,8 @@ export class Hud {
           problem: ready ? null : 'No reaction or 1st-level slot left.',
           disabled: true, cls: `passive ${ready ? 'armed' : ''}` });
       }
-      const problem = game.spellProblem(u, id);
+      // While picking what to Ready, only the spells it can hold.
+      const problem = this.readying ? game.readySpellProblem(u, id) : game.spellProblem(u, id);
       return button({
         kind: 'spell', id, name: s.name, cls: 'spell',
         sub: s.pool ? `${u.layOnHands}/${u.layOnHandsMax} HP left · action`
@@ -1014,7 +1023,7 @@ export class Hud {
           chips: [id === 'potion' ? `${u.potions} left` : null, a.range ? `${a.range * 5} ft` : null,
             id === 'ready' ? 'melee: into reach' : null, id === 'ready' ? 'ranged: into view' : null].filter(Boolean),
           desc: a.desc,
-          how: id === 'ready' ? `${this.touch ? 'Tap' : 'Click'} it, then the attack to hold.` : null,
+          how: id === 'ready' ? `${this.touch ? 'Tap' : 'Click'} it, then the attack${u.spells.some((sp) => !game.readySpellProblem(u, sp)) ? ' or spell' : ''} to hold.` : null,
         },
         problem: problem && `${problem}.`,
         disabled: !!problem,
@@ -1125,6 +1134,9 @@ export class Hud {
       return;
     }
     if (kind === 'attack' && this.readying) this.handlers.onChoose({ kind: 'readyAttack', attack: Number(id) });
+    else if (kind === 'spell' && this.readying && !this.lastBar[0].readySpellProblem(this.current, id)) {
+      this.handlers.onChoose({ kind: 'readySpell', id });
+    }
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
     else if (['shove', 'grapple', 'help', 'feed', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });

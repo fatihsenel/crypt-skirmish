@@ -45,7 +45,7 @@ export function cleanParty(party) {
   return Object.keys(out).length ? out : null;
 }
 
-const COMMAND_KEYS = { type: 'string', id: 'string', x: 'number', z: 'number', target: 'number', attack: 'number', unit: 'number' };
+const COMMAND_KEYS = { type: 'string', id: 'string', x: 'number', z: 'number', target: 'number', attack: 'number', unit: 'number', spell: 'string' };
 
 /** A command from a link with only the fields commands use, or null. */
 function cleanCommand(c) {

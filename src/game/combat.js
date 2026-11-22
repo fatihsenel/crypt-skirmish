@@ -266,13 +266,13 @@ export class Game extends Spellcasting {
   }
 
   /**
-   * Half cover: +2 AC when a barrel or crate stands between attacker and target. One right
-   * next to the attacker doesn't count (you lean over your own barricade).
+   * Half cover: +2 AC when a barrel, a crate or a lowered portcullis stands between attacker
+   * and target. One right next to the attacker doesn't count (you lean over your own barricade).
    */
   coverBonus(attacker, target) {
     for (const [x, z] of this.grid.lineBetween(attacker.x, attacker.z, target.x, target.z)) {
-      const p = this.grid.props.get(key(x, z));
-      if (p?.cover === 'half' && gridDistance(attacker, p) > 1) return 2;
+      const p = this.grid.props.get(key(x, z)) ?? this.grid.gates.get(key(x, z));
+      if ((p?.cover === 'half' || p?.down) && gridDistance(attacker, p) > 1) return 2;
     }
     return 0;
   }
@@ -572,6 +572,7 @@ export class Game extends Spellcasting {
       interacted: false,
       readied: false,
       readiedAttack: null,
+      readiedSpell: null,
     });
     if (u.helping) this.endHelp(u); // Help lasts until the helper's next turn
     this.standUp(u);
@@ -922,6 +923,21 @@ export class Game extends Spellcasting {
     return { near: gridDistance(hero, at) <= 1, saw: this.grid.lineOfSight(hero.x, hero.z, at.x, at.z) };
   }
 
+  /** A spell a hero can ready: one cast as an action at a single foe (Magic Missile, Sacred Flame…). */
+  readySpellProblem(hero, id) {
+    const s = SPELLS[id];
+    if (!s || s.targeting !== 'enemy' || s.time !== 'action') return 'That spell can’t be readied';
+    return this.spellProblem(hero, id);
+  }
+
+  /** A readied spell goes off at `target`, on the slot spent when it was readied. Uses the reaction. */
+  castReadied(hero, target) {
+    const { id, slot } = hero.readiedSpell;
+    hero.readiedSpell = null;
+    hero.reactionUsed = true;
+    return this.castSpell(hero, id, target, { readied: slot });
+  }
+
   /** The attack a hero readies: the one they picked, else their first (main weapon or cantrip). */
   readyWeapon(hero) {
     return hero.readiedAttack ?? hero.attacks[0];
@@ -934,12 +950,14 @@ export class Game extends Spellcasting {
    */
   readyAttack(hero, foe, at, before) {
     if (!hero.readied || !hero.alive || hero.reactionUsed) return null;
-    const a = this.readyWeapon(hero);
+    const spell = hero.readiedSpell;
+    const a = spell ? null : this.readyWeapon(hero);
     const now = this.readyWatch(hero, at);
-    if (a.reach === 1 ? !now.near || before.near : !now.saw || before.saw) return null;
+    if (a?.reach === 1 ? !now.near || before.near : !now.saw || before.saw) return null;
     const there = Object.create(foe);
     there.x = at.x;
     there.z = at.z;
+    if (spell) return this.spellProblem(hero, spell.id, there, { readied: true }) ? null : spell;
     return this.attackProblem(hero, there, a, { opportunity: true }) ? null : a;
   }
 
@@ -1043,7 +1061,7 @@ export class Game extends Spellcasting {
         unit.x = to.x;
         unit.z = to.z;
         h.readied = false;
-        const result = this.attack(h, unit, atk, { readied: true });
+        const result = atk === h.readiedSpell ? this.castReadied(h, unit) : this.attack(h, unit, atk, { readied: true });
         steps.push({ type: 'readied', result, at: { x: to.x, z: to.z } });
         if (!unit.alive || this.over) return stop(i + 1);
       }
@@ -1193,6 +1211,39 @@ export class Game extends Spellcasting {
       this.applyDamage(u, damage, u.team === 'monsters' ? unit : null);
     }
     this.noise(b, 4); // a crash and a roar of sparks
+    this.updateAwareness();
+    return result;
+  }
+
+  // --- levers and portcullises ------------------------------------------------------
+  leverProblem(unit, x, z) {
+    const lever = this.grid.props.get(key(x, z));
+    if (lever?.kind !== 'lever') return 'No lever here';
+    if (unit.team !== 'heroes') return 'Only heroes work the levers';
+    if (gridDistance(unit, lever) > 1) return 'Move next to the lever to pull it';
+    if (unit.interacted) return 'Already interacted with something this turn';
+    if (!lever.pulled && [...this.grid.gates.values()].some((g) => this.unitAt(g.x, g.z))) {
+      return 'Someone stands under the portcullis';
+    }
+    return null;
+  }
+
+  /**
+   * Free object interaction: pull an adjacent lever, and every portcullis in the room drops (or
+   * rises again). Down, its bars stop walking but not sight. The crash carries.
+   */
+  pullLever(unit, x, z) {
+    const problem = this.leverProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    const lever = this.grid.props.get(key(x, z));
+    unit.interacted = true;
+    const down = !lever.pulled;
+    for (const p of this.grid.props.values()) if (p.kind === 'lever') p.pulled = down; // they work as one
+    const gates = [...this.grid.gates.values()];
+    for (const g of gates) g.down = down;
+    const result = { ok: true, unit, lever, gates, down };
+    this.emit('lever', result);
+    if (gates.length) this.noise(gates[0], 4);
     this.updateAwareness();
     return result;
   }
@@ -1833,9 +1884,12 @@ export class Game extends Spellcasting {
     return null;
   }
 
-  /** `attack`: for Ready, the index of the attack to hold (the first when left out). */
-  doAction(unit, id, { attack } = {}) {
-    const problem = this.actionProblem(unit, id);
+  /**
+   * `attack`: for Ready, the index of the attack to hold (the first when left out); `spell`, a
+   * spell to hold instead, whose slot is spent now (as in the SRD) and lost if nothing comes.
+   */
+  doAction(unit, id, { attack, spell } = {}) {
+    const problem = this.actionProblem(unit, id) ?? (id === 'ready' && spell ? this.readySpellProblem(unit, spell) : null);
     if (problem) return { ok: false, reason: problem };
     const def = ACTIONS[id];
     if (def.time === 'action') unit.actionUsed = true;
@@ -1853,6 +1907,11 @@ export class Game extends Spellcasting {
         break;
       case 'ready':
         unit.readied = true;
+        if (spell) {
+          unit.readiedSpell = { id: spell, slot: this.spendSlot(unit, SPELLS[spell].level) };
+          result.spell = SPELLS[spell];
+          break;
+        }
         unit.readiedAttack = unit.attacks[attack] ?? null;
         result.attack = this.readyWeapon(unit);
         break;

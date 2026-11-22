@@ -176,6 +176,11 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return why ? { toast: why } : { cmd: { type: 'brazier', x: t.x, z: t.z } };
   }
 
+  if (game.grid.props.get(key(t.x, t.z))?.kind === 'lever') {
+    const why = game.leverProblem(u, t.x, t.z);
+    return why ? { toast: why } : { cmd: { type: 'lever', x: t.x, z: t.z } };
+  }
+
   if (game.grid.chests.has(key(t.x, t.z))) {
     const why = game.chestProblem(u, t.x, t.z);
     return why ? { toast: why } : { cmd: { type: 'chest', x: t.x, z: t.z } };
@@ -234,6 +239,9 @@ export function tileSummary(game, t, { unitAt, explored }) {
   if (game.grid.chests.has(key(t.x, t.z))) return 'A chest';
   const prop = game.grid.props.get(key(t.x, t.z));
   if (prop?.kind === 'brazier') return prop.tipped ? 'A brazier on its side' : 'A lit brazier, to tip over from next to it';
+  if (prop?.kind === 'lever') return `A lever, ${prop.pulled ? 'down: pull it to raise' : 'up: pull it to drop'} the portcullis`;
+  const gate = game.grid.gates.get(key(t.x, t.z));
+  if (gate) return gate.down ? 'A lowered portcullis: no way through, but you can see and shoot past it' : 'Under a raised portcullis';
   if (game.burningTiles().has(key(t.x, t.z))) return 'Burning coals';
   if (game.grid.water.has(key(t.x, t.z))) return 'Shallow water, double movement';
   return 'Floor';
@@ -265,5 +273,8 @@ export function surroundings(game, u, { seen }) {
   if (down.length) parts.push(`Down: ${down.map((h) => h.name).join(', ')}.`);
   const brazier = [...game.grid.props.values()].find((p) => p.kind === 'brazier' && !p.tipped && gridDistance(u, p) <= 1);
   if (brazier) parts.push('A lit brazier stands next to you: you can tip it over.');
+  if ([...game.grid.props.values()].some((p) => p.kind === 'lever' && gridDistance(u, p) <= 1)) {
+    parts.push(`A lever stands next to you: pulling it ${game.grid.gates.values().next().value?.down ? 'raises' : 'drops'} the portcullis.`);
+  }
   return parts.join(' ');
 }

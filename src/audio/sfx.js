@@ -472,6 +472,20 @@ class Sfx {
     });
   }
 
+  /** A lever thrown, the chain rattling, and the portcullis crashing down (or grinding up). */
+  portcullis(down) {
+    this.play((t) => {
+      this.click(t, 600, 0.3); // the lever
+      for (let i = 0; i < 6; i++) this.noise(t + 0.1 + i * 0.06, { dur: 0.04, filter: 'bandpass', freq: 2200 + i * 150, gain: 0.18 }); // chain
+      if (down) {
+        this.tone(t + 0.5, { type: 'sine', freq: 70, freqEnd: 35, dur: 0.45, gain: 0.45 }); // the bars hit the floor
+        for (const [f, g] of [[620, 0.06], [1310, 0.04], [2090, 0.03]]) this.tone(t + 0.5, { type: 'triangle', freq: f, dur: 0.8, gain: g });
+      } else {
+        this.tone(t + 0.15, { type: 'sawtooth', freq: 110, freqEnd: 150, dur: 0.7, gain: 0.04, attack: 0.1, lowpass: 900 }); // grinding up
+      }
+    });
+  }
+
   /** Spikes shooting out of the floor. */
   trap() {
     this.play((t) => {

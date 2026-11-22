@@ -9,7 +9,7 @@
 const STORAGE_KEY = 'crypt-skirmish:tips';
 
 /** What the player can see right now, from main.js. */
-// ctx: { unit, cmd, chestInSight, brazierNext, waterInSight, foeNext, foesComing, hurtAllyNext, touch, report }
+// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, foeNext, foesComing, hurtAllyNext, touch, report }
 const click = (ctx, word = 'click') => (ctx.touch ? word.replace('click', 'tap').replace('Click', 'Tap') : word);
 
 /**
@@ -51,6 +51,13 @@ export const TIPS = [
     when: (c) => c.brazierNext,
     text: (c) => `<b>${c.unit.name}</b> stands by a lit <b>brazier</b>. ${click(c, 'Click')} it to tip it over (your action): ` +
       'its coals spill on the tiles beyond, burn whoever stands there, and keep burning for 3 turns.',
+  },
+  {
+    id: 'lever',
+    on: 'heroTurn',
+    when: (c) => c.leverNext,
+    text: (c) => `<b>${c.unit.name}</b> stands by a <b>lever</b>. ${click(c, 'Click')} it (free, once a turn) to drop the portcullis: ` +
+      'its bars stop anyone walking through, but not seeing or shooting. Pull it again to raise it. The clang wakes the room.',
   },
   {
     id: 'water',

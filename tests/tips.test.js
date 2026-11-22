@@ -34,6 +34,7 @@ describe('tips for new players', () => {
     const seen = new Set(['move']);
     expect(pickTip('heroTurn', { unit: hero(), brazierNext: true }, seen).id).toBe('brazier');
     expect(pickTip('heroTurn', { unit: hero(), waterInSight: true }, seen).id).toBe('water');
+    expect(pickTip('heroTurn', { unit: hero(), leverNext: true }, seen).id).toBe('lever');
     expect(pickTip('heroTurn', { unit: hero(), hurtAllyNext: true }, seen).id).toBe('feed');
     expect(pickTip('heroTurn', { unit: hero({ potions: 0 }), hurtAllyNext: true }, seen)).toBeNull();
     expect(pickTip('heroTurn', { unit: hero(), foesComing: true }, seen).id).toBe('ready');

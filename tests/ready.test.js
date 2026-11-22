@@ -71,6 +71,45 @@ describe('the Ready action', () => {
     expect(ilsa.readied).toBe(false);
   });
 
+  it('holds a spell instead: its slot is spent now, and it goes off at a foe stepping into view', () => {
+    const g = fight([
+      '#######',
+      '#W....#',
+      '#####.#',
+      '#####o#',
+      '#######',
+    ], () => 0.9);
+    const ilsa = g.current;
+    const orc = g.units.find((u) => u.team === 'monsters');
+    const slots = ilsa.slots[1];
+    expect(g.readySpellProblem(ilsa, 'burningHands')).toBe('That spell can’t be readied');
+    expect(applyCommand(g, { type: 'action', id: 'ready', spell: 'burningHands' }).ok).toBe(false);
+    const r = applyCommand(g, { type: 'action', id: 'ready', spell: 'magicMissile' });
+    expect(r).toMatchObject({ ok: true, spell: { name: 'Magic Missile' } });
+    expect(ilsa.slots[1]).toBe(slots - 1);
+    expect(ilsa.actionUsed).toBe(true);
+    turnOf(g, orc);
+    const hp = orc.hp;
+    const ready = g.move(orc, 5, 1).steps.find((s) => s.type === 'readied');
+    expect(ready.result).toMatchObject({ ok: true, kind: 'spell', id: 'magicMissile', caster: ilsa, target: orc, readied: true, slot: 1 });
+    expect(g.grid.lineOfSight(ilsa.x, ilsa.z, ready.at.x, ready.at.z)).toBe(true);
+    expect(orc.hp).toBe(Math.max(0, hp - ready.result.damage));
+    expect(ilsa.slots[1]).toBe(slots - 1); // no second slot
+    expect(ilsa.reactionUsed).toBe(true);
+    expect(ilsa.readiedSpell).toBe(null);
+  });
+
+  it('loses a readied spell’s slot if nothing comes', () => {
+    const g = fight(['##########', '#W......o#', '##########'], () => 0.9);
+    const ilsa = g.current;
+    const slots = ilsa.slots[1];
+    applyCommand(g, { type: 'action', id: 'ready', spell: 'magicMissile' });
+    turnOf(g, ilsa);
+    expect(ilsa.readied).toBe(false);
+    expect(ilsa.readiedSpell).toBe(null);
+    expect(ilsa.slots[1]).toBe(slots - 1);
+  });
+
   it('is a hero action only, and changes no dice when it is not used', () => {
     const g = fight(['######', '#F..o#', '######']);
     const orc = g.units.find((u) => u.team === 'monsters');

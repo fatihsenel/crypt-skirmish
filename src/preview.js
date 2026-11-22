@@ -57,7 +57,8 @@ export function createPreview(deps) {
     if (selected?.kind === 'grapple') return refreshGrapple(u);
     if (selected?.kind === 'feed') return refreshFeed(u);
     if (selected?.kind === 'ready') {
-      hud.hint('Ready: pick the attack to hold · a melee one strikes a foe stepping into reach, a ranged one a foe stepping into view · Esc to cancel');
+      const spells = u.spells.some((id) => !game.readySpellProblem(u, id));
+      hud.hint(`Ready: pick the attack${spells ? ' or spell' : ''} to hold · a melee one strikes a foe stepping into reach, a ranged one${spells ? ' or a spell' : ''} a foe stepping into view · Esc to cancel`);
       return;
     }
 
@@ -87,6 +88,14 @@ export function createPreview(deps) {
       return;
     }
     const prop = game.grid.props.get(key(hovered.x, hovered.z));
+    if (prop?.kind === 'lever') {
+      const why = game.leverProblem(u, hovered.x, hovered.z);
+      if (why) return void hud.hint(why);
+      const gates = [...game.grid.gates.values()];
+      board.cone.set(gates);
+      hud.hint(`Pull the lever (free, once a turn): the portcullis ${prop.pulled ? 'rises' : 'drops, blocking the way but not sight'}. The clang carries`, true);
+      return;
+    }
     if (prop?.kind === 'brazier') {
       const why = game.brazierProblem(u, hovered.x, hovered.z);
       if (why) return void hud.hint(why);
