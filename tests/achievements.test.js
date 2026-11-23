@@ -36,8 +36,8 @@ describe('achievements', () => {
   it('counts the bestiary when a room is won', () => {
     const base = { game: fight(), node: 'crypt' };
     const got = (ctx) => ids(earned('room', { ...base, ...ctx }, { 'first-room': 1 }));
-    expect(got({ met: 16, slain: 99 })).toEqual([]);
-    expect(got({ met: 17, slain: 100 })).toEqual(['scholar', 'exterminator']);
+    expect(got({ met: 19, slain: 99 })).toEqual([]);
+    expect(got({ met: 20, slain: 100 })).toEqual(['scholar', 'exterminator']);
     expect(got({})).toEqual([]);
   });
 

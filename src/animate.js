@@ -123,7 +123,8 @@ export function createAnimations(app) {
         if (r.resisted) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Rage ½', 'spell');
         if (r.deflect) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, `Deflected −${r.deflect.total}`, 'spell');
         if (r.bonus) floatText(stage.scene, { x: attacker.x, z: attacker.z - 0.6 }, BONUS_STRIKE[r.bonus], 'spell');
-        for (const t of [r.stun, r.topple].filter(Boolean)) {
+        if (r.charge) floatText(stage.scene, { x: attacker.x, z: attacker.z - 0.6 }, 'Charge!', 'crit');
+        for (const t of [r.stun, r.topple, r.knock].filter(Boolean)) {
           if (!target.alive) break;
           wait(t === r.stun ? 350 : 500).then(() => floatText(stage.scene, { x: pos.x, z: pos.z - 0.5 }, t.success ? 'Resists' : CONDITION_FLOAT[t.condition], t.success ? 'miss' : 'cond'));
           tv.updateStatus();
@@ -242,7 +243,7 @@ export function createAnimations(app) {
   }
 
   const BONUS_STRIKE = { flurry: 'Flurry of Blows', martial: 'Martial Arts', frenzy: 'Frenzy' };
-  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!' };
+  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!', petrified: 'Turned to stone!' };
 
   function damageReaction(unit) {
     const v = view(unit);

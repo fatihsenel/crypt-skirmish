@@ -59,7 +59,8 @@ export function difficultyLabel(difficulty, tier = 0) {
  * `boss` draws a crown on the map; `actBreak` gives a long rest after the fight.
  * Act two (after the sanctum) asks the same question once more: the vault or the well.
  * Act three (after the barrow) asks it again: the gallery's loot or the shrine's rest.
- * Act four (after the throne) asks it a last time: the armory's loot or the hearth's rest.
+ * Act four (after the throne) asks it again: the armory's loot or the hearth's rest.
+ * Act five (after the tomb) asks it a last time: the basilisk den's loot or the grotto's rest.
  */
 export const NODES = {
   crypt: { kind: 'fight', level: 'crypt', col: 0, row: 1, next: ['warren', 'ossuary', 'pilgrim'] },
@@ -149,8 +150,28 @@ export const NODES = {
   },
   reliquary: { kind: 'event', col: 12, row: 1, next: ['armory', 'hearth'], name: 'The Saint’s Reliquary', short: 'Reliquary' },
   tomb: {
-    kind: 'fight', level: 'tomb', short: 'Tomb', col: 13, row: 1, next: [], boss: true,
-    teaser: 'Nekhet the Mummy Lord. The end of the road.',
+    kind: 'fight', level: 'tomb', short: 'Tomb', col: 13, row: 1, next: ['bridge'], boss: true,
+    actBreak: true,
+    teaser: 'Nekhet the Mummy Lord, the end of the fourth act. Afterwards the party takes a long rest.',
+  },
+  // Act five: the bridge, then the basilisk den's loot or the grotto's rest, then the minotaur.
+  bridge: {
+    kind: 'fight', level: 'bridge', short: 'Bridge', col: 14, row: 1, next: ['lair', 'grotto'],
+    teaser: 'Gargoyles and a fallen knight, across a chasm no one can climb.',
+  },
+  lair: {
+    kind: 'fight', level: 'lair', short: 'Den', col: 15, row: 0, next: ['labyrinth'],
+    teaser: 'Basilisks: their bite turns you to stone. A Runed Weapon +2, but no rest before the Labyrinth.',
+  },
+  grotto: {
+    kind: 'rest', col: 15, row: 2, next: ['labyrinth'],
+    name: 'The Dripping Grotto', short: 'Grotto', verb: 'Rest in the grotto',
+    intro: 'A dry ledge above a slow stream, too narrow for anything big to follow. The party takes a long rest.',
+    teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
+  },
+  labyrinth: {
+    kind: 'fight', level: 'labyrinth', short: 'Labyrinth', col: 16, row: 1, next: [], boss: true,
+    teaser: 'Tharok the minotaur, who charges down the corridors. The end of the road.',
   },
 };
 

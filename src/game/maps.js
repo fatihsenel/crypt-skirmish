@@ -4,13 +4,15 @@
 // Spawns: F fighter, W wizard, R rogue, C cleric;
 //         g goblin, s skeleton, o orc, r giant rat, b goblin boss, n necromancer,
 //         u ghoul, w wight, k giant spider, e specter, q banshee,
-//         y mummy, t wraith, x fallen knight, l mummy lord. (Mimics hide in chests: see `mimics`.)
+//         y mummy, t wraith, x fallen knight, l mummy lord,
+//         a gargoyle, z basilisk, v minotaur. (Mimics hide in chests: see `mimics`.)
 // `loot` lists the contents of each chest in reading order (item ids from items.js).
 // `mimics` lists chest tiles ('x,z') that are really mimics; give those chests [] loot.
 // `final` marks the last room of the campaign; `outro` is its victory text.
 // Props: '&' barrels and '=' crates (half cover: +2 AC against attacks across them), '|' columns
 // (block movement and sight), '*' braziers (a hero next to one can tip it: burning coals).
 // '~' shallow water: costs double to wade through.
+// '_' a chasm: no one crosses it, but it blocks neither sight nor shots.
 // `asleep` lists monsters asleep at the start, by tile ('x,z'); `patrols` maps a monster's
 // tile to the waypoints it walks between while it hasn't noticed the party.
 // The campaign map that links these levels lives in campaign.js.
@@ -310,9 +312,7 @@ LEVELS.push(
   {
     id: 'tomb',
     name: 'The Hollow Tomb',
-    final: true,
     intro: 'Nekhet built the crypt to hold his court forever. He rises from his sarcophagus, and the dead of his house rise with him.',
-    outro: 'Nekhet crumbles into dust and linen, and nothing below the crypt stirs again. The crypt is cleansed at last.',
     rows: [
       '################',
       '#F.R..#........#',
@@ -328,6 +328,73 @@ LEVELS.push(
       '################',
     ],
     loot: [['potion', 'potion']],
+  },
+  // --- act five: under the tomb, the labyrinth Nekhet sealed away -------------------
+  {
+    id: 'bridge',
+    name: 'The Broken Bridge',
+    intro: 'Beneath Nekhet’s sarcophagus a shaft drops into older stone. A chasm splits the hall, crossed by two narrow spans, and stone gargoyles crouch along its far lip.',
+    rows: [
+      '################',
+      '#F.R..#..__.a..#',
+      '#.....#..__..x.#',
+      '#W.C..+........#',
+      '#.....#..__.|a.#',
+      '###+###..__..x.#',
+      '#.....#..__....#',
+      '#..^..#..__.a..#',
+      '#.$...+........#',
+      '#.....#..__..a.#',
+      '#.....#..__..>.#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+    asleep: ['12,1', '13,4', '12,7', '13,9'], // statues until something comes close (False Appearance)
+  },
+  {
+    id: 'lair',
+    name: 'The Basilisk Den',
+    intro: 'The statues here were adventurers once: their faces are still frozen mid-scream. Something heavy drags itself through the shallows.',
+    rows: [
+      '################',
+      '#F.R..#.|....$.#',
+      '#.....#....z...#',
+      '#W.C..+..|..|..#',
+      '#.....#~~....a.#',
+      '###+###~~..a...#',
+      '#.....#.....|z.#',
+      '#..^..+..|.....#',
+      '#.$...#....z...#',
+      '#.....#.|....|.#',
+      '#.....#......>.#',
+      '################',
+    ],
+    loot: [['weaponPlus2', 'potion'], ['potion']],
+    asleep: ['11,5', '13,4'],
+  },
+  {
+    id: 'labyrinth',
+    name: 'The Labyrinth',
+    final: true,
+    intro: 'Nekhet walled a beast into the heart of his crypt. Tharok the minotaur has paced these halls for a thousand years, and he smells you coming.',
+    outro: 'Tharok falls, and the labyrinth goes quiet. Nothing below the crypt stirs again. The crypt is cleansed at last.',
+    rows: [
+      '################',
+      '#F.R..#........#',
+      '#.....#.##.##..#',
+      '#W.C..+.#...#..#',
+      '#.....#.#.v.#.a#',
+      '###+###......__#',
+      '#.....#.#...#__#',
+      '#..^..+.#...#..#',
+      '#.$...#.##.##..#',
+      '#.....#..a...a.#',
+      '#.....#......>.#',
+      '################',
+    ],
+    loot: [['potion', 'potion']],
+    asleep: ['9,9', '13,9', '14,4'], // gargoyles on their plinths
+    thinned: ['14,4'], // Hard leaves this gargoyle out
   },
 );
 

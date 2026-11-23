@@ -100,6 +100,8 @@ function bannerSpots(grid, torches) {
 }
 
 const WATER_GEO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+// Open-topped and inside-out: the shaft's walls face into the hole.
+const CHASM_GEO = new THREE.BoxGeometry(1, 2.2, 1);
 
 const overlay = (color, opacity) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
@@ -177,6 +179,7 @@ export class Board {
       for (let x = 0; x < grid.width; x++) {
         if (this.kit) {
           if (grid.isWall(x, z)) this.addKitWall(x, z);
+          else if (grid.chasms.has(key(x, z))) continue; // drawn below
           else if (!grid.stairs.some((s) => s.x === x && s.z === z)) this.addKitFloor(x, z);
           continue;
         }
@@ -190,7 +193,7 @@ export class Board {
           this.group.add(wall, cap);
           this.addToCell(x, z, wall, cap);
           this.walls.push({ x, z, meshes: [wall, cap], opacity: 1 });
-        } else if (!grid.stairs.some((s) => s.x === x && s.z === z)) {
+        } else if (!grid.chasms.has(key(x, z)) && !grid.stairs.some((s) => s.x === x && s.z === z)) {
           const tile = new THREE.Mesh(floorGeo, floorMats[(x + z) % 2]);
           tile.position.set(x, -0.1, z);
           tile.receiveShadow = true;
@@ -208,6 +211,16 @@ export class Board {
       sheet.receiveShadow = true;
       this.group.add(sheet);
       this.addToCell(x, z, sheet);
+    }
+
+    // Chasms: a black shaft with rough rock walls dropping out of sight.
+    for (const k of grid.chasms) {
+      const [x, z] = k.split(',').map(Number);
+      const shaft = new THREE.Mesh(CHASM_GEO, mat(0x1e1a17, { roughness: 1, side: THREE.BackSide }));
+      shaft.position.set(x, -1.1, z);
+      shaft.receiveShadow = true;
+      this.group.add(shaft);
+      this.addToCell(x, z, shaft);
     }
 
     this.torches = [];

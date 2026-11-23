@@ -1,6 +1,6 @@
 // Headless balance check: plays rooms many times with a simple hero policy (heals, Fireball,
 // Magic Missile, potions, then the monster AI's tactics) and prints win rates.
-//   node scripts/sim.js [runs] [act2|act3|act4|full|endless]
+//   node scripts/sim.js [runs] [act2|act3|act4|act5|full|endless]
 // Runs are split over worker threads, one per core; JOBS=n sets how many (JOBS=1: one thread).
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
 // RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's), BARD=1 (a Bard in the Cleric's),
@@ -387,7 +387,8 @@ const ACT_TWO = [
 ];
 const ACT_THREE = [['nest', 'gallery', 'throne'], ['nest', 'shrine', 'throne']];
 const ACT_FOUR = [['halls', 'armory', 'tomb'], ['halls', 'hearth', 'tomb']];
-const REST = new Set(['chapel', 'well', 'shrine', 'hearth']);
+const ACT_FIVE = [['bridge', 'lair', 'labyrinth'], ['bridge', 'grotto', 'labyrinth']];
+const REST = new Set(['chapel', 'well', 'shrine', 'hearth', 'grotto']);
 /** EVENTS=1 takes the stops with no fight on the way: tend the pilgrim, bleed at the altar, open the reliquary. */
 const TAKE_EVENTS = !!process.env.EVENTS;
 const STOPS = [['pilgrim', 'tend'], ['pilgrim', 'rob'], ['altar', 'offer'], ['reliquary', 'open']];
@@ -510,23 +511,40 @@ const MODES = {
     return { stats, whole, levels, xp: parties.map((p) => p.xp) };
   },
 
-  /** Whole runs, first room to the tomb, cycling through every route; where do they end? */
+  /** Act five only, from a pool of real parties that won the tomb (rested by its act break). */
+  act5(runs, rng, poolSize = 40) {
+    const parties = pool(poolSize, (t) => [...ACT_ONE[t % 3], ...ACT_TWO[t % 4], ...ACT_THREE[t % 2], ...ACT_FOUR[Math.floor(t / 2) % 2]], 'tomb', rng);
+    const stats = {};
+    const whole = {};
+    for (const five of ACT_FIVE) {
+      let won = 0;
+      for (let i = 0; i < runs; i++) {
+        const res = campaign(five, rng, parties[i % parties.length]);
+        for (const r of res) add(stats, r.id === 'bridge' ? r.id : `${r.id} (${five[1]})`, r);
+        if (res.at(-1).id === 'labyrinth' && res.at(-1).won) won++;
+      }
+      whole[five[1]] = [won, runs];
+    }
+    return { stats, whole };
+  },
+
+  /** Whole runs, first room to the labyrinth, cycling through every route; where do they end? */
   full(runs, rng, _pool, offset = 0) {
     const ends = {};
     let won = 0;
     for (let i = offset; i < offset + runs; i++) {
-      const route = [...ACT_ONE[i % 3], ...ACT_TWO[i % 4], ...ACT_THREE[i % 2], ...ACT_FOUR[Math.floor(i / 2) % 2]];
+      const route = [...ACT_ONE[i % 3], ...ACT_TWO[i % 4], ...ACT_THREE[i % 2], ...ACT_FOUR[Math.floor(i / 2) % 2], ...ACT_FIVE[Math.floor(i / 4) % 2]];
       const last = campaign(route, rng).at(-1);
-      if (last.id === 'tomb' && last.won) won++;
+      if (last.id === 'labyrinth' && last.won) won++;
       else ends[last.id] = (ends[last.id] ?? 0) + 1;
     }
     return { stats: {}, whole: { all: [won, runs] }, ends };
   },
 
-  /** The Endless Crypt, from a pool of parties that won the tomb: floor by floor until they fall. */
+  /** The Endless Crypt, from a pool of parties that won the labyrinth: floor by floor until they fall. */
   endless(runs, rng, poolSize = 20) {
-    const full = (t) => [...ACT_ONE[t % 3], ...ACT_TWO[t % 4], ...ACT_THREE[t % 2], ...ACT_FOUR[Math.floor(t / 2) % 2]];
-    const parties = pool(poolSize, full, 'tomb', rng);
+    const full = (t) => [...ACT_ONE[t % 3], ...ACT_TWO[t % 4], ...ACT_THREE[t % 2], ...ACT_FOUR[Math.floor(t / 2) % 2], ...ACT_FIVE[Math.floor(t / 4) % 2]];
+    const parties = pool(poolSize, full, 'labyrinth', rng);
     const stats = {};
     const ends = {};
     for (let i = 0; i < runs; i++) {
@@ -591,7 +609,7 @@ function print(mode, data, runs, seed, jobs) {
     console.log('  whole campaign won:', rates(data.whole));
     return;
   }
-  const act = { act2: 'two', act3: 'three', act4: 'four' }[mode];
+  const act = { act2: 'two', act3: 'three', act4: 'four', act5: 'five' }[mode];
   if (mode === 'act4') {
     console.log(`  pool: ${data.levels.length} parties, levels ${[...new Set(data.levels)].sort().join('/')}, XP ${Math.min(...data.xp)}–${Math.max(...data.xp)}`);
   }
@@ -612,7 +630,7 @@ function report(name, results) {
   console.log(`  ${name.padEnd(20)} win ${pct(wins.length, results.length).padStart(4)}  rounds ${avg((r) => r.rounds)}  heroes down ${avg((r) => r.downed)}  hp left ${pct(wins.reduce((s, r) => s + r.hpLeft, 0), wins.length)}`);
 }
 
-const POOLS = { act2: 60, act3: 40, act4: 40, endless: 20 };
+const POOLS = { act2: 60, act3: 40, act4: 40, act5: 40, endless: 20 };
 
 /** Split `runs` over `jobs` worker threads (each with its own seed and a share of the pool). */
 async function inThreads(mode, runs, seed, jobs) {
@@ -632,7 +650,7 @@ async function inThreads(mode, runs, seed, jobs) {
 
 async function main() {
   const runs = Number(process.argv[2]) || 500;
-  const mode = ['act2', 'act3', 'act4', 'full', 'endless'].includes(process.argv[3]) ? process.argv[3] : 'campaign';
+  const mode = ['act2', 'act3', 'act4', 'act5', 'full', 'endless'].includes(process.argv[3]) ? process.argv[3] : 'campaign';
   const seed = Number(process.env.SEED) || 1;
   // JOBS=1 plays everything on this thread with one dice stream (the numbers from before threads).
   const jobs = Math.max(1, Math.min(Number(process.env.JOBS) || availableParallelism(), runs));

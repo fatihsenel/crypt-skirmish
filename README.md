@@ -14,7 +14,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
 
-A party of four fights its way down a crypt on a 5-ft grid, room by room, across four acts.
+A party of four fights its way down a crypt on a 5-ft grid, room by room, across five acts.
 It runs on desktop and on phones, and once it has loaded it plays offline too.
 
 **Contents:** [The party](#the-party) · [Rules](#rules) · [Monsters](#monsters) ·
@@ -114,9 +114,12 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - Goblins, skeletons, an orc, giant rats, ghouls, a ghast, a mimic, giant spiders and
   specters.
 - Act four: mummies, wraiths and fallen knights.
+- Act five: gargoyles that stand as statues until you come close, and basilisks whose bite can
+  turn a hero to stone for a turn.
 - Bosses: **Grukk** the goblin chief, **Morvath** the necromancer (raises the dead),
-  **Varek** the wight, **Ysolde** the banshee and **Nekhet** the mummy lord (at half HP his
-  dead rise again and his glare frightens heroes near him).
+  **Varek** the wight, **Ysolde** the banshee, **Nekhet** the mummy lord (at half HP his
+  dead rise again and his glare frightens heroes near him) and **Tharok** the minotaur, who
+  charges down the labyrinth's corridors and can knock a hero flat.
 - Monsters start unaware. They notice heroes they can see, hear fighting nearby and shout to
   wake their allies. Some sleep, and some patrol.
 - Goblins hide after shooting. Monsters that lose sight of a hidden hero go to where they last
@@ -126,12 +129,14 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 
 - Doors that block sight, hidden spike traps, chests with potions and magic items, and stairs
   down.
+- **Chasms** in the fifth act: no one crosses one, not even a flier, but you can see and shoot
+  over it.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden.
 - Walls in front of a figure turn see-through.
 
 ## The campaign
 
-- **Four acts**, each a map with forks: choose which room to clear next, and whether to rest
+- **Five acts**, each a map with forks: choose which room to clear next, and whether to rest
   or push on for more XP and loot.
 - Between rooms the party takes a short rest, shares XP and hands out magic items at camp.
 - **Magic items:** Runed Weapons +1 and +2, Rings and Cloaks of Protection, Bracers of Defense
@@ -146,7 +151,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   - Ysolde's Veil: the party starts every fight hidden, even in plate; each hero stays hidden
     until they attack or cast, get hurt, or a sharp-eyed monster spots them.
   - Nekhet's Embalming Jar: the rest after each room gives back three-quarters of the missing
-    HP, not half (New Game+ only, since Nekhet is the last boss).
+    HP, not half.
+  - Tharok's Red Thread: every hero moves one tile further each turn (New Game+ and the
+    Endless Crypt only, since Tharok is the last boss).
 - **Gold and the pedlar:** every room cleared pays gold, more the deeper it is and twice
   for a boss. A pedlar follows the party down and trades at the rest stops and in camp after
   each act's boss (Visit the pedlar): potions (30 gold, to whoever carries fewest) and two
@@ -184,15 +191,16 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   down, and the run's record and achievements count it at that difficulty.
 - **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
   on the same turn.
-- Beating Nekhet shows a tally of the run and each hero's stats. Save image downloads it as a
+- Beating Tharok shows a tally of the run and each hero's stats. Save image downloads it as a
   picture with the party's gear and the way down (on a phone, the share sheet). A run that ended at Ysolde
-  before act four existed carries on into it.
-- **New Game+:** after beating Nekhet, go back down with the same heroes from the first room.
+  before act four existed carries on into it, and one that ended at Nekhet before act five
+  carries on into that, after a long rest.
+- **New Game+:** after beating Tharok, go back down with the same heroes from the first room.
   Each one keeps a magic item of your choice from the run. Every win adds a tier (Hard NG+1,
   NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The relics
   come along too. The title
   screen offers it too, until you start a new campaign. Each hero may also keep nothing.
-- **Endless Crypt:** after beating Nekhet, the title also offers a dive below the tomb with the
+- **Endless Crypt:** after beating Tharok, the title also offers a dive below the labyrinth with the
   same heroes, their gear, relics and gold. Each floor is a room made from the dive's seed: six
   chambers joined by doors and gaps, with barrels, crates, columns, water, traps, chests and more
   monsters the deeper it goes. Every third floor ends in a long rest and the pedlar; monsters
@@ -222,7 +230,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
   If an update moves the week to another room, its best starts again there.
-- **Achievements:** 36 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 37 goals that carry across runs. Open them from the title screen.
 - **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
   follow the pointer (on a phone, your taps) and flare at the title's buttons. Click or tap it
   (or press K) to play its moves in turn, each with its own sound: gape, chatter, cocked head,
@@ -400,6 +408,14 @@ A few things differ from the SRD to keep the game simple:
   DC 16) the target can't regain HP for two of its turns. The wraith's Life Drain doesn't lower maximum HP and
   it raises no specters. Nekhet has no legendary actions or cleric spells. Instead, once a fight at half HP, two
   skeletons rise for him and heroes within 10 ft make a WIS save or are frightened.
+- Gargoyles have no resistance to plain weapons, and their bite is folded into two claw attacks.
+- The basilisk's Petrifying Gaze rides on its bite instead: a hero it hits makes a CON save
+  (DC 12) or is petrified until the end of their next turn. They can't move, act or react,
+  fail STR and DEX saves, and attacks against them have advantage. No one is turned to stone
+  for good.
+- Tharok is a minotaur built up as a boss: two greataxe swings, Reckless every turn, and a
+  Charge on the first hit after a run of 2 tiles or more (+2d8, and a STR save, DC 14, or
+  prone). Chasms stop fliers too.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.
@@ -469,7 +485,7 @@ fails, so GitHub emails, if the game crashed for anyone the day before (`scripts
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
-12 Halls, 13 Armory, 14 Tomb). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`), `&seed=7` for the same dice every time.
+12 Halls, 13 Armory, 14 Tomb, 15 Bridge, 16 Den, 17 Labyrinth). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`, `thread`), `&seed=7` for the same dice every time.
 This doesn't touch the save.
 
 **See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,
@@ -484,10 +500,10 @@ run with elites slain. Nothing is saved.
 `scripts/sim.js` plays the campaign without graphics and prints win rates.
 
 - `npm run sim -- 300` plays 300 campaigns down each route.
-- `npm run sim -- 300 act2`, `act3` or `act4` plays just that act, starting from real parties
+- `npm run sim -- 300 act2`, `act3`, `act4` or `act5` plays just that act, starting from real parties
   that finished the act before.
-- `npm run sim -- 300 full` plays whole runs, first room to the Tomb, and says where they end.
-- `npm run sim -- 100 endless` dives into the Endless Crypt with parties that won the Tomb, and
+- `npm run sim -- 300 full` plays whole runs, first room to the Labyrinth, and says where they end.
+- `npm run sim -- 100 endless` dives into the Endless Crypt with parties that won the Labyrinth, and
   shows each floor's win rate and where the dives end.
 - Runs are split over one worker thread per core; `JOBS=1` plays them on one thread (the same
   numbers as before threads, for a given `SEED`).
@@ -501,10 +517,11 @@ run with elites slain. Nothing is saved.
 Each act's boss is won almost every time by a rested party and noticeably less often by a
 party that skipped the rest. On Normal the Throne is won about 98% of the time after a rest
 and about 80% without one. The Tomb is the same: about 95% after the Hearth and 75% after the
-Armory. On Hard the Throne drops to about 95% and 60%, and the Tomb to about 80% and 35%.
-A whole run (900 simulated, relics earned from the bosses along the way) wins about 99% of the
-time on Story, 87% on Normal and 51% on Hard (monsters get +20% HP and +1 to hit and damage);
-with no relics, 97%, 78% and 35%. At New Game+ 3 with all four relics it's about 46%. Samples
+Armory. The Labyrinth is about 100% after the Grotto and 85% after the Den. On Hard the Throne
+drops to about 95% and 60%, the Tomb to about 80% and 35%, and the Labyrinth to about 96% and
+50%. A whole run (300 simulated, relics earned from the bosses along the way) wins about 99% of
+the time on Story, 77% on Normal and 35% on Hard (monsters get +20% HP and +1 to hit and
+damage). At New Game+ 3 with all five relics it's about 23%. Samples
 of 300 runs swing by about 5 points either way.
 
 [docs/stats.md](docs/stats.md) lists the play stats' events and how to read real players' win

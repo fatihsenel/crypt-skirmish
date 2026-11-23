@@ -178,6 +178,19 @@ export const SPECS = {
     file: 'Skeleton_Mage', height: 1.6, tint: 0xf0d890,
     clips: { melee: '1H_Melee_Attack_Stab', walk: 'Walking_D_Skeletons' },
   },
+  // Act five: gargoyles are the clawing skeleton in weathered stone; the basilisk Quaternius's
+  // spider (it has eight legs in the SRD too), big and lizard green; Tharok KayKit's horned
+  // barbarian, tall and bull brown, with the great axe.
+  a: {
+    file: 'Skeleton_Minion', height: 1.25, tint: 0x8d8a84,
+    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
+  },
+  z: { file: 'monsters/Spider', height: 0.62, quadruped: true, tint: 0x7f9a55, clips: { ...QUATERNIUS, melee: 'Spider_Attack', idle: 'Spider_Idle', walk: 'Spider_Walk', die: 'Spider_Death', dead: 'Spider_Death' } },
+  v: {
+    file: 'Barbarian', height: 1.75, tint: 0x9a6a4c,
+    show: ['2H_Axe'],
+    clips: { melee: '1H_Melee_Attack_Chop' },
+  },
 };
 
 export const DEFAULT_CLIPS = {

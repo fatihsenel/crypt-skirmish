@@ -100,8 +100,12 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ node, daily }) => !daily && node === 'throne',
   },
   {
-    id: 'scholar', name: 'Scholar of the crypt', desc: 'Meet all 17 kinds of monster in the bestiary.',
-    on: 'room', test: ({ met }) => (met ?? 0) >= 17,
+    id: 'act-four', name: 'The mummy lord', desc: 'Clear the Hollow Tomb, the end of act four.',
+    on: 'room', test: ({ node, daily }) => !daily && node === 'tomb',
+  },
+  {
+    id: 'scholar', name: 'Scholar of the crypt', desc: 'Meet all 20 kinds of monster in the bestiary.',
+    on: 'room', test: ({ met }) => (met ?? 0) >= 20,
   },
   {
     id: 'exterminator', name: 'Exterminator', desc: 'Slay 100 monsters, counted across runs.',

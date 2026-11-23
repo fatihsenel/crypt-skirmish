@@ -42,6 +42,7 @@ const PROFILES = {
   b: { f0: 228, size: 1.25, rasp: 0.4, breath: 0.15, speed: 1.4 },    // Grukk: a bigger goblin
   o: { f0: 84, size: 0.78, rasp: 0.9, breath: 0.2, speed: 0.85 },     // the orc: a growl
   n: { f0: 92, size: 0.9, rasp: 0.35, breath: 0.55, speed: 0.75 },    // the necromancer: a whispered chant
+  v: { f0: 66, size: 0.7, rasp: 1, breath: 0.25, speed: 0.8 },        // Tharok: a bull's bellow
 };
 
 /** Every hero class says these; letters are syllables, '-' joins them into one line. */
@@ -59,6 +60,7 @@ const MONSTER_LINES = {
   b: { attack: ['grah-kah', 'gra-ka-ka', 'hrah'], hurt: ['agh', 'gruk'] },
   o: { attack: ['graah', 'hrooah', 'grah'], hurt: ['hrung', 'grah'] },
   n: { attack: ['heh-heh', 'ha'], cast: ['mor-va-thul', 'u-ma-ra-goth', 'se-ke-mor'], hurt: ['hah', 'agh'] },
+  v: { attack: ['hrrooo', 'graah', 'hruh-hruh'], hurt: ['hrung', 'mrooh'] },
 };
 
 /**

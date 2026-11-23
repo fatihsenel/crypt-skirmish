@@ -245,6 +245,7 @@ export function tileSummary(game, t, { unitAt, explored }) {
   if (gate) return gate.down ? 'A lowered portcullis: no way through, but you can see and shoot past it' : 'Under a raised portcullis';
   if (game.burningTiles().has(key(t.x, t.z))) return 'Burning coals';
   if (game.grid.water.has(key(t.x, t.z))) return 'Shallow water, double movement';
+  if (game.grid.chasms.has(key(t.x, t.z))) return 'A chasm: no way across, but you can see and shoot over it';
   return 'Floor';
 }
 

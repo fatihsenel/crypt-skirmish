@@ -32,6 +32,9 @@ export const LORE = {
   t: 'A hateful shade that drains the life from whatever it touches.',
   x: 'The tomb’s guards, whose oaths rotted along with their lord.',
   l: 'The crypt’s first lord, sealed below the throne for an age and in no mood to be woken.',
+  a: 'Carved to guard the chasm, and still guarding it. It holds still as a statue until you come close.',
+  z: 'Eight legs, a heavy tail and a bite that turns flesh to stone. Its den is full of statues.',
+  v: 'The beast Nekhet walled into the labyrinth’s heart. A thousand years of pacing have not calmed him.',
 };
 
 /** "87 damage, 2 heroes dropped". */

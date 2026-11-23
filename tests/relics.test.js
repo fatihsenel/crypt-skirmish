@@ -18,7 +18,7 @@ const won = (state, node) => {
 describe('boss relics', () => {
   it('come one from each boss room', () => {
     const bosses = Object.values(NODES).filter((n) => n.boss).map((n) => n.level);
-    expect(bosses.map(relicFrom)).toEqual(['phylactery', 'horn', 'veil', 'jar']);
+    expect(bosses.map(relicFrom)).toEqual(['phylactery', 'horn', 'veil', 'jar', 'thread']);
     expect(relicFrom('crypt')).toBeNull();
     expect(Object.values(RELICS).every((r) => r.name && r.desc)).toBe(true);
     expect(cleanRelics(['jar', 'crown', 'horn', 'jar'])).toEqual(['horn', 'jar']);

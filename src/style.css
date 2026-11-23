@@ -123,6 +123,7 @@ html, body {
 .tag.restrained, .cond.restrained { color: #e8e2d0; }
 .tag.paralyzed, .cond.paralyzed { color: #b7d98a; }
 .tag.stunned, .cond.stunned { color: #ffe27a; }
+.tag.petrified, .cond.petrified { color: #c9c4bb; }
 .tag.raging { color: #ff6a4a; font-weight: 700; }
 .tag.reckless { color: #ffa070; }
 .tag.rotting, .cond.rotting { color: #b8a060; }

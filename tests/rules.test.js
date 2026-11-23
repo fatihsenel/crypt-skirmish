@@ -1344,7 +1344,7 @@ describe('act two', () => {
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;
     const { state, report } = completeFight(rested, 'throne', game);
     expect([state.done, report.longRest, choices(state)]).toEqual([false, true, ['halls']]);
-    expect(LEVELS.filter((l) => l.final).map((l) => l.id)).toEqual(['tomb']);
+    expect(LEVELS.filter((l) => l.final).map((l) => l.id)).toEqual(['labyrinth']);
   });
 
   it('a save that finished at the barrow before act three carries on, rested', () => {
@@ -2167,7 +2167,7 @@ describe('act four and levels 7–8', () => {
     return game;
   };
 
-  it('after the throne: the halls, then the armory or the hearth, then the tomb, which ends the campaign', () => {
+  it('after the throne: the halls, then the armory or the hearth, then the tomb, which ends the act', () => {
     const base = { ...newCampaign(), at: 'halls', cleared: [...ACT_THREE, 'halls'] };
     expect(choices(base)).toEqual(['armory', 'hearth', 'reliquary']);
     expect(choices({ ...base, at: 'armory', cleared: [...base.cleared, 'armory'] })).toEqual(['tomb']);
@@ -2176,7 +2176,87 @@ describe('act four and levels 7–8', () => {
     const game = new Game(levelById('tomb'), { party: rested.party });
     expect(game.units.find((u) => u.code === 'l')).toMatchObject({ name: 'Nekhet', cls: 'Mummy Lord', undead: true });
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;
-    expect(completeFight(rested, 'tomb', game).state.done).toBe(true);
+    const { state, report } = completeFight(rested, 'tomb', game);
+    expect([state.done, report.longRest, choices(state)]).toEqual([false, true, ['bridge']]);
+  });
+
+  it('after the tomb: the bridge, then the den or the grotto, then the labyrinth, which ends the campaign', () => {
+    const base = { ...newCampaign(), at: 'bridge', cleared: [...ACT_THREE, 'halls', 'hearth', 'tomb', 'bridge'] };
+    expect(choices(base)).toEqual(['lair', 'grotto']);
+    expect(choices({ ...base, at: 'lair', cleared: [...base.cleared, 'lair'] })).toEqual(['labyrinth']);
+    const rested = takeRest(base, 'grotto');
+    expect(choices(rested)).toEqual(['labyrinth']);
+    const game = new Game(levelById('labyrinth'), { party: rested.party });
+    expect(game.units.find((u) => u.code === 'v')).toMatchObject({ name: 'Tharok', cls: 'Minotaur', recklessBrute: true });
+    for (const u of game.units) if (u.team === 'monsters') u.alive = false;
+    expect(completeFight(rested, 'labyrinth', game).state.done).toBe(true);
+  });
+
+  it('a run that ended at the tomb before act five carries on, rested', () => {
+    const finished = { ...newCampaign(), at: 'tomb', cleared: [...ACT_THREE, 'halls', 'hearth', 'tomb'], done: true };
+    finished.party.F.hp = 3;
+    const s = parseSave(serialize(finished));
+    expect(s.done).toBe(false);
+    expect(s.party.F.hp).toBeGreaterThan(3);
+    expect(choices(s)).toEqual(['bridge']);
+  });
+
+  it('a chasm stops walking but not sight, and fliers cannot cross it either', () => {
+    const rows = [
+      '#######',
+      '#F._.a#',
+      '#..#..#',
+      '#######',
+    ];
+    const game = new Game(rows, { senses: false, rng: () => 0.5 });
+    expect(game.grid.isSolid(3, 1)).toBe(true);
+    expect(game.grid.blocksSight(3, 1)).toBe(false);
+    const f = game.units.find((u) => u.code === 'F');
+    const a = game.units.find((u) => u.code === 'a');
+    expect(game.inSight(f, a)).toBe(true);
+    a.movesLeft = 6;
+    expect(game.reachable(a).has('2,1')).toBe(false); // the gargoyle flies, but not over it
+    f.movesLeft = 6;
+    expect(game.reachable(f).has('4,1')).toBe(false);
+  });
+
+  it('a basilisk’s bite can turn a hero to stone for a turn: no move or action, saves fail, hits come easy', () => {
+    const game = new Game(['#####', '#Fz.#', '#####'], { senses: false, rng: () => 0.999 });
+    game.start();
+    const f = game.units.find((u) => u.code === 'F');
+    const z = game.units.find((u) => u.code === 'z');
+    game.addCondition(f, 'petrified', { turns: 1, by: z });
+    expect(f).toMatchObject({ movesLeft: 0, actionUsed: true, reactionUsed: true });
+    expect(game.save(f, 'dex', 5).success).toBe(false);
+    expect(game.attackMods(z, f, z.attacks[0], {}).adv).toContain('target petrified');
+    expect(z.attacks[0].rider).toMatchObject({ save: 'con', condition: 'petrified', turns: 1 });
+  });
+
+  it('Tharok’s charge: +2d8 and a STR save against prone, only after a run of 2 tiles', () => {
+    const game = new Game(['########', '#F....v#', '########'], { senses: false, rng: () => 0.001 });
+    game.start();
+    const f = game.units.find((u) => u.code === 'F');
+    const v = game.units.find((u) => u.code === 'v');
+    setTurn(game, game.units.indexOf(v));
+    expect(v.reckless).toBe(true); // Reckless every turn
+    Object.assign(v, { x: 2, z: 1, movesLeft: 5 }); // ran 3 tiles
+    f.hp = f.maxHp = 500; // stands up to a maxed-out charge
+    game.rng = () => 0.999; // hits; the target's save then fails on a 1
+    let fails = true;
+    const save = game.save.bind(game);
+    game.save = (u, stat, dc) => (fails ? { ...save(u, stat, dc), success: false } : save(u, stat, dc));
+    const r = game.attack(v, f, v.attacks[0]);
+    expect(r.hit).toBe(true);
+    expect(r.charge?.total).toBeGreaterThan(0);
+    expect(r.knock).toMatchObject({ stat: 'str', dc: 14, success: false });
+    expect(game.has(f, 'prone')).toBe(true);
+    fails = false;
+    const again = game.attack(v, f, v.attacks[0]);
+    expect(again.charge).toBeNull(); // once a turn
+    setTurn(game, game.units.indexOf(v)); // a new turn
+    v.movesLeft = 7; // a single step is no run
+    const step = game.attack(v, f, v.attacks[0]);
+    expect([step.hit, step.charge]).toEqual([true, null]);
   });
 
   it('a run that ended at the throne before act four carries on, rested', () => {

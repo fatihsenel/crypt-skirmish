@@ -15,18 +15,18 @@ export function sampleVictory(search) {
   const run = partyAt(newCampaign('normal'), 8);
   const gear = { F: ['weaponPlus2', 'gauntletsOgre'], W: ['bracersDefense', 'ringProtection', 'amuletHealth'], R: ['weaponPlus1', 'cloakProtection'], C: ['periaptPoison', 'cloakProtection', 'weaponPlus1'] };
   for (const [code, items] of Object.entries(gear)) run.party[code].items = items;
-  run.cleared = ['crypt', 'ossuary', 'chapel', 'sanctum', 'catacombs', 'vault', 'barrow', 'nest', 'gallery', 'throne', 'halls', 'armory', 'tomb'];
-  run.xp = 14350;
+  run.cleared = ['crypt', 'ossuary', 'chapel', 'sanctum', 'catacombs', 'vault', 'barrow', 'nest', 'gallery', 'throne', 'halls', 'armory', 'tomb', 'bridge', 'lair', 'labyrinth'];
+  run.xp = 19750;
   const tally = (damage, kills, crits, healing, downed) => ({ damage, kills, crits, healing, downed });
   run.stats = {
-    won: 13, lost: 1, rounds: 95,
-    heroes: { F: tally(612, 31, 9, 0, 2), W: tally(540, 22, 1, 0, 1), R: tally(488, 19, 6, 0, 0), C: tally(301, 9, 2, 356, 1) },
+    won: 16, lost: 1, rounds: 118,
+    heroes: { F: tally(768, 37, 11, 0, 2), W: tally(661, 26, 2, 0, 1), R: tally(597, 23, 7, 0, 1), C: tally(372, 11, 2, 431, 1) },
   };
   run.tier = Math.max(0, Math.min(99, Math.floor(Number(new URLSearchParams(search).get('tier')) || 0)));
   if (run.tier >= 2) run.stats.elites = { regenerating: 3, relentless: 4, frenzied: 2, swift: 2, warded: 2, barbed: 1 };
   const summary = runSummary(run);
-  const tomb = levelById('tomb');
-  return ['victory', { round: 9, level: tomb.name, final: true, xp: 0, outro: tomb.outro, summary, share: runShareText(summary) }];
+  const last = levelById('labyrinth');
+  return ['victory', { round: 9, level: last.name, final: true, xp: 0, outro: last.outro, summary, share: runShareText(summary) }];
 }
 
 /** Win (`team` 'monsters') or lose ('heroes') on the spot: through Relentless and Death Ward too. */

@@ -94,6 +94,7 @@ export const CONDITION_INFO = {
   mocked: 'Mocked: disadvantage on its next attack roll. Wears off after it attacks or at the end of its next turn.',
   rotting: 'Rotting (mummy rot): can’t regain hit points. Wears off after two of its own turns.',
   stunned: 'Stunned (a monk’s Stunning Strike): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage. Wears off at the end of its next turn.',
+  petrified: 'Petrified (a basilisk’s gaze): turned to stone for a turn. Can’t move, act or react, and fails STR and DEX saves; attacks against it have advantage. Wears off at the end of its next turn.',
   paralyzed: 'Paralysed (a ghoul’s claws): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage, and a hit from within 5 ft is a critical hit. A CON save as each of its turns starts ends it, in time to act.',
 };
 

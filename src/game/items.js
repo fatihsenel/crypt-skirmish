@@ -98,6 +98,10 @@ export const RELICS = {
     name: 'Nekhet’s Embalming Jar', boss: 'tomb',
     desc: 'The short rest after a room heals three-quarters of everyone’s missing HP, not half.',
   },
+  thread: {
+    name: 'Tharok’s Red Thread', boss: 'labyrinth',
+    desc: 'The thread that marks every way out of the labyrinth: each hero moves one tile further every turn.',
+  },
 };
 
 /** The relic a boss room (level id) leaves behind, or null. */

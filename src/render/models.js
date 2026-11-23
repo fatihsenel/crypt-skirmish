@@ -759,6 +759,7 @@ const BUILDERS = {
   u: skeleton, w: skeleton, m: mimic,
   k: giantRat, e: skeleton, q: necromancer, // act three
   y: skeleton, t: skeleton, x: fighter, l: necromancer, // act four
+  a: skeleton, z: giantRat, v: fighter, // act five
 };
 
 export function buildModel(unit) {

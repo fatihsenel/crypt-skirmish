@@ -50,10 +50,12 @@ export const PATROL_PACE = 3;
 //   paralyzed   (rules 2, a ghoul's claws) can't move, act or react; fails STR and DEX saves;
 //               attacks against it have advantage, and a hit from within 5 ft is a crit. A CON
 //               save at the start of each of its turns ends it (in time to act).
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned'];
+//   petrified   (a basilisk's gaze, cut down to a turn) can't move, act or react; fails STR and
+//               DEX saves; attacks against it have advantage. Wears off as its next turn ends.
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified'];
 /** Conditions that simply run out after their `turns`. */
 
-const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned'];
+const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
@@ -164,6 +166,8 @@ export class Game extends Spellcasting {
         u.hp = Math.min(u.hp, u.maxHp); // an Amulet of Health handed back at camp
       }
     }
+    // The Labyrinth Thread: every hero moves a tile further.
+    if (this.relics.includes('thread')) for (const u of this.units) if (u.team === 'heroes') u.speed += 1;
 
     // Monsters start out unaware of the party (see updateAwareness).
     if (senses) {
@@ -300,8 +304,8 @@ export class Game extends Spellcasting {
   /** Roll a saving throw: d20 + ability modifier + item bonuses + a paladin's aura. */
   save(unit, stat, dc) {
     let d20 = rollDice(1, 20, this.rng).total;
-    // Paralysed or stunned: STR and DEX saves fail, whatever the die says.
-    if ((stat === 'str' || stat === 'dex') && (this.has(unit, 'paralyzed') || this.has(unit, 'stunned'))) {
+    // Paralysed, stunned or petrified: STR and DEX saves fail, whatever the die says.
+    if ((stat === 'str' || stat === 'dex') && (this.has(unit, 'paralyzed') || this.has(unit, 'stunned') || this.has(unit, 'petrified'))) {
       return { unit, d20, total: d20 + abilityMod(unit.stats[stat]), aura: 0, luck: null, inspired: null, success: false, paralyzed: true };
     }
     // Advantage: a raging barbarian's STR saves, Danger Sense's DEX saves. Restrained: DEX at disadvantage.
@@ -471,7 +475,7 @@ export class Game extends Spellcasting {
     unit.conditions[name] = { turns: turns + (own && turns !== Infinity ? 1 : 0), by, dc };
     if ((name === 'prone' || name === 'restrained') && own) unit.movesLeft = 0; // knocked down or caught mid-move
     if (fresh) this.emit('condition', { unit, name, on: true, by });
-    if (name === 'paralyzed' || name === 'stunned') this.paralyze(unit);
+    if (name === 'paralyzed' || name === 'stunned' || name === 'petrified') this.paralyze(unit);
   }
 
   /** Paralysed: no move, action, bonus action or reaction, and what it held or kept up ends. */
@@ -659,6 +663,7 @@ export class Game extends Spellcasting {
       readiedAttack: null,
       readiedSpell: null,
       reckless: false,
+      chargeUsed: false,
       tookAttack: false,
       strikes: 0,
       quickCast: false,
@@ -672,7 +677,9 @@ export class Game extends Spellcasting {
       if (this.save(u, 'con', u.conditions.paralyzed.dc).success) this.removeCondition(u, 'paralyzed', 'save');
       else this.paralyze(u);
     }
-    if (this.has(u, 'stunned')) this.paralyze(u); // no save: it wears off as this turn ends
+    if (this.has(u, 'stunned') || this.has(u, 'petrified')) this.paralyze(u); // no save: it wears off as this turn ends
+    if (u.recklessBrute && u.alive) u.reckless = true; // a minotaur: Reckless every turn
+    u.startMoves = u.movesLeft; // what a Charge measures its run from (after standing up)
     if (u.grappledBy) this.struggle(u);
     this.recharge(u);
     if (u.elite === 'regenerating' && u.alive && u.hp < u.maxHp) {
@@ -1570,6 +1577,7 @@ export class Game extends Spellcasting {
     if (this.has(target, 'restrained')) adv.push('target restrained');
     if (this.has(target, 'paralyzed')) adv.push('target paralyzed');
     if (this.has(target, 'stunned')) adv.push('target stunned');
+    if (this.has(target, 'petrified')) adv.push('target petrified');
     if (attacker.reckless && !opportunity && isMelee(attack) && attack.stat === 'str') adv.push('reckless');
     if (target.reckless) adv.push('target is reckless');
     const fear = this.fearSource(attacker);
@@ -1815,6 +1823,7 @@ export class Game extends Spellcasting {
     let mark = null;
     let colossus = null;
     let strike = null;
+    let charge = null;
     if (hit && attack.damage) { // a web hits for no damage: only its rider matters
       damageRoll = rollExpr(attack.damage, { crit, rng: this.rng });
       damage = Math.max(1, damageRoll.total + this.damageBonus(attacker, attack));
@@ -1840,6 +1849,12 @@ export class Game extends Spellcasting {
         attacker.strikeUsed = true;
         strike = rollExpr('1d8', { crit, rng: this.rng });
         damage += strike.total;
+      }
+      // Charge (a minotaur's gore): the first hit on a turn it moved 2 tiles or more first.
+      if (attack.charge && !opportunity && !readied && attacker === this.current && !attacker.chargeUsed && (attacker.startMoves ?? 0) - attacker.movesLeft >= 2) {
+        attacker.chargeUsed = true;
+        charge = rollExpr(attack.charge.damage, { crit, rng: this.rng });
+        damage += charge.total;
       }
     }
 
@@ -1868,7 +1883,7 @@ export class Game extends Spellcasting {
       ok: true, kind: 'attack', attacker, target, attack, opportunity, readied,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
       hit, crit, fumble, shielded, inspired, cutting, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
-      bonus, resisted, deflect, stun: null, topple: null,
+      bonus, resisted, deflect, stun: null, topple: null, charge, knock: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -1880,6 +1895,10 @@ export class Game extends Spellcasting {
       if (damage) this.applyDamage(target, damage, attacker);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
+      // A charge's gore knocks the target down unless it makes a STR save.
+      if (charge && target.alive && !this.has(target, 'prone')) {
+        result.knock = this.monkSave(target, 'str', attack.charge.dc, 'prone');
+      }
       // A monk's hit: Stunning Strike (armed, 1 ki) and Open Hand's push to the floor.
       const dc = 8 + attacker.prof + abilityMod(attacker.stats.wis);
       if (attacker.stunArmed && isMelee(attack) && attacker.ki > 0 && target.alive) {
@@ -1890,7 +1909,7 @@ export class Game extends Spellcasting {
       if (bonus === 'flurry' && attacker.passives.includes('openHand') && target.alive && !this.has(target, 'prone')) {
         result.topple = this.monkSave(target, 'dex', dc, 'prone');
       }
-      if (result.stun || result.topple) this.emit('technique', result);
+      if (result.stun || result.topple || result.knock) this.emit('technique', result);
       if (damage) result.rebuke = this.rebuke(target, attacker);
       result.barbs = this.barbs(target, attacker, attack);
     }

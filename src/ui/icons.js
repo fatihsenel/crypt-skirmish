@@ -119,6 +119,20 @@ const ICONS = {
     <path fill="none" stroke="var(--icon-hole)" stroke-width="1.1" d="M6 10.5l12-1.2M5.8 14.6 18.2 13.4M5.8 18.6 18.2 17.4"/>
     <circle cx="9.5" cy="12.2" r="1.2" fill="var(--icon-hole)" stroke="none"/>
     <circle cx="14.5" cy="11.8" r="1.2" fill="var(--icon-hole)" stroke="none"/>`),
+  // act five: a gargoyle's horned head with bat wings, the basilisk's lizard head with its
+  // staring eye, and the minotaur's horned bull head
+  a: svg(`<path stroke="none" d="M1.5 6c2.5.3 4.4 1.6 5.6 3.6L7 15c-2.2-.6-4.2-2.2-5.5-4.6l2-.4-2.6-2.2zM22.5 6c-2.5.3-4.4 1.6-5.6 3.6L17 15c2.2-.6 4.2-2.2 5.5-4.6l-2-.4 2.6-2.2z"/>
+    <path stroke="none" d="M8 3.5 9.6 7h4.8L16 3.5l.2 5.3c.9 1.1 1.3 2.4 1.3 3.9 0 3.9-2.5 7.8-5.5 9.3-3-1.5-5.5-5.4-5.5-9.3 0-1.5.4-2.8 1.3-3.9z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M9.2 11.2l2 .9-2 .9zM14.8 11.2l-2 .9 2 .9zM10.4 17h3.2l-1.6 1.6z"/>`),
+  z: svg(`<path stroke="none" d="M2 13.5C2.8 8.6 7 5.5 12.6 5.5c4.6 0 8 2.2 9.4 5.6l-3.4 1.3 3.4 1.6c-1.5 3.1-5.1 4.9-9.6 4.9C7 18.9 2.8 17.4 2 13.5z"/>
+    <circle cx="11.5" cy="10.2" r="2.4" fill="var(--icon-hole)" stroke="none"/>
+    <circle cx="11.5" cy="10.2" r="1" stroke="none"/>
+    <path fill="none" stroke="var(--icon-hole)" stroke-width="1.1" d="M14.6 14.6c2 .1 4-.3 5.6-1.1"/>`),
+  v: svg(`<path stroke="none" d="M1.5 4.5c.4 3.8 2.5 6 5.6 6.4L8 8.4C5.6 8.2 3.4 6.9 1.5 4.5zM22.5 4.5c-.4 3.8-2.5 6-5.6 6.4L16 8.4c2.4-.2 4.6-1.5 6.5-3.9z"/>
+    <path stroke="none" d="M12 6.5c-3.4 0-5.5 2.3-5.5 5.3 0 1.5.4 2.6 1 3.7L8 19.2c.4 1.8 2 2.8 4 2.8s3.6-1 4-2.8l.5-3.7c.6-1.1 1-2.2 1-3.7 0-3-2.1-5.3-5.5-5.3z"/>
+    <circle cx="9.4" cy="11.6" r="1.2" fill="var(--icon-hole)" stroke="none"/>
+    <circle cx="14.6" cy="11.6" r="1.2" fill="var(--icon-hole)" stroke="none"/>
+    <path fill="none" stroke="var(--icon-hole)" stroke-width="1.2" d="M10.5 18.6c.9.4 2.1.4 3 0"/>`),
   unknown: svg(`<path fill="none" stroke-width="2.4" d="M8.8 8.6c0-2 1.5-3.4 3.4-3.4 2 0 3.4 1.3 3.4 3.1 0 2.6-3.4 2.8-3.4 5.6"/>
     <circle stroke="none" cx="12.2" cy="18.3" r="1.6"/>`),
 };

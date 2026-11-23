@@ -1217,6 +1217,7 @@ async function onTurnStart(unit) {
     sfx.turn();
     voices.bark(unit, 'turn'); // now and then
     saveFight(); // with the rooms seen so far
+    if (game.has(unit, 'petrified')) hud.toast(`${unit.name} is stone: no move or action this turn.`);
     if (game.has(unit, 'paralyzed')) hud.toast(`${unit.name} is paralysed: no move or action this turn (a CON save next turn may end it).`);
     if (!debugAutoplay) {
       const chestInSight = [...game.grid.chests.keys()].some((k) => visible.has(k));

@@ -26,7 +26,7 @@ const BOSSES = ['b', 'n', 'w', 'q', 'l'];
 const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000 };
 
 const INTROS = [
-  'The stairs wind down past the tomb into rooms no map shows.',
+  'The stairs wind down past the labyrinth into rooms no map shows.',
   'Older stone here, cut by hands that weren’t human.',
   'Water drips somewhere below. Something else is moving with it.',
   'The air is colder on this floor, and the dark is patient.',

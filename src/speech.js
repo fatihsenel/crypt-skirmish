@@ -225,10 +225,23 @@ const MONSTERS = {
     flee: ['This light offends me!', 'You will pay for this!'],
     gloat: ['Dust to dust.', 'Join my house forever.', 'The tomb is sealed.'],
   },
+  a: { // gargoyles
+    attack: ['Grind… you…', 'Stone… endures.', 'None cross.', 'Krrrk!'],
+    kill: ['Crumble.', 'Fall. Like all.', 'Stone stays.'],
+    reply: ['Stone obeys.', 'We guard.', 'Krrk… yes.'],
+    gloat: ['Stone endures.', 'None cross.'],
+  },
+  v: { // Tharok, the minotaur
+    attack: ['I smell you!', 'Run! Run!', 'My halls!', 'Crush!', 'No way out!'],
+    kill: ['Meat.', 'Another for the bones.', 'Ha! Ha!'],
+    intro: ['Fresh meat in my halls!', 'A thousand years… and now, you.', 'No thread will save you.'],
+    hurt: ['You sting!', 'Rrraagh!', 'Blood! Mine!'],
+    gloat: ['The labyrinth keeps all.', 'Bones for my floor.', 'There is no way out.'],
+  },
 };
 
 /** Foes with a name of their own: they speak on most of their attacks, not some. */
-const NAMED = new Set(['b', 'n', 'w', 'q', 'x', 'l']);
+const NAMED = new Set(['b', 'n', 'w', 'q', 'x', 'l', 'v']);
 
 /** Which lines a unit uses (null: it has no words). The risen dead are skeletons. */
 function linesOf(unit) {

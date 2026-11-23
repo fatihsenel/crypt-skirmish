@@ -441,7 +441,7 @@ export class Camp {
       }
       news = parts.join('');
     } else if (!state.at && state.endless) {
-      news = '<p>Below the tomb the stairs go on down, into rooms no map shows. Every floor is deeper and deadlier; every third ends in a long rest, and the pedlar. The dive ends when the party falls.</p>';
+      news = '<p>Below the labyrinth the stairs go on down, into rooms no map shows. Every floor is deeper and deadlier; every third ends in a long rest, and the pedlar. The dive ends when the party falls.</p>';
     } else if (!state.at) {
       news = '<p>The crypt waits below. Choose your way on the map; the party rests and shares XP between rooms. Progress is saved after every room.</p>';
     }

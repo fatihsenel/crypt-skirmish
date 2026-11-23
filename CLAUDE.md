@@ -148,9 +148,12 @@ server on 5173.
 
 ## Adding content
 
-- **Monster:** stat block in `game/units.js`, model in `render/modelSpecs.js` (or a
-  procedural builder in `render/models.js`), an icon in `ui/icons.js`, and lines in
-  `speech.js` if it talks.
+- **Monster:** stat block in `game/units.js` (a free letter: the map reads every letter as a
+  unit, and `m` is the mimic), model in `render/modelSpecs.js` (and a fallback builder in
+  `render/models.js`), an icon in `ui/icons.js`, lore in `ui/bestiary.js` (its count is in
+  the `scholar` achievement), a sound alias in `audio/sfx.js`, and lines in `speech.js` if it
+  talks. Monster abilities are template fields that `combat.js` reads (`rider`, `charge`,
+  `recklessBrute`, `rises`), never changes to `ai.js`.
 - **Condition:** add it to `CONDITIONS` in `combat.js` and a line in `attackMods`. Monsters
   apply it through an attack `rider` or a spell's `condition`.
 - **Elite trait:** `ELITE_TRAITS` and `makeElite` in `combat.js`; the bestiary lists them.
@@ -159,8 +162,11 @@ server on 5173.
   `moveCost`; a room without water or ice keeps the plain paths, so its old saves still
   replay), `'*'` a brazier (the `brazier` command, `tipBrazier`; its coals are `this.fire`, a
   `burn` move step), `'!'` a lever and `':'` a portcullis (the `lever` command, `pullLever`; down,
-  `grid.gates` are solid but see-through). Adding any of these to an existing room changes its
-  paths or dice, so its old saves and links fall back.
+  `grid.gates` are solid but see-through), `'_'` a chasm (`grid.chasms`: solid for everyone,
+  fliers too, but see-through and no cover). Adding any of these to an existing room changes its
+  paths or dice, so its old saves and links fall back. The last room has `final` and an
+  `outro`; an earlier act's boss has `actBreak`, and a save that finished at it before the
+  next act existed is reopened by `parseSave`.
 - **Relic:** `RELICS` in `game/items.js` (its `boss` is the room that drops it) and its rule in
   `Game` (`this.relics`) or `completeFight`. Relics ride in the fight record and links (`rl`).
 - **Endless Crypt:** `game/endless.js`. A floor is the room id `deep:<seed>:<floor>`, rebuilt

@@ -411,6 +411,39 @@ export const TEMPLATES = {
     stats: { str: 18, dex: 10, con: 17, int: 11, wis: 18, cha: 16 },
     attacks: [{ name: 'Rotting Fist', stat: 'str', damage: '4d6', reach: 1, rider: { save: 'con', dc: 16, condition: 'rotting', turns: 2 } }],
   },
+  // --- act five: the labyrinth below the tomb ---------------------------------
+  // SRD gargoyle: claws twice (its bite folded in), and it stands as a statue until woken
+  // (False Appearance, as `asleep` in the map). No resistance to plain weapons.
+  a: {
+    name: 'Gargoyle', cls: 'Gargoyle', team: 'monsters', color: 0x7a7670,
+    hp: 52, ac: 15, speed: 6, prof: 2, xp: 450, cr: 2,
+    flies: true, // drifts over difficult ground (Ice Storm)
+    multiattack: 2,
+    ai: 'brute',
+    stats: { str: 15, dex: 11, con: 16, int: 6, wis: 11, cha: 7 },
+    attacks: [{ name: 'Claws', stat: 'str', damage: '1d6', reach: 1 }],
+  },
+  // SRD basilisk: a poisonous bite (2d6+3 piercing and 2d6 poison, one roll here) and its
+  // Petrifying Gaze, cut down to a rider on the bite that turns a hero to stone for a turn.
+  z: {
+    name: 'Basilisk', cls: 'Basilisk', team: 'monsters', color: 0x6a7a4a,
+    hp: 52, ac: 15, speed: 4, prof: 2, xp: 700, cr: 3,
+    ai: 'brute',
+    stats: { str: 16, dex: 8, con: 15, int: 2, wis: 8, cha: 7 },
+    attacks: [{ name: 'Bite', stat: 'str', damage: '4d6', reach: 1, rider: { save: 'con', dc: 12, condition: 'petrified', turns: 1 } }],
+  },
+  // The last boss: an SRD minotaur made a lord of the labyrinth for a level 8 party. Two
+  // greataxe swings; the first hit after a run of 2 tiles or more is a Charge (+2d8, STR
+  // save or prone); Reckless every turn (advantage for him, and against him).
+  v: {
+    name: 'Tharok', cls: 'Minotaur', team: 'monsters', color: 0x6a4630,
+    hp: 155, ac: 15, speed: 8, prof: 3, xp: 3900, cr: 7,
+    multiattack: 2,
+    ai: 'brute',
+    recklessBrute: true,
+    stats: { str: 18, dex: 11, con: 16, int: 6, wis: 16, cha: 9 },
+    attacks: [{ name: 'Greataxe', stat: 'str', damage: '2d12', reach: 1, charge: { damage: '2d8', dc: 14 } }],
+  },
 };
 
 let nextId = 1;
