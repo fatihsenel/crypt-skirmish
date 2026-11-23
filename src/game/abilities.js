@@ -67,6 +67,12 @@ export const SHOVE = {
   desc: 'Instead of one attack: Athletics (STR + proficiency) against the target’s STR or DEX. Win and it is knocked prone: melee attacks against it have advantage until it gets up on its turn.',
 };
 
+/** Push: Shove's other choice (rules 3), 5 ft straight back instead of prone. */
+export const PUSH = {
+  name: 'Push', reach: 1,
+  desc: 'Instead of one attack: Athletics (STR + proficiency) against the target’s STR or DEX. Win and it is pushed 5 ft straight away from you. Over a chasm’s edge it falls and is gone; onto burning coals it burns. Not past a wall, a door or someone standing there.',
+};
+
 /** Help sits with the actions but needs a target: a foe next to the helper. */
 export const HELP = {
   name: 'Help', reach: 1,

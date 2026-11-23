@@ -2220,6 +2220,74 @@ describe('act four and levels 7–8', () => {
     expect(game.reachable(f).has('4,1')).toBe(false);
   });
 
+  it('rules 3: a push sends a foe 5 ft straight back, and over a chasm’s edge it is gone', () => {
+    const game = new Game(['#######', '#Fs_..#', '#Fs...#', '#######'], { senses: false });
+    game.start();
+    const [f, f2] = game.units.filter((u) => u.code === 'F');
+    setTurn(game, game.units.indexOf(f));
+    const [s1, s2] = game.units.filter((u) => u.code === 's');
+    expect(game.pushTo(f, s1)).toEqual({ x: 3, z: 1, fall: true });
+    expect(game.pushTo(f, s2).why).toMatch(/No room/); // diagonally into the wall
+    expect(game.pushTo(f2, s2)).toEqual({ x: 3, z: 2, fall: false });
+    game.rng = fixed(0.999, 0.001); // the fighter rolls 20, the skeleton 1
+    const r = game.shove(f, s1, true);
+    expect(r).toMatchObject({ success: true, push: { from: { x: 2, z: 1 }, to: { x: 3, z: 1 }, fall: true } });
+    expect(s1).toMatchObject({ alive: false, fell: true, raised: true });
+    expect(game.corpses()).not.toContain(s1); // nothing left to raise
+    setTurn(game, game.units.indexOf(f2));
+    game.rng = fixed(0.999, 0.001);
+    const r2 = game.shove(f2, s2, true);
+    expect(r2.push).toMatchObject({ to: { x: 3, z: 2 }, fall: false });
+    expect([s2.x, s2.z]).toEqual([3, 2]);
+    expect(game.has(s2, 'prone')).toBe(false);
+  });
+
+  it('no push past a wall or someone, nor fliers or the surefooted over the edge, nor in rules 2 fights', () => {
+    const game = new Game(['#######', '#Fa_..#', '#Fv_..#', '#Fs#..#', '#######'], { senses: false });
+    game.start();
+    const [f1, f2, f3] = game.units.filter((u) => u.code === 'F');
+    const a = game.units.find((u) => u.code === 'a');
+    const v = game.units.find((u) => u.code === 'v');
+    const s = game.units.find((u) => u.code === 's');
+    setTurn(game, game.units.indexOf(f1));
+    expect(game.shoveProblem(f1, a, true)).toMatch(/would only fly/);
+    setTurn(game, game.units.indexOf(f2));
+    expect(game.shoveProblem(f2, v, true)).toMatch(/won’t be pushed off the edge/);
+    setTurn(game, game.units.indexOf(f3));
+    expect(game.shoveProblem(f3, s, true)).toMatch(/No room/);
+    const old = new Game(['#####', '#Fs.#', '#####'], { senses: false, rules: 2 });
+    old.start();
+    const f = setTurn(old, 0);
+    expect(old.shoveProblem(f, old.units[1], true)).toMatch(/before pushing/);
+    expect(old.shoveProblem(f, old.units[1])).toBe(null);
+  });
+
+  it('Tharok’s threat zone marks where he could charge in; a basilisk has none', () => {
+    const game = new Game(['##############', '#F..........v#', '#z...........#', '##############'], { senses: false });
+    game.start();
+    const v = game.units.find((u) => u.code === 'v');
+    const z = game.units.find((u) => u.code === 'z');
+    v.unaware = false;
+    z.unaware = false;
+    const t = game.threatOf(v);
+    expect(t.charge.has('5,1')).toBe(true);
+    expect(t.charge.has('1,1')).toBe(false); // out of his reach altogether
+    expect([...t.charge].every((k) => t.melee.has(k))).toBe(true);
+    expect(game.threatOf(z).charge.size).toBe(0);
+  });
+
+  it('a pushed foe lands on burning coals and burns', () => {
+    const game = new Game(['######', '#Fs..#', '######'], { senses: false });
+    game.start();
+    const f = setTurn(game, 0);
+    const s = game.units[1];
+    game.fire = [{ by: f, turns: 2, tiles: new Set(['3,1']) }];
+    game.rng = fixed(0.999, 0.001, 0.5);
+    const r = game.shove(f, s, true);
+    expect(r.push.burn?.damage).toBeGreaterThan(0);
+    expect(s.hp).toBeLessThan(s.maxHp);
+  });
+
   it('a basilisk’s bite can turn a hero to stone for a turn: no move or action, saves fail, hits come easy', () => {
     const game = new Game(['#####', '#Fz.#', '#####'], { senses: false, rng: () => 0.999 });
     game.start();

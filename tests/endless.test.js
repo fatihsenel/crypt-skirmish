@@ -49,13 +49,25 @@ describe('the Endless Crypt', () => {
     expect(parseFloorId('deep:1:0')).toBeNull();
   });
 
+  it('a dive keeps its generation: old dives keep their floors, new ones meet act five', () => {
+    expect(parseFloorId('deep:7:3:2')).toEqual({ seed: 7, floor: 3, gen: 2 });
+    expect(parseFloorId('deep:7:3:9')).toBeNull();
+    expect(nextFloor({ endless: { seed: 7, floor: 3 } })).toBe('deep:7:3'); // saved before generations
+    expect(levelOf('deep:7:3').rows).toEqual(makeFloor(7, 3).rows);
+    const seen = (gen) => new Set(Array.from({ length: 40 }, (_, s) => makeFloor(s, 8, gen).rows.join('')).join(''));
+    expect(seen(1).has('a') || seen(1).has('z')).toBe(false);
+    expect(seen(2).has('a') && seen(2).has('z')).toBe(true);
+    expect(makeFloor(1, 30, 2).rows.join('')).toMatch(/v/);
+    expect(makeFloor(1, 30).rows.join('')).not.toMatch(/v/);
+  });
+
   it('starts from the won party, rested, and goes deeper floor by floor', () => {
     const s = newEndless(won(), 99);
-    expect(s.endless).toEqual({ seed: 99, floor: 1 });
+    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 2 });
     expect(s.done).toBe(false);
     expect(s.gold).toBe(120);
     expect(s.pack).toEqual(['ringProtection']);
-    expect(nextFloor(s)).toBe('deep:99:1');
+    expect(nextFloor(s)).toBe('deep:99:1:2');
     const game = new Game(levelOf(nextFloor(s)), { rng: seeded(1), party: s.party });
     game.over = 'victory';
     const done = completeFight(s, nextFloor(s), game).state;

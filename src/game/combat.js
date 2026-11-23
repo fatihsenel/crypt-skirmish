@@ -1051,17 +1051,19 @@ export class Game extends Spellcasting {
    * from somewhere it could stand, with a line of sight. Both are Sets of tile keys. `ignore`
    * is a unit to leave out of the way: the hero deciding where to go, who won't be there.
    * `far` (rules 2): the tiles only a long-range shot reaches, at disadvantage.
+   * `charge`: the melee tiles a charger (Tharok) can reach after a run of 2 tiles or more.
    * Monsters that haven't noticed the party, or are fleeing a Turn Undead, threaten nothing.
    */
   threatOf(monster, { ignore = null } = {}) {
     const melee = new Set();
     const ranged = new Set();
     const far = new Set();
-    if (!monster.alive || monster.unaware || monster.turned) return { melee, ranged, far };
+    const charge = new Set();
+    if (!monster.alive || monster.unaware || monster.turned) return { melee, ranged, far, charge };
     const ready = monster.attacks.filter((a) => !monster.spent?.[a.name]);
     const reach = Math.max(0, ...ready.filter((a) => a.reach > 1).map((a) => a.reach));
     const long = this.rules >= 2 ? Math.max(reach, ...ready.filter((a) => a.reach > 1).map(longReach)) : reach;
-    if (!ready.length) return { melee, ranged, far };
+    if (!ready.length) return { melee, ranged, far, charge };
 
     let moves = monster.speed;
     if (this.has(monster, 'restrained')) moves = 0;
@@ -1076,10 +1078,13 @@ export class Game extends Spellcasting {
     });
 
     if (ready.some((a) => a.reach === 1)) {
-      for (const { x, z } of spots) {
+      const charger = ready.some((a) => a.reach === 1 && a.charge);
+      for (const { x, z, dist } of spots) {
         for (let dz = -1; dz <= 1; dz++) {
           for (let dx = -1; dx <= 1; dx++) {
-            if ((dx || dz) && !this.grid.isSolid(x + dx, z + dz)) melee.add(key(x + dx, z + dz));
+            if (!(dx || dz) || this.grid.isSolid(x + dx, z + dz)) continue;
+            melee.add(key(x + dx, z + dz));
+            if (charger && dist >= 2) charge.add(key(x + dx, z + dz));
           }
         }
       }
@@ -1095,7 +1100,7 @@ export class Game extends Spellcasting {
         }
       }
     }
-    return { melee, ranged, far };
+    return { melee, ranged, far, charge };
   }
 
   /** Tiles the unit could end its move on (excludes its own tile). */
@@ -2088,26 +2093,53 @@ export class Game extends Spellcasting {
     helper.helping = null;
   }
 
-  /** Shove: knock an adjacent enemy prone. Takes one attack of the Attack action. */
-  shoveProblem(attacker, target) {
+  /**
+   * Shove: knock an adjacent enemy prone, or (rules 3, `push`) push it 5 ft straight back.
+   * Takes one attack of the Attack action.
+   */
+  shoveProblem(attacker, target, push = false) {
     if (this.over) return 'The battle is over';
+    if (push && this.rules < 3) return 'This fight began before pushing';
     if (!this.canAttack(attacker)) return 'Action already used this turn';
     if (attacker.actionUsed && attacker.extraAttackWith) return `Only ${attacker.extraAttackWith} fires again`;
     if (attacker.turned) return 'Turned: can only flee';
     if (!target?.alive || target.team === attacker.team) return 'Choose an enemy';
     if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
-    if (this.has(target, 'prone')) return `${target.name} is already prone`;
     if (target.huge) return `${target.name} is too big to shove`;
+    if (push) return this.pushTo(attacker, target).why ?? null;
+    if (this.has(target, 'prone')) return `${target.name} is already prone`;
     if (target.immune?.includes('prone')) return `${target.name} can’t be knocked prone`; // a Warded elite
     return null;
   }
 
   /**
-   * Athletics (d20 + STR + proficiency) against the target's best of STR or DEX.
-   * The target wins ties. Returns { ok, kind: 'shove', attacker, target, roll, resist, success }.
+   * Where a push from `attacker` sends `target`: the tile straight behind it, { x, z, fall }
+   * (fall: a chasm), or { why } when there's no room: a wall, a door, a prop or someone there.
+   * Fliers and the surefooted don't go over a chasm's edge.
    */
-  shove(attacker, target) {
-    const problem = this.shoveProblem(attacker, target);
+  pushTo(attacker, target) {
+    const g = this.grid;
+    const dx = Math.sign(target.x - attacker.x);
+    const dz = Math.sign(target.z - attacker.z);
+    const x = target.x + dx;
+    const z = target.z + dz;
+    const fall = g.chasms.has(key(x, z));
+    const blocked = (bx, bz) => g.isSolid(bx, bz) && !g.chasms.has(key(bx, bz));
+    if (!fall && (blocked(x, z) || g.closedDoorAt(x, z))) return { why: `No room to push ${target.name} back` };
+    if (dx && dz && (blocked(target.x + dx, target.z) || blocked(target.x, target.z + dz))) return { why: `No room to push ${target.name} back` };
+    if (this.unitAt(x, z)) return { why: `Someone stands behind ${target.name}` };
+    if (fall && target.flies) return { why: `${target.name} would only fly` };
+    if (fall && target.surefooted) return { why: `${target.name} won’t be pushed off the edge` };
+    return { x, z, fall };
+  }
+
+  /**
+   * Athletics (d20 + STR + proficiency) against the target's best of STR or DEX.
+   * The target wins ties. Returns { ok, kind: 'shove', attacker, target, roll, resist, success },
+   * and with `push`, `push: { from, to, fall, burn }` when it wins.
+   */
+  shove(attacker, target, push = false) {
+    const problem = this.shoveProblem(attacker, target, push);
     if (problem) return { ok: false, reason: problem };
     this.reveal(attacker, 'attack');
     if (!attacker.actionUsed) {
@@ -2124,12 +2156,35 @@ export class Game extends Spellcasting {
     const roll = { d20: a.d20, rolls: a.rolls, bonus, total: a.d20 + bonus };
     const resist = { d20: b, bonus: resistBonus, total: b + resistBonus };
     const result = { ok: true, kind: 'shove', attacker, target, roll, resist, success: roll.total > resist.total };
+    const to = push && result.success ? this.pushTo(attacker, target) : null;
+    if (to) result.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null };
     this.emit('shove', result);
     this.alert(target, 'hurt');
-    if (result.success) this.addCondition(target, 'prone', { by: attacker });
+    if (to) this.pushed(target, attacker, to, result.push);
+    else if (result.success) this.addCondition(target, 'prone', { by: attacker });
     this.noise(attacker);
     this.updateAwareness();
     return result;
+  }
+
+  /** `target` is pushed onto `to`: a hold that's now out of reach lets go; coals burn; a chasm is the end. */
+  pushed(target, by, to, out) {
+    target.x = to.x;
+    target.z = to.z;
+    if (target.grappling && gridDistance(target, target.grappling) > 1) this.letGo(target, 'pushed');
+    if (target.grappledBy && !this.held(target)) this.letGo(target.grappledBy, 'pushed');
+    if (to.fall) this.fall(target, by);
+    else if (this.fire?.length && !target.flies && this.burningTiles().has(key(to.x, to.z))) out.burn = this.burn(target);
+  }
+
+  /** Over the edge: no saving throw, no Death Ward, and no body left to raise. */
+  fall(target, by) {
+    target.deathWard = false;
+    target.fell = true;
+    target.raised = true;
+    this.cause = 'a fall';
+    this.via = 'fall';
+    this.applyDamage(target, target.hp + (target.tempHp ?? 0) + target.maxHp, by);
   }
 
   shoveBonus(unit) {

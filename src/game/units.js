@@ -441,6 +441,7 @@ export const TEMPLATES = {
     multiattack: 2,
     ai: 'brute',
     recklessBrute: true,
+    surefooted: true, // he knows every edge of his labyrinth: no push sends him over
     stats: { str: 18, dex: 11, con: 16, int: 6, wis: 16, cha: 9 },
     attacks: [{ name: 'Greataxe', stat: 'str', damage: '2d12', reach: 1, charge: { damage: '2d8', dc: 14 } }],
   },

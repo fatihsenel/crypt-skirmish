@@ -7,7 +7,7 @@
 import { ELITE_TRAITS } from './elites.js';
 import { roomElite } from './campaign.js';
 import { CLASS_CHOICES } from './units.js';
-import { hash, dayKey, dailyCampaign, DAILY_ROOMS_ACT_FOUR, addDaily, parseDaily } from './daily.js';
+import { hash, dayKey, dailyCampaign, DAILY_ROOMS_ACT_FOUR, DAILY_ROOMS_ACT_FIVE, ACT_FIVE_DAILY_FROM, addDaily, parseDaily } from './daily.js';
 
 export const WEEKLY_KEY = 'crypt-skirmish:weekly';
 export const WEEKLY_TIER = 3;
@@ -18,6 +18,10 @@ export const WEEKLY_TIER = 3;
  */
 const TOO_HARD = ['catacombs', 'vault', 'barrow'];
 export const WEEKLY_ROOMS = DAILY_ROOMS_ACT_FOUR.filter(([node]) => !TOO_HARD.includes(node));
+
+/** From the week of ACT_FIVE_DAILY_FROM (a Monday) it can also be the Tomb, the Bridge or the Den. */
+export const WEEKLY_ROOMS_ACT_FIVE = DAILY_ROOMS_ACT_FIVE.filter(([node]) => !TOO_HARD.includes(node));
+export const weeklyRooms = (key) => (key >= ACT_FIVE_DAILY_FROM ? WEEKLY_ROOMS_ACT_FIVE : WEEKLY_ROOMS);
 
 /** The week of `date`, as its Monday's YYYY-MM-DD. */
 export function weekKey(date = new Date()) {
@@ -41,7 +45,7 @@ const THIRD_FROM = '2026-11-30';
 export function weeklyPlan(key = weekKey()) {
   const seed = hash(`crypt-skirmish weekly ${key}`);
   const trait = ELITE_TRAITS[seed % ELITE_TRAITS.length].id;
-  const rooms = WEEKLY_ROOMS.filter(([node]) => roomElite(node, WEEKLY_TIER).id === trait);
+  const rooms = weeklyRooms(key).filter(([node]) => roomElite(node, WEEKLY_TIER).id === trait);
   const [node, level] = rooms[(seed >>> 3) % rooms.length];
   const classes = {};
   if ((seed >>> 8) & 1) classes.F = 'P';

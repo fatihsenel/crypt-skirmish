@@ -80,6 +80,10 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ feats }) => !!feats?.coals,
   },
   {
+    id: 'edge', name: 'Mind the gap', desc: 'Push a foe over a chasm’s edge.',
+    on: 'room', test: ({ feats }) => !!feats?.edge,
+  },
+  {
     id: 'pinned', name: 'Pinned', desc: 'Slay a foe a hero is still grappling.',
     on: 'room', test: ({ feats }) => !!feats?.pinned,
   },

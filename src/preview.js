@@ -63,7 +63,7 @@ export function createPreview(deps) {
     if (!isHeroTurn() || busy) return;
 
     if (selected?.kind === 'spell') return refreshSpell(u, selected.id);
-    if (selected?.kind === 'shove') return refreshShove(u);
+    if (selected?.kind === 'shove' || selected?.kind === 'push') return refreshShove(u, selected.kind === 'push');
     if (selected?.kind === 'help') return refreshHelp(u);
     if (selected?.kind === 'grapple') return refreshGrapple(u);
     if (selected?.kind === 'feed') return refreshFeed(u);
@@ -136,9 +136,15 @@ export function createPreview(deps) {
       board.danger.set(danger);
       const who = game.provokers(u, path).map((f) => f.name);
       if (who.length) tips.notice('provoke', { touch: touching() });
-      const reachers = threats.active ? threats.at(hovered.x, hovered.z).map((m) => m.name) : [];
+      // Tharok's charge and a basilisk's stare are said even with the zones off: they're the ones that bite.
+      const near = threats.near(hovered.x, hovered.z, { all: threats.active });
+      const reachers = threats.active ? near.map((r) => r.unit.name) : [];
+      const chargers = near.filter((r) => r.charge).map((r) => r.unit.name);
+      const stone = [...new Set(near.filter((r) => r.stone).map((r) => r.unit.cls))];
       hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
-        + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : ''), true);
+        + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : '')
+        + (chargers.length ? ` · ${listNames(chargers)} could charge you here (extra damage, STR save or prone)` : '')
+        + (stone.length ? ` · a ${stone.join(' or ')}’s bite here can turn you to stone` : ''), true);
     }
   }
 
@@ -183,18 +189,21 @@ export function createPreview(deps) {
       : `Help → ${foe.name}: the next ally to attack it before your next turn has advantage`, !why);
   }
 
-  /** Shove targeting: adjacent enemies light up, the hint shows the contest. */
-  function refreshShove(u) {
-    board.targets.set(game.enemiesOf(u).filter((f) => !unseen(f) && !game.shoveProblem(u, f)));
+  /** Shove or Push targeting: adjacent enemies light up, the hint shows the contest (and where a push lands). */
+  function refreshShove(u, push) {
+    const name = push ? 'Push' : 'Shove';
+    board.targets.set(game.enemiesOf(u).filter((f) => !unseen(f) && !game.shoveProblem(u, f, push)));
     const foe = hovered && visibleUnitAt(hovered.x, hovered.z);
     if (!foe || foe.team === u.team) {
-      hud.hint('Shove: click an enemy next to you · Esc to cancel');
+      hud.hint(`${name}: click an enemy next to you · Esc to cancel`);
       return;
     }
-    board.hover.set([hovered]);
-    const why = game.shoveProblem(u, foe);
+    const why = game.shoveProblem(u, foe, push);
+    const to = push && !why ? game.pushTo(u, foe) : null;
+    board.hover.set(to ? [hovered, { x: to.x, z: to.z }] : [hovered]);
+    const win = !push ? 'it is knocked prone' : to?.fall ? 'it goes over the edge' : 'it is pushed 5 ft back';
     hud.hint(why ? `${foe.name}: ${why}`
-      : `Shove → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and it is knocked prone`, !why);
+      : `${name} → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and ${win}`, !why);
   }
 
   /** The unit on a tile, unless it's a monster lurking out of sight. */

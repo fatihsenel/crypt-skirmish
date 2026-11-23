@@ -159,10 +159,11 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return why ? { toast: why } : { cmd: { type: 'help', target: unitRef(game, other) } };
   }
 
-  if (selected?.kind === 'shove') {
+  if (selected?.kind === 'shove' || selected?.kind === 'push') {
     if (!other || other.team === u.team) return { toast: 'Click an enemy next to you' };
-    const why = game.shoveProblem(u, other);
-    return why ? { toast: why } : { cmd: { type: 'shove', target: unitRef(game, other) } };
+    const push = selected.kind === 'push';
+    const why = game.shoveProblem(u, other, push);
+    return why ? { toast: why } : { cmd: { type: 'shove', target: unitRef(game, other), ...(push && { push: true }) } };
   }
 
   if (other && other.team !== u.team) {

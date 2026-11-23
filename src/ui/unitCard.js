@@ -28,7 +28,8 @@ function attackLine(game, u, a) {
   const r = a.rider?.v2 && (game.rules ?? RULES) >= 2 ? a.rider.v2 : a.rider; // a ghoul's claws paralyse under rules 2
   const rider = !r ? '' : r.save ? ` · ${r.save.toUpperCase()} DC ${r.dc} or ${r.condition}` : ` · ${r.condition} on a hit`;
   const recharge = a.recharge ? ` · recharge ${a.recharge}–6${u.spent?.[a.name] ? ', spent' : ''}` : '';
-  return `<li><b>${esc(a.name)}</b> ${signed(game.toHitBonus(u, a))} · ${esc(dmg)} · ${reach}${esc(rider)}${recharge}</li>`;
+  const charge = a.charge ? ` · after a run of 10 ft: charge +${a.charge.damage}, STR DC ${a.charge.dc} or prone` : '';
+  return `<li><b>${esc(a.name)}</b> ${signed(game.toHitBonus(u, a))} · ${esc(dmg)} · ${reach}${esc(rider)}${esc(charge)}${recharge}</li>`;
 }
 
 /** The card's HTML. `game` gives the numbers: a live Game, or OUT_OF_FIGHT. */
@@ -55,7 +56,10 @@ export function unitCard(game, u) {
     elite && `Elite · ${elite.name}: ${elite.desc}.`,
     u.multiattack > 1 && `Attacks ${u.multiattack === 2 ? 'twice' : `${u.multiattack} times`} a turn.`,
     u.team === 'monsters' && u.spells?.length && `Casts ${u.spells.map((id) => SPELLS[id]?.name ?? id).join(', ')} (DC ${game.spellDC(u)}).`,
-    u.flies && 'Flies: icy ground doesn’t slow it.',
+    u.flies && 'Flies: icy ground doesn’t slow it, and no push sends it over a chasm.',
+    u.recklessBrute && 'Reckless: advantage on its attacks, and on attacks against it.',
+    u.surefooted && 'Surefooted: no push sends it over an edge.',
+    u.attacks?.some((a) => a.rider?.condition === 'petrified') && 'Its bite can turn a hero to stone for a turn: no moving or acting, STR and DEX saves fail, and hits on them come easy.',
     u.stench && `Stench: a hero starting a turn next to it makes a CON save (DC ${u.stench.dc}) or is poisoned.`,
     u.rises && !u.roused && 'At half HP his fallen house rises to fight again.',
   ].filter(Boolean);

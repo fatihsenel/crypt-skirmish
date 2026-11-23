@@ -115,7 +115,7 @@ let testSeed = new URLSearchParams(location.search).has('level') && new URLSearc
 /** A linked fight being played yourself ({ rec, theirs }: the link's record and how it went), else null. */
 let challenge = null;
 /** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
-let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false };
+let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false, edge: false };
 
 // The character models load room by room: a fight waits only for the figures it needs.
 // Once the dungeon tiles are in (they gate the title), the next room's models come first,
@@ -771,7 +771,7 @@ function startFight(resume, watch = null) {
   game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed), relics, rules });
   fight = daily || challenge || watch ? null : { node: nodeId, seed, ...ru, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
   if (!watch) record = { node: nodeId, seed, ...ru, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };
-  feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false };
+  feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false, edge: false };
   if (!watch) takeInput(); // the fight's presses count from here (play stats)
   game.on('attack', (r) => {
     if (r.attacker.team !== 'heroes' || !r.hit) return;
@@ -793,6 +793,7 @@ function startFight(resume, watch = null) {
     if (clung?.unit === unit && clung.round === game.round) feats.stayDown = true;
     if (unit.team !== 'monsters') return;
     if (scorched === unit) feats.coals = true;
+    if (unit.fell) feats.edge = true;
     if (blow?.target === unit) {
       if (blow.readied) feats.held = true;
       if (blow.mods.adv.some((a) => a.startsWith('help from'))) feats.teamwork = true;
@@ -1375,7 +1376,7 @@ const STEP_VERBS = { dash: 'dashes', dodge: 'dodges', disengage: 'disengages', h
 /** What a step (a monster's, or a hero's command) adds to its turn's line in the log (attacks add their own). */
 function stepNote(step) {
   if (step.type === 'move') return 'moves';
-  if (step.type === 'shove') return 'shoves';
+  if (step.type === 'shove') return step.push ? 'pushes' : 'shoves';
   if (step.type === 'help') return 'helps';
   if (step.type === 'grapple') return 'grapples';
   if (step.type === 'feed') return 'gives a potion';

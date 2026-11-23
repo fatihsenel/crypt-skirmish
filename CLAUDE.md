@@ -54,7 +54,9 @@ server on 5173.
   first rules (`tests/fixtures/v1-fights.json`, made by `scripts/v1-fixtures.mjs`). `RULES=1
   npm run sim` plays the old rules. Rules 2: death saves (`dying`, `deathSave`, `revive`),
   concentration (`concentrating`, `endConcentration`), ghoul paralysis (a rider's `v2`), long
-  range (`longReach`) and creatures giving cover.
+  range (`longReach`) and creatures giving cover. Rules 3: Push, a shove's `push` choice
+  (`pushTo`, `pushed`, `fall`: over a chasm's edge, `fell` and `raised`, no body left).
+  `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
   motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):
@@ -169,12 +171,14 @@ server on 5173.
   next act existed is reopened by `parseSave`.
 - **Relic:** `RELICS` in `game/items.js` (its `boss` is the room that drops it) and its rule in
   `Game` (`this.relics`) or `completeFight`. Relics ride in the fight record and links (`rl`).
-- **Endless Crypt:** `game/endless.js`. A floor is the room id `deep:<seed>:<floor>`, rebuilt
-  by `makeFloor` (`levelOf(id)` finds any room, campaign or floor; use it, not
-  `levelById(NODES[id].level)`, where a fight's room is looked up). The dive is a campaign state
-  with `endless: { seed, floor, rested }`, saved under `crypt-skirmish:endless` (`writeSave`
-  picks the key); `afterFloor` follows `completeFight`. Changing `makeFloor`, `POOL` or
-  `floorBudget` changes every floor, so a saved mid-floor fight falls back to camp.
+- **Endless Crypt:** `game/endless.js`. A floor is the room id `deep:<seed>:<floor>` (and
+  `:<gen>` from generation 2), rebuilt by `makeFloor` (`levelOf(id)` finds any room, campaign or
+  floor; use it, not `levelById(NODES[id].level)`, where a fight's room is looked up). The dive is
+  a campaign state with `endless: { seed, floor, rested, gen }`, saved under
+  `crypt-skirmish:endless` (`writeSave` picks the key); `afterFloor` follows `completeFight`. A
+  dive keeps the `gen` it began with (none means 1), so new monsters go in a new generation's
+  pool (`GEN`, `POOL_TWO`, `BOSSES_TWO`); changing `makeFloor`, `POOL` or `floorBudget` itself
+  changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,
   `PRICES`); `ui/shop.js` is the panel, opened from camp through `onTrade`. A new item for sale

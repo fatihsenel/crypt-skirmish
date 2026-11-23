@@ -413,6 +413,7 @@ export function createAnimations(app) {
 
   async function playShove(r) {
     const { attacker, target } = r;
+    if (r.push) return playPush(r);
     await view(attacker).swing(target, () => {
       if (r.success) {
         sfx.hit(target.code);
@@ -422,6 +423,33 @@ export function createAnimations(app) {
         floatText(stage.scene, target, 'Holds firm', 'miss');
       }
     });
+    hud.renderInitiative(app.game());
+  }
+
+  /** Push (rules 3): a stagger 5 ft back, then maybe coals, or over a chasm's edge. */
+  async function playPush(r) {
+    const { attacker, target, push } = r;
+    const v = view(target);
+    await view(attacker).swing(target, () => {});
+    sfx.hit(target.code);
+    if (push.fall) {
+      floatText(stage.scene, push.from, 'Over the edge!', 'crit');
+      const edge = { x: (push.from.x + push.to.x) / 2, z: (push.from.z + push.to.z) / 2 };
+      await v.shoved(edge.x, edge.z);
+      if (!unseen(target)) voices.bark(target, 'die');
+      sfx.death(target.code);
+      await v.plunge();
+    } else {
+      floatText(stage.scene, target, 'Pushed!', 'cond');
+      await v.shoved(push.to.x, push.to.z);
+      if (push.burn) {
+        sfx.fireImpact();
+        floatText(stage.scene, target, `Burns −${push.burn.damage}`, 'crit');
+        hitFx(stage.scene, target);
+        await damageReaction(target);
+      }
+      v.updateStatus();
+    }
     hud.renderInitiative(app.game());
   }
 

@@ -3,7 +3,7 @@
 import { EndBanner } from './banner.js';
 import { announce } from './announce.js';
 import { signed } from '../game/dice.js';
-import { ACTIONS, SPELLS, PASSIVES, SHOVE, HELP, FEED, GRAPPLE, CONDITION_INFO } from '../game/abilities.js';
+import { ACTIONS, SPELLS, PASSIVES, SHOVE, PUSH, HELP, FEED, GRAPPLE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
 import { AbilityTip } from './abilityTip.js';
@@ -619,7 +619,10 @@ export class Hud {
     const roll = `<span class="dice">${r.roll.rolls.length > 1 ? `d20 [${r.roll.rolls.join(', ')}] → ${r.roll.d20}` : `d20 ${r.roll.d20}`} ${signed(r.roll.bonus)} = ${r.roll.total}</span>`;
     const resist = `<span class="dice">${r.resist.d20} ${signed(r.resist.bonus)} = ${r.resist.total}</span>`;
     this.log(`${who(r.attacker)} shoves ${who(r.target)}: ${roll} vs ${resist}. ` +
-      (r.success ? '<b class="cond prone">Knocked prone!</b>' : '<b class="miss">It keeps its feet.</b>'));
+      (!r.success ? '<b class="miss">It keeps its feet.</b>'
+        : r.push?.fall ? '<b class="crit">Pushed over the edge!</b>'
+        : r.push ? '<b>Pushed back 5 ft.</b>'
+        : '<b class="cond prone">Knocked prone!</b>'));
   }
 
   /** A condition starts or ends. (Starting ones from riders and spells are logged with them.) */
@@ -1070,6 +1073,17 @@ export class Hud {
     }));
     // Moves most turns don't need wait behind More, so the bar stays short (on a phone, one row).
     const more = [];
+    // Push (rules 3): on the bar where there's a chasm or coals to push a foe into, else behind More.
+    if (u.team === 'heroes' && (game.rules ?? 3) >= 3) {
+      (game.grid.chasms?.size || game.fire?.length ? atks : more).push(button({
+        kind: 'push', id: 'push', name: PUSH.name, cls: 'act',
+        sub: `${signed(game.shoveBonus(u))} · 5 ft back`,
+        tip: { kind: 'Takes one attack', chips: [`${signed(game.shoveBonus(u))} Athletics`, '5 ft'], desc: PUSH.desc, how: this.howTo('an enemy') },
+        problem: attackWhy,
+        disabled: !!attackWhy,
+        active: selected?.kind === 'push',
+      }));
+    }
     if (u.team === 'heroes') {
       more.push(button({
         kind: 'grapple', id: 'grapple', name: GRAPPLE.name, cls: 'act',
@@ -1242,7 +1256,7 @@ export class Hud {
       this.handlers.onChoose({ kind: 'readySpell', id });
     }
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (['shove', 'grapple', 'help', 'feed', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
+    else if (['shove', 'push', 'grapple', 'help', 'feed', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

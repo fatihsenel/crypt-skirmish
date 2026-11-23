@@ -32,7 +32,7 @@ const fail = (reason) => ({ ok: false, reason });
 
 /**
  * Carry out one of the player's commands for the unit whose turn it is.
- * Commands: move {x, z}, attack {target, attack}, shove {target}, grapple {target}, help {target},
+ * Commands: move {x, z}, attack {target, attack}, shove {target, push?}, grapple {target}, help {target},
  * feed {target} (give a potion), chest {x, z}, brazier {x, z}, lever {x, z},
  * action {id, attack?, spell?} (attack or spell: Ready's pick),
  * spell {id, unit | x, z}, smite, rebuke, end. Returns the engine's result.
@@ -54,7 +54,7 @@ export function applyCommand(game, cmd) {
     }
     case 'shove': {
       const target = unit(cmd.target);
-      return target ? game.shove(u, target) : fail('No such target');
+      return target ? game.shove(u, target, !!cmd.push) : fail('No such target');
     }
     case 'help': {
       const target = unit(cmd.target);

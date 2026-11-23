@@ -68,9 +68,15 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   gives advantage. Shooting with an enemy next to you, or at someone Dodging, gives
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
-- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Grapple, Help, Ready, drinking a
+- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Push, Grapple, Help, Ready, drinking a
   potion or giving one to an ally next to you. Grapple, Disengage, Search, Help and Give potion
-  wait behind **More** on the action bar, so the moves most turns need stay in one row.
+  wait behind **More** on the action bar, so the moves most turns need stay in one row; so does
+  Push, except in a room with a chasm or burning coals.
+- **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or DEX;
+  win and it's pushed 5 ft straight away from you. Over a chasm's edge it falls and is gone (no
+  save, no body left to raise); onto burning coals it burns. A wall, a door or someone behind it
+  stops the push, and fliers and Tharok don't go over an edge. Choosing a foe marks the tile
+  it would land on.
 - **Grapple:** instead of one attack, Athletics against the foe's STR or DEX. Win and it can't
   move while you stay next to it; it tries to break free at the start of each of its turns.
 - **Help:** a hero distracts a foe next to them; the next ally to attack it before the
@@ -130,7 +136,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - Doors that block sight, hidden spike traps, chests with potions and magic items, and stairs
   down.
 - **Chasms** in the fifth act: no one crosses one, not even a flier, but you can see and shoot
-  over it.
+  over it. Push a foe over the edge and it's gone.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden.
 - Walls in front of a figure turn see-through.
 
@@ -205,7 +211,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   chambers joined by doors and gaps, with barrels, crates, columns, water, traps, chests and more
   monsters the deeper it goes. Every third floor ends in a long rest and the pedlar; monsters
   get tougher every three floors (as New Game+), elites from floor 7, and a named foe waits on
-  every fifth. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
+  every fifth. Dives started since act five also meet gargoyles (from floor 4) and basilisks
+  (from floor 5), and Tharok after the mummy lord; a dive already under way keeps its floors. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
@@ -222,7 +229,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory, and
   from 23 November its party (and the weekly's) can bring the Bard, and from 30 November the
-  Barbarian, Sorcerer, Monk and Druid.
+  Barbarian, Sorcerer, Monk and Druid, and the room (the weekly's too) can be the Tomb, the
+  Bridge or the Den.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button. Watch your best replays the day's fastest win from
   the title, and its Copy link and Copy challenge link share it.
@@ -230,7 +238,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
   If an update moves the week to another room, its best starts again there.
-- **Achievements:** 37 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 38 goals that carry across runs. Open them from the title screen.
 - **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
   follow the pointer (on a phone, your taps) and flare at the title's buttons. Click or tap it
   (or press K) to play its moves in turn, each with its own sound: gape, chatter, cocked head,
@@ -263,7 +271,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   tapping or pressing Space. Monsters' rolls and saving throws show too.
 - **Enemy reach** (T): marks the tiles monsters could reach and hit next turn. A red
   crosshatch means melee, amber dots mean ranged, and fainter dots a long shot at disadvantage.
-  Settings can switch them to purple and yellow for colour-blind players.
+  Settings can switch them to purple and yellow for colour-blind players. Hovering a tile to move
+  to warns, even with the zones off, when Tharok could charge you there or a basilisk's bite
+  could reach you, and a monster's card lists its charge, Reckless and petrifying bite.
 - **Odds:** hovering (or first tapping) a foe says the chance to hit, with advantage,
   disadvantage and cover counted, and the damage a hit does. Its HP bar shades what the hit
   would take off: dark for the lowest roll, striped up to the highest, and a ☠ by its name when
@@ -416,6 +426,8 @@ A few things differ from the SRD to keep the game simple:
 - Tharok is a minotaur built up as a boss: two greataxe swings, Reckless every turn, and a
   Charge on the first hit after a run of 2 tiles or more (+2d8, and a STR save, DC 14, or
   prone). Chasms stop fliers too.
+- A Push sends a foe over a chasm's edge with no saving throw; it simply falls. Tharok knows
+  his labyrinth too well to be pushed off.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.

@@ -313,8 +313,17 @@ function bonusStrikes(game, u) {
 
 const gridDistanceTo =(a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
+/** Rules 3: a hero next to a foe standing at a chasm's edge tries to push it over, if strong enough. */
+function pushOff(game, u) {
+  if (game.over || !u.alive || game.rules < 3 || !game.grid.chasms.size) return;
+  const foe = game.enemiesOf(u).find((f) => !f.unaware && !game.shoveProblem(u, f, true)
+    && game.pushTo(u, f).fall && game.shoveBonus(u) >= game.shoveResist(f));
+  if (foe) game.shove(u, foe, true);
+}
+
 function playTurn(game, u) {
   if (u.team === 'heroes') heroOpening(game, u);
+  if (u.team === 'heroes') pushOff(game, u);
   const memo = {};
   for (let i = 0; i < 12 && !game.over && u.alive; i++) {
     const step = nextMonsterStep(game, u, memo);

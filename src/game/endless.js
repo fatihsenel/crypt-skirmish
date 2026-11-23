@@ -23,7 +23,16 @@ const POOL = [
 ];
 /** A named foe waits on every fifth floor, in turn. */
 const BOSSES = ['b', 'n', 'w', 'q', 'l'];
-const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000 };
+const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
+
+/**
+ * Dives started since act five (`gen` 2) also meet its gargoyles and basilisks, and Tharok
+ * after the mummy lord. A dive keeps the generation it began with, so its floors (and their
+ * replays) stay the same.
+ */
+export const GEN = 2;
+const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
+const BOSSES_TWO = [...BOSSES, 'v'];
 
 const INTROS = [
   'The stairs wind down past the labyrinth into rooms no map shows.',
@@ -33,11 +42,13 @@ const INTROS = [
   'Old bones crunch underfoot. Not all of them stay still.',
 ];
 
-/** Floor `floor` of the run with seed `seed` as a room id, and back. */
-export const floorId = (seed, floor) => `deep:${seed >>> 0}:${floor}`;
+/** Floor `floor` of the run with seed `seed` (of generation `gen`) as a room id, and back. */
+export const floorId = (seed, floor, gen = 1) => `deep:${seed >>> 0}:${floor}${gen > 1 ? `:${gen}` : ''}`;
 export function parseFloorId(id) {
-  const m = /^deep:(\d+):(\d+)$/.exec(String(id));
-  return m && Number(m[2]) >= 1 ? { seed: Number(m[1]), floor: Number(m[2]) } : null;
+  const m = /^deep:(\d+):(\d+)(?::(\d+))?$/.exec(String(id));
+  const gen = m?.[3] ? Number(m[3]) : 1;
+  if (!m || Number(m[2]) < 1 || gen < 1 || gen > GEN) return null;
+  return { seed: Number(m[1]), floor: Number(m[2]), ...(gen > 1 && { gen }) };
 }
 
 /** The New Game+ tier a floor is fought at: monsters get tougher every 3 floors, elites from the 7th. */
@@ -52,7 +63,7 @@ export const floorBudget = (floor) => 1900 + 300 * floor;
  * the top-left one, the stairs in the one farthest from it, monsters, chests, traps, props
  * and now and then water. Deeper floors bring more, and stronger, monsters.
  */
-export function makeFloor(seed, floor) {
+export function makeFloor(seed, floor, gen = 1) {
   const rng = seeded(hash(`endless ${seed} ${floor}`));
   const pick = (list) => list[Math.floor(rng() * list.length)];
   const grid = Array.from({ length: H }, () => Array(W).fill('#'));
@@ -142,11 +153,12 @@ export function makeFloor(seed, floor) {
   const rooms = cells.slice(1);
   let budget = floorBudget(floor);
   if (floor % 5 === 0) {
-    const boss = BOSSES[(floor / 5 - 1) % BOSSES.length];
+    const bosses = gen >= 2 ? BOSSES_TWO : BOSSES;
+    const boss = bosses[(floor / 5 - 1) % bosses.length];
     place(end, boss);
     budget -= BOSS_XP[boss];
   }
-  const pool = POOL.filter(([, , first]) => first <= floor);
+  const pool = (gen >= 2 ? [...POOL, ...POOL_TWO].sort((a, b) => a[1] - b[1]) : POOL).filter(([, , first]) => first <= floor);
   let count = grid.flat().filter((ch) => /[a-z]/.test(ch)).length;
   const asleep = [];
   while (budget > 0 && count < 10) {
@@ -172,7 +184,7 @@ export function makeFloor(seed, floor) {
   for (let n = Math.floor(rng() * 3); n > 0; n--) place(pick(rooms), '^');
 
   return {
-    id: floorId(seed, floor),
+    id: floorId(seed, floor, gen),
     name: `The Deep, floor ${floor}`,
     intro: floor % 5 === 0 ? 'Something with a name waits on this floor. It has been expecting you.' : pick(INTROS),
     rows: grid.map((row) => row.join('')),
@@ -212,7 +224,7 @@ export function allReachable(grid, from) {
 /** A room by id: a campaign room, or a floor of the Endless Crypt. */
 export function levelOf(id) {
   const f = parseFloorId(id);
-  return f ? makeFloor(f.seed, f.floor) : levelById(NODES[id]?.level);
+  return f ? makeFloor(f.seed, f.floor, f.gen ?? 1) : levelById(NODES[id]?.level);
 }
 
 /** Is this room id a floor of the Endless Crypt? */
@@ -227,7 +239,7 @@ export const floorGold = (floor) => 40 + 15 * floor;
  */
 export function newEndless(won, seed) {
   const state = structuredClone(won);
-  Object.assign(state, { at: null, cleared: [], done: false, tier: 0, endless: { seed: seed >>> 0, floor: 1 } });
+  Object.assign(state, { at: null, cleared: [], done: false, tier: 0, endless: { seed: seed >>> 0, floor: 1, gen: GEN } });
   delete state.fight;
   delete state.fails;
   delete state.traded;
@@ -239,7 +251,7 @@ export function newEndless(won, seed) {
 }
 
 /** The room the run fights next. */
-export const nextFloor = (state) => floorId(state.endless.seed, state.endless.floor);
+export const nextFloor = (state) => floorId(state.endless.seed, state.endless.floor, state.endless.gen ?? 1);
 
 /** Every third floor ends in a long rest, and the pedlar is there. */
 export const restFloor = (floor) => floor % 3 === 0;
@@ -267,6 +279,7 @@ export function parseEndless(text) {
     const s = JSON.parse(text);
     const e = s?.endless;
     if (!e || !Number.isInteger(e.seed) || !Number.isInteger(e.floor) || e.floor < 1) return null;
+    if (e.gen !== undefined && !(Number.isInteger(e.gen) && e.gen >= 1 && e.gen <= GEN)) return null;
     if (!s.party || !HERO_CODES.every((c) => s.party[c] && Array.isArray(s.party[c].items))) return null;
     for (const c of HERO_CODES) cleanPicks(c, s.party[c]);
     if (!Array.isArray(s.pack)) s.pack = [];

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, shareText, keepBest, bestFight, resultFor } from '../src/game/daily.js';
+import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, DAILY_ROOMS_ACT_FIVE, ACT_FIVE_DAILY_FROM, shareText, keepBest, bestFight, resultFor } from '../src/game/daily.js';
 import { NODES } from '../src/game/campaign.js';
 
 describe('daily crypt', () => {
@@ -35,6 +35,23 @@ describe('daily crypt', () => {
       k = dayKey(new Date(y, m - 1, d + 1));
     }
     expect(['throne', 'halls', 'armory'].filter((n) => later.has(n))).toEqual(['throne', 'halls', 'armory']);
+  });
+
+  it('draws act five’s rooms (and the Tomb) only from 30 November, never the Labyrinth', () => {
+    let key = prevDay(ACT_FIVE_DAILY_FROM);
+    for (let i = 0; i < 10; i++, key = prevDay(key)) {
+      const plan = dailyPlan(key);
+      expect([plan.node, plan.level]).toEqual(DAILY_ROOMS_ACT_FOUR[plan.seed % DAILY_ROOMS_ACT_FOUR.length]);
+    }
+    for (const [node] of DAILY_ROOMS_ACT_FIVE) expect(NODES[node].kind).toBe('fight');
+    expect(DAILY_ROOMS_ACT_FIVE.map(([n]) => n)).not.toContain('labyrinth');
+    const later = new Set();
+    for (let i = 0, k = ACT_FIVE_DAILY_FROM; i < 120; i++) {
+      later.add(dailyPlan(k).node);
+      const [y, m, d] = k.split('-').map(Number);
+      k = dayKey(new Date(y, m - 1, d + 1));
+    }
+    expect(['tomb', 'bridge', 'lair'].filter((n) => later.has(n))).toEqual(['tomb', 'bridge', 'lair']);
   });
 
   it('builds a level 8 party for the Armory', () => {

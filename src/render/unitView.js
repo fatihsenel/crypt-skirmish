@@ -163,6 +163,29 @@ export class UnitView {
     this.group.visible = false;
   }
 
+  /** Pushed: a stagger back onto (x, z), facing whoever pushed. */
+  async shoved(x, z) {
+    const from = this.group.position.clone();
+    const to = new THREE.Vector3(x, 0, z);
+    await tween(260, (t) => this.group.position.lerpVectors(from, to, t), easeOut);
+  }
+
+  /** Over a chasm's edge: a drop into the dark, and gone. */
+  async plunge() {
+    this.down = true;
+    this.label.visible = false;
+    this.marker.visible = false;
+    this.base.visible = false;
+    const fig = this.figure;
+    await tween(650, (t) => {
+      this.group.position.y = -3.2 * t * t;
+      fig.rotation.x = -1.2 * t;
+      this.fadeMeshes(1 - t);
+    }, easeIn);
+    this.gone = true;
+    this.group.visible = false;
+  }
+
   /** Clawing up out of the ground (Animate Dead). */
   async rise() {
     if (this.rig?.has('rise')) {

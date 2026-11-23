@@ -88,9 +88,25 @@ export function createThreats({ game, board, unseen, showing, refresh }) {
 
   /** The monsters in sight that could strike a hero standing on (x, z) next turn. */
   function at(x, z) {
+    return near(x, z).map((r) => r.unit);
+  }
+
+  /**
+   * The same, with what each would bring: `charge` (it could charge in: Tharok's extra dice
+   * and a shove to the floor) and `stone` (its bite can turn a hero to stone). `all: false`
+   * looks only at the monsters that bring either (cheap enough for every hover).
+   */
+  function near(x, z, { all = true } = {}) {
     const g = game();
-    return g.units.filter((m) => m.team === 'monsters' && m.alive && !m.hidden && !unseen(m)
-      && g.threatOf(m, { ignore: g.current }).melee.has(key(x, z)));
+    const k = key(x, z);
+    const special = (m) => m.attacks.some((a) => a.charge || a.rider?.condition === 'petrified');
+    return g.units.filter((m) => m.team === 'monsters' && m.alive && !m.hidden && !unseen(m) && (all || special(m)))
+      .map((m) => ({ unit: m, zone: g.threatOf(m, { ignore: g.current }) }))
+      .filter((r) => r.zone.melee.has(k))
+      .map(({ unit, zone }) => ({
+        unit, charge: zone.charge.has(k),
+        stone: unit.attacks.some((a) => a.rider?.condition === 'petrified'),
+      }));
   }
 
   // Hovering a monster's portrait shows just its reach; on a touch screen, tapping does.
@@ -122,7 +138,7 @@ export function createThreats({ game, board, unseen, showing, refresh }) {
   });
 
   return {
-    toggle, draw, at,
+    toggle, draw, at, near,
     /** Is any zone showing (the toggle, or a focused portrait)? */
     get active() { return on || !!focus; },
     get on() { return on; },
