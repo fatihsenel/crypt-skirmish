@@ -26,6 +26,32 @@ export const ACTIONS = {
     name: 'Turn Undead', time: 'action', feature: true, range: 6,
     desc: 'Channel Divinity: undead within 30 ft make a WIS save or flee for 2 turns. Once per fight.',
   },
+  // Barbarian
+  rage: {
+    name: 'Rage', time: 'bonus', feature: true,
+    desc: 'Once per fight, for the rest of it: +2 damage with Strength melee weapon attacks, half damage from weapon attacks, and advantage on Strength saves.',
+  },
+  reckless: {
+    name: 'Reckless Attack', time: 'free', feature: true,
+    desc: 'Free: this turn your Strength melee attacks have advantage, and attacks against you have advantage until your next turn.',
+  },
+  // Sorcerer
+  quicken: {
+    name: 'Quickened Spell', time: 'free', feature: true,
+    desc: 'Free, 2 sorcery points: your next spell that takes an action takes a bonus action instead. After it, your action can cast only a cantrip. Press again to cancel. Sorcery points: your level, back every fight.',
+  },
+  // Monk
+  flurry: {
+    name: 'Flurry of Blows', time: 'bonus', feature: true,
+    desc: '1 ki, after you take the Attack action: two unarmed strikes as a bonus action. Open Hand: each that hits knocks the foe prone unless it makes a DEX save. Ki: your level, back every fight.',
+  },
+  patientDefense: { name: 'Patient Defense', time: 'bonus', feature: true, desc: '1 ki: Dodge as a bonus action.' },
+  stepOfTheWind: { name: 'Step of the Wind', time: 'bonus', feature: true, desc: '1 ki: Dash and Disengage as a bonus action.' },
+  stunningStrike: {
+    name: 'Stunning Strike', time: 'free', feature: true,
+    desc: 'Free: arm it, and your next melee hit spends 1 ki: the foe makes a CON save or is stunned until the end of its next turn. Press again to cancel.',
+  },
+  wholeness: { name: 'Wholeness of Body', time: 'action', feature: true, desc: 'Regain three times your monk level in HP. Once per fight.' },
   // Monsters
   nimbleEscape: { name: 'Nimble Escape', time: 'bonus', feature: true, desc: 'Disengage as a bonus action.' },
   aggressive: { name: 'Aggressive', time: 'bonus', feature: true, desc: 'Move up to its speed toward an enemy.' },
@@ -67,6 +93,7 @@ export const CONDITION_INFO = {
   restrained: 'Restrained: can’t move; attacks against it have advantage, its own attacks and DEX saves disadvantage. Wears off at the end of its next turn.',
   mocked: 'Mocked: disadvantage on its next attack roll. Wears off after it attacks or at the end of its next turn.',
   rotting: 'Rotting (mummy rot): can’t regain hit points. Wears off after two of its own turns.',
+  stunned: 'Stunned (a monk’s Stunning Strike): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage. Wears off at the end of its next turn.',
   paralyzed: 'Paralysed (a ghoul’s claws): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage, and a hit from within 5 ft is a critical hit. A CON save as each of its turns starts ends it, in time to act.',
 };
 
@@ -91,6 +118,15 @@ export const PASSIVES = {
   darkOnesBlessing: 'Dark One’s Blessing: when you drop a foe to 0 HP, gain temporary HP equal to your CHA modifier + your level.',
   ownLuck: 'Dark One’s Own Luck: once per room, when you fail a saving throw, add 1d10 to it (used automatically when it could turn the failure into a success).',
   escapeTheHorde: 'Escape the Horde: opportunity attacks against you have disadvantage.',
+  dangerSense: 'Danger Sense: advantage on DEX saves.',
+  frenzy: 'Frenzy: while raging, after you take the Attack action you can make one more melee weapon attack as a bonus action.',
+  fastMovement: 'Fast Movement: +10 ft of speed.',
+  mindlessRage: 'Mindless Rage: you can’t be frightened while raging, and raging ends fear.',
+  feralInstinct: 'Feral Instinct: advantage on initiative.',
+  elementalAffinity: 'Elemental Affinity: add your CHA modifier to the damage of Fire Bolt, Burning Hands and Fireball.',
+  martialArts: 'Martial Arts: after you take the Attack action, an unarmed strike as a bonus action.',
+  deflectMissiles: 'Deflect Missiles: your reaction takes 1d10 + DEX + monk level off a ranged weapon hit (used automatically).',
+  openHand: 'Open Hand Technique: a Flurry of Blows hit knocks the foe prone unless it makes a DEX save.',
   packTactics:'Pack Tactics: advantage when an ally is next to the target.',
   trapSense: 'Keen Eyes: spots traps within 10 ft.',
   skulker: 'Skulker: monsters that have not noticed the party only spot you within 15 ft.',
@@ -218,6 +254,21 @@ export const SPELLS = {
   greaterInvisibility: {
     name: 'Greater Invisibility', level: 4, time: 'action', range: 1, targeting: 'ally', concentration: true,
     desc: 'Touch an ally (or yourself): they turn invisible for the rest of the fight. Their attacks have advantage, and attacks against them disadvantage. One at a time. Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
+  },
+  thunderwave: {
+    name: 'Thunderwave', level: 1, time: 'action', targeting: 'self', radius: 1,
+    damage: '2d8', save: 'con',
+    desc: 'A wave of thunder bursts from you: everyone within 5 ft makes a CON save or takes 2d8 thunder and is knocked prone (SRD: pushed); half and still standing on a success. +1d8 per slot level above 1st. Hits allies too!',
+  },
+  entangle: {
+    name: 'Entangle', level: 1, time: 'action', range: 18, radius: 1, targeting: 'area',
+    save: 'str', condition: 'restrained', turns: 1,
+    desc: 'Grasping weeds burst from a 15-ft square within 90 ft: everyone in it makes a STR save or is restrained until the end of its next turn (no concentration here). Hits allies too!',
+  },
+  callLightning: {
+    name: 'Call Lightning', level: 3, time: 'action', range: 24, radius: 1, targeting: 'area', concentration: true,
+    damage: '3d10', save: 'dex',
+    desc: 'A storm cloud gathers: a bolt strikes a point within 120 ft, 3d10 lightning to everyone within 5 ft of it, DEX save for half. +1d10 per slot level above 3rd. While you keep concentrating, your action can call another bolt at no slot. Hits allies too! Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
   },
   animateDead: {
     name: 'Animate Dead', level: 3, time: 'action', range: 6, targeting: 'corpse',

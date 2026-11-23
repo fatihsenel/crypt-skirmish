@@ -6,7 +6,7 @@ import { ACTIONS } from './game/abilities.js';
 import { ITEMS } from './game/items.js';
 import { shootProjectile, floatText } from './render/unitView.js';
 import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
-import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, SHATTER_TINT } from './render/effects.js';
+import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT } from './render/effects.js';
 import { wait } from './render/tween.js';
 import { sfx } from './audio/sfx.js';
 import { voices } from './audio/voices.js';
@@ -120,6 +120,14 @@ export function createAnimations(app) {
         hitFx(stage.scene, { ...pos, undead: target.undead }, attacker, { crit: r.crit });
         if (r.crit) stage.shake(0.3, 420);
         if (r.uncanny) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Uncanny Dodge ½', 'spell');
+        if (r.resisted) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Rage ½', 'spell');
+        if (r.deflect) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, `Deflected −${r.deflect.total}`, 'spell');
+        if (r.bonus) floatText(stage.scene, { x: attacker.x, z: attacker.z - 0.6 }, BONUS_STRIKE[r.bonus], 'spell');
+        for (const t of [r.stun, r.topple].filter(Boolean)) {
+          if (!target.alive) break;
+          wait(t === r.stun ? 350 : 500).then(() => floatText(stage.scene, { x: pos.x, z: pos.z - 0.5 }, t.success ? 'Resists' : CONDITION_FLOAT[t.condition], t.success ? 'miss' : 'cond'));
+          tv.updateStatus();
+        }
         if (r.smite) {
           sfx.radiant();
           radiantFx(stage.scene, pos);
@@ -233,7 +241,8 @@ export function createAnimations(app) {
     }));
   }
 
-  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!' };
+  const BONUS_STRIKE = { flurry: 'Flurry of Blows', martial: 'Martial Arts', frenzy: 'Frenzy' };
+  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!' };
 
   function damageReaction(unit) {
     const v = view(unit);
@@ -492,6 +501,35 @@ export function createAnimations(app) {
         v.updateStatus();
         await wait(450);
         break;
+      case 'rage':
+        sfx.roar();
+        stage.shake(0.15, 300);
+        floatText(stage.scene, unit, 'Rage!', 'crit');
+        v.updateStatus();
+        await wait(550);
+        break;
+      case 'reckless':
+      case 'quicken':
+      case 'stunningStrike':
+        sfx.maneuver();
+        if (r.armed !== false) floatText(stage.scene, unit, r.name, 'spell');
+        v.updateStatus();
+        await wait(r.armed === false ? 0 : 350);
+        break;
+      case 'flurry':
+      case 'patientDefense':
+      case 'stepOfTheWind':
+        sfx.maneuver();
+        floatText(stage.scene, unit, `${r.name} · ${r.left} ki`, 'spell');
+        v.updateStatus();
+        await wait(450);
+        break;
+      case 'wholeness':
+        sfx.heal();
+        floatText(stage.scene, unit, `+${r.healed}`, 'heal');
+        v.updateHp();
+        await healFx(stage.scene, unit);
+        break;
       case 'aggressive':
         sfx.roar();
         if (!unseen(unit)) floatText(stage.scene, unit, 'Charge!', 'warn');
@@ -734,6 +772,47 @@ export function createAnimations(app) {
           if (s.damage) hitFx(stage.scene, s.unit);
           return damageReaction(s.unit);
         }));
+        break;
+      case 'thunderwave':
+        await cv.cast(null, async () => {
+          sfx.shatter();
+          stage.shake(0.3, 400);
+          await turnFx(stage.scene, caster, 1.5, SHATTER_TINT);
+        });
+        await showSaves(r.saves, 'CON', r.dc);
+        await Promise.all(r.saves.map((s) => {
+          floatText(stage.scene, s.unit, s.success ? `Save −${s.damage}` : `−${s.damage} · Prone!`, 'crit');
+          if (s.damage) hitFx(stage.scene, s.unit);
+          view(s.unit)?.updateStatus();
+          return damageReaction(s.unit);
+        }));
+        break;
+      case 'entangle':
+        await cv.cast(r.center, async () => {
+          sfx.cast();
+          await turnFx(stage.scene, r.center, r.spell.radius + 0.5, ENTANGLE_TINT);
+        });
+        await showSaves(r.saves, 'STR', r.dc);
+        for (const s of r.saves) {
+          floatText(stage.scene, s.unit, s.success ? 'Resists' : 'Entangled!', s.success ? 'miss' : 'cond');
+          view(s.unit).updateStatus();
+        }
+        await wait(300);
+        break;
+      case 'callLightning':
+        await cv.cast(r.center, async () => {
+          sfx.thunder();
+          stage.shake(0.35, 450);
+          radiantFx(stage.scene, r.center);
+          await turnFx(stage.scene, r.center, r.spell.radius + 0.5, STORM_TINT);
+        });
+        await showSaves(r.saves, 'DEX', r.dc);
+        await Promise.all(r.saves.map((s) => {
+          floatText(stage.scene, s.unit, s.success ? (s.damage ? `Save −${s.damage}` : 'Evaded') : `−${s.damage}`, 'crit');
+          if (s.damage) hitFx(stage.scene, s.unit);
+          return damageReaction(s.unit);
+        }));
+        cv.updateStatus();
         break;
       case 'fear': {
         const aim = { x: caster.x + r.dir.x, z: caster.z + r.dir.z };

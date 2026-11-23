@@ -23,7 +23,7 @@ const rows = [
 
 describe('the bard', () => {
   it('fills the cleric’s slot and levels up to 8', () => {
-    expect(CLASS_CHOICES.C).toEqual(['C', 'B']);
+    expect(CLASS_CHOICES.C).toEqual(['C', 'B', 'D']);
     const b = applyLevel(createUnit('B', 0, 0), 8);
     expect(b.stats.cha).toBe(20);
     expect(b.inspiration).toBe(5);

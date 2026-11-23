@@ -954,6 +954,7 @@ function startFight(resume, watch = null) {
   game.on('mimic', (r) => hud.logMimic(r));
   game.on('mimicFound', (r) => pendingReveals.push(r));
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
+  game.on('technique', (r) => { if (!unseen(r.target)) hud.logTechnique(r); });
   game.on('shove', (r) => hud.logShove(r));
   game.on('help', (r) => hud.logHelp(r));
   game.on('feed', (r) => hud.logFeed(r));
@@ -1725,7 +1726,7 @@ if (levelParam >= 1 && levelParam <= LEVELS.length) {
     saving = false;
     const q = new URLSearchParams(location.search);
     const d = q.get('difficulty'); // e.g. &difficulty=hard
-    campaign = partyAt(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('warlock') && { W: 'K' }), ...(q.has('ranger') && { R: 'A' }), ...(q.has('bard') && { C: 'B' }) }), Number(q.get('party')));
+    campaign = partyAt(newCampaign(DIFFICULTIES[d] ? d : 'normal', {}, { ...(q.has('paladin') && { F: 'P' }), ...(q.has('warlock') && { W: 'K' }), ...(q.has('ranger') && { R: 'A' }), ...(q.has('bard') && { C: 'B' }), ...(q.has('barbarian') && { F: 'Z' }), ...(q.has('sorcerer') && { W: 'S' }), ...(q.has('monk') && { R: 'M' }), ...(q.has('druid') && { C: 'D' }) }), Number(q.get('party')));
     campaign.tier = Math.max(0, Math.min(99, Math.floor(Number(q.get('tier')) || 0))); // &tier=2: New Game+
     campaign.relics = cleanRelics((q.get('relics') ?? '').split(',')); // &relics=veil,horn
     nodeId = LEVELS[levelParam - 1].id;

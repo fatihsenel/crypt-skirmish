@@ -352,6 +352,19 @@ export function createPreview(deps) {
         const caught = tiles.map((t) => visibleUnitAt(t.x, t.z)).filter(Boolean);
         const allies = caught.filter((c) => c.team === u.team);
         const foes = caught.filter((c) => c.team !== u.team);
+        if (id === 'entangle') {
+          hud.hint(`${s.name}: STR save DC ${game.spellDC(u)} or restrained for ${s.turns} turn · ` +
+            (foes.length ? `catches ${foes.map((f) => f.name).join(', ')}` : 'no enemies caught') +
+            (allies.length ? ` · ⚠ also holds ${allies.map((a) => a.name).join(', ')}!` : ''), true);
+          break;
+        }
+        if (id === 'callLightning') {
+          const cost = u.storm ? 'no slot (the storm is up)' : `a ${ordinalSlot(u, 3)}-level slot, then a free bolt each turn`;
+          hud.hint(`${s.name}: ${s.damage} lightning in ${s.radius * 5} ft, DEX save DC ${game.spellDC(u)} for half · ` +
+            (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies caught') +
+            (allies.length ? ` · ⚠ also strikes ${allies.map((a) => a.name).join(', ')}!` : '') + ` · ${cost}`, true);
+          break;
+        }
         hud.hint(
           `${s.name}: ${id === 'shatter' ? `${2 + lowestSlot(u, 2)}d8` : s.damage} ${{ iceStorm: 'hail and cold', shatter: 'thunder' }[id] ?? 'fire'} in ${s.radius * 5} ft, ${(s.save ?? 'dex').toUpperCase()} save DC ${game.spellDC(u)} for half · ` +
             (foes.length ? `hits ${foes.map((f) => f.name).join(', ')}` : 'no enemies caught') +

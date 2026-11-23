@@ -19,7 +19,7 @@ import { loadHistory, loadDeepest, deepestLabel } from '../game/history.js';
 import { ACHIEVEMENTS, loadAchievements } from '../game/achievements.js';
 import { dayKey, dailyPlan, loadDaily, streak, bestFight, loadBestFights, resultFor } from '../game/daily.js';
 import { weekKey, weeklyPlan, loadWeekly, weekStreak } from '../game/weekly.js';
-import { ELITE_TRAITS } from '../game/combat.js';
+import { ELITE_TRAITS } from '../game/elites.js';
 import { loadEndless, loadBestFloor, nextFloor, levelOf, restFloor, floorTier } from '../game/endless.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -57,6 +57,10 @@ const CLASS_BLURB = {
   A: 'Ranger: a longbow with Archery, Hunter’s Mark for extra damage on one foe, spots traps. Extra Attack and Colossus Slayer at level 5.',
   C: 'Cleric: heavy armour and the party’s healer: Cure Wounds, Healing Word, Sacred Flame and Turn Undead. Spiritual Weapon and Mass Healing Word at level 5.',
   B: 'Bard: Bardic Inspiration turns an ally’s near miss or failed save, Cutting Words spoils a foe’s hit, Vicious Mockery, Shatter and Healing Word. Fear at level 5.',
+  Z: 'Barbarian: Rage for extra damage and half damage from weapons, Reckless Attack for advantage (and to be hit), Danger Sense and a bonus Frenzy attack. Extra Attack at level 5.',
+  S: 'Sorcerer: fire spells (Fire Bolt, Burning Hands, Scorching Ray), Shield, and sorcery points to Quicken a spell into a bonus action. Fireball at level 5.',
+  M: 'Monk: fast, unarmoured, with a free unarmed strike after attacking and ki for Flurry of Blows, Patient Defense and Step of the Wind; catches arrows. Stunning Strike at level 5.',
+  D: 'Druid: Entangle holds foes, Thunderwave knocks them down, Healing Word and Cure Wounds mend, Shillelagh in hand. Call Lightning at level 5.',
 };
 
 /** A selector for a camp control that a redraw replaces, to focus its new copy (null: leave focus). */

@@ -4,8 +4,9 @@
 // carry it as they carry any other. Like the daily it's played outside the campaign, as
 // often as you like; each week keeps its best result, and weeks won in a row make a streak.
 
-import { ELITE_TRAITS } from './combat.js';
+import { ELITE_TRAITS } from './elites.js';
 import { roomElite } from './campaign.js';
+import { CLASS_CHOICES } from './units.js';
 import { hash, dayKey, dailyCampaign, DAILY_ROOMS_ACT_FOUR, addDaily, parseDaily } from './daily.js';
 
 export const WEEKLY_KEY = 'crypt-skirmish:weekly';
@@ -33,6 +34,9 @@ export function prevWeek(key) {
 /** The first week a weekly can bring the Bard (earlier weeks keep the party they had). */
 const BARD_FROM = '2026-11-23';
 
+/** The first week a weekly can bring the Barbarian, Sorcerer, Monk or Druid (a Monday). */
+const THIRD_FROM = '2026-11-30';
+
 /** This week's crypt (or any week's): its elite trait, room, party level, class swaps and dice seed. */
 export function weeklyPlan(key = weekKey()) {
   const seed = hash(`crypt-skirmish weekly ${key}`);
@@ -44,6 +48,12 @@ export function weeklyPlan(key = weekKey()) {
   if ((seed >>> 9) & 1) classes.R = 'A';
   if ((seed >>> 10) & 1) classes.W = 'K';
   if (key >= BARD_FROM && (seed >>> 11) & 1) classes.C = 'B';
+  // From THIRD_FROM each slot may bring its third class instead (a third of the time).
+  if (key >= THIRD_FROM) {
+    for (const [i, slot] of ['F', 'W', 'R', 'C'].entries()) {
+      if ((seed >>> (12 + i * 3)) % 3 === 0) classes[slot] = CLASS_CHOICES[slot][2];
+    }
+  }
   return { key, seed, node, level, classes, tier: WEEKLY_TIER, trait, weekly: true };
 }
 

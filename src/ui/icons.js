@@ -46,6 +46,20 @@ const ICONS = {
     <rect stroke="none" x="18.5" y="2.6" width="1.9" height="12"/>
     <ellipse stroke="none" cx="5.8" cy="17.8" rx="3.2" ry="2.4" transform="rotate(-20 5.8 17.8)"/>
     <ellipse stroke="none" cx="16.7" cy="15" rx="3.2" ry="2.4" transform="rotate(-20 16.7 15)"/>`),
+  // A double-bitted great axe.
+  Z: svg(`<rect stroke="none" x="11" y="3" width="2" height="19" rx="1"/>
+    <path stroke="none" d="M11 5.5C8 3.6 5 3.4 3 4.2c-.6 3.2-.6 6.4 0 9.6 2-.8 5-.6 8-2.5zM13 5.5c3-1.9 6-2.1 8-1.3.6 3.2.6 6.4 0 9.6-2-.8-5-.6-8-2.5z"/>`),
+  // A flame: the sorcerer's blood.
+  S: svg(`<path stroke="none" d="M12 1.8c.6 3.6 5.8 6.2 5.8 12 0 4.4-2.6 8.2-5.8 8.2s-5.8-3.8-5.8-8.2c0-2.9 1.3-4.6 2.5-5.9.2 1.9.9 3.2 2 3.9C10.4 8.6 11 5.2 12 1.8z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M12 12.4c.4 1.9 2.6 3.2 2.6 5.6 0 1.6-1.2 2.6-2.6 2.6s-2.6-1-2.6-2.6c0-2.1 1.9-3 2.6-5.6z"/>`),
+  // A closed fist.
+  M: svg(`<path stroke="none" d="M6 9.2c0-1.3 1-2.2 2.2-2.2h8.6C18 7 19 8 19 9.2v6.3c0 3.6-2.8 6.5-6.4 6.5H11c-2.8 0-5-2.3-5-5.1z"/>
+    <path fill="none" stroke="var(--icon-hole)" stroke-width="1.1" d="M9.6 7v5M12.6 7v5M15.6 7v5M6.2 12h9.2"/>
+    <path stroke="none" d="M8 2.5h9v3H8z"/>`),
+  // A leaf on its stem.
+  D: svg(`<path stroke="none" d="M20.5 3.5C11 3.2 4.6 7.6 4.6 14.2c0 1.9.6 3.5 1.6 4.6C14.6 18.7 20.4 12.6 20.5 3.5z"/>
+    <path fill="none" stroke="var(--icon-hole)" stroke-width="1.1" d="M7 17.6c3.2-3.4 6.8-6.8 11-11.4"/>
+    <path fill="none" stroke-width="1.6" d="M6.6 18.4 3.2 21.6"/>`),
   // --- monsters -----------------------------------------------------------------
   g: svg(`<path stroke="none" d="M12 6c-3.3 0-5.6 2.4-5.9 5.4L1 8.5l3.4 5.4c.6 3.8 3.8 6.6 7.6 6.6s7-2.8 7.6-6.6L23 8.5l-5.1 2.9C17.6 8.4 15.3 6 12 6z"/>
     <path fill="var(--icon-hole)" stroke="none" d="M8.6 12.2l2.6 1.1-.5 1.2zm6.8 0-2.6 1.1.5 1.2zM10 17.2h4l-.8 1h-2.4z"/>`),

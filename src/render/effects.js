@@ -340,6 +340,8 @@ export async function turnFx(scene, at, radius, tint = [0xffe08a, 0xffd060, 0xff
 
 /** Shatter's ring of sound: Turn Undead's ring in a cold blue. */
 export const SHATTER_TINT = [0xbfe6ff, 0x8cc8ff, 0x9fd4ff];
+export const ENTANGLE_TINT = [0x7fc24a, 0x4f9a2a, 0x9ad46a];
+export const STORM_TINT = [0xe8f4ff, 0xa8d0ff, 0xfff6b0];
 
 /** Animate Dead: green wisps spiralling down into a corpse. */
 export async function raiseFx(scene, at) {

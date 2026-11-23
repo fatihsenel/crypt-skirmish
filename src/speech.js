@@ -90,6 +90,45 @@ const HEROES = {
     heal: ['Up, {name}! Your cue!', 'A little tune for you.', 'Back on stage, {name}!', 'Applause for {name}!'],
     thanks: ['A dramatic return!', 'Did you miss me?', 'Not my final bow.', 'The crowd goes wild!'],
   },
+  Z: { // the Barbarian: loud and glad of it
+    first: ['RAAAH!', 'Fight me!', 'Finally!', 'Who wants it?', 'Blood and thunder!'],
+    crit: ['HA! In half!', 'Felt that one!', 'Again! Again!', 'That’s how it’s done!'],
+    kill: ['Too easy!', 'More!', 'Bring the next!', 'HA!'],
+    down: ['{name}! Get UP!', 'Nobody touches {name}!', '{name}! I’ll crush them!'],
+    win: ['Is that all?', 'More! Where’s more?', 'Good fight! Ale!', 'HA! Again tomorrow!'],
+    hurt: ['That just makes me angry!', 'MORE!', 'Is that all you’ve got?', 'Blood! Mine! Good!'],
+    thanks: ['Ha! Not dead!', 'Where’s my axe?', 'Back in it!', 'Too stubborn to die!'],
+  },
+  S: { // the Sorcerer: proud, born to it
+    first: ['It’s in my blood.', 'Let me show you.', 'Ready to burn?', 'Watch closely.'],
+    crit: ['Effortless.', 'Born for this.', 'Did you see that?', 'Oh, I’m good.'],
+    kill: ['Ash.', 'Too bright for you.', 'Snuffed.', 'Next.'],
+    down: ['{name}! No!', 'Up, {name}! Please!', 'Hold on, {name}!'],
+    win: ['Not a scorch on me.', 'That was nothing.', 'Well, that was warm.', 'Done. Easily.'],
+    hurt: ['My blood’s boiling!', 'You’ll regret that.', 'That… stung.', 'Back off!'],
+    blast: ['Burn!', 'Feel the heat!', 'Stand clear!', 'All of it, at once!'],
+    thanks: ['The fire’s still lit.', 'Not out yet.', 'Thank you. Truly.', 'Embers. Still glowing.'],
+  },
+  M: { // the Monk: calm, few words
+    first: ['Breathe.', 'Be still.', 'Begin.', 'Empty hands. Full mind.'],
+    crit: ['There.', 'The centre.', 'Exactly.', 'Stillness, then strike.'],
+    kill: ['Peace.', 'Rest.', 'Gone.', 'Let go.'],
+    down: ['{name}! Breathe!', 'Stay with us, {name}.', 'Up, {name}. Slowly.'],
+    win: ['Stillness again.', 'Balance kept.', 'Let us rest.', 'Breathe, everyone.'],
+    hurt: ['Pain is a teacher.', 'Breathe… breathe…', 'I bend. I don’t break.', 'Focus.'],
+    thanks: ['Back to centre.', 'I am here.', 'Gratitude.', 'The breath returns.'],
+  },
+  D: { // the Druid: earthy, patient
+    first: ['The roots are restless.', 'Nature takes its course.', 'Grow!', 'Back to the soil.'],
+    crit: ['The oak bites!', 'Thorn and stone!', 'The wild is with me!', 'Deep roots!'],
+    kill: ['Return to the earth.', 'Rot and renew.', 'Feed the moss.', 'Be still.'],
+    down: ['{name}! Hold on!', 'The roots will hold you, {name}!', '{name}! Not yet!'],
+    win: ['The forest would be proud.', 'Clean air again.', 'All is calm.', 'Rest, friends. Grow.'],
+    hurt: ['Bark and bone…', 'I’ll mend.', 'Even oaks bend.', 'Rooted. Still rooted.'],
+    blast: ['Hear the storm!', 'Thunder, come!', 'Hold them, roots!', 'The sky answers!'],
+    heal: ['Grow strong, {name}.', 'Mend, {name}.', 'Sap and sunlight, {name}.', 'Breathe, {name}.'],
+    thanks: ['Spring always comes.', 'Rooted again.', 'Thank you, friend.', 'The green holds me.'],
+  },
 };
 
 /**
@@ -222,7 +261,7 @@ export function attackMoment({ attacker, target, hit, crit, killed, first, kindS
 }
 
 /** Hero spells big enough to shout about, and the heals. */
-const BLASTS = new Set(['burningHands', 'fireball', 'lightningBolt', 'iceStorm', 'shatter', 'fear']);
+const BLASTS = new Set(['burningHands', 'fireball', 'lightningBolt', 'iceStorm', 'shatter', 'fear', 'thunderwave', 'callLightning', 'scorchingRay']);
 const HEALS = new Set(['cureWounds', 'healingWord', 'layOnHands', 'massHealingWord']);
 
 /**
@@ -334,6 +373,16 @@ const BANTER = {
     FA: ['Good shooting back there.', 'Good shield. I aimed past it.'],
     BK: ['Sing with me, warlock!', 'My patron forbids it. Mercifully.'],
     PR: ['Whose purse is that?', 'Mine now. Finders keepers.'],
+    ZW: ['Why read about fire? Just hit things.', 'That explains a great deal.'],
+    FZ: ['You could try a shield.', 'Shields are for people who stop.'],
+    SW: ['You studied for years? I was born with it.', 'And it shows. Untidily.'],
+    WS: ['Where did you learn that?', 'Nowhere. It just happens.'],
+    MR: ['You fidget.', 'You don’t. It’s unsettling.'],
+    RM: ['Got any money on you?', 'I own a bowl.'],
+    DC: ['Your light, my roots. We work well.', 'Mostly. Your moss is on my boots.'],
+    CD: ['Do you ever wash?', 'Rain does.'],
+    ZM: ['You hit like a gnat. A fast gnat.', 'And you breathe like a bellows.'],
+    DZ: ['You’re like a bear. A bear with an axe.', 'Thank you!'],
   },
   any: [
     ['Anyone else hungry?', 'Always.'],

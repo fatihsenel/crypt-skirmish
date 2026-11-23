@@ -16,7 +16,7 @@ const party = (level, cls = {}) => {
 
 describe('ability score picks', () => {
   it('a hero with no picks is built as before: the class’s own increases', () => {
-    for (const code of 'FPWKRACB') {
+    for (const code of 'FPWKRACBZSMD') {
       const own = Object.fromEntries(asiLevels(code).map((l) => [l, asiDefault(code, l)]));
       for (let l = 3; l <= 8; l++) {
         const a = at(code, l);

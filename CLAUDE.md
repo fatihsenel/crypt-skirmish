@@ -185,7 +185,12 @@ server on 5173.
   `applyLevel`, never written into `PROGRESSION`. The camp offers them (`openPicks`,
   `pickOptions`, `choosePick`), and `enterRoom` settles open ones (`settlePicks`).
 - **Class:** `CLASS_CHOICES` and `PROGRESSION` in `units.js`, a model spec, and a policy in
-  `scripts/sim.js` if the AI wouldn't use its abilities, and its lines in `speech.js`.
+  `scripts/sim.js` if the AI wouldn't use its abilities, its lines in `speech.js`, an icon, a voice
+  (`audio/voices.js`), a `CLASS_BLURB` in `ui/camp.js` and a URL flag in `main.js`. A daily or
+  weekly may only pick it from a date on (`THIRD_FROM` in `daily.js` and `weekly.js`), so
+  earlier days stay the same. A per-turn toggle (Reckless Attack, Quickened Spell, Stunning
+  Strike) is an `ACTIONS` entry with `time: 'free'` through the `action` command; bonus attacks
+  after the Attack action go through `bonusStrike` in `combat.js`.
 - **Spell or action:** it needs a case in `playSpell` or `playAction` in `animate.js`;
   `tests/animate.test.js` fails until it has one.
 - Rules that differ from the SRD go in the README's House rules section.
@@ -193,7 +198,7 @@ server on 5173.
 ## Testing in the browser
 
 - `?level=N` jumps into a room with a fresh party and never touches the save. Add
-  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&relics=veil,horn`, `&paladin`, `&ranger`, `&warlock`, `&bard`,
+  `&party=5`, `&difficulty=hard|story`, `&tier=N` (New Game+; elites from 2), `&relics=veil,horn`, `&paladin`, `&ranger`, `&warlock`, `&bard`, `&barbarian`, `&sorcerer`, `&monk`, `&druid`,
   `&seed=S` (the same dice every time; `SEED=S npm run touch-check` uses it).
 - `?losses` lists real players' lost fights (needs the Worker's read key, kept under
   `crypt-skirmish:loss-key`).

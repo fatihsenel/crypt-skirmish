@@ -2,19 +2,16 @@
 // features (doors, traps, chests); spells are in spells.js. Knows nothing about three.js; the controller
 // animates the results it returns.
 
-import { rollDice, rollExpr, parseDice, abilityMod, hash } from './dice.js';
+import { rollDice, rollExpr, parseDice, abilityMod } from './dice.js';
 import { Grid, key, gridDistance, pathFrom } from './grid.js';
 import { createUnit, applyLevel, classOf, TEMPLATES } from './units.js';
 import { applyItems } from './items.js';
 import { ACTIONS, STANDARD_ACTIONS, SPELLS } from './abilities.js';
 import { Spellcasting, NOISE, dexSaveDamage } from './spells.js';
+import { RULES, ELITE_TRAITS, ELITE_REGEN, ELITE_BARBS, eliteTrait } from './elites.js';
 
-/**
- * The rules new fights are played by. 1: as first released. 2: death saves, concentration,
- * ghoul claws that paralyse, long range and creatures giving cover. A saved fight, replay or
- * link carries the number it began under (none means 1), so it plays back by its own rules.
- */
-export const RULES = 2;
+// Kept apart (elites.js) so the title's code doesn't carry the rules engine.
+export { RULES, ELITE_TRAITS, ELITE_REGEN, ELITE_BARBS, eliteTrait };
 
 export const TRAP_DC = 13;
 export const TRAP_DAMAGE = '2d6';
@@ -53,16 +50,16 @@ export const PATROL_PACE = 3;
 //   paralyzed   (rules 2, a ghoul's claws) can't move, act or react; fails STR and DEX saves;
 //               attacks against it have advantage, and a hit from within 5 ft is a crit. A CON
 //               save at the start of each of its turns ends it (in time to act).
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed'];
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned'];
 /** Conditions that simply run out after their `turns`. */
 
-const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed'];
+const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
 const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
 
 /** Weapon attacks (not spell attacks like Fire Bolt) benefit from +1 weapons. */
-export const isWeapon = (attack) => attack.stat === 'str' || attack.stat === 'dex';
+export const isWeapon = (attack) => attack.stat === 'str' || attack.stat === 'dex' || !!attack.weapon; // a druid's Shillelagh too
 /** A melee weapon attack (not a thrown javelin): what Dueling and Divine Smite need. */
 export const isMelee = (attack) => isWeapon(attack) && attack.reach === 1;
 /**
@@ -93,29 +90,6 @@ export function diceRange(expr, bonus = 0) {
 }
 
 export const longReach = (attack) => (isWeapon(attack) && attack.reach > 1 ? attack.long ?? attack.reach * 4 : attack.reach);
-
-/**
- * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits
- * (see Game#makeElite). Which trait goes by the room and the tier, never by the dice.
- */
-export const ELITE_TRAITS = [
-  { id: 'regenerating', name: 'Regenerating', desc: 'regains 5 HP at the start of each of its turns' },
-  { id: 'relentless', name: 'Relentless', desc: 'the first time it drops to 0 HP, it stays on 1 instead' },
-  { id: 'frenzied', name: 'Frenzied', desc: 'makes one more attack with each Attack action' },
-  { id: 'swift', name: 'Swift', desc: 'moves 10 ft farther' },
-  { id: 'warded', name: 'Warded', desc: '+2 AC; can’t be frightened, knocked prone or poisoned' },
-  { id: 'barbed', name: 'Barbed', desc: 'a foe that hits it with a melee weapon takes 3 piercing damage' },
-];
-export const ELITE_REGEN = 5;
-export const ELITE_BARBS = 3;
-
-/**
- * The elite's trait in the room `levelId` at New Game+ `tier`: it moves on one trait a tier.
- * The hash gives every trait a room at each tier, and a weekly room at New Game+ 3 (weekly.js).
- */
-export function eliteTrait(levelId, tier) {
-  return ELITE_TRAITS[(tier + hash(String(levelId))) % ELITE_TRAITS.length];
-}
 
 export class Game extends Spellcasting {
   /**
@@ -295,10 +269,13 @@ export class Game extends Spellcasting {
 
   /** Flat damage bonus added to an attack's dice. */
   damageBonus(unit, attack) {
+    // Elemental Affinity: a draconic sorcerer's CHA on Fire Bolt (its other fire spells in spells.js).
+    if (attack.projectile === 'fire' && unit.passives?.includes('elementalAffinity')) return abilityMod(unit.stats.cha);
     if (attack.addMod === false) return 0;
+    const rage = unit.raging && isMelee(attack) && attack.stat === 'str' ? 2 : 0;
     const dueling = unit.passives?.includes('dueling') && isMelee(attack) ? 2 : 0;
     const ogre = attack.stat === 'str' ? unit.strDamage ?? 0 : 0; // Gauntlets of Ogre Power
-    return abilityMod(unit.stats[attack.stat]) + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + dueling + ogre;
+    return abilityMod(unit.stats[attack.stat]) + (isWeapon(attack) ? unit.weaponBonus ?? 0 : 0) + dueling + ogre + rage;
   }
 
   acOf(unit) {
@@ -323,11 +300,15 @@ export class Game extends Spellcasting {
   /** Roll a saving throw: d20 + ability modifier + item bonuses + a paladin's aura. */
   save(unit, stat, dc) {
     let d20 = rollDice(1, 20, this.rng).total;
-    // Paralysed: STR and DEX saves fail, whatever the die says.
-    if ((stat === 'str' || stat === 'dex') && this.has(unit, 'paralyzed')) {
+    // Paralysed or stunned: STR and DEX saves fail, whatever the die says.
+    if ((stat === 'str' || stat === 'dex') && (this.has(unit, 'paralyzed') || this.has(unit, 'stunned'))) {
       return { unit, d20, total: d20 + abilityMod(unit.stats[stat]), aura: 0, luck: null, inspired: null, success: false, paralyzed: true };
     }
-    if (stat === 'dex' && this.has(unit, 'restrained')) d20 = Math.min(d20, rollDice(1, 20, this.rng).total);
+    // Advantage: a raging barbarian's STR saves, Danger Sense's DEX saves. Restrained: DEX at disadvantage.
+    const adv = (stat === 'str' && unit.raging) || (stat === 'dex' && !!unit.passives?.includes('dangerSense'));
+    const dis = stat === 'dex' && this.has(unit, 'restrained');
+    if (dis && !adv) d20 = Math.min(d20, rollDice(1, 20, this.rng).total);
+    else if (adv && !dis) d20 = Math.max(d20, rollDice(1, 20, this.rng).total);
     const aura = this.auraBonus(unit);
     let total = d20 + abilityMod(unit.stats[stat]) + (unit.saveBonus ?? 0) + aura;
     // Dark One's Own Luck: once per fight, a d10 on a failed save that it could still turn.
@@ -390,6 +371,21 @@ export class Game extends Spellcasting {
   /** Can still attack this turn (Multiattack allows follow-up attacks). */
   canAttack(unit) {
     return !unit.actionUsed || unit.attacksLeft > 0;
+  }
+
+  /**
+   * A strike past the Attack action, when its attacks are spent: Flurry of Blows' unarmed
+   * strikes, a monk's Martial Arts unarmed strike or a raging berserker's Frenzy (each a bonus
+   * action). Returns 'flurry' | 'martial' | 'frenzy' or null; `attack` null: any attack.
+   */
+  bonusStrike(unit, attack = null) {
+    if (!unit.actionUsed || unit.attacksLeft > 0 || !unit.tookAttack) return null;
+    const unarmed = attack ? attack.unarmed : unit.attacks.some((a) => a.unarmed);
+    if (unit.strikes > 0 && unarmed) return 'flurry';
+    if (unit.bonusUsed) return null;
+    if (unarmed && unit.passives.includes('martialArts')) return 'martial';
+    if (unit.raging && unit.passives.includes('frenzy') && (attack ? isMelee(attack) : unit.attacks.some(isMelee))) return 'frenzy';
+    return null;
   }
 
   // --- senses ---------------------------------------------------------------
@@ -475,7 +471,7 @@ export class Game extends Spellcasting {
     unit.conditions[name] = { turns: turns + (own && turns !== Infinity ? 1 : 0), by, dc };
     if ((name === 'prone' || name === 'restrained') && own) unit.movesLeft = 0; // knocked down or caught mid-move
     if (fresh) this.emit('condition', { unit, name, on: true, by });
-    if (name === 'paralyzed') this.paralyze(unit);
+    if (name === 'paralyzed' || name === 'stunned') this.paralyze(unit);
   }
 
   /** Paralysed: no move, action, bonus action or reaction, and what it held or kept up ends. */
@@ -621,6 +617,7 @@ export class Game extends Spellcasting {
   start() {
     for (const u of this.living()) {
       u.initRoll = rollDice(1, 20, this.rng).total;
+      if (u.feral) u.initRoll = Math.max(u.initRoll, rollDice(1, 20, this.rng).total); // Feral Instinct
       u.initiative = u.initRoll + abilityMod(u.stats.dex);
     }
     // Varek's Barrow Horn: the heroes go first, each side in its own initiative order.
@@ -643,8 +640,10 @@ export class Game extends Spellcasting {
 
   beginTurn() {
     const u = this.current;
+    if (u.quickened) u.sorcery += 2; // a Quickened Spell left unused comes back
     Object.assign(u, {
       movesLeft: u.speed,
+      quickened: false,
       actionUsed: false,
       bonusUsed: false,
       reactionUsed: false,
@@ -659,6 +658,11 @@ export class Game extends Spellcasting {
       readied: false,
       readiedAttack: null,
       readiedSpell: null,
+      reckless: false,
+      tookAttack: false,
+      strikes: 0,
+      quickCast: false,
+      leveledCast: false,
     });
     if (u.helping) this.endHelp(u); // Help lasts until the helper's next turn
     this.standUp(u);
@@ -668,6 +672,7 @@ export class Game extends Spellcasting {
       if (this.save(u, 'con', u.conditions.paralyzed.dc).success) this.removeCondition(u, 'paralyzed', 'save');
       else this.paralyze(u);
     }
+    if (this.has(u, 'stunned')) this.paralyze(u); // no save: it wears off as this turn ends
     if (u.grappledBy) this.struggle(u);
     this.recharge(u);
     if (u.elite === 'regenerating' && u.alive && u.hp < u.maxHp) {
@@ -751,6 +756,7 @@ export class Game extends Spellcasting {
     if (!id) return [];
     caster.concentrating = null;
     const touched = [];
+    if (id === 'callLightning') caster.storm = null;
     if (caster.mark && (id === 'hex' || id === 'huntersMark')) {
       const old = this.units.find((u) => u.id === caster.mark.id);
       if (old?.marked === caster.mark.spell) { old.marked = false; touched.push(old); }
@@ -1502,7 +1508,9 @@ export class Game extends Spellcasting {
   /** Returns a reason string if the attack is not allowed, else null. */
   attackProblem(attacker, target, attack, { opportunity = false } = {}) {
     if (this.over) return 'The battle is over';
-    if (opportunity ? attacker.reactionUsed : !this.canAttack(attacker)) {
+    if (opportunity ? attacker.reactionUsed : !this.canAttack(attacker) && !this.bonusStrike(attacker, attack)) {
+      if (!opportunity && attacker.strikes > 0) return 'Flurry of Blows: unarmed strikes only';
+      if (!opportunity && this.bonusStrike(attacker)) return attacker.raging ? 'Frenzy: a melee weapon only' : 'Martial Arts: an unarmed strike only';
       return opportunity ? 'Reaction already used' : 'Action already used this turn';
     }
     if (!opportunity && attacker.turned) return 'Turned: can only flee';
@@ -1561,6 +1569,9 @@ export class Game extends Spellcasting {
     if (this.has(attacker, 'restrained')) dis.push('restrained');
     if (this.has(target, 'restrained')) adv.push('target restrained');
     if (this.has(target, 'paralyzed')) adv.push('target paralyzed');
+    if (this.has(target, 'stunned')) adv.push('target stunned');
+    if (attacker.reckless && !opportunity && isMelee(attack) && attack.stat === 'str') adv.push('reckless');
+    if (target.reckless) adv.push('target is reckless');
     const fear = this.fearSource(attacker);
     if (fear && this.inSight(attacker, fear, 99)) dis.push('frightened');
     if (attack.reach === 1 && this.isFlanking(attacker, target)) adv.push('flanking');
@@ -1723,6 +1734,14 @@ export class Game extends Spellcasting {
     return mods.mode === 'adv' || (mods.mode === 'normal' && this.allyNextTo(attacker, target));
   }
 
+  /** A monk's technique: `target` saves or gains `condition`. Returns the save. */
+  monkSave(target, stat, dc, condition, turns = Infinity) {
+    const s = this.save(target, stat, dc);
+    const immune = target.immune?.includes(condition);
+    if (!s.success && !immune) this.addCondition(target, condition, { turns });
+    return { stat, dc, d20: s.d20, total: s.total, success: s.success || !!immune, condition };
+  }
+
   attack(attacker, target, attack, { opportunity = false, ambush = false, readied = false } = {}) {
     const problem = this.attackProblem(attacker, target, attack, { opportunity: opportunity || readied });
     if (problem) return { ok: false, reason: problem };
@@ -1730,13 +1749,19 @@ export class Game extends Spellcasting {
     const mods = this.attackMods(attacker, target, attack, { opportunity, ambush });
     this.useHelp(attacker, target);
     this.reveal(attacker, 'attack');
+    let bonus = null; // a bonus-action strike: 'flurry' | 'martial' | 'frenzy'
     if (opportunity || readied) {
       attacker.reactionUsed = true;
     } else if (!attacker.actionUsed) {
       attacker.actionUsed = true;
+      attacker.tookAttack = true;
       attacker.attacksLeft = this.followUps(attacker, attack);
-    } else {
+    } else if (attacker.attacksLeft > 0) {
       attacker.attacksLeft--;
+    } else {
+      bonus = this.bonusStrike(attacker, attack);
+      if (bonus === 'flurry') attacker.strikes--;
+      else attacker.bonusUsed = true;
     }
     if (attack.recharge) (attacker.spent ??= {})[attack.name] = true;
 
@@ -1818,6 +1843,19 @@ export class Game extends Spellcasting {
       }
     }
 
+    // Rage: half damage from weapon attacks.
+    let resisted = false;
+    if (hit && damage && target.raging && isWeapon(attack)) {
+      resisted = true;
+      damage = Math.floor(damage / 2);
+    }
+    // Deflect Missiles: a monk's reaction takes 1d10 + DEX + level off a ranged weapon hit.
+    let deflect = null;
+    if (hit && damage && isWeapon(attack) && attack.reach > 1 && target.alive && target.passives.includes('deflectMissiles') && !target.reactionUsed) {
+      target.reactionUsed = true;
+      deflect = rollExpr(`1d10+${abilityMod(target.stats.dex) + target.level}`, { rng: this.rng });
+      damage = Math.max(0, damage - deflect.total);
+    }
     // Uncanny Dodge: a reaction that halves an attack's damage. Saved for hits that matter.
     let uncanny = false;
     if (hit && damage && this.canUncannyDodge(target) && (damage >= 6 || damage >= target.hp)) {
@@ -1830,6 +1868,7 @@ export class Game extends Spellcasting {
       ok: true, kind: 'attack', attacker, target, attack, opportunity, readied,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
       hit, crit, fumble, shielded, inspired, cutting, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
+      bonus, resisted, deflect, stun: null, topple: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -1841,6 +1880,17 @@ export class Game extends Spellcasting {
       if (damage) this.applyDamage(target, damage, attacker);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
+      // A monk's hit: Stunning Strike (armed, 1 ki) and Open Hand's push to the floor.
+      const dc = 8 + attacker.prof + abilityMod(attacker.stats.wis);
+      if (attacker.stunArmed && isMelee(attack) && attacker.ki > 0 && target.alive) {
+        attacker.stunArmed = false;
+        attacker.ki--;
+        result.stun = this.monkSave(target, 'con', dc, 'stunned', 1);
+      }
+      if (bonus === 'flurry' && attacker.passives.includes('openHand') && target.alive && !this.has(target, 'prone')) {
+        result.topple = this.monkSave(target, 'dex', dc, 'prone');
+      }
+      if (result.stun || result.topple) this.emit('technique', result);
       if (damage) result.rebuke = this.rebuke(target, attacker);
       result.barbs = this.barbs(target, attacker, attack);
     }
@@ -2101,8 +2151,25 @@ export class Game extends Spellcasting {
       if (unit.hp >= unit.maxHp) return 'Already at full HP';
     }
     if (id === 'potion' && unit.hp >= unit.maxHp) return 'Already at full HP';
+    if (id === 'rage' && unit.raging) return 'Already raging';
+    if (id === 'reckless') {
+      if (unit.reckless) return 'Already reckless this turn';
+      if (!this.canAttack(unit)) return 'No attacks left this turn';
+    }
+    if (id === 'quicken' && !unit.quickened) {
+      if (unit.sorcery < 2) return 'Not enough sorcery points (2)';
+      if (unit.bonusUsed) return 'Bonus action already used this turn';
+      if (unit.actionUsed) return 'Action already used this turn';
+    }
+    if (['flurry', 'patientDefense', 'stepOfTheWind'].includes(id) && !(unit.ki > 0)) return 'No ki left this fight';
+    if (id === 'flurry' && !unit.tookAttack) return 'Take the Attack action first';
+    if (id === 'stunningStrike' && !unit.stunArmed && !(unit.ki > 0)) return 'No ki left this fight';
+    if (id === 'wholeness') {
+      if (unit.wholenessUsed) return 'Already used this fight';
+      if (unit.hp >= unit.maxHp) return 'Already at full HP';
+    }
     if (id === 'ready' && unit.readied) return 'Already readied';
-    if ((id === 'secondWind' || id === 'potion') && this.has(unit, 'rotting')) return 'Rotting: you can’t regain HP';
+    if ((id === 'secondWind' || id === 'potion' || id === 'wholeness') && this.has(unit, 'rotting')) return 'Rotting: you can’t regain HP';
     if (id === 'turnUndead') {
       if (unit.channelUsed >= (unit.channelUses ?? 1)) return 'Already used this fight';
       if (!this.turnTargets(unit).length) return 'No undead within 30 ft';
@@ -2131,7 +2198,7 @@ export class Game extends Spellcasting {
     if (problem) return { ok: false, reason: problem };
     const def = ACTIONS[id];
     if (def.time === 'action') unit.actionUsed = true;
-    else unit.bonusUsed = true;
+    else if (def.time === 'bonus') unit.bonusUsed = true; // 'free': a choice, not an action
 
     const result = { ok: true, kind: 'action', unit, id, name: def.name };
     switch (id) {
@@ -2184,6 +2251,47 @@ export class Game extends Spellcasting {
         unit.secondWindUsed = true;
         result.roll = rollExpr(`1d10+${unit.level ?? 1}`, { rng: this.rng });
         result.healed = this.heal(unit, result.roll.total);
+        break;
+      case 'rage':
+        unit.raging = true;
+        // Mindless Rage: no fear while raging.
+        if (unit.passives.includes('mindlessRage')) {
+          unit.immune = [...(unit.immune ?? []), 'frightened'];
+          if (this.has(unit, 'frightened')) this.removeCondition(unit, 'frightened', 'rage');
+        }
+        break;
+      case 'reckless':
+        unit.reckless = true;
+        break;
+      case 'quicken':
+        unit.quickened = !unit.quickened;
+        unit.sorcery += unit.quickened ? -2 : 2;
+        result.armed = unit.quickened;
+        result.left = unit.sorcery;
+        break;
+      case 'stunningStrike':
+        unit.stunArmed = !unit.stunArmed;
+        result.armed = unit.stunArmed;
+        break;
+      case 'flurry':
+        unit.ki--;
+        unit.strikes = 2;
+        result.left = unit.ki;
+        break;
+      case 'patientDefense':
+        unit.ki--;
+        unit.dodging = true;
+        result.left = unit.ki;
+        break;
+      case 'stepOfTheWind':
+        unit.ki--;
+        unit.disengaged = true;
+        if (!this.has(unit, 'restrained') && !this.held(unit)) unit.movesLeft += unit.speed;
+        result.left = unit.ki;
+        break;
+      case 'wholeness':
+        unit.wholenessUsed = true;
+        result.healed = this.heal(unit, 3 * unit.level);
         break;
       case 'potion':
         unit.potions--;

@@ -2,7 +2,7 @@
 // A kind counts as met once the heroes have seen one in a fight (main.js calls meet).
 
 import { TEMPLATES } from './units.js';
-import { ELITE_TRAITS } from './combat.js';
+import { ELITE_TRAITS } from './elites.js';
 import { NODES, nodeName } from './campaign.js';
 import { levelById } from './maps.js';
 

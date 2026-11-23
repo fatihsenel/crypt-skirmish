@@ -29,14 +29,19 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 | --- | --- | --- |
 | Brannoc | Fighter | Second Wind, Extra Attack at level 5 |
 | | *or* Paladin | Divine Smite, Lay on Hands, Shield of Faith, Aura of Protection |
+| | *or* Barbarian | Rage, Reckless Attack, Danger Sense, a bonus Frenzy attack |
 | Ilsa | Wizard | Magic Missile, Burning Hands, Misty Step, Shield, then Fireball and Lightning Bolt |
 | | *or* Warlock | Eldritch Blast, Hex, Scorching Ray, Hellish Rebuke, temp HP on kills |
+| | *or* Sorcerer | Fire Bolt, Burning Hands, Scorching Ray, Quickened Spell, Elemental Affinity |
 | Wren | Rogue | Sneak Attack, Cunning Action, hides as a bonus action, spots traps |
 | | *or* Ranger | Longbow with Archery, Hunter's Mark, Colossus Slayer |
+| | *or* Monk | Martial Arts, Flurry of Blows, Deflect Missiles, Stunning Strike |
 | Maela | Cleric | Healing, Sacred Flame, Turn Undead, Spiritual Weapon |
 | | *or* Bard | Bardic Inspiration, Cutting Words, Vicious Mockery, Shatter, Healing Word, Fear |
+| | *or* Druid | Entangle, Thunderwave, Shillelagh, healing, Call Lightning |
 
-- Pick Paladin, Warlock, Ranger or Bard and rename the heroes under New campaign on the title screen.
+- Each hero has three classes to pick from. Pick one and rename the heroes under New campaign
+  on the title screen.
 - The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
   or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
 - At levels 4 and 8 (the Fighter at 6 too) each hero raises an ability by 2 in camp. The
@@ -49,6 +54,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - The Bard's Bardic Inspiration is a die given to an ally, used by itself on the first attack
   that misses, or save that fails, by no more than the die. Cutting Words spends a use and the
   Bard's reaction to take the die off a foe's hit, when it could turn it into a miss.
+- The Barbarian's Rage and Reckless Attack are on the action bar; Frenzy is a bonus attack
+  after the Attack action while raging.
+- The Monk's unarmed strike after the Attack action is free, ki pays for the rest, and an
+  armed Stunning Strike spends its ki on the next melee hit. The Sorcerer's Quickened Spell is
+  armed the same way and gives its points back if it isn't used that turn.
 
 ## Rules
 
@@ -203,7 +213,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory, and
-  from 23 November its party (and the weekly's) can bring the Bard.
+  from 23 November its party (and the weekly's) can bring the Bard, and from 30 November the
+  Barbarian, Sorcerer, Monk and Druid.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button. Watch your best replays the day's fastest win from
   the title, and its Copy link and Copy challenge link share it.
@@ -399,6 +410,13 @@ A few things differ from the SRD to keep the game simple:
   misses (only when it could turn it). Cutting Words only answers attack rolls.
 - Fear spares the Bard's allies and doesn't make foes drop anything. Greater Invisibility only
   changes attack rolls.
+- Rage lasts the whole fight and needs no attacks to keep it going. Ki and sorcery points come
+  back every fight, like Bardic Inspiration.
+- The Druid has no Wild Shape. Thunderwave knocks its targets prone instead of pushing them.
+  Entangle needs no concentration, covers a 15-ft square and holds for one turn. Call
+  Lightning's free bolts need no new slot while its concentration lasts.
+- Step of the Wind gives both Dash and Disengage for its one ki. Deflect Missiles only cuts
+  the damage, and the Monk doesn't throw it back.
 - Ready has two fixed triggers instead of one you name: a foe stepping into reach (a melee
   attack) or into view (a ranged one, or a spell). A readied spell needs no concentration.
 - Levers and portcullises are not from the SRD: pulling a lever is a free object interaction,

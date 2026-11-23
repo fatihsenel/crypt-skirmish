@@ -122,6 +122,9 @@ html, body {
 .tag.frightened, .cond.frightened { color: #c79bff; }
 .tag.restrained, .cond.restrained { color: #e8e2d0; }
 .tag.paralyzed, .cond.paralyzed { color: #b7d98a; }
+.tag.stunned, .cond.stunned { color: #ffe27a; }
+.tag.raging { color: #ff6a4a; font-weight: 700; }
+.tag.reckless { color: #ffa070; }
 .tag.rotting, .cond.rotting { color: #b8a060; }
 .tag.mocked, .cond.mocked { color: #f08aa0; }
 .passive-tag.cond { border-color: currentColor; }
@@ -1085,14 +1088,15 @@ b.loot, b.gold { color: var(--gold); }
 #title .title-tips input { width: 16px; height: 16px; accent-color: var(--gold); }
 #title .names summary { cursor: pointer; padding: 4px 0; }
 #title .names summary:hover { color: #e6cf98; }
-#title .names .name-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+/* Three classes a slot: as many slots across as fit their pickers (four on a wide screen, one on a phone). */
+#title .names .name-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 10px; margin-top: 10px; }
 #title .names .name-slot { display: flex; flex-direction: column; gap: 4px; text-align: left; }
 #title .names small { font-size: 12px; color: #d8cfc0; }
 #title .names .cls-pick {
-  display: inline-flex; align-self: flex-start; border: 1px solid #c9b07a66; border-radius: 6px; overflow: hidden;
+  display: flex; border: 1px solid #c9b07a66; border-radius: 6px; overflow: hidden;
 }
 #title .names .cls-pick button {
-  padding: 1px 8px; font: inherit; font-size: 12px; color: #d8cfc0; background: #00000080;
+  flex: 1 1 auto; min-width: 0; padding: 1px 6px; font: inherit; font-size: 12px; color: #d8cfc0; background: #00000080;
   border: 0; border-radius: 0; cursor: pointer;
 }
 #title .names .cls-pick button + button { border-left: 1px solid #c9b07a66; }
@@ -1103,7 +1107,6 @@ b.loot, b.gold { color: var(--gold); }
 }
 #title .names input::placeholder { color: #a99f90; opacity: 1; }
 #title .names input:focus { outline: 2px solid #c9b07a; outline-offset: -1px; }
-@media (max-width: 520px) { #title .names .name-grid { grid-template-columns: repeat(2, 1fr); } }
 #title .title-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 #title .title-buttons button { padding: 10px 20px; }
 #title-continue[hidden] { display: none; }

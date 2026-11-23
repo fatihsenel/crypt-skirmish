@@ -5,7 +5,7 @@
 // streak.
 
 import { newCampaign, heroUnit } from './campaign.js';
-import { MAX_LEVEL } from './units.js';
+import { MAX_LEVEL, CLASS_CHOICES } from './units.js';
 import { watchable } from './history.js';
 import { hash } from './dice.js';
 
@@ -48,6 +48,9 @@ export function prevDay(key) {
 /** The first day a daily can bring the Bard (earlier days keep the party they had). */
 export const BARD_FROM = '2026-11-23';
 
+/** The first day a daily can bring the Barbarian, Sorcerer, Monk or Druid. */
+export const THIRD_FROM = '2026-11-30';
+
 /** Today's crypt (or any day's): room, party level, class swaps and dice seed. */
 export function dailyPlan(key = dayKey()) {
   const seed = hash(`crypt-skirmish daily ${key}`);
@@ -58,6 +61,12 @@ export function dailyPlan(key = dayKey()) {
   if ((seed >>> 9) & 1) classes.R = 'A';
   if ((seed >>> 10) & 1) classes.W = 'K';
   if (key >= BARD_FROM && (seed >>> 11) & 1) classes.C = 'B';
+  // From THIRD_FROM each slot may bring its third class instead (a third of the time).
+  if (key >= THIRD_FROM) {
+    for (const [i, slot] of ['F', 'W', 'R', 'C'].entries()) {
+      if ((seed >>> (12 + i * 3)) % 3 === 0) classes[slot] = CLASS_CHOICES[slot][2];
+    }
+  }
   return { key, seed, node, level, classes };
 }
 

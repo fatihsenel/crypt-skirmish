@@ -21,6 +21,20 @@ export const TEMPLATES = {
       { name: 'Javelin', stat: 'str', damage: '1d6', reach: 6, projectile: 'javelin' },
     ],
   },
+  // The Barbarian (a Berserker) can take the Fighter's place: Rage, Reckless Attack and
+  // Frenzy. Unarmored Defense: 10 + DEX + CON. Rage lasts the whole fight (a house rule).
+  Z: {
+    name: 'Brannoc', cls: 'Barbarian', team: 'heroes', color: 0xb5562e,
+    hp: 35, ac: 15, speed: 6, prof: 2, level: 3,
+    features: ['rage', 'reckless'],
+    passives: ['dangerSense', 'frenzy'],
+    potions: 1,
+    stats: { str: 16, dex: 14, con: 16, int: 8, wis: 12, cha: 10 },
+    attacks: [
+      { name: 'Greataxe', stat: 'str', damage: '1d12', reach: 1 },
+      { name: 'Handaxe', stat: 'str', damage: '1d6', reach: 4, projectile: 'javelin' },
+    ],
+  },
   // The Paladin can take the Fighter's place in the party (chosen on the title screen).
   P: {
     name: 'Brannoc', cls: 'Paladin', team: 'heroes', color: 0xe0c060,
@@ -48,6 +62,23 @@ export const TEMPLATES = {
     stats: { str: 8, dex: 14, con: 12, int: 16, wis: 12, cha: 10 },
     attacks: [
       { name: 'Fire Bolt', stat: 'int', damage: '1d10', reach: 24, addMod: false, projectile: 'fire' },
+      { name: 'Dagger', stat: 'dex', damage: '1d4', reach: 1 },
+    ],
+  },
+  // The Sorcerer (Draconic bloodline) can take the Wizard's place: fewer spells, but
+  // Quickened Spell puts one on a bonus action. Draconic Resilience: AC 13 + DEX, +1 HP a level.
+  S: {
+    name: 'Ilsa', cls: 'Sorcerer', team: 'heroes', color: 0xd0532a,
+    hp: 23, ac: 15, speed: 6, prof: 2, level: 3,
+    castStat: 'cha',
+    spells: ['burningHands', 'scorchingRay', 'mistyStep', 'shield'],
+    slots: { 1: 4, 2: 2 },
+    autoShield: true,
+    features: ['quicken'],
+    sorcery: 3, // sorcery points: the sorcerer's level, back every fight
+    stats: { str: 8, dex: 14, con: 14, int: 10, wis: 12, cha: 16 },
+    attacks: [
+      { name: 'Fire Bolt', stat: 'cha', damage: '1d10', reach: 24, addMod: false, projectile: 'fire' },
       { name: 'Dagger', stat: 'dex', damage: '1d4', reach: 1 },
     ],
   },
@@ -79,6 +110,23 @@ export const TEMPLATES = {
     attacks: [
       { name: 'Shortsword', stat: 'dex', damage: '1d6', reach: 1 },
       { name: 'Shortbow', stat: 'dex', damage: '1d6', reach: 16, projectile: 'arrow' },
+    ],
+  },
+  // The Monk (Way of the Open Hand) can take the Rogue's place: Martial Arts, ki for Flurry
+  // of Blows, Patient Defense and Step of the Wind, and Deflect Missiles. Unarmored Defense:
+  // 10 + DEX + WIS. Keeps the Rogue's eye for traps.
+  M: {
+    name: 'Wren', cls: 'Monk', team: 'heroes', color: 0xd09a3a,
+    hp: 24, ac: 15, speed: 8, prof: 2, level: 3,
+    features: ['flurry', 'patientDefense', 'stepOfTheWind'],
+    ki: 3, // ki points: the monk's level, back every fight
+    stealth: 'trained',
+    passives: ['martialArts', 'deflectMissiles', 'openHand', 'trapSense'],
+    stats: { str: 10, dex: 16, con: 14, int: 10, wis: 14, cha: 8 },
+    attacks: [
+      { name: 'Unarmed Strike', stat: 'dex', damage: '1d4', reach: 1, unarmed: true },
+      { name: 'Shortsword', stat: 'dex', damage: '1d6', reach: 1 },
+      { name: 'Darts', stat: 'dex', damage: '1d4', reach: 4, projectile: 'arrow' },
     ],
   },
   // The Ranger (a Hunter) can take the Rogue's place: a longbow and Hunter's Mark, with
@@ -124,6 +172,21 @@ export const TEMPLATES = {
     stats: { str: 8, dex: 14, con: 14, int: 10, wis: 12, cha: 16 },
     attacks: [
       { name: 'Rapier', stat: 'dex', damage: '1d8', reach: 1 },
+    ],
+  },
+  // The Druid (Circle of the Land) can take the Cleric's place: Shillelagh and Produce
+  // Flame, Entangle and Thunderwave, Call Lightning at 5. No Wild Shape (a house rule).
+  D: {
+    name: 'Maela', cls: 'Druid', team: 'heroes', color: 0x5f9a3a,
+    hp: 24, ac: 15, speed: 6, prof: 2, level: 3, // hide armour + a wooden shield
+    dexCap: 2, // medium armour: at most +2 from DEX
+    castStat: 'wis',
+    spells: ['entangle', 'thunderwave', 'healingWord', 'cureWounds'],
+    slots: { 1: 4, 2: 2 },
+    stats: { str: 10, dex: 12, con: 14, int: 12, wis: 16, cha: 8 },
+    attacks: [
+      { name: 'Shillelagh', stat: 'wis', weapon: true, damage: '1d8', reach: 1 },
+      { name: 'Produce Flame', stat: 'wis', damage: '1d8', reach: 6, addMod: false, projectile: 'fire' },
     ],
   },
   g: {
@@ -404,6 +467,13 @@ export function createUnit(code, x, z, number = 1, total = 1) {
     deathWard: false,   // Death Ward: the next drop to 0 HP leaves 1 instead
     inspired: null,     // a bard's Bardic Inspiration on it: { die, by }, until used
     invisibleFrom: null, // the bard whose Greater Invisibility is on it
+    raging: false,      // a barbarian's Rage, once per fight, for the rest of it
+    reckless: false,    // Reckless Attack, until the barbarian's next turn
+    quickened: false,   // a sorcerer's Quickened Spell, armed for the next action spell
+    stunArmed: false,   // a monk's Stunning Strike, armed for the next melee hit
+    strikes: 0,         // Flurry of Blows' unarmed strikes left this turn
+    wholenessUsed: false,
+    storm: null,        // a druid's Call Lightning: { slot } while it lasts
     conditions: {},     // prone / poisoned / frightened (combat.js)
   };
 }
@@ -497,14 +567,51 @@ export const PROGRESSION = {
     7: { hp: 7, slots: { 4: 1 }, spells: ['greaterInvisibility'], note: 'Greater Invisibility and a 4th-level slot' },
     8: { hp: 7, stats: { cha: 2 }, slots: { 4: 2 }, note: 'Charisma 20, a fifth Bardic Inspiration and a second 4th-level slot' },
   },
+  Z: {
+    4: { hp: 9, stats: { str: 2 }, note: 'Strength 18: +1 to hit and damage' },
+    5: { hp: 9, prof: 3, extraAttack: 2, speed: 8, passives: ['extraAttack', 'fastMovement'], note: 'Extra Attack and Fast Movement (+10 ft of speed)' },
+    6: { hp: 9, passives: ['mindlessRage'], note: 'Mindless Rage: you can’t be frightened while raging' },
+    7: { hp: 9, feral: true, passives: ['feralInstinct'], note: 'Feral Instinct: advantage on initiative' },
+    8: { hp: 9, stats: { con: 2 }, note: 'Constitution 18: +8 hit points and +1 AC' },
+  },
+  S: {
+    4: { hp: 6, stats: { cha: 2 }, slots: { 2: 3 }, note: 'Charisma 18, a third 2nd-level slot' },
+    5: { hp: 6, prof: 3, slots: { 3: 2 }, spells: ['fireball'], note: 'Fireball and two 3rd-level slots' },
+    6: {
+      hp: 6, slots: { 3: 3 }, passives: ['elementalAffinity'],
+      note: 'Elemental Affinity: add your CHA to Fire Bolt, Burning Hands and Fireball damage; a third 3rd-level slot',
+    },
+    7: { hp: 6, slots: { 4: 1 }, spells: ['iceStorm'], note: 'Ice Storm and a 4th-level slot' },
+    8: { hp: 6, stats: { cha: 2 }, slots: { 4: 2 }, note: 'Charisma 20 and a second 4th-level slot' },
+  },
+  M: {
+    4: { hp: 7, stats: { dex: 2 }, note: 'Dexterity 18: +1 to hit, damage and AC' },
+    5: {
+      hp: 7, prof: 3, extraAttack: 2, dice: { 'Unarmed Strike': '1d6' }, passives: ['extraAttack'], features: ['stunningStrike'],
+      note: 'Extra Attack, Stunning Strike and a d6 Martial Arts die',
+    },
+    6: { hp: 7, speed: 9, features: ['wholeness'], note: 'Wholeness of Body (heal three times your level, once per fight) and +5 ft of speed' },
+    7: { hp: 7, passives: ['evasion'], note: 'Evasion: no damage from a DEX save you make, half from one you fail' },
+    8: { hp: 7, stats: { wis: 2 }, note: 'Wisdom 18: +1 AC and Stunning Strike DC' },
+  },
+  D: {
+    4: { hp: 7, stats: { wis: 2 }, slots: { 2: 3 }, note: 'Wisdom 18, a third 2nd-level slot' },
+    5: { hp: 7, prof: 3, slots: { 3: 2 }, spells: ['callLightning'], dice: { 'Produce Flame': '2d8' }, note: 'Call Lightning, two 3rd-level slots and a 2d8 Produce Flame' },
+    6: { hp: 7, slots: { 3: 3 }, note: 'A third 3rd-level slot' },
+    7: { hp: 7, slots: { 4: 1 }, spells: ['iceStorm'], note: 'Ice Storm and a 4th-level slot' },
+    8: { hp: 7, stats: { wis: 2 }, slots: { 4: 2 }, note: 'Wisdom 20 and a second 4th-level slot' },
+  },
 };
 
 export const MAX_LEVEL = 8;
 
 export const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 export const ABILITY_NAMES = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
-/** Classes whose armour counts their Dexterity (Mage Armor, leather): more DEX, more AC. */
-const DEX_AC = new Set(['W', 'K', 'R', 'A', 'B']);
+/**
+ * The abilities each class's AC counts: Dexterity in light armour (Mage Armor, leather, a
+ * druid's hide up to +2), and Unarmored Defense's CON (barbarian) or WIS (monk).
+ */
+const AC_STATS = { W: ['dex'], K: ['dex'], R: ['dex'], A: ['dex'], B: ['dex'], S: ['dex'], D: ['dex'], Z: ['dex', 'con'], M: ['dex', 'wis'] };
 
 /** The levels where class `code` raises an ability score (4 and 8; the Fighter 6 too). */
 export const asiLevels = (code) =>
@@ -521,11 +628,12 @@ function raise(unit, stat, n, level) {
   const before = abilityMod(unit.stats[stat]);
   unit.stats[stat] = Math.min(20, unit.stats[stat] + n);
   const gain = abilityMod(unit.stats[stat]) - before;
+  const cap = (m) => (stat === 'dex' ? Math.min(unit.dexCap ?? 99, m) : m);
   if (stat === 'con') {
     unit.maxHp += gain * level;
     unit.hp += gain * level;
   }
-  if (stat === 'dex' && DEX_AC.has(unit.code)) unit.ac += gain;
+  if (AC_STATS[unit.code]?.includes(stat)) unit.ac += cap(before + gain) - cap(before);
 }
 
 /**
@@ -540,7 +648,7 @@ export function applyLevel(unit, level, picks = {}) {
   for (let l = unit.level + 1; l <= Math.min(level, MAX_LEVEL); l++) {
     const g = table[l];
     if (!g) continue;
-    const { hp = 0, stats = {}, slots = {}, spells = [], passives = [], note, ac = 0, ...rest } = g;
+    const { hp = 0, stats = {}, slots = {}, spells = [], passives = [], features = [], dice = {}, note, ac = 0, ...rest } = g;
     // A higher CON gives every new level its extra hit point too.
     const more = hp + abilityMod(unit.stats.con) - baseCon;
     unit.maxHp += more;
@@ -550,6 +658,8 @@ export function applyLevel(unit, level, picks = {}) {
     for (const [k, v] of Object.entries(slots)) unit.slotMax[k] = v;
     unit.spells.push(...spells.filter((s) => !unit.spells.includes(s)));
     unit.passives.push(...passives.filter((p) => !unit.passives.includes(p)));
+    unit.features.push(...features.filter((p) => !unit.features.includes(p)));
+    for (const a of unit.attacks) if (dice[a.name]) a.damage = dice[a.name]; // a bigger die for an attack (a monk's fists)
     Object.assign(unit, rest);
     unit.level = l;
   }
@@ -557,11 +667,14 @@ export function applyLevel(unit, level, picks = {}) {
   if (unit.spells.includes('layOnHands')) unit.layOnHands = unit.layOnHandsMax = 5 * unit.level;
   // Bardic Inspiration: as many uses as the CHA modifier.
   if (unit.inspirationDie) unit.inspiration = Math.max(1, abilityMod(unit.stats.cha));
+  // Ki and sorcery points: one per level, back every fight.
+  if (unit.ki !== undefined) unit.ki = unit.level;
+  if (unit.sorcery !== undefined) unit.sorcery = unit.level;
   return unit;
 }
 
 /** Classes that can fill each hero slot: the first is the default. */
-export const CLASS_CHOICES = { F: ['F', 'P'], W: ['W', 'K'], R: ['R', 'A'], C: ['C', 'B'] };
+export const CLASS_CHOICES = { F: ['F', 'P', 'Z'], W: ['W', 'K', 'S'], R: ['R', 'A', 'M'], C: ['C', 'B', 'D'] };
 
 /** The class (template code) a party record plays in a slot. */
 export const classOf = (slot, rec) => (CLASS_CHOICES[slot]?.includes(rec?.cls) ? rec.cls : slot);

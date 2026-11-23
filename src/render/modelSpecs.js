@@ -68,6 +68,37 @@ export const SPECS = {
     recolor: { hue: 205, sat: 1.3, light: 0.95, from: [190, 350] },
     clips: { melee: '1H_Melee_Attack_Stab' },
   },
+  // The Barbarian: the horned barbarian as the pack made him, with the great axe and a
+  // handaxe swapped in to throw.
+  Z: {
+    file: 'Barbarian', height: 1.38,
+    show: ['2H_Axe'],
+    ranged: ['1H_Axe_Offhand'],
+    clips: { melee: '1H_Melee_Attack_Chop' },
+  },
+  // The Sorcerer: the mage in ember orange, a wand and her closed book.
+  S: {
+    file: 'Mage', height: 1.35,
+    show: ['1H_Wand', 'Spellbook'],
+    recolor: { hue: 24, sat: 1.5, light: 0.95, from: [190, 350] },
+    clips: { melee: '1H_Melee_Attack_Stab' },
+  },
+  // The Monk: the hooded rogue in saffron robes, empty-handed, darts swapped in to throw.
+  M: {
+    file: 'Rogue_Hooded', height: 1.28,
+    show: [],
+    ranged: ['Throwable'],
+    recolor: { hue: 46, sat: 1.5, light: 1.05 },
+    clips: { melee: '1H_Melee_Attack_Stab', arrow: 'Throw' },
+  },
+  // The Druid: the mage bareheaded in moss green, with the staff.
+  D: {
+    file: 'Mage', height: 1.33,
+    show: ['2H_Staff'],
+    hide: ['Mage_Hat'],
+    recolor: { hue: 112, sat: 1.1, light: 0.85, from: [190, 350] },
+    clips: { melee: '2H_Melee_Attack_Stab' },
+  },
   s: {
     file: 'Skeleton_Warrior', height: 1.3, blade: true,
     clips: { melee: '1H_Melee_Attack_Chop', walk: 'Walking_D_Skeletons', rise: 'Spawn_Ground_Skeletons' },

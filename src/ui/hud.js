@@ -18,6 +18,8 @@ import { isWeapon, isMelee, longReach } from '../game/combat.js';
 const $ = (sel) => document.querySelector(sel);
 /** Standard actions few turns need: they sit behind More with Grapple, Help and Give potion. */
 const RARE_ACTIONS = new Set(['disengage', 'search']);
+/** A monk's features that spend ki (the button shows what's left). */
+const KI_COST = new Set(['flurry', 'patientDefense', 'stepOfTheWind', 'stunningStrike']);
 const LOG_KEY = 'crypt-skirmish:log'; // '0' when the log beside the board is folded
 const NARROW = '(max-width: 900px)'; // the log is a panel of its own (style.css)
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -55,7 +57,7 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}${s.inspired ? ` (inspired +${s.inspired.total})` : ''}${s.paralyzed ? ' (paralysed: fails)' : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
-const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!' };
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!', stunned: 'is stunned!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
@@ -541,13 +543,16 @@ export class Hud {
         ? ` <span class="dis">disadvantage: ${esc(r.mods.dis.join(', '))}</span>`
         : '';
     const tag = r.opportunity ? '<b class="opp">Opportunity attack!</b><br>'
-      : r.readied ? '<b class="opp">Readied attack!</b><br>' : '';
+      : r.readied ? '<b class="opp">Readied attack!</b><br>'
+        : r.bonus ? `<b class="spell">${{ flurry: 'Flurry of Blows', martial: 'Martial Arts', frenzy: 'Frenzy' }[r.bonus]}</b> <span class="dice">bonus action</span><br>` : '';
     const sneak = (r.sneak ? ` incl. <b class="sneak">Sneak Attack +${r.sneak.total}</b> ${dice(r.sneak)}` : '')
       + (r.smite ? ` incl. <b class="spell">Divine Smite +${r.smite.total} radiant</b> ${dice(r.smite.roll)}${r.target.undead ? ' (undead +1d8)' : ''} <span class="dice">${ordinal(r.smite.slot)}-level slot</span>` : '')
       + (r.mark ? ` incl. <b class="spell">${r.mark.spell === 'hex' ? 'Hex' : 'Hunter’s Mark'} +${r.mark.total}</b> ${dice(r.mark)}` : '')
       + (r.colossus ? ` incl. <b class="sneak">Colossus Slayer +${r.colossus.total}</b> ${dice(r.colossus)}` : '')
       + (r.strike ? ` incl. <b class="spell">Divine Strike +${r.strike.total} radiant</b> ${dice(r.strike)}` : '')
-      + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '');
+      + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '')
+      + (r.resisted ? ` <b class="spell">Rage</b> halves it.` : '')
+      + (r.deflect ? ` <b class="spell">Deflect Missiles</b> takes off ${r.deflect.total} ${dice(r.deflect)}.` : '');
     const did = r.crit ? `crits ${who(r.target)}${r.attack.damage ? ` for ${r.damage}` : ''}`
       : r.hit && !r.shielded && !r.fumble ? `hits ${who(r.target)}${r.attack.damage ? ` for ${r.damage}` : ''}`
         : `misses ${who(r.target)}`;
@@ -568,6 +573,15 @@ export class Hud {
     }
     this.log(`${who(r.target)} <span class="dice">${x.stat.toUpperCase()} save ${x.total} vs DC ${x.dc}</span>: ` +
       (x.success ? `<b class="hit">shrugs it off</b>.` : `<b class="cond ${x.condition}">${CONDITION_VERB[x.condition]}</b>`));
+  }
+
+  /** A monk's Stunning Strike or Open Hand Technique, after the hit. */
+  logTechnique(r) {
+    for (const [x, name] of [[r.stun, 'Stunning Strike'], [r.topple, 'Open Hand']]) {
+      if (!x) continue;
+      this.log(`<b class="spell">${name}</b>: ${who(r.target)} <span class="dice">${x.stat.toUpperCase()} save ${x.total} vs DC ${x.dc}</span>: ` +
+        (x.success ? `<b class="hit">shrugs it off</b>.` : `<b class="cond ${x.condition}">${CONDITION_VERB[x.condition]}</b>`));
+    }
   }
 
   logStench(r) {
@@ -615,7 +629,7 @@ export class Hud {
       save: name === 'paralyzed' ? 'shakes off the paralysis.' : `shakes off the fear.`,
       concentration: 'is no longer frightened: the spell ended.',
       expired: name === 'poisoned' ? 'is no longer poisoned.' : name === 'frightened' ? 'is no longer frightened.'
-        : name === 'restrained' ? 'tears free of the web.' : name === 'rotting' ? 'is free of the rot.'
+        : name === 'restrained' ? 'tears free.' : name === 'rotting' ? 'is free of the rot.'
           : name === 'mocked' ? 'shakes off the mockery.' : name === 'paralyzed' ? 'can move again.' : 'recovers.',
     }[cause] ?? 'recovers.';
     this.log(`${who(unit)} ${text}`, 'sys');
@@ -672,7 +686,8 @@ export class Hud {
 
   logSpell(r) {
     if (r.readied) this.log(`<b class="opp">Readied spell!</b> ${who(r.target)} steps into ${who(r.caster)}’s view.`);
-    const slot = r.slot ? `<span class="dice">${ordinal(r.slot)}-level slot</span>` : '<span class="dice">cantrip</span>';
+    const slot = (r.slot ? `<span class="dice">${ordinal(r.slot)}-level slot</span>` : '<span class="dice">cantrip</span>')
+      + (r.quickened ? ' <span class="dice">Quickened: bonus action</span>' : '');
     const name = `<b class="spell">${esc(r.spell.name)}</b>`;
     if (r.id === 'shield') {
       this.log(`${who(r.caster)} casts ${name} as a reaction: AC +5 until the start of the next turn. ${slot}`);
@@ -758,6 +773,21 @@ export class Hud {
     } else if (r.id === 'bardicInspiration') {
       this.log(`${who(r.caster)} gives ${who(r.target)} <b class="spell">Bardic Inspiration</b>: a d${r.die} for a near miss or a failed save. ` +
         `<span class="dice">bonus action, ${r.left} left</span>`);
+    } else if (r.id === 'thunderwave') {
+      const saves = r.saves.map((s) => `${who(s.unit)} <span class="dice">CON ${s.total}</span> ` +
+        (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b> and is knocked prone`)).join('<br>');
+      this.log(`${who(r.caster)} casts ${name} <span class="dice">${r.roll.total} thunder [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${slot}<br>${saves}`);
+    } else if (r.id === 'entangle') {
+      const saves = r.saves.length ? r.saves.map((s) => saveText(s, 'is restrained')).join('<br>') : '<span class="miss">The weeds catch no one.</span>';
+      this.log(`${who(r.caster)} casts ${name}, STR save DC ${r.dc}. ${slot}<br>${saves}`);
+    } else if (r.id === 'callLightning') {
+      const saves = r.saves.length
+        ? r.saves.map((s) => `${who(s.unit)} <span class="dice">DEX ${s.total}</span> ` +
+            (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b>`) +
+            (s.evasion ? ' <span class="dice">Evasion</span>' : '')).join('<br>')
+        : '<span class="miss">The bolt strikes no one.</span>';
+      const how = r.again ? 'calls another bolt from the storm' : `casts ${name}`;
+      this.log(`${who(r.caster)} ${how} <span class="dice">${r.roll.total} lightning [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. ${r.again ? '<span class="dice">no slot</span>' : slot}<br>${saves}`);
     } else if (r.id === 'shatter') {
       const saves = r.saves.length
         ? r.saves.map((s) => `${who(s.unit)} <span class="dice">CON ${s.total}</span> ` +
@@ -833,6 +863,14 @@ export class Hud {
       cunningHide: `uses <b>Cunning Action</b> to Hide: <b>Stealth ${r.total}</b> ${stealthRoll(r)}.`,
       nimbleHide: 'ducks out of sight (<b>Nimble Escape</b>) and hides.',
       aggressive: 'roars and charges (<b>Aggressive</b>).',
+      rage: 'flies into a <b class="crit">Rage</b>: +2 melee damage, half damage from weapons, for the rest of the fight.',
+      reckless: 'attacks <b>recklessly</b>: advantage on Strength melee attacks this turn, and attacks against them have advantage.',
+      quicken: r.armed ? `readies a <b class="spell">Quickened Spell</b> <span class="dice">2 sorcery points, ${r.left} left</span>.` : `lets the Quickened Spell go <span class="dice">back to ${r.left} sorcery points</span>.`,
+      stunningStrike: r.armed ? 'readies a <b class="spell">Stunning Strike</b> for the next melee hit.' : 'lets the Stunning Strike go.',
+      flurry: `unleashes a <b class="spell">Flurry of Blows</b>: two unarmed strikes <span class="dice">1 ki, ${r.left} left</span>.`,
+      patientDefense: `takes up <b class="spell">Patient Defense</b>: attacks against them have disadvantage <span class="dice">1 ki, ${r.left} left</span>.`,
+      stepOfTheWind: `moves with the <b class="spell">Step of the Wind</b>: Dash and Disengage <span class="dice">1 ki, ${r.left} left</span>.`,
+      wholeness: `uses <b>Wholeness of Body</b> and regains <b class="heal">${r.healed} HP</b>.`,
       search: !r.checks?.length
         ? 'searches the shadows but finds nothing.'
         : 'searches the shadows: ' + r.checks.map((c) =>
@@ -931,6 +969,8 @@ export class Hud {
         <span>AC <b>${game.acOf(u)}</b></span>
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span data-hint="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
+        ${u.ki !== undefined ? `<span data-hint="Ki points: your level, back every fight">Ki <b>${u.ki}</b></span>` : ''}
+        ${u.sorcery !== undefined ? `<span data-hint="Sorcery points: your level, back every fight">Sorcery <b>${u.sorcery}</b></span>` : ''}
       </div>
       ${u.passives.length || u.items?.length || conds.length || u.marked || u.inspired || u.invisibleFrom || u.concentrating ? `<div class="passives">${u.faithFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.shieldOfFaith.desc)}">Shield of Faith</span>` : ''}${u.inspired ? `<span class="passive-tag item" data-hint="${esc(SPELLS.bardicInspiration.desc)}">Inspired d${u.inspired.die}</span>` : ''}${u.invisibleFrom ? `<span class="passive-tag item" data-hint="${esc(SPELLS.greaterInvisibility.desc)}">Invisible</span>` : ''}${u.concentrating ? `<span class="passive-tag item" data-hint="${esc(SPELLS[u.concentrating].desc)}">Concentrating: ${esc(SPELLS[u.concentrating].name)}</span>` : ''}${u.marked ? `<span class="passive-tag cond" data-hint="${esc(SPELLS[markOf(u)].desc)}">${esc(SPELLS[markOf(u)].name)}</span>` : ''}${conds.map((c) =>
         `<span class="passive-tag cond ${c}" data-hint="${esc(CONDITION_INFO[c])}">${esc(c[0].toUpperCase() + c.slice(1))}</span>`).join('')}${u.passives.map((p) =>
@@ -974,13 +1014,15 @@ export class Hud {
     const group = (label, buttons) =>
       `<div class="group"><span class="group-label">${label}</span><div class="buttons">${buttons.join('')}</div></div>`;
     const attackWhy = game.canAttack(u) ? null : 'No attacks left this turn.';
+    // Past the Attack action: a bonus-action strike (Martial Arts, Flurry of Blows, Frenzy) if one fits.
+    const strikeWhy = (atk) => (attackWhy && !game.bonusStrike(u, atk) ? attackWhy : null);
 
     const atks = u.attacks.map((atk, i) => button({
       kind: 'attack', id: i, name: atk.name,
-      sub: `${signed(game.toHitBonus(u, atk))} · ${atk.damage} · ${atk.reach * 5} ft`,
+      sub: `${attackWhy && game.bonusStrike(u, atk) ? 'bonus · ' : ''}${signed(game.toHitBonus(u, atk))} · ${atk.damage} · ${atk.reach * 5} ft`,
       tip: this.attackTip(game, u, atk),
-      problem: attackWhy,
-      disabled: !!attackWhy,
+      problem: strikeWhy(atk),
+      disabled: !!strikeWhy(atk),
       active: selected?.kind === 'attack' && selected.attack === atk,
     }));
     if (u.passives.includes('divineSmite')) {
@@ -1072,11 +1114,15 @@ export class Hud {
     for (const id of game.actionsFor(u)) {
       const a = ACTIONS[id];
       const problem = game.actionProblem(u, id);
+      const armed = (id === 'quicken' && u.quickened) || (id === 'stunningStrike' && u.stunArmed) || (id === 'reckless' && u.reckless);
+      const cost = KI_COST.has(id) ? ` · ${u.ki} ki` : id === 'quicken' && !armed ? ` · ${u.sorcery} pts` : '';
       (RARE_ACTIONS.has(id) ? more : acts).push(button({
-        kind: id === 'ready' ? 'ready' : 'action', id, name: a.name, cls: a.time === 'bonus' ? 'bonus' : 'act',
-        sub: (a.time === 'bonus' ? 'bonus' : 'action') + (id === 'potion' ? ` · ${u.potions} left` : ''),
+        kind: id === 'ready' ? 'ready' : 'action', id, name: armed ? `${a.name.split(' ')[0]} armed` : a.name,
+        cls: `${a.time === 'bonus' ? 'bonus' : a.time === 'free' ? 'spell' : 'act'} ${armed ? 'armed' : ''}`,
+        sub: armed ? (id === 'reckless' ? 'this turn' : 'click to cancel')
+          : (a.time === 'bonus' ? 'bonus' : a.time === 'free' ? 'free' : 'action') + (id === 'potion' ? ` · ${u.potions} left` : '') + cost,
         tip: {
-          kind: `${a.time === 'bonus' ? 'Bonus action' : 'Action'}${a.feature ? ' · class feature' : ''}`,
+          kind: `${a.time === 'bonus' ? 'Bonus action' : a.time === 'free' ? 'Free, no action' : 'Action'}${a.feature ? ' · class feature' : ''}`,
           chips: [id === 'potion' ? `${u.potions} left` : null, a.range ? `${a.range * 5} ft` : null,
             id === 'ready' ? 'melee: into reach' : null, id === 'ready' ? 'ranged: into view' : null].filter(Boolean),
           desc: a.desc,
@@ -1084,7 +1130,7 @@ export class Hud {
         },
         problem: problem && `${problem}.`,
         disabled: !!problem,
-        active: id === 'ready' && selected?.kind === 'ready',
+        active: armed || (id === 'ready' && selected?.kind === 'ready'),
       }));
     }
 

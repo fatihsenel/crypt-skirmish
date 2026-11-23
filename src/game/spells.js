@@ -66,6 +66,18 @@ export class Spellcasting {
     });
   }
 
+  /** Who a Thunderwave from `caster` catches: everyone next to it, friend or foe. */
+  thunderVictims(caster) {
+    return this.units.filter((u) => u.alive && u !== caster && gridDistance(u, caster) <= SPELLS.thunderwave.radius);
+  }
+
+  /** Elemental Affinity: a draconic sorcerer adds CHA to a fire spell's damage. */
+  affinity(caster, roll) {
+    if (!caster.passives?.includes('elementalAffinity')) return roll;
+    const mod = abilityMod(caster.stats.cha);
+    return { ...roll, bonus: (roll.bonus ?? 0) + mod, total: roll.total + mod, affinity: mod };
+  }
+
   /** Mass Healing Word: up to six hurt allies (or self) within range and sight. */
   massHealTargets(caster) {
     const s = SPELLS.massHealingWord;
@@ -91,14 +103,18 @@ export class Spellcasting {
     if (this.over) return 'The battle is over';
     if (s.time === 'reaction') return 'Cast automatically as a reaction';
     if (caster.turned) return 'Turned: can only flee';
-    if (!readied && s.time === 'action' && caster.actionUsed) return 'Action already used this turn';
-    if (!readied && s.time === 'bonus' && caster.bonusUsed) return 'Bonus action already used this turn';
+    const quick = !readied && s.time === 'action' && caster.quickened; // Quickened Spell: a bonus action
+    if (!readied && s.time === 'action' && !quick && caster.actionUsed) return 'Action already used this turn';
+    if (!readied && (s.time === 'bonus' || quick) && caster.bonusUsed) return 'Bonus action already used this turn';
+    if (!readied && s.time === 'action' && s.level > 0 && caster.quickCast) return 'After a Quickened spell, your action can cast only a cantrip';
+    if (quick && s.level > 0 && caster.leveledCast) return 'You cast a spell this turn: a Quickened one must be a cantrip';
     const free = readied || this.freeRecast(caster, id);
     const again = id === 'spiritualWeapon' && free; // strikes again for free
     if (!free && !this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
     if (s.pool && !(caster.layOnHands > 0)) return 'Your healing pool is spent';
     if (s.uses && !(caster.inspiration > 0)) return 'No Bardic Inspiration left this fight';
     if (s.targeting === 'self') {
+      if (id === 'thunderwave' && !this.thunderVictims(caster).length) return 'No one within 5 ft';
       if (id === 'massHealingWord' && !this.massHealTargets(caster).length) return 'No one nearby is hurt';
       return null;
     }
@@ -183,7 +199,7 @@ export class Spellcasting {
    * moves on for free in the SRD; here every new mark costs a slot, for balance.)
    */
   freeRecast(caster, id) {
-    return id === 'spiritualWeapon' && !!caster.spiritWeapon;
+    return (id === 'spiritualWeapon' && !!caster.spiritWeapon) || (id === 'callLightning' && !!caster.storm);
   }
 
   /**
@@ -237,19 +253,24 @@ export class Spellcasting {
     const spell = SPELLS[id];
     this.cause = spell.name;
     this.via = 'spell';
+    const quick = readied === null && spell.time === 'action' && caster.quickened;
     if (readied === null) { // a readied spell's action went on Ready
-      if (spell.time === 'action') caster.actionUsed = true;
+      if (spell.time === 'action' && !quick) caster.actionUsed = true;
       else caster.bonusUsed = true;
     }
+    if (quick) {
+      caster.quickened = false;
+      caster.quickCast = true;
+    } else if (spell.time === 'action' && spell.level > 0) caster.leveledCast = true;
     const again = readied === null && this.freeRecast(caster, id);
-    const slot = readied ?? (again ? caster.spiritWeapon.slot : this.spendSlot(caster, spell.level));
+    const slot = readied ?? (again ? (caster.storm ?? caster.spiritWeapon).slot : this.spendSlot(caster, spell.level));
     const upcast = Math.max(0, slot - spell.level);
     this.reveal(caster, 'spell');
     const focus = this.rules >= 2 && spell.concentration; // rules 2: one concentration spell at a time
     // A new mark moves the old one itself (the case below clears its tag).
-    const moving = ['hex', 'huntersMark'].includes(id) && caster.concentrating === id;
+    const moving = ['hex', 'huntersMark', 'callLightning'].includes(id) && caster.concentrating === id;
     if (focus && !moving) this.endConcentration(caster, 'switch');
-    const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot, ...(readied !== null && { readied: true }) };
+    const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot, ...(readied !== null && { readied: true }), ...(quick && { quickened: true }) };
 
     switch (id) {
       case 'magicMissile': {
@@ -264,7 +285,7 @@ export class Spellcasting {
       case 'burningHands': {
         const dir = directionTo(caster, target);
         const tiles = coneTiles(this.grid, caster, dir, spell.range);
-        const roll = rollExpr(`${3 + upcast}d6`, { rng: this.rng });
+        const roll = this.affinity(caster, rollExpr(`${3 + upcast}d6`, { rng: this.rng }));
         const dc = this.spellDC(caster);
         const victims = this.blastVictims(caster, tiles);
         Object.assign(result, { dir, tiles, roll, dc });
@@ -307,7 +328,7 @@ export class Spellcasting {
       }
       case 'fireball': {
         const tiles = areaTiles(this.grid, target, spell.radius);
-        const roll = rollExpr(`${8 + upcast}d6`, { rng: this.rng });
+        const roll = this.affinity(caster, rollExpr(`${8 + upcast}d6`, { rng: this.rng }));
         const dc = this.spellDC(caster);
         const victims = this.blastVictims(caster, tiles);
         Object.assign(result, { center: { x: target.x, z: target.z }, tiles, roll, dc });
@@ -337,6 +358,45 @@ export class Spellcasting {
         const victims = this.blastVictims(caster, tiles);
         Object.assign(result, { center: { x: target.x, z: target.z }, tiles, roll, dc });
         result.saves = this.areaSaves(victims, dc, roll.total, 'con');
+        this.emit('spell', result);
+        for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        break;
+      }
+      case 'thunderwave': {
+        const roll = rollExpr(`${2 + upcast}d8`, { rng: this.rng });
+        const dc = this.spellDC(caster);
+        const victims = this.thunderVictims(caster);
+        Object.assign(result, { center: { x: caster.x, z: caster.z }, tiles: victims.map((v) => ({ x: v.x, z: v.z })), roll, dc });
+        result.saves = this.areaSaves(victims, dc, roll.total, 'con');
+        this.emit('spell', result);
+        for (const s of result.saves) {
+          this.applyDamage(s.unit, s.damage, caster);
+          if (!s.success && s.unit.alive) this.addCondition(s.unit, 'prone', { by: caster });
+          this.alert(s.unit, 'hurt');
+        }
+        break;
+      }
+      case 'entangle': {
+        const tiles = areaTiles(this.grid, target, spell.radius);
+        const dc = this.spellDC(caster);
+        const victims = this.blastVictims(caster, tiles);
+        Object.assign(result, { center: { x: target.x, z: target.z }, tiles, dc });
+        result.saves = victims.map((v) => this.save(v, 'str', dc));
+        this.emit('spell', result);
+        for (const s of result.saves) {
+          if (!s.success) this.addCondition(s.unit, 'restrained', { turns: spell.turns, by: caster });
+          this.alert(s.unit, 'hurt');
+        }
+        break;
+      }
+      case 'callLightning': {
+        const tiles = areaTiles(this.grid, target, spell.radius);
+        const roll = rollExpr(`${3 + upcast}d10`, { rng: this.rng });
+        const dc = this.spellDC(caster);
+        const victims = this.blastVictims(caster, tiles);
+        caster.storm = { slot };
+        Object.assign(result, { center: { x: target.x, z: target.z }, tiles, roll, dc, again });
+        result.saves = this.areaSaves(victims, dc, roll.total);
         this.emit('spell', result);
         for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
         break;

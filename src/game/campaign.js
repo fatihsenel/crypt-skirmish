@@ -8,7 +8,7 @@ import {
 import { ITEMS, applyItems, relicFrom, cleanRelics } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
-import { ELITE_TRAITS, eliteTrait, RULES } from './combat.js';
+import { ELITE_TRAITS, eliteTrait, RULES } from './elites.js';
 import { goldFor, cleanGold } from './shop.js';
 
 export const SAVE_VERSION = 1;

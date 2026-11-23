@@ -4,6 +4,7 @@
 // Runs are split over worker threads, one per core; JOBS=n sets how many (JOBS=1: one thread).
 // Env: SEED, DIFFICULTY (story|normal|hard), PALADIN=1 (a Paladin in the Fighter's slot),
 // RANGER=1 (a Ranger in the Rogue's), WARLOCK=1 (a Warlock in the Wizard's), BARD=1 (a Bard in the Cleric's),
+// BARBARIAN=1, SORCERER=1, MONK=1, DRUID=1 (each slot's third class),
 // RULES=1 (the first rules: no death saves, concentration, long range or creature cover).
 // Rooms default to the act-two route; "route" chains catacombs → vault|well → barrow the
 // way the campaign does (short rests between fights, a long rest at the well).
@@ -21,6 +22,7 @@ import { availableParallelism } from 'node:os';
 
 const CLASSES = {
   ...(process.env.PALADIN && { F: 'P' }), ...(process.env.RANGER && { R: 'A' }), ...(process.env.WARLOCK && { W: 'K' }), ...(process.env.BARD && { C: 'B' }),
+  ...(process.env.BARBARIAN && { F: 'Z' }), ...(process.env.SORCERER && { W: 'S' }), ...(process.env.MONK && { R: 'M' }), ...(process.env.DRUID && { C: 'D' }),
 };
 /** TIER=N plays every fight at New Game+ tier N (0 by default). */
 const TIER = Math.max(0, Math.floor(Number(process.env.TIER) || 0));
@@ -154,6 +156,10 @@ function heroOpening(game, u) {
   if (u.code === 'A') rangerOpening(game, u);
   if (u.code === 'K') warlockOpening(game, u);
   if (u.code === 'B') bardOpening(game, u, heroes, hurt);
+  if (u.code === 'Z') barbarianOpening(game, u);
+  if (u.code === 'S') sorcererOpening(game, u);
+  if (u.code === 'M') monkOpening(game, u);
+  if (u.code === 'D') druidOpening(game, u, heroes, hurt);
   if (!u.actionUsed && u.hp < u.maxHp * 0.35 && u.potions > 0 && !game.actionProblem(u, 'potion')) game.doAction(u, 'potion');
 }
 
@@ -245,6 +251,66 @@ function bardOpening(game, u, heroes, hurt) {
   }
 }
 
+/** Rage once a foe is near, and Reckless Attack while healthy. */
+function barbarianOpening(game, u) {
+  const near = game.knownFoes(u).some((e) => !e.unaware && gridDistanceTo(u, e) <= u.speed + 1);
+  if (!near) return;
+  if (!game.actionProblem(u, 'rage')) game.doAction(u, 'rage');
+  if (u.hp > u.maxHp * 0.4 && !game.actionProblem(u, 'reckless')) game.doAction(u, 'reckless');
+}
+
+/** Fireball (or Ice Storm) on a crowd; otherwise a Quickened Scorching Ray at a tough foe, and Fire Bolt with the action. */
+function sorcererOpening(game, u) {
+  if (u.actionUsed) return;
+  const p = (u.slots[3] ?? 0) > 0 ? bestFireball(game, u) : null;
+  const hail = p ? null : bestFireball(game, u, 'iceStorm');
+  if (p) return void game.castSpell(u, 'fireball', p);
+  if (hail) return void game.castSpell(u, 'iceStorm', hail);
+  const tough = game.spellTargets(u, 'scorchingRay').filter((e) => !e.unaware && e.hp >= 15).sort((a, b) => b.hp - a.hp)[0];
+  if (!tough) return;
+  if (!u.bonusUsed && !game.actionProblem(u, 'quicken')) game.doAction(u, 'quicken');
+  game.castSpell(u, 'scorchingRay', tough);
+}
+
+/** Stunning Strike armed against a tough foe; Patient Defense when badly hurt and cornered. */
+function monkOpening(game, u) {
+  const foes = game.knownFoes(u).filter((e) => !e.unaware);
+  if (u.features.includes('stunningStrike') && !u.stunArmed && u.ki >= 2 && foes.some((e) => (e.cr ?? 0) >= 1 && gridDistanceTo(u, e) <= u.speed + 1)) {
+    game.doAction(u, 'stunningStrike');
+  }
+}
+
+/** Healing Word for the hurt; then Call Lightning, Ice Storm, Entangle or Thunderwave on a crowd. */
+function druidOpening(game, u, heroes, hurt) {
+  for (const h of hurt) if (!game.spellProblem(u, 'healingWord', h)) { game.castSpell(u, 'healingWord', h); break; }
+  if (u.actionUsed || !game.knownFoes(u).some((e) => !e.unaware)) return;
+  // A storm already overhead: its bolt is free, so even one foe is worth it.
+  if (u.storm) {
+    const t = game.knownFoes(u).filter((e) => !e.unaware && !game.spellProblem(u, 'callLightning', e)
+      && !game.living('heroes').some((h) => gridDistanceTo(h, e) <= 1)).sort((x, y) => y.hp - x.hp)[0];
+    const p = bestFireball(game, u, 'callLightning') ?? (t && { x: t.x, z: t.z });
+    if (p) return void game.castSpell(u, 'callLightning', p);
+  }
+  for (const id of ['callLightning', 'iceStorm', 'entangle']) {
+    if (id === 'entangle' && u.storm) break; // the storm's free bolt is better
+    const p = bestFireball(game, u, id);
+    if (p) return void game.castSpell(u, id, p);
+  }
+  const around = game.thunderVictims(u);
+  if (around.length >= 2 && around.every((v) => v.team !== u.team) && !game.spellProblem(u, 'thunderwave')) game.castSpell(u, 'thunderwave');
+}
+
+/** After the AI's turn: Flurry of Blows, Martial Arts or Frenzy at a foe next to it. */
+function bonusStrikes(game, u) {
+  if (u.tookAttack && !u.bonusUsed && u.ki > 0 && game.isAdjacentToEnemy(u) && !game.actionProblem(u, 'flurry')) game.doAction(u, 'flurry');
+  for (let i = 0; i < 3 && !game.over && u.alive && game.bonusStrike(u); i++) {
+    const foe = game.enemiesOf(u).filter((e) => gridDistanceTo(u, e) <= 1).sort((a, b) => a.hp - b.hp)[0];
+    const attack = foe && u.attacks.find((a) => !game.attackProblem(u, foe, a));
+    if (!attack) break;
+    game.attack(u, foe, attack);
+  }
+}
+
 const gridDistanceTo =(a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 function playTurn(game, u) {
@@ -255,6 +321,7 @@ function playTurn(game, u) {
     if (step.type === 'end') break;
     apply(game, u, step);
   }
+  if (u.team === 'heroes' && !game.over && u.alive) bonusStrikes(game, u);
 }
 
 /** One fight. Returns { won, rounds, downed, state }. */

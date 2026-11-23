@@ -206,6 +206,7 @@ class Sfx {
   step(code) {
     code = SOUND_ALIAS[code] ?? code; // a ghast sounds like a ghoul, a spider like a rat
     if (code === 'P') code = 'F'; // a paladin clanks like a fighter
+    if (code === 'M') code = 'R'; // a monk's bare feet barely sound
     this.play((t) => {
       if (code === 'F' || code === 'C') {
         this.noise(t, { dur: 0.09, filter: 'lowpass', freq: 380, gain: 0.35 });

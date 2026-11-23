@@ -9,7 +9,7 @@
 
 import { NODES, HERO_CODES } from './campaign.js';
 import { classOf } from './units.js';
-import { ELITE_TRAITS } from './combat.js';
+import { ELITE_TRAITS } from './elites.js';
 
 export const ACHIEVEMENTS_KEY = 'crypt-skirmish:achievements';
 
@@ -152,9 +152,9 @@ export const ACHIEVEMENTS = [
     on: 'run', test: ({ state }) => heroTotal(state.stats?.heroes, 'downed') === 0,
   },
   {
-    id: 'new-blood', name: 'New blood', desc: 'Win a campaign with a Paladin, a Ranger or a Warlock in the party.',
+    id: 'new-blood', name: 'New blood', desc: 'Win a campaign with a hero who isn’t one of the first four classes.',
     on: 'run',
-    test: ({ state }) => HERO_CODES.some((c) => ['P', 'A', 'K'].includes(classOf(c, state.party?.[c]))),
+    test: ({ state }) => HERO_CODES.some((c) => classOf(c, state.party?.[c]) !== c),
   },
   {
     id: 'daily', name: 'Daily delver', desc: 'Win a daily crypt.',
