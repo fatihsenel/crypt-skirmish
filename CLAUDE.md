@@ -169,7 +169,12 @@ server on 5173.
   replay), `'*'` a brazier (the `brazier` command, `tipBrazier`; its coals are `this.fire`, a
   `burn` move step), `'!'` a lever and `':'` a portcullis (the `lever` command, `pullLever`; down,
   `grid.gates` are solid but see-through), `'_'` a chasm (`grid.chasms`: solid for everyone,
-  fliers too, but see-through and no cover). Adding any of these to an existing room changes its
+  fliers too, but see-through and no cover), `'['` a stair down and `']'` a stair up (a room on
+  two floors: the n-th `[` is linked to the n-th `]` in `grid.links`, one step apart through
+  `neighbors`, so paths, the AI and sound use them; `grid.lower` is the lower hall, drawn shaded;
+  a `stairs` move step, `takeStairs` in `unitView.js` walking each flight the board drew (`flightAt`); a hero standing on a stair sees from its
+  other end too, in `updateVision`, but rules' sight is unchanged). Keep a wall two tiles thick between the
+  floors, and the stairs against a far (`-x` or `-z`) wall so the camera sees them. Adding any of these to an existing room changes its
   paths or dice, so its old saves and links fall back. The last room has `final` and an
   `outro`; an earlier act's boss has `actBreak`, and a save that finished at it before the
   next act existed is reopened by `parseSave`.

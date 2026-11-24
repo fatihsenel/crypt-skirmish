@@ -1185,6 +1185,7 @@ export class Game extends Spellcasting {
    *   { type: 'walk', path }  { type: 'door', x, z }
    *   { type: 'opportunity', result, at }  { type: 'trap', result }  { type: 'burn', result }
    *   { type: 'readied', result, at } (a readied hero's attack as the mover steps into it)
+   *   { type: 'stairs', from, to, down } (down or up a stair to the room's other floor)
    * for the controller to animate in order; or null if the move is illegal.
    */
   move(unit, x, z) {
@@ -1234,7 +1235,12 @@ export class Game extends Spellcasting {
         steps.push({ type: 'door', x: to.x, z: to.z });
         this.emit('door', { unit, x: to.x, z: to.z });
       }
-      walked.push(to);
+      if (gridDistance(from, to) > 1) { // a stair to the other floor: down out of sight, up at its other end
+        flush(from);
+        steps.push({ type: 'stairs', from: { x: from.x, z: from.z }, to: { x: to.x, z: to.z }, down: !this.grid.lower.has(key(from.x, from.z)) });
+        this.emit('stairs', { unit, from, to });
+        walked = [to];
+      } else walked.push(to);
       const trap = this.grid.traps.get(key(to.x, to.z));
       if (trap && !trap.sprung && unit.team === 'heroes') {
         flush(to);
@@ -1541,6 +1547,8 @@ export class Game extends Spellcasting {
     const far = this.rules >= 2 ? longReach(attack) : attack.reach;
     if (d > far) return `Out of range (${d * 5} ft, ${attack.name} reaches ${far * 5} ft${far > attack.reach ? ' at long range' : ''})`;
     if (d > 1 && !this.grid.lineOfSight(attacker.x, attacker.z, target.x, target.z)) {
+      const lower = this.grid.lower;
+      if (lower.size && lower.has(key(attacker.x, attacker.z)) !== lower.has(key(target.x, target.z))) return 'On the other floor: take the stairs first';
       return 'No line of sight';
     }
     return null;

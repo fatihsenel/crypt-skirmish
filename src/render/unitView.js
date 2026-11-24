@@ -146,10 +146,11 @@ export class UnitView {
           o.material.transparent = true;
           this.fadeList.push(o);
         }
-        if (o.isLight) o.intensity = 0;
+        if (o.isLight) (this.fadeLights ??= []).push([o, o.intensity]);
       });
     }
     for (const o of this.fadeList) o.material.opacity = opacity;
+    for (const [o, lit] of this.fadeLights ?? []) o.intensity = opacity >= 1 ? lit : 0; // back on once whole (off the stairs)
   }
 
   /** A body sinks away (a corpse that was raised as something else). */
@@ -184,6 +185,54 @@ export class UnitView {
     }, easeIn);
     this.gone = true;
     this.group.visible = false;
+  }
+
+  /**
+   * Down (or up) a stair to the room's other floor: the figure sinks out of sight on the stair at
+   * `from`, then climbs into view on the one at `to`. Reduced motion: a fade out and in, in place.
+   */
+  /**
+   * Down (or up) a flight of steps to its linked stair on the other floor: the figure walks along
+   * `out`'s steps, sinking into the well or climbing out of sight, then comes along `back`'s steps
+   * onto the far stair. Each is the board's flight there ({ dx, dz, down }). `onEnd(at)` fires as
+   * the figure leaves the first stair and as it reaches the second (dust, a sound). Calm motion
+   * keeps a fade in place.
+   */
+  async takeStairs(from, to, out, back, onEnd = () => {}) {
+    const shown = [this.label, this.marker, this.base].map((o) => o.visible);
+    const full = this.ghost ? 0.35 : 1;
+    this.label.visible = this.marker.visible = this.base.visible = false;
+    const still = calm();
+    const span = 0.42; // how far along the steps the figure goes before it's out of sight
+    const height = (f) => (f?.down ? -0.5 : 0.6); // the well's bottom, or the top of the steps
+    // A staircase, not a ramp: each of four treads is a small lift and a flat stride.
+    const treads = (t) => { const n = 4, i = Math.min(n - 1, Math.floor(t * n)); return (i + easeInOut(Math.min(1, t * n - i))) / n; };
+    this.walking = !still;
+    if (out) this.faceTowards(from.x + out.dx, from.z + out.dz);
+    onEnd(from);
+    await tween(still ? 380 : 620, (t) => {
+      if (!still && out) {
+        const s = treads(t);
+        this.group.position.set(from.x + out.dx * span * s, height(out) * s, from.z + out.dz * span * s);
+      }
+      this.fadeMeshes(full * Math.min(1, 2 - 2 * t)); // gone over the second half
+    }, linear);
+    if (!still) sfx.step(this.unit.code);
+    await wait(still ? 120 : 220);
+    if (back) this.figure.rotation.y = Math.atan2(-back.dx, -back.dz); // coming off the steps
+    this.group.position.set(to.x + (still || !back ? 0 : back.dx * span), still || !back ? 0 : height(back), to.z + (still || !back ? 0 : back.dz * span));
+    await tween(still ? 380 : 620, (t) => {
+      if (!still && back) {
+        const s = 1 - treads(t);
+        this.group.position.set(to.x + back.dx * span * s, height(back) * s, to.z + back.dz * span * s);
+      }
+      this.fadeMeshes(full * Math.min(1, 2 * t)); // seen within the first half
+    }, linear);
+    this.group.position.set(to.x, 0, to.z);
+    this.fadeMeshes(full);
+    this.walking = false;
+    onEnd(to);
+    [this.label.visible, this.marker.visible, this.base.visible] = shown;
   }
 
   /** Clawing up out of the ground (Animate Dead). */

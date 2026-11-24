@@ -30,6 +30,8 @@ export class Grid {
    *   ':' a raised portcullis: floor until a lever ('!', in the way like a prop) drops it. Down,
    *   its bars block walking but not sight, and give half cover.
    *   '_' a chasm: no one can cross it (not even a flier), but it blocks neither sight nor shots.
+   *   '[' a stair down to the room's lower hall, ']' the stair up from it: floor tiles, the n-th '['
+   *   (in reading order) linked to the n-th ']' as if they were next to each other, one step apart.
    */
   constructor(rows) {
     this.height = rows.length;
@@ -45,6 +47,11 @@ export class Grid {
     this.water = new Set();  // keys of shallow water tiles
     this.chasms = new Set(); // keys of chasm tiles
     this.gates = new Map();  // key -> {x, z, down}: portcullis tiles, all worked by the room's levers
+    this.links = new Map();  // key -> {x, z}: the stair at the other end of a '[' or ']'
+    this.stairways = [];     // [{ down: {x, z}, up: {x, z} }]: the linked stairs, '[' above and ']' below
+    this.lower = new Set();  // keys of the lower hall's tiles (none in a one-floor room)
+    const downs = [];
+    const ups = [];
     rows.forEach((row, z) => {
       if (row.length !== this.width) throw new Error(`Map row ${z} has wrong width`);
       this.walls[z] = [...row].map((ch, x) => {
@@ -57,10 +64,24 @@ export class Grid {
         else if (ch === '~') this.water.add(key(x, z));
         else if (ch === '_') this.chasms.add(key(x, z));
         else if (ch === ':') this.gates.set(key(x, z), { x, z, down: false });
+        else if (ch === '[') downs.push({ x, z });
+        else if (ch === ']') ups.push({ x, z });
         else if (PROPS[ch]) this.props.set(key(x, z), { x, z, ...PROPS[ch] });
         return ch === '#';
       });
     });
+    if (downs.length !== ups.length) throw new Error('Every stair down needs a stair up');
+    downs.forEach((down, i) => {
+      const up = ups[i];
+      this.stairways.push({ down, up });
+      this.links.set(key(down.x, down.z), up);
+      this.links.set(key(up.x, up.z), down);
+    });
+    // The lower hall: everything walkable from a stair up without climbing back.
+    const above = new Set(downs.map((d) => key(d.x, d.z)));
+    for (const up of ups) {
+      for (const k of this.flood(up.x, up.z, Infinity, (x, z) => !above.has(key(x, z))).keys()) this.lower.add(k);
+    }
   }
 
   inBounds(x, z) {
@@ -103,6 +124,10 @@ export class Grid {
       if (dx && dz && (this.isSolid(x + dx, z) || this.isSolid(x, z + dz))) continue;
       yield [nx, nz];
     }
+    // A stair to the other floor: one step to the stair at its other end (after the eight
+    // directions, so a room without stairs keeps its paths).
+    const to = this.links.size ? this.links.get(key(x, z)) : null;
+    if (to && !this.isSolid(to.x, to.z)) yield [to.x, to.z];
   }
 
   /**

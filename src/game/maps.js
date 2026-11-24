@@ -396,6 +396,27 @@ LEVELS.push(
     asleep: ['9,9', '13,9', '14,4'], // gargoyles on their plinths
     thinned: ['14,4'], // Hard leaves this gargoyle out
   },
+  // Act two's third way: a room on two floors. The stairs '[' lead down to ']' in the lower hall.
+  {
+    id: 'cistern',
+    name: 'The Cistern Stair',
+    intro: 'Past the catacombs a charnel hall sits over a flooded cistern. Two stairs wind down through its floor, and something hungry splashes in the dark below.',
+    rows: [
+      '################',
+      '#F.R.[.##.]...u#',
+      '#......##.~~...#',
+      '#W.C...##.~~...#',
+      '#...|..##...u..#',
+      '#......##.=....#',
+      '#.s..s.##..~~..#',
+      '#......##..~~.u#',
+      '#[...|.##].$...#',
+      '#..s...##..u...#',
+      '#^.....##....>.#',
+      '################',
+    ],
+    loot: [['weaponPlus1', 'ringProtection', 'potion']],
+  },
 );
 
 /** The first level's map, kept for older code and tests. */

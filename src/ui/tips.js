@@ -9,7 +9,7 @@
 const STORAGE_KEY = 'crypt-skirmish:tips';
 
 /** What the player can see right now, from main.js. */
-// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, chasmInSight, edgeFoe, foeNext,
+// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, chasmInSight, stairsInSight, edgeFoe, foeNext,
 //        foesComing, hurtAllyNext, dyingAlly, paralysed, petrified, rules, touch, report }
 const click = (ctx, word = 'click') => (ctx.touch ? word.replace('click', 'tap').replace('Click', 'Tap') : word);
 
@@ -101,6 +101,14 @@ export const TIPS = [
     when: (c) => c.chasmInSight,
     text: (c) => 'The black gaps are a <b>chasm</b>: no one crosses it, not even a flier, but you can see and shoot over it.' +
       (c.rules >= 3 ? ' A foe standing at its edge can be sent over with <b>Push</b>.' : ''),
+  },
+  {
+    id: 'stairs',
+    on: 'heroTurn',
+    when: (c) => c.stairsInSight,
+    text: (c) => 'This room has <b>two floors</b>. Steps going down lead to the <b>lower hall</b>, and steps going up lead back: ' +
+      'a step onto them takes you to the other end, 5 ft like any step. Stand on a stair to look down (or up) it, then ' +
+      `${click(c, 'click')} a tile past it. The walls hide each floor from the other, but a fight is heard on both, and monsters use the stairs too.`,
   },
   {
     id: 'feed',

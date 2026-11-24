@@ -34,6 +34,17 @@ export function createPreview(deps) {
     shaded?.previewDamage(range);
   }
 
+  /** The stairs a path takes to the room's other floor, said in the hint (or ''). */
+  function stairsOn(path) {
+    const lower = game.grid.lower;
+    const out = [];
+    for (let i = 0; i < path.length - 1; i++) {
+      if (Math.max(Math.abs(path[i].x - path[i + 1].x), Math.abs(path[i].z - path[i + 1].z)) <= 1) continue;
+      out.push(lower.has(key(path[i].x, path[i].z)) ? 'up the stairs to the hall above' : 'down the stairs to the lower hall');
+    }
+    return out.join(', then ');
+  }
+
   /** Indices of path tiles where leaving provokes an opportunity attack. */
   function provokingSteps(u, path) {
     const out = [];
@@ -142,7 +153,8 @@ export function createPreview(deps) {
       const chargers = near.filter((r) => r.charge).map((r) => r.unit.name);
       const stone = [...new Set(near.filter((r) => r.stone).map((r) => r.unit.cls))];
       const edge = [...new Set(near.filter((r) => r.edge).map((r) => r.unit.cls))];
-      hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
+      const flights = stairsOn(path);
+      hud.hint(`Move ${node.dist * 5} ft` + (flights ? ` · ${flights}` : '') + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
         + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : '')
         + (chargers.length ? ` · ${listNames(chargers)} could charge you here (extra damage, STR save or prone)` : '')
         + (stone.length ? ` · a ${stone.join(' or ')}’s bite here can turn you to stone` : '')

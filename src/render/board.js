@@ -100,6 +100,8 @@ function bannerSpots(grid, torches) {
 }
 
 const WATER_GEO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+// The lower hall of a room on two floors: a cool shadow over its floor.
+const LOWER_MAT = new THREE.MeshBasicMaterial({ color: 0x061224, transparent: true, opacity: 0.5, depthWrite: false });
 // Open-topped and inside-out: the shaft's walls face into the hole.
 const CHASM_GEO = new THREE.BoxGeometry(1, 2.2, 1);
 
@@ -180,7 +182,7 @@ export class Board {
         if (this.kit) {
           if (grid.isWall(x, z)) this.addKitWall(x, z);
           else if (grid.chasms.has(key(x, z))) continue; // drawn below
-          else if (!grid.stairs.some((s) => s.x === x && s.z === z)) this.addKitFloor(x, z);
+          else if (!grid.stairs.some((s) => s.x === x && s.z === z) && !grid.links.has(key(x, z))) this.addKitFloor(x, z);
           continue;
         }
         if (grid.isWall(x, z)) {
@@ -193,7 +195,7 @@ export class Board {
           this.group.add(wall, cap);
           this.addToCell(x, z, wall, cap);
           this.walls.push({ x, z, meshes: [wall, cap], opacity: 1 });
-        } else if (!grid.chasms.has(key(x, z)) && !grid.stairs.some((s) => s.x === x && s.z === z)) {
+        } else if (!grid.chasms.has(key(x, z)) && !grid.stairs.some((s) => s.x === x && s.z === z) && !grid.links.has(key(x, z))) {
           const tile = new THREE.Mesh(floorGeo, floorMats[(x + z) % 2]);
           tile.position.set(x, -0.1, z);
           tile.receiveShadow = true;
@@ -211,6 +213,22 @@ export class Board {
       sheet.receiveShadow = true;
       this.group.add(sheet);
       this.addToCell(x, z, sheet);
+    }
+
+    // A room on two floors: the lower hall lies in a cooler shadow, and a flight of steps leads
+    // down at each '[' and up at each ']', both toward the stair at the other end.
+    for (const k of grid.lower) {
+      if (grid.links.has(k)) continue;
+      const [x, z] = k.split(',').map(Number);
+      const shade = new THREE.Mesh(WATER_GEO, LOWER_MAT);
+      shade.position.set(x, 0.006, z);
+      this.group.add(shade);
+      this.addToCell(x, z, shade);
+    }
+    this.flights = new Map(); // key -> { dx, dz, down }: which way each flight of steps runs
+    for (const { down, up } of grid.stairways) {
+      this.addFlight(down, up, true, grid);
+      this.addFlight(up, down, false, grid);
     }
 
     // Chasms: a black shaft with rough rock walls dropping out of sight.
@@ -825,6 +843,45 @@ export class Board {
     g.add(light);
     this.addToCell(x, z, g);
     return { light, lit: false };
+  }
+
+  /**
+   * A flight of steps on a linked stair at (x, z): down into a dark well (`down`, on the upper
+   * floor) or up into the wall (on the lower floor). It runs into a wall on the far side from the
+   * camera, so the steps show, else toward the stair at its other end (`toward`).
+   */
+  addFlight({ x, z }, toward, down, grid) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    const [dx, dz] = [[0, -1], [-1, 0]].find(([a, b]) => grid.isWall(x + a, z + b)) ?? [Math.sign(toward.x - x), Math.sign(toward.z - z)];
+    g.rotation.y = Math.atan2(-dx, -dz);
+    this.flights.set(key(x, z), { dx, dz, down });
+    this.group.add(g);
+    const stone = [mat(0x5b524a), mat(0x4b433c)];
+    if (down) {
+      const pit = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.6, 0.98), mat(0x07060a));
+      pit.position.y = -0.5;
+      g.add(pit);
+    } else {
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.1, 0.98), mat(0x2c2622));
+      floor.position.y = -0.05;
+      floor.receiveShadow = true;
+      g.add(floor);
+    }
+    for (let i = 0; i < 5; i++) {
+      const h = down ? 0.08 : 0.12 * (i + 1);
+      const step = new THREE.Mesh(new THREE.BoxGeometry(0.96, h, 0.19), stone[i % 2]);
+      step.position.set(0, down ? -0.04 - i * 0.08 : h / 2, 0.39 - i * 0.19);
+      step.castShadow = !down;
+      step.receiveShadow = true;
+      g.add(step);
+    }
+    this.addToCell(x, z, g);
+  }
+
+  /** The flight of steps on a linked stair: { dx, dz } toward its far end, and `down` for a well. */
+  flightAt(x, z) {
+    return this.flights?.get(key(x, z)) ?? null;
   }
 
   lightStairs() {

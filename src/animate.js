@@ -6,7 +6,7 @@ import { ACTIONS } from './game/abilities.js';
 import { ITEMS } from './game/items.js';
 import { shootProjectile, floatText } from './render/unitView.js';
 import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
-import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT } from './render/effects.js';
+import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, burstFx, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT } from './render/effects.js';
 import { wait } from './render/tween.js';
 import { sfx } from './audio/sfx.js';
 import { voices } from './audio/voices.js';
@@ -317,6 +317,24 @@ export function createAnimations(app) {
             }
           }
           await view(unit).moveAlong(path);
+          break;
+        }
+        case 'stairs': { // to the room's other floor; out of sight, a monster just arrives
+          const v = view(unit);
+          if (unit.team === 'monsters' && !inView(step.from) && !inView(step.to)) {
+            v.group.position.set(step.to.x, 0, step.to.z);
+            break;
+          }
+          const where = step.down ? 'down the stairs to the lower hall' : 'up the stairs to the hall above';
+          hud.log(`<span class="${unit.team}" data-unit="${unit.id}">${unit.name}</span> goes ${where}.`);
+          const flight = (at) => app.board().flightAt?.(at.x, at.z);
+          const out = flight(step.from), back = flight(step.to);
+          sfx.stairway(step.down);
+          await v.takeStairs(step.from, step.to, out, back, (at) => {
+            if (inView(at)) burstFx(stage.scene, at, { colors: [0x6b6259, 0x8a8076, 0x4d463f], count: 10, speed: 0.9, size: 0.06, y: 0.08, life: 700 });
+            if (at === step.to) sfx.step(unit.code);
+          });
+          keepInView(step.to);
           break;
         }
         case 'door':

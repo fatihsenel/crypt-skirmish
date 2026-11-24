@@ -57,7 +57,8 @@ export function difficultyLabel(difficulty, tier = 0) {
  * The fork: take one middle room and rest at the chapel, or clear both middle rooms
  * (more XP and loot) and face the necromancer without that rest.
  * `boss` draws a crown on the map; `actBreak` gives a long rest after the fight.
- * Act two (after the sanctum) asks the same question once more: the vault or the well.
+ * Act two (after the sanctum) asks the same question once more: the vault or the well (or the
+ * cistern, a room on two floors).
  * Act three (after the barrow) asks it again: the gallery's loot or the shrine's rest.
  * Act four (after the throne) asks it again: the armory's loot or the hearth's rest.
  * Act five (after the tomb) asks it a last time: the basilisk den's loot or the grotto's rest.
@@ -89,12 +90,17 @@ export const NODES = {
   },
   // Act two: one fight, then the vault's loot or the well's rest, an optional larder, then the wight.
   catacombs: {
-    kind: 'fight', level: 'catacombs', col: 4, row: 1, next: ['vault', 'well'],
+    kind: 'fight', level: 'catacombs', col: 4, row: 1, next: ['vault', 'cistern', 'well'],
     teaser: 'Ghouls: their claws poison. Skeletons besides.',
   },
   vault: {
     kind: 'fight', level: 'vault', short: 'Vault', col: 5, row: 0, next: ['barrow', 'larder'],
     teaser: 'Guarded treasure: a magic cloak and weapon. Skip the rest at the well.',
+  },
+  // A room on two floors: skeletons in the hall above, ghouls in the flooded cistern below.
+  cistern: {
+    kind: 'fight', level: 'cistern', short: 'Cistern', col: 5, row: 1, next: ['barrow', 'larder'],
+    teaser: 'Two floors: skeletons in the hall above, ghouls in the flooded cistern below, stairs between. A magic weapon and ring, no rest.',
   },
   well: {
     kind: 'rest', col: 5, row: 2, next: ['barrow', 'larder'],

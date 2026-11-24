@@ -646,6 +646,11 @@ function updateVision(force = false) {
     return;
   }
   const eyes = game.units.filter((u) => u.team === 'heroes' && u.alive && view(u)).map((u) => tileOf(view(u)));
+  // A hero on a stair to the other floor sees down (or up) it: from the stair at its other end too.
+  for (const e of [...eyes]) {
+    const far = grid.links.get(key(e.x, e.z));
+    if (far) eyes.push(far);
+  }
   const doors = [...board.doors.values()].map((d) => (d.opened ? 1 : 0)).join('');
   const sig = eyes.map((e) => key(e.x, e.z)).join(';') + '|' + doors;
   if (sig === visionSig && !force) return;
@@ -1234,6 +1239,7 @@ async function onTurnStart(unit) {
         leverNext: [...game.grid.props.values()].some((p) => p.kind === 'lever' && near(p)),
         waterInSight: [...game.grid.water].some((k) => visible.has(k)),
         chasmInSight: [...game.grid.chasms].some((k) => visible.has(k)),
+        stairsInSight: [...game.grid.links.keys()].some((k) => visible.has(k)),
         edgeFoe: foes.find((f) => !unseen(f) && near(f) && !game.shoveProblem(unit, f, true) && game.pushTo(unit, f).fall),
         foeNext: foes.some((f) => !unseen(f) && near(f)),
         // Foes on the hunt but none in sight: a moment to Ready.

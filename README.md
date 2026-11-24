@@ -139,6 +139,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Chasms** in the fifth act: no one crosses one, not even a flier, but you can see and shoot
   over it. Push a foe over the edge and it's gone. Gargoyles and Tharok can throw a hero
   back too: a hero thrown toward the edge gets a DEX save to catch it.
+- **Rooms on two floors:** the Cistern Stair (in act two, beside the Vault and the Well) has a
+  hall above and a flooded hall below, each with its own monsters. Stepping onto a flight of
+  steps takes you to the stair at its other end, 5 ft like any step. The walls hide each floor
+  from the other: from the top or foot of a stair you can look down or up it, but not shoot. A
+  fight is heard on both floors, and monsters use the stairs too.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden.
 - Walls in front of a figure turn see-through.
 
@@ -257,8 +262,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   again or copy as a link. Your deepest win (such as Hard NG+2) is kept and shown above them.
 - **Tips for new players:** short hints the first time something matters, such as a brazier
   to tip, water in sight, foes hunting out of sight (Ready), a hurt ally next to you, a dying or
-  paralysed hero, a spell to concentrate on, a chasm in sight, a foe at its edge to Push, or a
-  hero turned to stone. They can be turned off.
+  paralysed hero, a spell to concentrate on, a chasm in sight, a foe at its edge to Push, stairs
+  to another floor, or a hero turned to stone. They can be turned off.
 - **Offline and on your Home Screen:** once everything has loaded, the foot of the title says
   "Saved for offline play", and the game then opens without a signal ("No signal: playing the
   saved copy"). On an iPhone it says how to add it to the Home Screen (Share, then Add to Home
@@ -505,7 +510,7 @@ fails, so GitHub emails, if the game crashed for anyone the day before (`scripts
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
-12 Halls, 13 Armory, 14 Tomb, 15 Bridge, 16 Den, 17 Labyrinth). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`, `thread`), `&seed=7` for the same dice every time.
+12 Halls, 13 Armory, 14 Tomb, 15 Bridge, 16 Den, 17 Labyrinth, 18 Cistern). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`, `thread`), `&seed=7` for the same dice every time.
 This doesn't touch the save.
 
 **See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,

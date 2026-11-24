@@ -1317,10 +1317,11 @@ describe('act two', () => {
     expect(choices(state)).toEqual(['catacombs']);
   });
 
-  it('after the catacombs: the vault or the well, maybe the larder, then the barrow, which ends the act', () => {
+  it('after the catacombs: the vault, the cistern or the well, maybe the larder, then the barrow, which ends the act', () => {
     const base = { ...newCampaign(), cleared: ['crypt', 'warren', 'chapel', 'sanctum', 'catacombs'], at: 'catacombs' };
-    expect(choices(base)).toEqual(['vault', 'well']);
+    expect(choices(base)).toEqual(['vault', 'cistern', 'well']);
     expect(choices({ ...base, at: 'vault', cleared: [...base.cleared, 'vault'] })).toEqual(['barrow', 'larder']);
+    expect(choices({ ...base, at: 'cistern', cleared: [...base.cleared, 'cistern'] })).toEqual(['barrow', 'larder']);
     const rested = takeRest(base, 'well');
     expect(choices(rested)).toEqual(['barrow', 'larder']);
     expect(choices({ ...rested, at: 'larder', cleared: [...rested.cleared, 'larder'] })).toEqual(['barrow']);

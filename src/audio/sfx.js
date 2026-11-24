@@ -534,6 +534,16 @@ class Sfx {
     });
   }
 
+  /** Feet on a flight of stone steps, echoing down a stairwell (`down`) or up into the hall. */
+  stairway(down = true) {
+    this.play((t) => {
+      for (let i = 0; i < 3; i++) {
+        this.noise(t + i * 0.16, { dur: 0.07, filter: 'lowpass', freq: 520 - i * 90, gain: 0.22 - i * 0.04 });
+      }
+      this.tone(t, { type: 'sine', freq: down ? 220 : 150, freqEnd: down ? 110 : 260, dur: 0.6, gain: 0.04, attack: 0.08, lowpass: 900 });
+    });
+  }
+
   /** The way down opens up. */
   stairs() {
     this.play((t) => {

@@ -247,6 +247,7 @@ export function tileSummary(game, t, { unitAt, explored }) {
   if (game.burningTiles().has(key(t.x, t.z))) return 'Burning coals';
   if (game.grid.water.has(key(t.x, t.z))) return 'Shallow water, double movement';
   if (game.grid.chasms.has(key(t.x, t.z))) return 'A chasm: no way across, but you can see and shoot over it';
+  if (game.grid.links.has(key(t.x, t.z))) return game.grid.lower.has(key(t.x, t.z)) ? 'Stairs up to the hall above' : 'Stairs down to the lower hall';
   return 'Floor';
 }
 

@@ -393,6 +393,7 @@ const ACT_ONE = [['crypt', 'warren', 'chapel', 'sanctum'], ['crypt', 'ossuary', 
 const ACT_TWO = [
   ['catacombs', 'vault', 'barrow'], ['catacombs', 'well', 'barrow'],
   ['catacombs', 'vault', 'larder', 'barrow'], ['catacombs', 'well', 'larder', 'barrow'],
+  ['catacombs', 'cistern', 'barrow'], ['catacombs', 'cistern', 'larder', 'barrow'],
 ];
 const ACT_THREE = [['nest', 'gallery', 'throne'], ['nest', 'shrine', 'throne']];
 const ACT_FOUR = [['halls', 'armory', 'tomb'], ['halls', 'hearth', 'tomb']];
@@ -459,7 +460,7 @@ const MODES = {
         let won = 0;
         for (let i = 0; i < runs; i++) {
           const res = campaign(route, rng);
-          for (const r of res) add(stats, ['vault', 'larder', 'barrow'].includes(r.id) ? `${r.id} (${via(two)})` : r.id, r);
+          for (const r of res) add(stats, ['vault', 'cistern', 'larder', 'barrow'].includes(r.id) ? `${r.id} (${via(two)})` : r.id, r);
           if (res.length === route.filter((x) => !REST.has(x)).length && res.at(-1).won) won++;
         }
         whole[name] = [won, runs];
