@@ -84,6 +84,10 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ feats }) => !!feats?.edge,
   },
   {
+    id: 'stairs-push', name: 'Mind the steps', desc: 'Push a foe down a flight of stairs.',
+    on: 'room', test: ({ feats }) => !!feats?.stairs,
+  },
+  {
     id: 'fingertips', name: 'By your fingertips', desc: 'Thrown at a chasm, catch its edge.',
     on: 'room', test: ({ feats }) => !!feats?.caught,
   },

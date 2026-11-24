@@ -795,6 +795,7 @@ function startFight(resume, watch = null) {
   game.on('spill', (r) => { blow = null; scorched = r.unit; });
   game.on('burn', (r) => { blow = null; scorched = r.unit; });
   game.on('throw', (r) => { if (r.target.team === 'heroes' && r.edge?.success) feats.caught = true; });
+  game.on('shove', (r) => { if (r.push?.stair && r.attacker.team === 'heroes') feats.stairs = true; });
   game.on('grappleEnd', ({ unit, why }) => { if (why === 'fell' && unit.team === 'monsters' && !unit.alive) feats.pinned = true; });
   game.on('death', ({ unit }) => {
     if (clung?.unit === unit && clung.round === game.round) feats.stayDown = true;
@@ -965,6 +966,7 @@ function startFight(resume, watch = null) {
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
   game.on('technique', (r) => { if (!unseen(r.target)) hud.logTechnique(r); });
   game.on('shove', (r) => hud.logShove(r));
+  game.on('tumble', (r) => { if (unseen(r.unit)) hud.log('Something tumbles down the stairs in the dark.', 'sys'); else hud.logTumble(r); });
   game.on('throw', (r) => hud.logThrow(r));
   game.on('help', (r) => hud.logHelp(r));
   game.on('feed', (r) => hud.logFeed(r));

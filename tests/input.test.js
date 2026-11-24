@@ -147,6 +147,18 @@ describe('reading out the surroundings', () => {
   });
 });
 
+describe('reading out a room on two floors', () => {
+  it('says which floor the hero is on, and how far a foe below is on foot', () => {
+    // F at (1,1); the stair down is (3,1), its stair up (5,1); the goblin at (6,3) is below.
+    const game = new Game(['#########', '#F.[#]..#', '#...#...#', '#...#.g.#', '#########'], { senses: false });
+    game.start();
+    const f = setTurn(game, 0);
+    const text = surroundings(game, f, { seen: () => true });
+    expect(text).toMatch(new RegExp(`^${f.name}, in the hall above:`));
+    expect(text).toContain(`${game.units[1].name}, 25 ft, below, by the stairs`); // 2 steps, the stairs, 2 more
+  });
+});
+
 describe('reading out a chasm’s edge', () => {
   it('says a foe next to the hero can be pushed over, or that a chasm is near', () => {
     const game = new Game(['#######', '#Fs_..#', '#.....#', '#######'], { senses: false });

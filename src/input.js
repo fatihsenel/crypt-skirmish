@@ -267,11 +267,19 @@ export function enterStep(armed, t, r) {
  * now (in range), and the heroes who are down.
  */
 export function surroundings(game, u, { seen }) {
-  const parts = [`${u.name}: ${u.hp} of ${u.maxHp} HP, ${u.movesLeft * 5} ft of movement.`];
+  const g = game.grid;
+  // In a room on two floors, which floor everyone is on, and how far it is on foot (the stairs).
+  const floors = g.links.size > 0;
+  const below = (t) => g.lower.has(key(t.x, t.z));
+  const walk = floors ? g.flood(u.x, u.z, Infinity, (x, z) => !g.isSolid(x, z)) : null;
+  const away = (e) => (floors ? walk.get(key(e.x, e.z))?.dist ?? gridDistance(u, e) : gridDistance(u, e));
+  const where = (e) => (!floors || below(e) === below(u) ? '' : below(e) ? ', below, by the stairs' : ', above, by the stairs');
+  const here = floors ? (below(u) ? ', in the lower hall' : ', in the hall above') : '';
+  const parts = [`${u.name}${here}: ${u.hp} of ${u.maxHp} HP, ${u.movesLeft * 5} ft of movement.`];
   const foes = game.enemiesOf(u).filter((e) => e.alive && seen(e))
-    .sort((a, b) => gridDistance(u, a) - gridDistance(u, b));
+    .sort((a, b) => away(a) - away(b));
   parts.push(foes.length
-    ? `Enemies in sight: ${foes.map((e) => `${e.name}, ${gridDistance(u, e) * 5} ft, ${e.hp} of ${e.maxHp} HP${game.bestAttack(u, e) ? ', in range' : ''}`).join('; ')}.`
+    ? `Enemies in sight: ${foes.map((e) => `${e.name}, ${away(e) * 5} ft${where(e)}, ${e.hp} of ${e.maxHp} HP${game.bestAttack(u, e) ? ', in range' : ''}`).join('; ')}.`
     : 'No enemies in sight.');
   const down = game.units.filter((h) => h.team === u.team && !h.alive);
   if (down.length) parts.push(`Down: ${down.map((h) => h.name).join(', ')}.`);

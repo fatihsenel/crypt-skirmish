@@ -2181,10 +2181,11 @@ describe('act four and levels 7–8', () => {
     expect([state.done, report.longRest, choices(state)]).toEqual([false, true, ['bridge']]);
   });
 
-  it('after the tomb: the bridge, then the den or the grotto, then the labyrinth, which ends the campaign', () => {
+  it('after the tomb: the bridge, then the den, the undercroft or the grotto, then the labyrinth, which ends the campaign', () => {
     const base = { ...newCampaign(), at: 'bridge', cleared: [...ACT_THREE, 'halls', 'hearth', 'tomb', 'bridge'] };
-    expect(choices(base)).toEqual(['lair', 'grotto']);
+    expect(choices(base)).toEqual(['lair', 'undercroft', 'grotto']);
     expect(choices({ ...base, at: 'lair', cleared: [...base.cleared, 'lair'] })).toEqual(['labyrinth']);
+    expect(choices({ ...base, at: 'undercroft', cleared: [...base.cleared, 'undercroft'] })).toEqual(['labyrinth']);
     const rested = takeRest(base, 'grotto');
     expect(choices(rested)).toEqual(['labyrinth']);
     const game = new Game(levelById('labyrinth'), { party: rested.party });

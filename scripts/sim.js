@@ -397,7 +397,7 @@ const ACT_TWO = [
 ];
 const ACT_THREE = [['nest', 'gallery', 'throne'], ['nest', 'shrine', 'throne']];
 const ACT_FOUR = [['halls', 'armory', 'tomb'], ['halls', 'hearth', 'tomb']];
-const ACT_FIVE = [['bridge', 'lair', 'labyrinth'], ['bridge', 'grotto', 'labyrinth']];
+const ACT_FIVE = [['bridge', 'lair', 'labyrinth'], ['bridge', 'grotto', 'labyrinth'], ['bridge', 'undercroft', 'labyrinth']];
 const REST = new Set(['chapel', 'well', 'shrine', 'hearth', 'grotto']);
 /** EVENTS=1 takes the stops with no fight on the way: tend the pilgrim, bleed at the altar, open the reliquary. */
 const TAKE_EVENTS = !!process.env.EVENTS;

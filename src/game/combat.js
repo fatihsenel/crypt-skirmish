@@ -19,6 +19,7 @@ export const TRAP_DAMAGE = '2d6';
 export const SPILL_DC = 12;
 export const SPILL_DAMAGE = '2d6';
 export const BURN_DAMAGE = '1d6'; // walking onto burning coals, once a turn
+export const TUMBLE_DAMAGE = '1d6'; // rules 5: pushed down a flight of stairs
 export const BURN_TURNS = 3;      // the coals burn until the end of the tipper's third turn
 
 // Monster senses, in tiles (5 ft). In the dim crypt, unaware monsters spot heroes within
@@ -841,6 +842,7 @@ export class Game extends Spellcasting {
   // --- damage & healing -----------------------------------------------------
   applyDamage(target, amount, source) {
     this.alert(target, 'hurt');
+    if (target.lurks && amount > 0) target.stirred = true;
     const before = target.hp;
     if (amount > 0) this.reveal(target, 'hurt'); // caught in a blast: no hiding that
     if (amount > 0) target.turned = 0; // damage breaks Turn Undead
@@ -987,9 +989,11 @@ export class Game extends Spellcasting {
   passableFor(unit) {
     const fear = this.fearSource(unit);
     const keep = fear ? gridDistance(unit, fear) : 0;
+    const floor = this.lurking(unit) ? this.grid.lower.has(key(unit.x, unit.z)) : null;
     return (x, z) => {
       const o = this.unitAt(x, z);
       if (o && o.team !== unit.team) return false;
+      if (floor !== null && this.grid.lower.has(key(x, z)) !== floor) return false; // it keeps to its floor
       if (fear && gridDistance({ x, z }, fear) < keep) return false;
       if (unit.team === 'heroes') {
         const t = this.grid.traps.get(key(x, z));
@@ -1008,6 +1012,17 @@ export class Game extends Spellcasting {
   /** The dying hero lying on a tile, if any (rules 2: death saves). */
   dyingAt(x, z) {
     return this.units.find((u) => u.dying && u.x === x && u.z === z) ?? null;
+  }
+
+  /**
+   * Rules 5: a monster that `lurks` (ghouls) keeps to its own floor of a two-floor room, waiting
+   * at the stairs' foot, until a foe sets foot on that floor or it's hurt; then it's `stirred`.
+   */
+  lurking(unit) {
+    if (!unit.lurks || unit.stirred || this.rules < 5 || !this.grid.links.size) return false;
+    const below = (t) => this.grid.lower.has(key(t.x, t.z));
+    if (this.enemiesOf(unit).some((e) => e.alive && below(e) === below(unit))) unit.stirred = true;
+    return !unit.stirred;
   }
 
   reachable(unit) {
@@ -2143,6 +2158,8 @@ export class Game extends Spellcasting {
     const dz = Math.sign(target.z - attacker.z);
     const x = target.x + dx;
     const z = target.z + dz;
+    const down = this.stairwell(target, x, z);
+    if (down) return down;
     const fall = g.chasms.has(key(x, z));
     const blocked = (bx, bz) => g.isSolid(bx, bz) && !g.chasms.has(key(bx, bz));
     if (!fall && (blocked(x, z) || g.closedDoorAt(x, z))) return { why: `No room to push ${target.name} back` };
@@ -2151,6 +2168,22 @@ export class Game extends Spellcasting {
     if (fall && target.flies) return { why: `${target.name} would only fly` };
     if (fall && target.surefooted) return { why: `${target.name} won’t be pushed off the edge` };
     return { x, z, fall };
+  }
+
+  /**
+   * Rules 5: a push into a stairwell (onto a stair down, or from one) sends `target` tumbling
+   * down to the stair at its foot: { x, z, fall: false, tumble: { x, z } } (the stair it fell
+   * down), or null when that's not it: older rules, a flier, no stair, or someone at the foot.
+   */
+  stairwell(target, x, z) {
+    const g = this.grid;
+    if (this.rules < 5 || !g.links.size || target.flies) return null;
+    const top = [[x, z], [target.x, target.z]].find(([sx, sz]) => g.links.has(key(sx, sz)) && !g.lower.has(key(sx, sz)));
+    if (!top) return null;
+    if (this.unitAt(top[0], top[1]) && this.unitAt(top[0], top[1]) !== target) return null;
+    const foot = g.links.get(key(top[0], top[1]));
+    if (this.unitAt(foot.x, foot.z)) return null;
+    return { x: foot.x, z: foot.z, fall: false, tumble: { x: top[0], z: top[1] } };
   }
 
   /**
@@ -2177,7 +2210,7 @@ export class Game extends Spellcasting {
     const resist = { d20: b, bonus: resistBonus, total: b + resistBonus };
     const result = { ok: true, kind: 'shove', attacker, target, roll, resist, success: roll.total > resist.total };
     const to = push && result.success ? this.pushTo(attacker, target) : null;
-    if (to) result.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null };
+    if (to) result.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }) };
     this.emit('shove', result);
     this.alert(target, 'hurt');
     if (to) this.pushed(target, attacker, to, result.push);
@@ -2194,7 +2227,20 @@ export class Game extends Spellcasting {
     if (target.grappling && gridDistance(target, target.grappling) > 1) this.letGo(target, 'pushed');
     if (target.grappledBy && !this.held(target)) this.letGo(target.grappledBy, 'pushed');
     if (to.fall) this.fall(target, by);
+    else if (to.tumble) out.tumble = this.tumble(target, by);
     else if (this.fire?.length && !target.flies && this.burningTiles().has(key(to.x, to.z))) out.burn = this.burn(target);
+  }
+
+  /** Rules 5: down a flight of stone steps: 1d6 bludgeoning, and prone at the bottom. */
+  tumble(target, by) {
+    const roll = rollExpr(TUMBLE_DAMAGE, { rng: this.rng });
+    this.cause = 'a fall down the stairs';
+    this.via = 'fall';
+    const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0) };
+    this.emit('tumble', result);
+    this.applyDamage(target, roll.total, by);
+    if (target.alive && target.hp > 0) this.addCondition(target, 'prone', { by });
+    return result;
   }
 
   /** Over the edge: no saving throw, no Death Ward, and no body left to raise. */
@@ -2227,7 +2273,7 @@ export class Game extends Spellcasting {
         return out;
       }
     }
-    out.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null };
+    out.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }) };
     this.pushed(target, attacker, to, out.push);
     return out;
   }

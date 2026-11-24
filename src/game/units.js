@@ -265,6 +265,7 @@ export const TEMPLATES = {
     multiattack: 2, // claw, claw
     ai: 'brute',
     undead: true,
+    lurks: true, // rules 5: in a room on two floors, it waits on its own floor (Game#lurking)
     stats: { str: 13, dex: 15, con: 10, int: 7, wis: 10, cha: 6 },
     attacks: [
       // SRD ghoul claws paralyse (rules 2: a CON save as each turn starts ends it, 10 turns
@@ -430,6 +431,7 @@ export const TEMPLATES = {
     name: 'Basilisk', cls: 'Basilisk', team: 'monsters', color: 0x6a7a4a,
     hp: 52, ac: 15, speed: 4, prof: 2, xp: 700, cr: 3,
     ai: 'brute',
+    lurks: true, // rules 5: in a room on two floors, it waits on its own floor
     stats: { str: 16, dex: 8, con: 15, int: 2, wis: 8, cha: 7 },
     attacks: [{ name: 'Bite', stat: 'str', damage: '4d6', reach: 1, rider: { save: 'con', dc: 12, condition: 'petrified', turns: 1 } }],
   },

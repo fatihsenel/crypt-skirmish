@@ -3,6 +3,7 @@ import { makeFloor, floorId, parseFloorId, levelOf, allReachable, floorTier, new
 import { newCampaign, completeFight, serialize, HERO_CODES } from '../src/game/campaign.js';
 import { Game } from '../src/game/combat.js';
 import { seeded } from '../src/game/dice.js';
+import { Grid } from '../src/game/grid.js';
 import { levelById } from '../src/game/maps.js';
 import { canTrade, stock } from '../src/game/shop.js';
 
@@ -76,13 +77,35 @@ describe('the Endless Crypt', () => {
     }
   });
 
+  it('generation 4 sinks some exits below, down a stair, every chamber still reachable', () => {
+    const floors = (gen) => Array.from({ length: 60 }, (_, s) => makeFloor(s, 6, gen));
+    expect(floors(3).some((f) => /[[\]]/.test(f.rows.join('')))).toBe(false);
+    const sunk = floors(4).filter((f) => /[[\]]/.test(f.rows.join('')));
+    expect(sunk.length).toBeGreaterThan(5);
+    expect(sunk.length).toBeLessThan(35);
+    for (const f of sunk) {
+      const g = new Grid(f.rows);
+      expect(g.stairways).toHaveLength(1);
+      const exit = g.stairs[0];
+      expect(g.lower.has(`${exit.x},${exit.z}`)).toBe(true); // the way down is in the lower hall
+      expect(g.spawns.filter((u) => /[A-Z]/.test(u.code)).some((u) => g.lower.has(`${u.x},${u.z}`))).toBe(false);
+      const walk = g.flood(1, 1, Infinity, (x, z) => !g.isWall(x, z) && !g.chasms.has(`${x},${z}`));
+      expect(walk.has(`${exit.x},${exit.z}`)).toBe(true); // reached by the stairs
+    }
+    // its own dice: a generation 4 floor with no stairs is its generation 3 floor
+    for (const f of floors(4).filter((g) => !/[[\]]/.test(g.rows.join('')))) {
+      const { seed, floor } = parseFloorId(f.id);
+      expect(f.rows).toEqual(makeFloor(seed, floor, 3).rows);
+    }
+  });
+
   it('starts from the won party, rested, and goes deeper floor by floor', () => {
     const s = newEndless(won(), 99);
-    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 3 });
+    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 4 });
     expect(s.done).toBe(false);
     expect(s.gold).toBe(120);
     expect(s.pack).toEqual(['ringProtection']);
-    expect(nextFloor(s)).toBe('deep:99:1:3');
+    expect(nextFloor(s)).toBe('deep:99:1:4');
     const game = new Game(levelOf(nextFloor(s)), { rng: seeded(1), party: s.party });
     game.over = 'victory';
     const done = completeFight(s, nextFloor(s), game).state;

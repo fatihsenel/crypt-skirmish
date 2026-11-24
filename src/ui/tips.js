@@ -108,7 +108,7 @@ export const TIPS = [
     when: (c) => c.stairsInSight,
     text: (c) => 'This room has <b>two floors</b>. Steps going down lead to the <b>lower hall</b>, and steps going up lead back: ' +
       'a step onto them takes you to the other end, 5 ft like any step. Stand on a stair to look down (or up) it, then ' +
-      `${click(c, 'click')} a tile past it. The walls hide each floor from the other, but a fight is heard on both, and monsters use the stairs too.`,
+      `${click(c, 'click')} a tile past it. The walls hide each floor from the other, but a fight is heard on both, and monsters use the stairs too. <b>Push</b> a foe into a stairwell and it tumbles down.`,
   },
   {
     id: 'feed',

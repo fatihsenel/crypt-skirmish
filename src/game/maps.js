@@ -417,6 +417,29 @@ LEVELS.push(
     ],
     loot: [['weaponPlus1', 'ringProtection', 'potion']],
   },
+  // Act five's middle way: a chapel over an undercroft, its stairs crossing (the first '[' leads to
+  // the first ']', at the far end below).
+  {
+    id: 'undercroft',
+    name: 'The Undercroft',
+    intro: 'Past the bridge a ruined chapel stands over its undercroft. Its two stairs go down to opposite ends of the dark, where something heavy waits in the water.',
+    rows: [
+      '################',
+      '#F.R..[....a..[#',
+      '#W.C........x..#',
+      '#..|....a...|..#',
+      '#.....$........#',
+      '################',
+      '################',
+      '#]...........]~#',
+      '#..~~.......~~.#',
+      '#..~~.$z.....u.#',
+      '#^....|....z.>.#',
+      '################',
+    ],
+    loot: [['weaponPlus2', 'potion'], ['potion', 'potion']],
+    asleep: ['11,1', '8,3'], // gargoyles on their plinths
+  },
 );
 
 /** The first level's map, kept for older code and tests. */

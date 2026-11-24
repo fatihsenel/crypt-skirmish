@@ -72,10 +72,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Push, Grapple, Help, Ready, drinking a
   potion or giving one to an ally next to you. Grapple, Disengage, Search, Help and Give potion
   wait behind **More** on the action bar, so the moves most turns need stay in one row; so does
-  Push, except in a room with a chasm or burning coals.
+  Push, except in a room with a chasm, burning coals or stairs.
 - **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or DEX;
   win and it's pushed 5 ft straight away from you. Over a chasm's edge it falls and is gone (no
-  save, no body left to raise); onto burning coals it burns. A wall, a door or someone behind it
+  save, no body left to raise); onto burning coals it burns; into a stairwell (or off the top
+  stair) it tumbles down to the floor below, takes 1d6 and lands prone. A wall, a door or someone behind it
   stops the push, and fliers and Tharok don't go over an edge. Choosing a foe marks the tile
   it would land on.
 - **Grapple:** instead of one attack, Athletics against the foe's STR or DEX. Win and it can't
@@ -140,10 +141,13 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   over it. Push a foe over the edge and it's gone. Gargoyles and Tharok can throw a hero
   back too: a hero thrown toward the edge gets a DEX save to catch it.
 - **Rooms on two floors:** the Cistern Stair (in act two, beside the Vault and the Well) has a
-  hall above and a flooded hall below, each with its own monsters. Stepping onto a flight of
-  steps takes you to the stair at its other end, 5 ft like any step. The walls hide each floor
-  from the other: from the top or foot of a stair you can look down or up it, but not shoot. A
-  fight is heard on both floors, and monsters use the stairs too.
+  hall above and a flooded hall below, each with its own monsters, and so does the Undercroft
+  (in act five, beside the Den and the Grotto), whose two stairs cross to opposite ends below.
+  Stepping onto a flight of steps takes you to the stair at its other end, 5 ft like any step.
+  The walls hide each floor from the other: from the top or foot of a stair you can look down or
+  up it, but not shoot. A fight is heard on both floors, and monsters use the stairs too, except
+  ghouls and basilisks: they lurk on their own floor, at the foot of the stairs at most, until a
+  hero comes down or they're hurt. Push a foe into a stairwell and it tumbles down.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden.
 - Walls in front of a figure turn see-through.
 
@@ -220,7 +224,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   get tougher every three floors (as New Game+), elites from floor 7, and a named foe waits on
   every fifth. Dives started since act five also meet gargoyles (from floor 4) and basilisks
   (from floor 5), and Tharok after the mummy lord, and dives started since then find about half
-  their floors cut by a chasm with a one-tile span; a dive already under way keeps its floors. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
+  their floors cut by a chasm with a one-tile span, and since the rooms on two floors about a
+  quarter have the way down in a sunken chamber, reached only by a stair; a dive already under
+  way keeps its floors. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
@@ -343,7 +349,8 @@ Everything is generated in the browser, with no recordings:
   dice don't wobble, and the title's skull holds still.
 - Screen readers hear the combat log as it happens (even with the log panel closed), whose
   turn it is, and what the keyboard cursor rests on with what Enter would do there. R reads
-  out the board around the hero (and a chasm's edge beside it), and the number keys say what they picked. At camp they hear
+  out the board around the hero (and a chasm's edge beside it; in a room on two floors, which
+  floor everyone is on and how far each foe is on foot), and the number keys say what they picked. At camp they hear
   how the last room went, which room is next, each room on the map, and items handed out.
 - The title, camp and New Game+ work from the keyboard alone: Tab to a room on the map, Enter
   to choose it, and focus stays where it was when the camp redraws.
@@ -441,6 +448,10 @@ A few things differ from the SRD to keep the game simple:
   thrown 5 ft away, and a hero Tharok's charge knocks down is thrown too. Thrown toward a chasm,
   the hero makes a DEX save (DC 10): success catches the edge (prone at the lip), failure is a
   fall. Fights begun before this rule (rules 3 and earlier) play without it.
+- A foe pushed into a stairwell, or off the top stair, tumbles to the stair at the foot (1d6
+  bludgeoning, prone), unless it flies or someone stands there. Ghouls and basilisks keep to
+  their own floor of a two-floor room until a hero sets foot there or they're hurt. Fights begun
+  before these rules (rules 4 and earlier) play without them.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.
@@ -510,7 +521,7 @@ fails, so GitHub emails, if the game crashed for anyone the day before (`scripts
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
 4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
-12 Halls, 13 Armory, 14 Tomb, 15 Bridge, 16 Den, 17 Labyrinth, 18 Cistern). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`, `thread`), `&seed=7` for the same dice every time.
+12 Halls, 13 Armory, 14 Tomb, 15 Bridge, 16 Den, 17 Labyrinth, 18 Cistern, 19 Undercroft). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`, `thread`), `&seed=7` for the same dice every time.
 This doesn't touch the save.
 
 **See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,

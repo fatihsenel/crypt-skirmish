@@ -34,7 +34,7 @@ describe('rooms on two floors', () => {
   });
 
   it('leaves one-floor rooms as they were', () => {
-    for (const l of LEVELS.filter((r) => r.id !== 'cistern')) {
+    for (const l of LEVELS.filter((r) => !['cistern', 'undercroft'].includes(r.id))) {
       const g = new Grid(l.rows);
       expect([g.links.size, g.lower.size]).toEqual([0, 0]);
     }
@@ -110,6 +110,81 @@ describe('rooms on two floors', () => {
     const spawns = g.spawns.filter((s) => /[a-z]/.test(s.code));
     expect(spawns.some((s) => g.lower.has(key(s.x, s.z)))).toBe(true);
     expect(spawns.some((s) => !g.lower.has(key(s.x, s.z)))).toBe(true);
+    expect(g.spawns.filter((s) => /[A-Z]/.test(s.code)).every((s) => !g.lower.has(key(s.x, s.z)))).toBe(true);
+  });
+
+  it('rules 5: a foe pushed into a stairwell tumbles down to the foot, hurt and prone', () => {
+    // The fighter at (1,1) pushes the goblin at (2,1) east, onto the stair down at (3,1).
+    const game = new Game(['#########', '#Fg[#]..#', '#...#...#', '#########'], { rng: () => 0.99 });
+    game.start();
+    const f = game.units.find((u) => u.team === 'heroes');
+    const g = game.units.find((u) => u.team === 'monsters');
+    setTurn(game, game.units.indexOf(f));
+    expect(game.pushTo(f, g)).toEqual({ x: 5, z: 1, fall: false, tumble: { x: 3, z: 1 } });
+    const hp = g.hp;
+    const r = game.shove(f, g, true);
+    expect(r.success).toBe(true);
+    expect(r.push).toMatchObject({ to: { x: 5, z: 1 }, stair: { x: 3, z: 1 } });
+    expect([g.x, g.z]).toEqual([5, 1]);
+    expect(hp - g.hp).toBe(r.push.tumble.damage);
+    if (g.alive) expect(game.has(g, 'prone')).toBe(true);
+  });
+
+  it('rules 5: a foe already on the stair down tumbles whichever way it is pushed', () => {
+    const game = new Game(['#########', '#..[#]..#', '#.F.#.g.#', '#########'], { rng: () => 0.99 });
+    game.start();
+    const [f, g] = game.units;
+    g.x = 3; g.z = 1; // on the stair; a push from (2,2) points into the wall at (4,0)
+    expect(game.pushTo(f, g)).toMatchObject({ x: 5, z: 1, tumble: { x: 3, z: 1 } });
+  });
+
+  it('rules 5: no tumble with someone at the foot, for a flier, or under older rules', () => {
+    const rows = ['#########', '#Fg[#]g.#', '#...#...#', '#########'];
+    const old = new Game(rows, { rules: 4 });
+    old.start();
+    expect(old.pushTo(old.units[0], old.units[1])).toEqual({ x: 3, z: 1, fall: false });
+    const game = new Game(rows);
+    game.start();
+    const [f, g, other] = game.units;
+    g.flies = true;
+    expect(game.pushTo(f, g).tumble).toBeUndefined();
+    g.flies = false;
+    expect(game.pushTo(f, g).tumble).toEqual({ x: 3, z: 1 });
+    other.x = 5; other.z = 1; // someone at the foot of the stairs
+    expect(game.pushTo(f, g)).toEqual({ x: 3, z: 1, fall: false });
+  });
+
+  it('rules 5: a ghoul lurks on its own floor until a hero comes down or it is hurt', () => {
+    const rows = ['#########', '#F.[#]..#', '#...#...#', '#...#.u.#', '#########'];
+    const up = (game) => {
+      const u = game.units.find((x) => x.code === 'u');
+      setTurn(game, game.units.indexOf(u));
+      u.unaware = false;
+      return [u, [...game.reachable(u).values()].some((n) => !game.grid.lower.has(key(n.x, n.z)))];
+    };
+    const game = new Game(rows, { rng: () => 0.5 });
+    game.start();
+    const [u, climbs] = up(game);
+    expect(climbs).toBe(false); // waits below
+    expect(game.reachable(u).has(key(5, 1))).toBe(true); // at the foot of the stairs, at most
+    game.applyDamage(u, 1, null);
+    expect(up(game)[1]).toBe(true); // hurt: it comes up
+    const old = new Game(rows, { rng: () => 0.5, rules: 4 });
+    old.start();
+    expect(up(old)[1]).toBe(true); // older rules: no lurking
+    const down = new Game(rows, { rng: () => 0.5 });
+    down.start();
+    const f = down.units.find((x) => x.code === 'F');
+    f.x = 6; f.z = 1; // a hero sets foot below
+    expect(down.lurking(down.units.find((x) => x.code === 'u'))).toBe(false);
+  });
+
+  it('the Undercroft: stairs that cross, its exit and lurkers below, its gargoyles above', () => {
+    const g = new Grid(levelById('undercroft').rows);
+    expect(g.stairways).toEqual([{ down: { x: 6, z: 1 }, up: { x: 1, z: 7 } }, { down: { x: 14, z: 1 }, up: { x: 13, z: 7 } }]);
+    expect(g.lower.has(key(g.stairs[0].x, g.stairs[0].z))).toBe(true);
+    const below = g.spawns.filter((s) => g.lower.has(key(s.x, s.z))).map((s) => s.code).sort();
+    expect(below).toEqual(['u', 'z', 'z']);
     expect(g.spawns.filter((s) => /[A-Z]/.test(s.code)).every((s) => !g.lower.has(key(s.x, s.z)))).toBe(true);
   });
 });

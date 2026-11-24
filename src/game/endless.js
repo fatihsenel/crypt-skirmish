@@ -28,9 +28,10 @@ const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
 /**
  * Dives started since act five (`gen` 2) also meet its gargoyles and basilisks, and Tharok
  * after the mummy lord. A dive keeps the generation it began with, so its floors (and their
- * replays) stay the same. Generation 3 floors are sometimes split by chasms (see makeFloor).
+ * replays) stay the same. Generation 3 floors are sometimes split by chasms, and generation 4
+ * sometimes sinks the stairs' chamber below the rest, down a flight of stairs (see makeFloor).
  */
-export const GEN = 3;
+export const GEN = 4;
 const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
 const BOSSES_TWO = [...BOSSES, 'v'];
 
@@ -207,6 +208,8 @@ export function makeFloor(seed, floor, gen = 1) {
   }
   for (let n = Math.floor(rng() * 3); n > 0; n--) place(pick(rooms), '^');
 
+  if (gen >= 4) sinkEnd(grid, { seed, floor, end, cells, openings, from: heroAt[0] });
+
   return {
     id: floorId(seed, floor, gen),
     name: `The Deep, floor ${floor}`,
@@ -215,6 +218,49 @@ export function makeFloor(seed, floor, gen = 1) {
     loot,
     asleep,
   };
+}
+
+/**
+ * Generation 4: now and then the chamber with the way down (when it's on the bottom row) is a
+ * lower hall: its doorways walled up, and a stair down '[' in another chamber leads to a stair
+ * up ']' inside it, both against a far (top) wall. Its own dice, and it's undone unless every
+ * other chamber can still be walked to, so a floor without it is its generation 3 floor.
+ */
+function sinkEnd(grid, { seed, floor, end, cells, openings, from }) {
+  const srng = seeded(hash(`endless ${seed} ${floor} stairs`));
+  if (end.r !== 1 || srng() >= 0.35) return;
+  const inEnd = (x, z) => x >= end.x0 && x <= end.x1 && z >= end.z0 && z <= end.z1;
+  const borders = (x, z) => [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => inEnd(x + dx, z + dz));
+  const sealed = openings.filter(([x, z]) => !inEnd(x, z) && borders(x, z) && grid[z][x] !== '#');
+  const was = sealed.map(([x, z]) => grid[z][x]);
+  for (const [x, z] of sealed) grid[z][x] = '#';
+  const undo = () => sealed.forEach(([x, z], i) => { grid[z][x] = was[i]; });
+  const walk = steps(grid, from);
+  const open = (ch) => !'#|&=*_'.includes(ch);
+  for (let z = 0; z < H; z++) {
+    for (let x = 0; x < W; x++) if (!inEnd(x, z) && open(grid[z][x]) && !walk.has(`${x},${z}`)) return undo();
+  }
+  // A stair's tile: plain floor on a chamber's top row, the wall right behind it.
+  const tops = (cell) => {
+    const out = [];
+    for (let x = cell.x0; x <= cell.x1; x++) if (grid[cell.z0][x] === '.' && grid[cell.z0 - 1][x] === '#') out.push([x, cell.z0]);
+    return out;
+  };
+  const ups = tops(end);
+  const downs = cells.filter((c) => c !== end && c !== cells[0]).flatMap(tops);
+  if (!ups.length || !downs.length) return undo();
+  const [ux, uz] = ups[Math.floor(srng() * ups.length)];
+  const [dx, dz] = downs[Math.floor(srng() * downs.length)];
+  grid[uz][ux] = ']';
+  grid[dz][dx] = '[';
+  // Everything in the lower hall is reached from its stair (the rest was checked above).
+  const below = steps(grid, [ux, uz]);
+  const lost = () => { for (let z = end.z0; z <= end.z1; z++) for (let x = end.x0; x <= end.x1; x++) if (open(grid[z][x]) && !below.has(`${x},${z}`)) return true; return false; };
+  if (!walk.has(`${dx},${dz}`) && !steps(grid, from).has(`${dx},${dz}`) || lost()) {
+    grid[uz][ux] = '.';
+    grid[dz][dx] = '.';
+    return undo();
+  }
 }
 
 /** Steps from `from` to every tile a hero could walk (walls, props and closed doors aside, doors open). */

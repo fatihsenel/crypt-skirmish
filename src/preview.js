@@ -215,7 +215,7 @@ export function createPreview(deps) {
     const why = game.shoveProblem(u, foe, push);
     const to = push && !why ? game.pushTo(u, foe) : null;
     board.hover.set(to ? [hovered, { x: to.x, z: to.z }] : [hovered]);
-    const win = !push ? 'it is knocked prone' : to?.fall ? 'it goes over the edge' : 'it is pushed 5 ft back';
+    const win = !push ? 'it is knocked prone' : to?.fall ? 'it goes over the edge' : to?.tumble ? 'it tumbles down the stairs (1d6, prone)' : 'it is pushed 5 ft back';
     hud.hint(why ? `${foe.name}: ${why}`
       : `${name} → ${foe.name}: Athletics ${signed(game.shoveBonus(u))} vs their ${signed(game.shoveResist(foe))}; win and ${win}`, !why);
   }

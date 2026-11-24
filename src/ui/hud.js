@@ -632,6 +632,7 @@ export class Hud {
     this.log(`${who(r.attacker)} shoves ${who(r.target)}: ${roll} vs ${resist}. ` +
       (!r.success ? '<b class="miss">It keeps its feet.</b>'
         : r.push?.fall ? '<b class="crit">Pushed over the edge!</b>'
+        : r.push?.stair ? '<b class="crit">Pushed down the stairs!</b>'
         : r.push ? '<b>Pushed back 5 ft.</b>'
         : '<b class="cond prone">Knocked prone!</b>'));
   }
@@ -848,6 +849,10 @@ export class Hud {
   /** Someone walked onto the coals. */
   logBurn(r) {
     this.log(`${who(r.unit)} steps onto the coals and takes <b class="hit">${r.damage} fire</b> ${dice(r.roll)}.`);
+  }
+
+  logTumble(r) {
+    this.log(`${who(r.unit)} tumbles down the stairs and takes <b class="hit">${r.damage} bludgeoning</b> ${dice(r.roll)}${r.lands ? ', landing prone' : ''}.`);
   }
 
   logTrapFound({ unit }) {
@@ -1084,9 +1089,9 @@ export class Hud {
     }));
     // Moves most turns don't need wait behind More, so the bar stays short (on a phone, one row).
     const more = [];
-    // Push (rules 3): on the bar where there's a chasm or coals to push a foe into, else behind More.
+    // Push (rules 3): on the bar where there is a chasm, coals or (rules 5) a stairwell to push a foe into, else behind More.
     if (u.team === 'heroes' && (game.rules ?? 3) >= 3) {
-      (game.grid.chasms?.size || game.fire?.length ? atks : more).push(button({
+      (game.grid.chasms?.size || game.fire?.length || (game.rules >= 5 && game.grid.links?.size) ? atks : more).push(button({
         kind: 'push', id: 'push', name: PUSH.name, cls: 'act',
         sub: `${signed(game.shoveBonus(u))} · 5 ft back`,
         tip: { kind: 'Takes one attack', chips: [`${signed(game.shoveBonus(u))} Athletics`, '5 ft'], desc: PUSH.desc, how: this.howTo('an enemy') },

@@ -160,14 +160,18 @@ export const NODES = {
     actBreak: true,
     teaser: 'Nekhet the Mummy Lord, the end of the fourth act. Afterwards the party takes a long rest.',
   },
-  // Act five: the bridge, then the basilisk den's loot or the grotto's rest, then the minotaur.
+  // Act five: the bridge, then the basilisk den's loot, the undercroft's two floors or the grotto's rest, then the minotaur.
   bridge: {
-    kind: 'fight', level: 'bridge', short: 'Bridge', col: 14, row: 1, next: ['lair', 'grotto'],
+    kind: 'fight', level: 'bridge', short: 'Bridge', col: 14, row: 1, next: ['lair', 'undercroft', 'grotto'],
     teaser: 'Gargoyles and a fallen knight, across a chasm no one can climb.',
   },
   lair: {
     kind: 'fight', level: 'lair', short: 'Den', col: 15, row: 0, next: ['labyrinth'],
     teaser: 'Basilisks: their bite turns you to stone. A Runed Weapon +2, but no rest before the Labyrinth.',
+  },
+  undercroft: {
+    kind: 'fight', level: 'undercroft', short: 'Undercroft', col: 15, row: 1, next: ['labyrinth'],
+    teaser: 'Two floors: gargoyles and a knight in the chapel, basilisks and ghouls waiting below. A Runed Weapon +2, no rest.',
   },
   grotto: {
     kind: 'rest', col: 15, row: 2, next: ['labyrinth'],

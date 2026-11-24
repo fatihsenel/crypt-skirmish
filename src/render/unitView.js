@@ -198,7 +198,7 @@ export class UnitView {
    * the figure leaves the first stair and as it reaches the second (dust, a sound). Calm motion
    * keeps a fade in place.
    */
-  async takeStairs(from, to, out, back, onEnd = () => {}) {
+  async takeStairs(from, to, out, back, onEnd = () => {}, { tumble = false } = {}) {
     const shown = [this.label, this.marker, this.base].map((o) => o.visible);
     const full = this.ghost ? 0.35 : 1;
     this.label.visible = this.marker.visible = this.base.visible = false;
@@ -207,10 +207,13 @@ export class UnitView {
     const height = (f) => (f?.down ? -0.5 : 0.6); // the well's bottom, or the top of the steps
     // A staircase, not a ramp: each of four treads is a small lift and a flat stride.
     const treads = (t) => { const n = 4, i = Math.min(n - 1, Math.floor(t * n)); return (i + easeInOut(Math.min(1, t * n - i))) / n; };
-    this.walking = !still;
+    this.walking = !still && !tumble;
+    const pace = tumble ? 0.6 : 1; // pushed: quicker, and head over heels
+    const roll = (t) => { if (tumble && !still) this.figure.rotation.x = t * Math.PI * 2; };
     if (out) this.faceTowards(from.x + out.dx, from.z + out.dz);
     onEnd(from);
-    await tween(still ? 380 : 620, (t) => {
+    await tween(still ? 380 : 620 * pace, (t) => {
+      roll(t / 2);
       if (!still && out) {
         const s = treads(t);
         this.group.position.set(from.x + out.dx * span * s, height(out) * s, from.z + out.dz * span * s);
@@ -218,10 +221,11 @@ export class UnitView {
       this.fadeMeshes(full * Math.min(1, 2 - 2 * t)); // gone over the second half
     }, linear);
     if (!still) sfx.step(this.unit.code);
-    await wait(still ? 120 : 220);
+    await wait(still ? 120 : 220 * pace);
     if (back) this.figure.rotation.y = Math.atan2(-back.dx, -back.dz); // coming off the steps
     this.group.position.set(to.x + (still || !back ? 0 : back.dx * span), still || !back ? 0 : height(back), to.z + (still || !back ? 0 : back.dz * span));
-    await tween(still ? 380 : 620, (t) => {
+    await tween(still ? 380 : 620 * pace, (t) => {
+      roll(0.5 + t / 2);
       if (!still && back) {
         const s = 1 - treads(t);
         this.group.position.set(to.x + back.dx * span * s, height(back) * s, to.z + back.dz * span * s);
@@ -229,6 +233,7 @@ export class UnitView {
       this.fadeMeshes(full * Math.min(1, 2 * t)); // seen within the first half
     }, linear);
     this.group.position.set(to.x, 0, to.z);
+    this.figure.rotation.x = 0;
     this.fadeMeshes(full);
     this.walking = false;
     onEnd(to);

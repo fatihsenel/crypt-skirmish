@@ -59,7 +59,9 @@ server on 5173.
   (`pushTo`, `pushed`, `fall`: over a chasm's edge, `fell` and `raised`, no body left).
   Rules 4: monsters throw heroes back (`throwBack`: an attack's `throws: { dc }` once a turn,
   `threw`, and Tharok's failed charge knock; a hero thrown at a chasm saves DEX vs `EDGE_DC` to
-  catch the edge; the `throw` event, `playThrown` in `animate.js`).
+  catch the edge; the `throw` event, `playThrown` in `animate.js`). Rules 5: a push into a
+  stairwell tumbles down (`stairwell`, `tumble`: a push's `stair`, `tumbleDown` in `animate.js`),
+  and a `lurks` monster keeps to its floor (`lurking`, through `passableFor`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
@@ -158,7 +160,7 @@ server on 5173.
   unit, and `m` is the mimic), model in `render/modelSpecs.js` (and a fallback builder in
   `render/models.js`), an icon in `ui/icons.js`, lore in `ui/bestiary.js` (its count is in
   the `scholar` achievement), a sound alias in `audio/sfx.js`, and lines in `speech.js` if it
-  talks. Monster abilities are template fields that `combat.js` reads (`rider`, `charge`,
+  talks. Monster abilities are template fields that `combat.js` reads (`rider`, `charge`, `lurks`,
   `recklessBrute`, `rises`), never changes to `ai.js`.
 - **Condition:** add it to `CONDITIONS` in `combat.js` and a line in `attackMods`. Monsters
   apply it through an attack `rider` or a spell's `condition`.
@@ -187,7 +189,8 @@ server on 5173.
   `crypt-skirmish:endless` (`writeSave` picks the key); `afterFloor` follows `completeFight`. A
   dive keeps the `gen` it began with (none means 1), so new monsters go in a new generation's
   pool (`GEN`, `POOL_TWO`, `BOSSES_TWO`). Generation 3 cuts chasms with their own dice
-  (`crng`), so a gen-3 floor without one is its gen-2 floor; changing `makeFloor`, `POOL` or `floorBudget` itself
+  (`crng`), so a gen-3 floor without one is its gen-2 floor; generation 4 sinks the exit's
+  chamber below a stair (`sinkEnd`, its own dice too; a one-tile wall is enough there); changing `makeFloor`, `POOL` or `floorBudget` itself
   changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,

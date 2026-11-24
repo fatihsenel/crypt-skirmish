@@ -162,6 +162,25 @@ export function createAnimations(app) {
     hud.renderInitiative(app.game());
   }
 
+  /**
+   * Rules 5: pushed into a stairwell: a stagger onto the stair, a tumble down the flight to the
+   * stair at its foot, the knock and the damage there, then prone.
+   */
+  async function tumbleDown(target, push) {
+    const v = view(target);
+    const board = app.board();
+    if (push.stair.x !== push.from.x || push.stair.z !== push.from.z) await v.shoved(push.stair.x, push.stair.z);
+    sfx.stairway(true);
+    await v.takeStairs(push.stair, push.to, board.flightAt?.(push.stair.x, push.stair.z), board.flightAt?.(push.to.x, push.to.z), () => {}, { tumble: true });
+    if (inView(push.to)) burstFx(stage.scene, push.to, { colors: [0x6b6259, 0x8a8076, 0x4d463f], count: 14, speed: 1.2, size: 0.06, y: 0.08, life: 700 });
+    sfx.hit(target.code);
+    stage.shake(0.04, 200);
+    if (push.tumble) floatText(stage.scene, push.to, `−${push.tumble.damage}`, 'crit');
+    await damageReaction(target);
+    v.updateStatus();
+    keepInView(push.to);
+  }
+
   /** Rules 4: thrown back by a gargoyle or Tharok: a stagger, coals, the chasm, or a grab at its edge. */
   async function playThrown({ target, thrown: t }) {
     const v = view(target);
@@ -184,6 +203,11 @@ export function createAnimations(app) {
       if (target.team === 'heroes') quip(downSpeaker(target, app.game().units, seen), 'down', target.name);
       await v.plunge();
       stage.shake(0.06, 260); // far below, it lands
+      return;
+    }
+    if (t.push.stair) {
+      floatText(stage.scene, t.push.from, 'Down the stairs!', 'crit');
+      await tumbleDown(target, t.push);
       return;
     }
     floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, 'Thrown back!', 'cond');
@@ -494,6 +518,9 @@ export function createAnimations(app) {
       sfx.fall();
       await v.plunge();
       stage.shake(0.06, 260); // far below, it lands
+    } else if (push.stair) {
+      floatText(stage.scene, target, 'Down the stairs!', 'crit');
+      await tumbleDown(target, push);
     } else {
       floatText(stage.scene, target, 'Pushed!', 'cond');
       await v.shoved(push.to.x, push.to.z);
