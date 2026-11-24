@@ -63,6 +63,24 @@ describe('fights recorded under rules 6', () => {
   }
 });
 
+// Whole fights recorded under rules 7 by scripts/v7-fixtures.mjs: rooms with doors, traps, rats and
+// skeletons, the cube's Sunken Halls, the dark Catacombs and generation 6 Endless floors.
+const SEVEN = JSON.parse(readFileSync(new URL('./fixtures/v7-fights.json', import.meta.url), 'utf8'));
+
+describe('fights recorded under rules 7', () => {
+  for (const f of SEVEN) {
+    it(`replay ${f.room} (seed ${f.seed}) unchanged`, () => {
+      const party = dailyCampaign({ level: f.level, classes: f.classes }).party;
+      const g = new Game(levelOf(f.room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(f.seed), rules: 7 });
+      const r = replayFight(g, f.log);
+      expect(r.ok).toBe(true);
+      expect(g.over).toBe(f.over);
+      expect(fightCheck(g)).toBe(f.check);
+      expect(g.rng()).toBe(f.next);
+    });
+  }
+});
+
 describe('the rules a fight began under', () => {
   it('ride with a saved record and a link', async () => {
     const { watchable } = await import('../src/game/history.js');

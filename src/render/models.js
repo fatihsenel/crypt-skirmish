@@ -819,6 +819,45 @@ function cube() {
   };
 }
 
+/** Rules 8: a swarm of rats: a scurrying knot of small ones, each with its own jitter. */
+function swarm() {
+  const root = new THREE.Group();
+  const body = pivot(root, 0, 0, 0);
+  const head = pivot(body, 0, 0.12, 0.2); // what a bite lunges; the rats follow it
+  const armL = pivot(body, 0.15, 0.12, 0);
+  const armR = pivot(body, -0.15, 0.12, 0);
+  const furs = [0x6b5a4c, 0x5a4b40, 0x7a6655, 0x4d4038].map((c) => mat(c));
+  const pink = mat(0xd89a94);
+  const eye = new THREE.MeshStandardMaterial({ color: 0xff2a2a, emissive: 0xc00000, emissiveIntensity: 1.2 });
+  const rats = [];
+  const spots = [[0, 0.18], [0.24, 0.05], [-0.24, 0.08], [0.12, -0.22], [-0.14, -0.2], [0.3, -0.24], [-0.32, -0.08], [0, -0.02]];
+  spots.forEach(([x, z], i) => {
+    const rat = pivot(body, x, 0, z);
+    rat.rotation.y = (i * 2.3) % (2 * PI);
+    add(rat, new THREE.SphereGeometry(0.075, 10, 8), furs[i % 4], [0, 0.07, 0], [0, 0, 0], [0.8, 0.7, 1.5]);
+    add(rat, new THREE.ConeGeometry(0.045, 0.11, 8), furs[i % 4], [0, 0.08, 0.14], [PI / 2, 0, 0]);
+    add(rat, new THREE.SphereGeometry(0.012, 6, 4), eye, [0.025, 0.1, 0.13]);
+    add(rat, new THREE.SphereGeometry(0.012, 6, 4), eye, [-0.025, 0.1, 0.13]);
+    add(rat, new THREE.CylinderGeometry(0.006, 0.01, 0.16, 5), pink, [0, 0.05, -0.17], [PI / 2 + 0.2, 0, 0]);
+    rats.push({ rat, x, z, phase: i * 1.7 });
+  });
+
+  const idle = (t, walking) => {
+    const speed = walking ? 9 : 2.6;
+    for (const r of rats) {
+      r.rat.position.x = r.x + Math.sin(t * speed + r.phase) * 0.04 + head.rotation.x * 0.2 * Math.sign(r.x || 1);
+      r.rat.position.z = r.z + Math.cos(t * speed * 0.8 + r.phase) * 0.04;
+      r.rat.position.y = Math.max(0, Math.sin(t * speed * 1.5 + r.phase)) * 0.015;
+    }
+    eye.emissiveIntensity = 1 + Math.sin(t * 3) * 0.3;
+  };
+
+  return {
+    root, body, head, armL, armR, legL: null, legR: null, rest: { armL: 0, armR: 0 },
+    height: 0.4, idle, bite: true, dieAxis: 'z',
+  };
+}
+
 const BUILDERS = {
   F: fighter, P: fighter, W: wizard, K: wizard, R: rogue, A: rogue, C: cleric,
   g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer,
@@ -828,6 +867,7 @@ const BUILDERS = {
   y: skeleton, t: skeleton, x: fighter, l: necromancer, // act four
   a: skeleton, z: giantRat, v: fighter, // act five
   j: jelly, i: cube,
+  d: skeleton, c: swarm, // rules 8: zombies fall back to the skeleton miniature
 };
 
 export function buildModel(unit) {

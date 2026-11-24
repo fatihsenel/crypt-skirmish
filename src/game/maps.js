@@ -39,6 +39,7 @@ export const LEVELS = [
     loot: [['potion']],
     asleep: ['14,8', '14,9', '11,10'], // the rat nest
     patrols: { '13,5': [[13, 1], [9, 2]], '11,8': [[7, 7]] },
+    added8: [['d', 3, 9]], // rules 8: a zombie shuffling by the chest
   },
   {
     id: 'warren',
@@ -83,6 +84,7 @@ export const LEVELS = [
     loot: [['ringProtection'], ['potion', 'potion', 'bracersDefense']],
     asleep: ['8,6', '3,7', '5,9'],
     patrols: { '11,1': [[14, 1], [14, 4]], '12,5': [[7, 6]] },
+    added8: [['c', 1, 7]], // rules 8: a swarm of rats in the flooded room
   },
   {
     id: 'sanctum',
@@ -104,6 +106,7 @@ export const LEVELS = [
     ],
     loot: [['potion']],
     patrols: { '12,2': [[8, 3]] },
+    added8: [['d', 11, 6]], // rules 8: one of the necromancer's zombies
   },
   // --- act two: below the sanctum ---------------------------------------------
   {
@@ -151,6 +154,7 @@ export const LEVELS = [
     mimics: ['14,5'],
     asleep: ['2,7'],
     patrols: { '9,8': [[13, 9], [7, 9]] },
+    added8: [['d', 3, 9]], // rules 8: a zombie in the lower hall
   },
   {
     id: 'barrow',

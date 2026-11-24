@@ -75,7 +75,14 @@ server on 5173.
   smashing barrels and crates (`smash`, `PROP_HP`, `board.removeProp`) and the gelatinous cube
   (`i`: `transparent`, the `engulfed` condition and `digest`); rooms add rules-7 spawns through
   `level.added7`, and rules-6 fights are replayed by `tests/fixtures/v6-fights.json`
-  (`scripts/v6-fixtures.mjs`).
+  (`scripts/v6-fixtures.mjs`). Rules 8: barred doors (the `bar` command, `barDoor`, a door's
+  `barred: { dc }`; a monster stepping into one makes `bashDoor`, a `bash` move step), disarmed
+  traps (the `disarm` command, `disarmBonus`; a `rigged` trap springs on monsters, not heroes),
+  the zombie (`d`: `fortitude`, Undead Fortitude in `applyDamage`, beaten by `this.blow`'s crit or
+  radiant or a `radiant` spell) and the swarm of rats (`c`: `swarm`, half weapon damage, through
+  foes in `passableFor`, an attack's `weak` dice at half HP); rooms add rules-8 spawns through
+  `level.added8`, and rules-7 fights are replayed by `tests/fixtures/v7-fights.json`
+  (`scripts/v7-fixtures.mjs`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
@@ -210,8 +217,9 @@ server on 5173.
   pool (`GEN`, `POOL_TWO`, `BOSSES_TWO`). Generation 3 cuts chasms with their own dice
   (`crng`), so a gen-3 floor without one is its gen-2 floor; generation 4 sinks the exit's
   chamber below a stair (`sinkEnd`, its own dice too; a one-tile wall is enough there); generation 5
-  turns a monster into an ochre jelly now and then (`oozeIn`, its own dice), and generation 6 into a
-  gelatinous cube (`cubeIn`); changing `makeFloor`, `POOL` or `floorBudget` itself
+  turns a monster into an ochre jelly now and then (`oozeIn`, its own dice), generation 6 into a
+  gelatinous cube (`cubeIn`), and generation 7 a skeleton into a zombie and a rat into a swarm
+  (`restlessIn`); changing `makeFloor`, `POOL` or `floorBudget` itself
   changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,

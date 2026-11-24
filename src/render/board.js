@@ -828,7 +828,7 @@ export class Board {
   }
 
   /** Stone frame and a wooden door that swings open on its hinge. */
-  addDoor({ x, z, open }) {
+  addDoor({ x, z, open, barred }) {
     // Doors span between the walls on either side of them.
     const alongX = this.grid.isWall(x - 1, z) || this.grid.isWall(x + 1, z);
     const g = new THREE.Group();
@@ -862,16 +862,39 @@ export class Board {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.01, 6, 12), mat(0xb08a3a, { metalness: 0.8, roughness: 0.3 }));
     ring.position.set(0.7, 0.32, 0.05);
     hinge.add(ring);
+    // Rules 8: the bar a hero drops across it, shown while it's barred.
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.11, 0.26), mat(0xa8763c)); // through the door: seen from either side
+    bar.position.set(0, 0.36, 0);
+    bar.castShadow = true;
+    bar.visible = !!barred;
+    g.add(bar);
     if (open) hinge.rotation.y = -1.7;
     this.addToCell(x, z, g);
-    return { hinge };
+    return { hinge, bar };
   }
 
   async openDoor(x, z) {
     const d = this.doors.get(key(x, z));
     if (!d || d.opened) return;
     d.opened = true;
+    d.bar.visible = false;
     await tween(420, (t) => { d.hinge.rotation.y = -1.7 * t; }, easeOut);
+  }
+
+  /** Rules 8: a hero swings the door shut and drops its bar. */
+  async shutDoor(x, z) {
+    const d = this.doors.get(key(x, z));
+    if (!d) return;
+    const from = d.hinge.rotation.y;
+    d.opened = false;
+    if (from) await tween(360, (t) => { d.hinge.rotation.y = from * (1 - t); }, easeOut);
+    d.bar.visible = true;
+  }
+
+  /** The bar breaks (a monster forced the door). */
+  breakBar(x, z) {
+    const d = this.doors.get(key(x, z));
+    if (d) d.bar.visible = false;
   }
 
   addChest({ x, z, opened, loot = [] }) {
@@ -1055,12 +1078,22 @@ export class Board {
       this.fogDirty = true;
       t.cell = cell;
     }
+    if (trap.rigged && !trap.sprung && !t.rigged) this.rigTrap(trap);
     if (trap.sprung && !t.sprung) {
       t.sprung = true;
       t.edge.material.color.set(0x888888);
       t.cell.mats.find((e) => e.m === t.edge.material)?.base.set(0x888888);
       await tween(110, (p) => { t.spikes.position.y = t.lo * (1 - p); }, easeOut);
     }
+  }
+
+  /** Rules 8: a disarmed trap, reset against the monsters: its edge turns from red to green. */
+  rigTrap(trap) {
+    const t = this.traps.get(key(trap.x, trap.z));
+    if (!t || t.sprung) return;
+    t.rigged = true;
+    t.edge.material.color.set(0x6ad06a);
+    t.cell?.mats.find((e) => e.m === t.edge.material)?.base.set(0x6ad06a);
   }
 
   /** Lower the spikes again after the victim has moved on. */

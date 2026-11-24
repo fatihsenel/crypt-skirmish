@@ -169,6 +169,11 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return why ? { toast: why } : { cmd: { type: 'smash', x: t.x, z: t.z } };
   }
 
+  if (selected?.kind === 'bar' || selected?.kind === 'disarm') { // rules 8
+    const why = selected.kind === 'bar' ? game.barProblem(u, t.x, t.z) : game.disarmProblem(u, t.x, t.z);
+    return why ? { toast: why } : { cmd: { type: selected.kind, x: t.x, z: t.z } };
+  }
+
   if (selected?.kind === 'grapple') {
     if (!other || other.team === u.team) return { toast: 'Click an enemy next to you' };
     const why = game.grappleProblem(u, other);

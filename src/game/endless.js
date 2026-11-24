@@ -32,9 +32,10 @@ const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
  * sometimes sinks the stairs' chamber below the rest, down a flight of stairs (see makeFloor).
  * Generation 5 (rules 6) turns an orc, ghoul, ghast or mummy into an ochre jelly now and then,
  * with its own dice (`oozeIn`), so a floor without one is its generation 4 floor. Generation 6
- * (rules 7) does the same with a gelatinous cube from floor 5 (`cubeIn`).
+ * (rules 7) does the same with a gelatinous cube from floor 5 (`cubeIn`), and generation 7
+ * (rules 8) now and then makes a skeleton a zombie and a giant rat a swarm of rats (`restlessIn`).
  */
-export const GEN = 6;
+export const GEN = 7;
 const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
 const BOSSES_TWO = [...BOSSES, 'v'];
 
@@ -204,6 +205,7 @@ export function makeFloor(seed, floor, gen = 1) {
 
   if (gen >= 5) oozeIn(grid, seed, floor);
   if (gen >= 6) cubeIn(grid, seed, floor);
+  if (gen >= 7) restlessIn(grid, seed, floor);
 
   // Chests (potions, and gear now and then) and a few hidden traps away from the start.
   const loot = [];
@@ -256,6 +258,22 @@ function cubeIn(grid, seed, floor) {
   if (!spots.length) return;
   const [x, z] = spots[Math.floor(crng() * spots.length)];
   grid[z][x] = 'i';
+}
+
+/**
+ * Generation 7: about one floor in three, a skeleton is a zombie, and on another third a giant
+ * rat is a swarm of rats. Its own dice, so a floor without either is its generation 6 floor.
+ */
+function restlessIn(grid, seed, floor) {
+  const rrng = seeded(hash(`endless ${seed} ${floor} restless`));
+  for (const [from, to] of [['s', 'd'], ['r', 'c']]) {
+    if (rrng() >= 0.35) continue;
+    const spots = [];
+    grid.forEach((row, z) => row.forEach((ch, x) => { if (ch === from) spots.push([x, z]); }));
+    if (!spots.length) continue;
+    const [x, z] = spots[Math.floor(rrng() * spots.length)];
+    grid[z][x] = to;
+  }
 }
 
 /**

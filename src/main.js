@@ -993,6 +993,19 @@ function startFight(resume, watch = null) {
   game.on('caltrops', (r) => hud.logCaltrops(r));
   game.on('light', (r) => hud.logLight(r));
   game.on('smash', (r) => hud.logSmash(r));
+  // Rules 8: barred doors, disarmed traps and Undead Fortitude.
+  game.on('bar', (r) => hud.logBar(r));
+  game.on('bash', (r) => {
+    const seen = !unseen(r.unit);
+    if (seen || inView(r)) hud.logBash(r, seen);
+    else hud.log('Something pounds on a barred door in the dark.', 'sys');
+  });
+  game.on('disarm', (r) => hud.logDisarm(r));
+  game.on('fortitude', (r) => {
+    if (unseen(r.unit)) return;
+    hud.logFortitude(r);
+    if (r.success) floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, 'Gets back up!', 'warn');
+  });
   game.on('morale', (r) => {
     if (unseen(r.unit)) return;
     hud.logMorale(r);
@@ -1518,6 +1531,8 @@ function stepNote(step) {
   if (step.type === 'caltrops') return 'spreads caltrops';
   if (step.type === 'torch') return step.spell ? 'casts Light' : 'throws a torch';
   if (step.type === 'smash') return 'smashes cover';
+  if (step.type === 'bar') return 'bars a door';
+  if (step.type === 'disarm') return 'works at a trap';
   if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'brazier') return 'tips a brazier';
   if (step.type === 'lever') return 'pulls the lever';

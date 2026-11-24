@@ -117,6 +117,11 @@ export const SPECS = {
     file: 'Skeleton_Minion', height: 1.2, tint: 0x9fb88a,
     clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
   },
+  // Rules 8: the zombie, the skeleton warrior in rotten grey-green flesh, empty-handed.
+  d: {
+    file: 'Skeleton_Warrior', height: 1.32, tint: 0x8f9a72,
+    clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
+  },
   // The ghast: a bigger, darker ghoul.
   h: {
     file: 'Skeleton_Minion', height: 1.38, tint: 0x6f8060,

@@ -12,10 +12,11 @@ import { hash } from './dice.js';
  * 1d6 damage and prone. 6: a potion can be tossed to an ally 15 ft away, the Ochre Jelly
  * splits, cracked floors give way to the hall below, alchemist's fire and caltrops, and dark
  * chambers. 7: torches thrown and the Light cantrip, living monsters breaking
- * and running (morale), smashable barrels and crates, and the Gelatinous Cube. A saved fight, replay or
+ * and running (morale), smashable barrels and crates, and the Gelatinous Cube. 8: doors shut and barred, traps disarmed and turned on monsters,
+ * zombies (Undead Fortitude) and swarms of rats. A saved fight, replay or
  * link carries the number it began under (none means 1), so it plays back by its own rules.
  */
-export const RULES = 7;
+export const RULES = 8;
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits

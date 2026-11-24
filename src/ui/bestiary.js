@@ -36,6 +36,8 @@ export const LORE = {
   z: 'Eight legs, a heavy tail and a bite that turns flesh to stone. Its den is full of statues.',
   j: 'A mound of yellow ooze that eats through flesh and bone alike. Cut it, and there are two.',
   i: 'A block of clear jelly that sweeps the halls clean. You see it when you are already inside, with the bones of the last ones.',
+  d: 'A body that forgot how to lie down. Cut it down and it gets up again, unless the blow is clean or holy.',
+  c: 'Not one rat but a hundred, pouring over and under everything. Swords find little to cut.',
   v: 'The beast Nekhet walled into the labyrinth’s heart. A thousand years of pacing have not calmed him.',
 };
 

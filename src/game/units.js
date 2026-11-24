@@ -477,6 +477,34 @@ export const TEMPLATES = {
     stats: { str: 14, dex: 3, con: 20, int: 1, wis: 6, cha: 1 },
     attacks: [{ name: 'Engulf', stat: 'str', damage: '3d6', reach: 1, rider: { save: 'dex', dc: 12, condition: 'engulfed' } }],
   },
+  // SRD zombie, rules 8. Undead Fortitude (`fortitude`): dropped to 0 HP by anything but a crit
+  // or radiant damage (Divine Smite, Divine Strike, Sacred Flame), it makes a CON save against
+  // 5 + the damage taken and stays on 1 HP if it succeeds (Game#applyDamage).
+  d: {
+    name: 'Zombie', cls: 'Zombie', team: 'monsters', color: 0x7d8a5c,
+    hp: 22, ac: 8, speed: 4, prof: 2, xp: 50, cr: 0.25,
+    ai: 'brute',
+    undead: true,
+    fortitude: true,
+    passives: ['undeadFortitude'],
+    immune: ['poisoned'],
+    stats: { str: 13, dex: 6, con: 16, int: 3, wis: 6, cha: 5 },
+    attacks: [{ name: 'Slam', stat: 'str', damage: '1d6', reach: 1 }],
+  },
+  // SRD swarm of rats, rules 8 (`swarm`): weapons deal it half damage (it resists bludgeoning,
+  // piercing and slashing), it moves through foes' spaces (though it can't stop in one), it
+  // can't be grappled, knocked prone, held or frightened, and its bites drop from 2d6 to 1d6 at
+  // half HP (`weak`).
+  c: {
+    name: 'Swarm of Rats', cls: 'Swarm of Rats', team: 'monsters', color: 0x5a4a3e,
+    hp: 24, ac: 10, speed: 6, prof: 2, xp: 50, cr: 0.25,
+    ai: 'brute',
+    swarm: true,
+    passives: ['swarm'],
+    immune: ['frightened', 'paralyzed', 'petrified', 'prone', 'restrained', 'stunned'],
+    stats: { str: 9, dex: 11, con: 9, int: 2, wis: 10, cha: 3 },
+    attacks: [{ name: 'Bites', stat: 'dex', damage: '2d6', weak: '1d6', reach: 1 }],
+  },
 };
 
 let nextId = 1;

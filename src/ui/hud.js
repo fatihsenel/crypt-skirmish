@@ -13,7 +13,7 @@ import { unitCard, shortName } from './unitCard.js';
 
 /** A turn-order name, short enough to tell apart: "Giant Spider 2" shows as "G. Spider 2". */
 const chipName = (name) => esc(shortName(name));
-import { isWeapon, isMelee, longReach, LIGHT_CLASSES, PROP_HP } from '../game/combat.js';
+import { isWeapon, isMelee, longReach, LIGHT_CLASSES, PROP_HP, TRAP_DC } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
 /** Standard actions few turns need: they sit behind More with Grapple, Help and Give potion. */
@@ -552,7 +552,7 @@ export class Hud {
       + (r.strike ? ` incl. <b class="spell">Divine Strike +${r.strike.total} radiant</b> ${dice(r.strike)}` : '')
       + (r.charge ? ` incl. <b class="crit">Charge +${r.charge.total}</b> ${dice(r.charge)}` : '')
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '')
-      + (r.resisted ? ` <b class="spell">Rage</b> halves it.` : '')
+      + (r.resisted ? (r.target.swarm ? ' The swarm scatters: half damage.' : ` <b class="spell">Rage</b> halves it.`) : '')
       + (r.deflect ? ` <b class="spell">Deflect Missiles</b> takes off ${r.deflect.total} ${dice(r.deflect)}.` : '');
     const did = r.crit ? `crits ${who(r.target)}${r.attack.damage ? ` for ${r.damage}` : ''}`
       : r.hit && !r.shielded && !r.fumble ? `hits ${who(r.target)}${r.attack.damage ? ` for ${r.damage}` : ''}`
@@ -831,7 +831,10 @@ export class Hud {
   }
 
   logTrap(r) {
-    this.log(`<b class="crit">A hidden trap!</b> Spikes burst from the floor under ${who(r.unit)}. ` +
+    const opener = r.trap.rigged && r.unit.team === 'monsters' ? '<b class="crit">The rigged trap!</b>' // rules 8
+      : r.trap.revealed && r.unit.team === 'heroes' && r.unit === this.disarming ? '<b class="crit">The trap goes off!</b>' : '<b class="crit">A hidden trap!</b>';
+    this.disarming = null;
+    this.log(`${opener} Spikes burst from the floor under ${who(r.unit)}. ` +
       `DEX save DC ${r.dc}: ${saveText(r)}, takes <b class="hit">${r.damage} piercing</b> ${dice(r.roll)}` +
       // (logged before the damage lands: it goes down only if it survives the spikes)
       (!r.success && r.unit.hp > r.damage ? ' and is <b class="cond prone">knocked prone</b>.' : '.'));
@@ -879,6 +882,33 @@ export class Hud {
   logSmash({ unit, prop, damage, roll, broken, hp }) {
     this.log(`${who(unit)} smashes at the ${prop}: <b class="hit">${damage}</b> ${dice(roll)}` +
       (broken ? `. <b class="crit">It breaks apart.</b>` : `. It holds (${hp} left).`));
+  }
+
+  /** Rules 8: a hero shuts and bars a door. */
+  logBar({ unit, shut, dc }) {
+    this.log(`${who(unit)} ${shut ? 'swings the door shut and drops' : 'drops'} the <b>bar</b> across it. A monster must break it: STR DC ${dc}.`);
+  }
+
+  /** Rules 8: a monster at a barred door. */
+  logBash(r, seen) {
+    const name = seen ? who(r.unit) : 'Something';
+    this.log(`${name} throws itself at the barred door. STR DC ${r.dc}: ${r.d20} ${signed(r.total - r.d20)} = ${r.total}` +
+      (r.success ? `. <b class="crit">The bar breaks!</b>` : '. It holds, splintering.'));
+  }
+
+  /** Rules 8: a hero works at a trap. */
+  logDisarm(r) {
+    if (!r.success && r.sprung) this.disarming = r.unit; // the springing is logged next
+    this.log(`${who(r.unit)} works at the trap. DEX check DC ${r.dc}: ${r.d20} ${signed(r.bonus)} = ${r.total}` +
+      (r.success ? `: <b class="spell">rigged</b>. Heroes can cross it now, and the next monster to step on it sets it off.`
+        : r.sprung ? ': a slip.' : ': no luck this time.'));
+  }
+
+  /** Rules 8: a zombie's Undead Fortitude. */
+  logFortitude(r) {
+    if (r.why) this.log(`${who(r.unit)} goes down for good: ${r.why === 'crit' ? 'a critical hit' : 'radiant damage'} beats Undead Fortitude.`);
+    else this.log(`${who(r.unit)}’s Undead Fortitude: CON save DC ${r.dc}: ${saveText({ ...r, unit: r.unit }, 'stays down')}` +
+      (r.success ? ': it <b class="crit">gets back up</b> on 1 HP!' : '.'));
   }
 
   /** Rules 7: a monster tests its nerve. */
@@ -1286,6 +1316,30 @@ export class Hud {
           }));
         }
       }
+      // Rules 8: bar a door next to the hero, or disarm a trap they've found.
+      const next = (t) => Math.max(Math.abs(t.x - u.x), Math.abs(t.z - u.z)) === 1;
+      const actWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
+      if (game.rules >= 8 && [...game.grid.doors.values()].some((d) => !d.barred && next(d))) {
+        more.push(button({
+          kind: 'bar', id: 'bar', name: 'Bar door', cls: 'act',
+          sub: 'action · 5 ft',
+          tip: { kind: 'Action', chips: ['shuts it', 'STR 15 to break', 'easier each try'], desc: 'Shut the door next to you and drop its bar. A monster has to break it down (STR 15, 2 easier each failed try); heroes lift it by walking through.', how: this.howTo('a door next to you') },
+          problem: actWhy,
+          disabled: !!actWhy,
+          active: selected?.kind === 'bar',
+        }));
+      }
+      if (game.rules >= 8 && [...game.grid.traps.values()].some((t) => t.revealed && !t.sprung && !t.rigged && Math.max(Math.abs(t.x - u.x), Math.abs(t.z - u.z)) <= 1)) {
+        const bonus = u.passives.includes('trapSense') ? abilityMod(u.stats.dex) + u.prof : abilityMod(u.stats.dex);
+        more.push(button({
+          kind: 'disarm', id: 'disarm', name: 'Disarm', cls: 'act',
+          sub: `action · ${signed(bonus)}`,
+          tip: { kind: 'Action', chips: [`DEX DC ${TRAP_DC}`, `${signed(bonus)}`, 'fail by 5: it goes off'], desc: 'Work at a trap you’ve found next to you. Succeed and it’s rigged against the monsters: heroes cross it safely and the next monster to step on it sets it off. Fail by 5 or more and it goes off on you.', how: this.howTo('a trap next to you') },
+          problem: actWhy,
+          disabled: !!actWhy,
+          active: selected?.kind === 'disarm',
+        }));
+      }
       // Rules 7: smash a barrel or crate next to the hero.
       if (game.rules >= 7 && [...game.grid.props.values()].some((p) => PROP_HP[p.kind] && Math.max(Math.abs(p.x - u.x), Math.abs(p.z - u.z)) === 1)) {
         const smashWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
@@ -1384,7 +1438,7 @@ export class Hud {
       this.handlers.onChoose({ kind: 'readySpell', id });
     }
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'torch', 'light', 'smash', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
+    else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'torch', 'light', 'smash', 'bar', 'disarm', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

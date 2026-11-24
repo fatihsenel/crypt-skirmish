@@ -626,7 +626,7 @@ describe('campaign: levels, items and the dungeon map', () => {
 
   it('a won fight rests the party, awards XP, levels up and banks loot', () => {
     const start = { ...newCampaign(), xp: 400 };
-    const game = new Game(levelById('crypt'), { party: start.party });
+    const game = new Game(levelById('crypt'), { party: start.party, rules: 7 }); // before the crypt's zombie
     const f = game.units.find((u) => u.code === 'F');
     f.hp = 11;
     for (const u of game.units) if (u.team === 'monsters') u.alive = false;

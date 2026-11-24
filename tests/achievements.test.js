@@ -37,7 +37,7 @@ describe('achievements', () => {
     const base = { game: fight(), node: 'crypt' };
     const got = (ctx) => ids(earned('room', { ...base, ...ctx }, { 'first-room': 1 }));
     expect(got({ met: 19, slain: 99 })).toEqual([]);
-    expect(got({ met: 22, slain: 100 })).toEqual(['scholar', 'exterminator']);
+    expect(got({ met: 24, slain: 100 })).toEqual(['scholar', 'exterminator']);
     expect(got({})).toEqual([]);
   });
 

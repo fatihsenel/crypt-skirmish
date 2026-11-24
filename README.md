@@ -72,9 +72,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Push, Grapple, Help, Ready, drinking a
   potion or giving one to an ally (next to you, or tossed up to 15 ft to one you can see), throwing
   alchemist's fire, scattering caltrops, throwing your torch into the dark (a bonus action, once a
-  fight; Wizards, Clerics, Sorcerers and Bards can cast **Light** instead) and smashing a barrel or
-  crate next to you. Grapple, Disengage, Search, Help, Give potion, Fire, Caltrops, Torch, Light and
-  Smash wait behind **More** on the action bar, so the moves most turns need stay in one row; so does
+  fight; Wizards, Clerics, Sorcerers and Bards can cast **Light** instead), smashing a barrel or
+  crate next to you, barring a door and disarming a trap you've found. Grapple, Disengage, Search,
+  Help, Give potion, Fire, Caltrops, Torch, Light, Smash, Bar door and Disarm wait behind **More**
+  on the action bar, so the moves most turns need stay in one row; so does
   Push, except in a room with a chasm, burning coals or stairs.
 - **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or DEX;
   win and it's pushed 5 ft straight away from you. Over a chasm's edge it falls and is gone (no
@@ -127,6 +128,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   two, each half the size with half its HP, until the pieces are Small or under 10 HP. A
   **gelatinous cube** lurks in the Sunken Halls, all but invisible until you're next to it: it
   engulfs a hero, who burns in its acid each turn until a STR save gets them out.
+- **Zombies** shamble through the Crypt Door, the Sanctum and the Sealed Vault: cut one
+  down and it may get back up on 1 HP (Undead Fortitude), unless the blow was a critical hit or
+  radiant (Divine Smite, Divine Strike, Sacred Flame). A **swarm of rats** fills the Flooded
+  Ossuary: weapons deal it half damage (spells don't), it pours through heroes, it can't be
+  grappled, tripped or frightened, and its bites weaken at half HP.
 - Act four: mummies, wraiths and fallen knights.
 - Act five: gargoyles that stand as statues until you come close and whose claws can throw a
   hero back, and basilisks whose bite can turn a hero to stone for a turn.
@@ -163,6 +169,13 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   hero; past that a foe is unseen, and attacks at one have disadvantage. Monsters see your
   torches from anywhere. Throw your torch, or cast Light, to light a spot for the rest of the
   fight; a burning foe lights the tiles around it.
+- **Barred doors:** a hero next to a door can shut it and drop its bar (an action). A monster
+  has to break it down, a STR check against DC 15 that takes the rest of its move when it fails,
+  each failure 2 easier. Heroes lift the bar by walking through.
+- **Disarming traps:** a hero next to a trap they've found can work at it (an action): a DEX
+  check against DC 13 (Wren, the Monk and the Ranger add their proficiency). Succeed and it's
+  rigged against the monsters: heroes walk over it, and the next monster to step on it sets it
+  off. Fail by 5 or more and it goes off on you.
 - **Barrels and crates** give half cover, and a hero can smash one next to them (a barrel takes 5,
   a crate 8; every blow lands). Broken, it's open floor: nothing left to hide behind.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden, but a foe
@@ -248,7 +261,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   way keeps its floors. A floor's opening line says when it has a chasm or a sunken way down.
   Dives started since the ochre jelly find one now and then from floor 3, in place of a ghoul,
   skeleton, ghast or specter, and dives started since the gelatinous cube find one now and then
-  from floor 5, in place of a ghoul, ghast or mummy.
+  from floor 5, in place of a ghoul, ghast or mummy. Dives started since the zombies find one in
+  place of a skeleton, and a swarm in place of a giant rat, on about a third of their floors.
   Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
@@ -505,6 +519,15 @@ A few things differ from the SRD to keep the game simple:
   Transparent: it starts hidden, and only a hero next to it or with passive Perception 15 spots
   it. Fights begun before these rules (rules 6 and earlier) play without the torches, morale,
   smashing and the cube.
+- Breaking a barred door is a plain STR check (DC 15, 2 easier after each failure) made by
+  stepping into it, and costs the rest of the monster's move; heroes lift a bar from either side.
+  Disarming is a DEX check with thieves' tools' proficiency for the Rogue's slot, the Monk and the
+  Ranger; a disarmed trap is reset against the monsters rather than taken apart, and fliers pass
+  over it.
+- The zombie's Undead Fortitude and the swarm's resistances work without damage types: a crit,
+  Divine Smite, Divine Strike or Sacred Flame keeps a zombie down, and a swarm takes half from
+  every weapon. A swarm can't end its move in a hero's space. Fights begun before these rules
+  (rules 7 and earlier) play without bars, disarming, zombies and swarms.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.

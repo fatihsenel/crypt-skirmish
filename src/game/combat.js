@@ -32,6 +32,8 @@ export const LIGHT_CLASSES = ['Wizard', 'Cleric', 'Sorcerer', 'Bard'];
 export const MORALE_DC = 10; export const MORALE_ROUNDS = 2;
 /** Rules 7: barrels and crates break: their hit points (a smash always hits). */
 export const PROP_HP = { barrel: 5, crate: 8 };
+/** Rules 8: the STR check a monster makes to break a barred door; each failure splinters it, 2 easier. */
+export const BAR_DC = 15; export const BAR_SPLINTER = 2;
 /** Rules 7: a gelatinous cube's acid at the start of an engulfed creature's turn, and the STR save out. */
 export const ENGULF_DAMAGE = '2d6'; export const ENGULF_DC = 12;
 /** Rules 7: the passive Perception that spots a transparent monster more than 5 ft away. */
@@ -157,6 +159,7 @@ export class Game extends Spellcasting {
       this.grid.spawns.push(...level.added.map(([code, x, z, young]) => ({ code, x, z, ...(young && { young }) })));
     }
     if (this.rules >= 7 && level.added7) this.grid.spawns.push(...level.added7.map(([code, x, z]) => ({ code, x, z })));
+    if (this.rules >= 8 && level.added8) this.grid.spawns.push(...level.added8.map(([code, x, z]) => ({ code, x, z })));
     // Rules 6: cracked floor gives way over the lower hall, `below` [dx, dz] from it (level.below).
     // Older fights walk it as plain floor.
     this.below = level.below ?? null;
@@ -242,6 +245,7 @@ export class Game extends Spellcasting {
     this.hurtBy = {}; // per round: HP each side lost, { heroes, monsters } (the log's round headings)
     this.blows = [];  // every hit a hero took: { round, to, by, byId, kind, code, how, via, damage, hp, down } (for the fight's recap)
     this.drunk = 0;   // potions the heroes drank this fight
+    this.blow = null;  // the weapon hit landing right now: { crit, radiant } (Undead Fortitude)
     this.cause = null; // what is dealing damage right now: an attack's or spell's name, or 'a trap'
     this.via = null;   // and how: 'melee', 'ranged', 'spell' or 'trap'
   }
@@ -966,6 +970,16 @@ export class Game extends Spellcasting {
       if (saved) saved.warded = (saved.warded ?? 0) + 1;
       this.emit('ward', { unit: target, source, ...(target.elite === 'relentless' && { relentless: true }) });
     }
+    // Rules 8: Undead Fortitude (a zombie). Dropped to 0 by anything but a crit or radiant damage,
+    // it makes a CON save against 5 + the damage taken and stays on 1 HP if it succeeds.
+    if (target.hp <= 0 && target.alive && target.fortitude && this.rules >= 8 && amount > 0) {
+      const radiant = !!this.blow?.radiant || Object.values(SPELLS).some((sp) => sp.radiant && sp.name === this.cause);
+      const why = this.blow?.crit ? 'crit' : radiant ? 'radiant' : null;
+      const dc = 5 + (amount - soaked);
+      const s = why ? null : this.save(target, 'con', dc);
+      if (s?.success) target.hp = 1;
+      this.emit('fortitude', { unit: target, why, dc, d20: s?.d20 ?? null, total: s?.total ?? null, success: !!s?.success });
+    }
     // Morvath's Phylactery: once a fight, the first hero who would drop stays on 1 HP.
     if (target.hp <= 0 && target.alive && target.team === 'heroes' && !target.corpse
       && this.relics.includes('phylactery') && !this.phylacteryUsed) {
@@ -1157,12 +1171,12 @@ export class Game extends Spellcasting {
     const floor = this.lurking(unit) ? this.grid.lower.has(key(unit.x, unit.z)) : null;
     return (x, z) => {
       const o = this.unitAt(x, z);
-      if (o && o.team !== unit.team) return false;
+      if (o && o.team !== unit.team && !(unit.swarm && this.rules >= 8)) return false; // a swarm pours through
       if (floor !== null && this.grid.lower.has(key(x, z)) !== floor) return false; // it keeps to its floor
       if (fear && gridDistance({ x, z }, fear) < keep) return false;
       if (unit.team === 'heroes') {
         const t = this.grid.traps.get(key(x, z));
-        if (t && t.revealed && !t.sprung) return false;
+        if (t && t.revealed && !t.sprung && !t.rigged) return false; // rules 8: a rigged one is safe
         if (this.fire?.length && this.burningTiles().has(key(x, z))) return false; // the party walks around coals
         if (this.caltropTiles?.has(key(x, z))) return false; // and their own caltrops
       }
@@ -1367,6 +1381,7 @@ export class Game extends Spellcasting {
    *   { type: 'opportunity', result, at }  { type: 'trap', result }  { type: 'burn', result }
    *   { type: 'readied', result, at } (a readied hero's attack as the mover steps into it)
    *   { type: 'stairs', from, to, down } (down or up a stair to the room's other floor)
+   *   { type: 'bash', result } (rules 8: a monster at a barred door; it stops there unless it breaks it)
    * for the controller to animate in order; or null if the move is illegal.
    */
   move(unit, x, z) {
@@ -1410,9 +1425,23 @@ export class Game extends Spellcasting {
         if (!unit.alive || this.over) return stop(i);
       }
       const door = this.grid.closedDoorAt(to.x, to.z);
+      if (door?.barred && unit.team !== 'heroes') { // rules 8: it has to be broken down
+        flush(from);
+        unit.x = from.x;
+        unit.z = from.z;
+        const result = this.bashDoor(unit, door);
+        steps.push({ type: 'bash', result });
+        if (!result.success) {
+          unit.movesLeft = 0; // the try takes the rest of its move
+          this.emit('move', { unit, path: path.slice(0, i + 1) });
+          this.updateAwareness();
+          return { steps, path: path.slice(0, i + 1), interrupted: true };
+        }
+      }
       if (door) {
         flush(from);
         door.open = true;
+        door.barred = false; // a hero lifts the bar on the way through
         steps.push({ type: 'door', x: to.x, z: to.z });
         this.emit('door', { unit, x: to.x, z: to.z });
       }
@@ -1423,7 +1452,7 @@ export class Game extends Spellcasting {
         walked = [to];
       } else walked.push(to);
       const trap = this.grid.traps.get(key(to.x, to.z));
-      if (trap && !trap.sprung && unit.team === 'heroes') {
+      if (trap && !trap.sprung && (trap.rigged ? unit.team !== 'heroes' && !unit.flies : unit.team === 'heroes')) {
         flush(to);
         unit.x = to.x;
         unit.z = to.z;
@@ -2039,7 +2068,9 @@ export class Game extends Spellcasting {
     let strike = null;
     let charge = null;
     if (hit && attack.damage) { // a web hits for no damage: only its rider matters
-      damageRoll = rollExpr(attack.damage, { crit, rng: this.rng });
+      // A swarm's bites thin out once it's down to half its HP (SRD swarm of rats).
+      const weak = attack.weak && this.rules >= 8 && attacker.hp <= attacker.maxHp / 2;
+      damageRoll = rollExpr(weak ? attack.weak : attack.damage, { crit, rng: this.rng });
       damage = Math.max(1, damageRoll.total + this.damageBonus(attacker, attack));
       if (this.canSneak(attacker, target, mods)) {
         attacker.sneakUsed = true;
@@ -2074,7 +2105,7 @@ export class Game extends Spellcasting {
 
     // Rage: half damage from weapon attacks.
     let resisted = false;
-    if (hit && damage && target.raging && isWeapon(attack)) {
+    if (hit && damage && (target.raging || (target.swarm && this.rules >= 8)) && isWeapon(attack)) { // a swarm shrugs off blades too
       resisted = true;
       damage = Math.floor(damage / 2);
     }
@@ -2106,7 +2137,9 @@ export class Game extends Spellcasting {
     if (hit) {
       this.cause = attack.name;
       this.via = attack.reach === 1 ? 'melee' : 'ranged';
+      this.blow = { crit, radiant: !!(smite || strike) }; // what Undead Fortitude can't stand up to
       if (damage) this.applyDamage(target, damage, attacker);
+      this.blow = null;
       // Rules 6: a melee weapon hit splits an ochre jelly.
       if (this.rules >= 6 && damage && target.splits && target.alive && attack.reach === 1 && isWeapon(attack)) result.split = this.split(target);
       result.rider = this.applyRider(attacker, target, attack.rider);
@@ -2357,6 +2390,96 @@ export class Game extends Spellcasting {
     return result;
   }
 
+  // --- doors and traps (rules 8) ---------------------------------------------
+  /** The door next to `unit` at (x, z) that it could shut and bar, or why not. */
+  barProblem(unit, x, z) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 8) return 'This fight began before barring doors';
+    if (unit.team !== 'heroes') return 'Only heroes bar doors';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    const door = this.grid.doors.get(key(x, z));
+    if (!door) return 'Pick a door';
+    if (door.barred) return 'Already barred';
+    if (gridDistance(unit, door) !== 1) return 'Must stand next to it';
+    if (this.unitAt(x, z) || this.dyingAt(x, z)) return 'Someone is in the doorway';
+    return null;
+  }
+
+  /**
+   * Bar (the action): shut the door next to you and drop its bar. Heroes lift it again by
+   * walking through; a monster has to break it, a STR check against its DC (BAR_DC), and each
+   * failed try splinters it, BAR_SPLINTER easier the next time.
+   */
+  barDoor(unit, x, z) {
+    const problem = this.barProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    const door = this.grid.doors.get(key(x, z));
+    const shut = door.open;
+    door.open = false;
+    door.barred = { dc: BAR_DC };
+    const result = { ok: true, kind: 'bar', unit, x, z, shut, dc: BAR_DC };
+    this.emit('bar', result);
+    this.noise({ x, z }, 3);
+    this.updateAwareness();
+    return result;
+  }
+
+  /** A monster throws itself at a barred door: { unit, x, z, d20, total, dc, success }. */
+  bashDoor(unit, door) {
+    const d20 = rollDice(1, 20, this.rng).total;
+    const total = d20 + abilityMod(unit.stats.str);
+    const dc = door.barred.dc;
+    const success = total >= dc;
+    if (success) door.barred = false;
+    else door.barred.dc = Math.max(5, dc - BAR_SPLINTER);
+    const result = { unit, x: door.x, z: door.z, d20, total, dc, success };
+    this.emit('bash', result);
+    this.noise(door, 4);
+    return result;
+  }
+
+  /** Why `unit` can't disarm the trap at (x, z), or null. */
+  disarmProblem(unit, x, z) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 8) return 'This fight began before disarming traps';
+    if (unit.team !== 'heroes') return 'Only heroes disarm traps';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    const trap = this.grid.traps.get(key(x, z));
+    if (!trap || !trap.revealed || trap.sprung) return 'Pick a trap you’ve found';
+    if (trap.rigged) return 'Already turned on the monsters';
+    if (gridDistance(unit, trap) > 1) return 'Must stand next to it';
+    return null;
+  }
+
+  /** The DEX bonus a hero disarms with: proficiency too for an eye for traps (thieves' tools). */
+  disarmBonus(unit) {
+    return abilityMod(unit.stats.dex) + (unit.passives.includes('trapSense') ? unit.prof : 0);
+  }
+
+  /**
+   * Disarm (the action): a DEX check against TRAP_DC. A success resets the trap against the
+   * monsters: heroes cross it safely, and the next monster to step on it springs it. Failing by
+   * 5 or more sets it off on you; otherwise nothing happens.
+   */
+  disarm(unit, x, z) {
+    const problem = this.disarmProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    const trap = this.grid.traps.get(key(x, z));
+    const d20 = rollDice(1, 20, this.rng).total;
+    const bonus = this.disarmBonus(unit);
+    const total = d20 + bonus;
+    const success = total >= TRAP_DC;
+    const result = { ok: true, kind: 'disarm', unit, x, z, d20, bonus, total, dc: TRAP_DC, success, sprung: null };
+    if (success) trap.rigged = true;
+    this.emit('disarm', result);
+    if (!success && total <= TRAP_DC - 5) result.sprung = this.springTrap(trap, unit);
+    return result;
+  }
+
   // --- grappling ------------------------------------------------------------
   /** Grapple: like Shove, it takes one attack of the Attack action. */
   grappleProblem(attacker, target) {
@@ -2369,6 +2492,7 @@ export class Game extends Spellcasting {
     if (target.hidden) return `${target.name} is hidden: Search to find it`;
     if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
     if (target.huge) return `${target.name} is too big to grapple`;
+    if (target.swarm) return `${target.name} is a swarm: nothing to hold`;
     if (target.grappledBy === attacker) return `Already holding ${target.name}`;
     return null;
   }

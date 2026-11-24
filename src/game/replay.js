@@ -35,6 +35,7 @@ const fail = (reason) => ({ ok: false, reason });
  * Commands: move {x, z}, attack {target, attack}, shove {target, push?}, grapple {target}, help {target},
  * feed {target} (give a potion), chest {x, z}, brazier {x, z}, lever {x, z},
  * action {id, attack?, spell?} (attack or spell: Ready's pick),
+ * flask {target}, caltrops {x, z}, torch {x, z, spell?}, smash {x, z}, bar {x, z}, disarm {x, z},
  * spell {id, unit | x, z}, smite, rebuke, end. Returns the engine's result.
  */
 export function applyCommand(game, cmd) {
@@ -86,6 +87,10 @@ export function applyCommand(game, cmd) {
       return game.lightTile(u, cmd.x, cmd.z, !!cmd.spell);
     case 'smash':
       return game.smash(u, cmd.x, cmd.z);
+    case 'bar': // rules 8
+      return game.barDoor(u, cmd.x, cmd.z);
+    case 'disarm':
+      return game.disarm(u, cmd.x, cmd.z);
     case 'spell':
       return game.castSpell(u, cmd.id, spellTarget(game, cmd));
     case 'smite':

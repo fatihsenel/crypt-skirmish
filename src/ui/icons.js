@@ -133,6 +133,15 @@ const ICONS = {
     <path fill="none" stroke="var(--icon-hole)" stroke-width="1.3" stroke-linecap="round" d="M8.5 15.5l5.5-2.5"/>
     <circle cx="16.5" cy="15.5" r="1.1" fill="var(--icon-hole)" stroke="none"/>
     <circle cx="10" cy="10.5" r=".8" fill="var(--icon-hole)" stroke="none"/>`),
+  // rules 8: a zombie's slumped head with stitched mouth, and three rats in a heap for the swarm
+  d: svg(`<path stroke="none" d="M12 3C8 3 5.2 6 5.2 10.2c0 2.3.8 4.2 2.1 5.5V21h9.4v-5.3c1.3-1.3 2.1-3.2 2.1-5.5C18.8 6 16 3 12 3z"/>
+    <circle cx="9.3" cy="10.4" r="1.5" fill="var(--icon-hole)" stroke="none"/>
+    <circle cx="14.9" cy="11" r="1" fill="var(--icon-hole)" stroke="none"/>
+    <path fill="none" stroke="var(--icon-hole)" stroke-width="1.1" d="M8.8 16.2h6.4M10 15.2v2M12 15.2v2M14 15.2v2"/>`),
+  c: svg(`<path stroke="none" d="M2 19c0-2.2 2-4 4.8-4 1.7 0 3 .6 3.8 1.5l1.8-.4 1 1.5-1.3 1C11.9 20.2 10.4 21 8 21H3.5C2.6 21 2 20.2 2 19z"/>
+    <path stroke="none" d="M11.5 18.5c0-2.2 2-4 4.8-4 1.7 0 3 .6 3.8 1.5l1.8-.4 1 1.5-1.3 1c-.2 1.6-1.7 2.4-4.1 2.4H13c-.9 0-1.5-.8-1.5-2z"/>
+    <path stroke="none" d="M6 11c0-2.2 2-4 4.8-4 1.7 0 3 .6 3.8 1.5l1.8-.4 1 1.5-1.3 1c-.2 1.6-1.7 2.4-4.1 2.4H7.5C6.6 13 6 12.2 6 11z"/>
+    <path fill="none" stroke-width="1.2" d="M6 11.5c-1.5 0-2.5 1-2.5 2.2M2 19.5c-1 .2-1.4 1-1 1.5"/>`),
   // the gelatinous cube: a see-through block with a skull caught inside
   i: svg(`<path fill="none" stroke-width="1.6" stroke-linejoin="round" d="M4 8.5L12 5l8 3.5v9L12 21l-8-3.5z"/>
     <path fill="none" stroke-width="1.1" opacity=".6" d="M4 8.5l8 3.5 8-3.5M12 12v9"/>

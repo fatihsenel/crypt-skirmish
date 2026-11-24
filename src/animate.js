@@ -121,7 +121,7 @@ export function createAnimations(app) {
         hitFx(stage.scene, { ...pos, undead: target.undead }, attacker, { crit: r.crit });
         if (r.crit) stage.shake(0.3, 420);
         if (r.uncanny) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Uncanny Dodge ½', 'spell');
-        if (r.resisted) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Rage ½', 'spell');
+        if (r.resisted) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, r.target.swarm ? 'Swarm ½' : 'Rage ½', 'spell');
         if (r.deflect) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, `Deflected −${r.deflect.total}`, 'spell');
         if (r.bonus) floatText(stage.scene, { x: attacker.x, z: attacker.z - 0.6 }, BONUS_STRIKE[r.bonus], 'spell');
         if (r.charge) floatText(stage.scene, { x: attacker.x, z: attacker.z - 0.6 }, 'Charge!', 'crit');
@@ -396,6 +396,20 @@ export function createAnimations(app) {
             if (at === step.to) sfx.step(unit.code);
           });
           keepInView(step.to);
+          break;
+        }
+        case 'bash': { // rules 8: a monster throws itself at a barred door
+          const r = step.result;
+          if (r.success) app.board().breakBar(r.x, r.z);
+          if (unseen(unit) && !inView(r)) break;
+          await view(unit).turnTowards(r.x, r.z);
+          sfx.whoosh(true);
+          await wait(160);
+          sfx.trap();
+          stage.shake(r.success ? 0.1 : 0.05, 200);
+          burstFx(stage.scene, r, { colors: [0x6b4524, 0x4a2e16, 0x8a6a40], count: r.success ? 18 : 8, speed: r.success ? 1.2 : 0.6, size: 0.045, y: 0.4, life: 500 });
+          floatText(stage.scene, r, r.success ? 'Broken!' : 'Holds', r.success ? 'crit' : 'miss');
+          await wait(300);
           break;
         }
         case 'door':
@@ -685,6 +699,44 @@ export function createAnimations(app) {
       floatText(stage.scene, { x: r.x, z: r.z }, 'Smashed!', 'crit');
     } else floatText(stage.scene, { x: r.x, z: r.z }, `−${r.damage}`, 'dmg');
     await wait(350);
+  }
+
+  /** Rules 8: a hero swings a door shut and drops its bar. */
+  async function playBar(r) {
+    await view(r.unit).turnTowards(r.x, r.z);
+    sfx.door();
+    await app.board().shutDoor(r.x, r.z);
+    sfx.maneuver();
+    floatText(stage.scene, { x: r.x, z: r.z }, 'Barred!', 'spell');
+    await wait(350);
+  }
+
+  /** Rules 8: a hero works at a trap: rigged against the monsters, a fumble, or it goes off. */
+  async function playDisarm(r) {
+    const board = app.board();
+    await view(r.unit).turnTowards(r.x, r.z);
+    sfx.maneuver();
+    await wait(250);
+    if (r.success) {
+      await board.showTrap(app.game().grid.traps.get(`${r.x},${r.z}`)); // drawn now if it wasn't, green-edged
+      sfx.discover();
+      floatText(stage.scene, { x: r.x, z: r.z }, 'Rigged!', 'spell');
+    } else if (!r.sprung) floatText(stage.scene, { x: r.x, z: r.z }, 'Fumbled', 'miss');
+    else {
+      const t = r.sprung;
+      sfx.trap();
+      await board.showTrap(t.trap);
+      floatText(stage.scene, t.unit, t.success ? `Save −${t.damage}` : `Trap −${t.damage}`, 'crit');
+      hitFx(stage.scene, t.unit);
+      await damageReaction(t.unit);
+      if (t.prone && t.unit.alive) {
+        floatText(stage.scene, t.unit, 'Prone!', 'cond');
+        view(t.unit).updateStatus();
+      }
+      board.retractTrap(t.trap);
+      hud.renderInitiative(app.game());
+    }
+    await wait(300);
   }
 
   async function playHelp(r) {
@@ -1174,6 +1226,8 @@ export function createAnimations(app) {
       case 'caltrops': return playCaltrops(r);
       case 'torch': return playLight(r);
       case 'smash': return playSmash(r);
+      case 'bar': return playBar(r);
+      case 'disarm': return playDisarm(r);
       case 'chest': return playChest(unit, r);
       case 'brazier': return playBrazier(unit, r);
       case 'lever': return playLever(unit, r);

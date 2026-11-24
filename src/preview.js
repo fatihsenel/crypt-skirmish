@@ -3,7 +3,7 @@
 // attacks, the odds of an attack or shove, a spell's targets and blast.
 
 import { key, pathFrom } from './game/grid.js';
-import { SPILL_DC, BURN_TURNS, PROP_HP, hitChance, diceRange } from './game/combat.js';
+import { SPILL_DC, BURN_TURNS, PROP_HP, BAR_DC, TRAP_DC, hitChance, diceRange } from './game/combat.js';
 import { signed, abilityMod } from './game/dice.js';
 import { SPELLS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { tips } from './ui/tips.js';
@@ -82,6 +82,8 @@ export function createPreview(deps) {
     if (selected?.kind === 'caltrops') return refreshCaltrops(u);
     if (selected?.kind === 'torch' || selected?.kind === 'light') return refreshLight(u, selected.kind === 'light');
     if (selected?.kind === 'smash') return refreshSmash(u);
+    if (selected?.kind === 'bar') return refreshBar(u);
+    if (selected?.kind === 'disarm') return refreshDisarm(u);
     if (selected?.kind === 'ready') {
       const spells = u.spells.some((id) => !game.readySpellProblem(u, id));
       hud.hint(`Ready: pick the attack${spells ? ' or spell' : ''} to hold · a melee one strikes a foe stepping into reach, a ranged one${spells ? ' or a spell' : ''} a foe stepping into view · Esc to cancel`);
@@ -253,6 +255,39 @@ export function createPreview(deps) {
     const why = game.smashProblem(u, hovered.x, hovered.z);
     const prop = game.grid.props.get(`${hovered.x},${hovered.z}`);
     hud.hint(why ? `Smash: ${why}` : `Smash the ${prop.kind}: ${prop.hp ?? PROP_HP[prop.kind]} HP left, and it’s cover no more once broken`, !why);
+  }
+
+  /** The tiles next to the hero where `problem` finds nothing wrong. */
+  function around(u, problem) {
+    const tiles = [];
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (!problem(u, u.x + dx, u.z + dz)) tiles.push({ x: u.x + dx, z: u.z + dz });
+    }
+    return tiles;
+  }
+
+  /** Rules 8: bar a door: the doors next to the hero. */
+  function refreshBar(u) {
+    board.reach.set(around(u, (h, x, z) => game.barProblem(h, x, z)));
+    if (!hovered) return hud.hint('Bar door: click a door next to you · Esc to cancel');
+    board.hover.set([hovered]);
+    const why = game.barProblem(u, hovered.x, hovered.z);
+    const open = game.grid.doors.get(`${hovered.x},${hovered.z}`)?.open;
+    hud.hint(why ? `Bar door: ${why}` : `${open ? 'Shut and bar' : 'Bar'} this door: a monster needs STR ${BAR_DC} to break it, 2 easier each try`, !why);
+  }
+
+  /** Rules 8: disarm: the found traps next to the hero, with the odds. */
+  function refreshDisarm(u) {
+    board.reach.set(around(u, (h, x, z) => game.disarmProblem(h, x, z)));
+    if (!hovered) return hud.hint('Disarm: click a trap you’ve found next to you · Esc to cancel');
+    board.hover.set([hovered]);
+    const why = game.disarmProblem(u, hovered.x, hovered.z);
+    if (why) return hud.hint(`Disarm: ${why}`);
+    const bonus = game.disarmBonus(u);
+    const pct = (need) => Math.round(Math.min(1, Math.max(0, (21 - need) / 20)) * 100);
+    const ok = pct(TRAP_DC - bonus);
+    const boom = 100 - pct(TRAP_DC - 4 - bonus); // a total of DC − 5 or less
+    hud.hint(`Disarm: ${ok}% to rig it against the monsters (DEX ${signed(bonus)} vs DC ${TRAP_DC}) · ${boom}% it goes off on you`, true);
   }
 
   /** Help targeting: adjacent enemies light up, the hint says who it helps. */

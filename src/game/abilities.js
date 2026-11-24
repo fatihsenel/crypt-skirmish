@@ -138,6 +138,8 @@ export const PASSIVES = {
   deflectMissiles: 'Deflect Missiles: your reaction takes 1d10 + DEX + monk level off a ranged weapon hit (used automatically).',
   openHand: 'Open Hand Technique: a Flurry of Blows hit knocks the foe prone unless it makes a DEX save.',
   packTactics:'Pack Tactics: advantage when an ally is next to the target.',
+  undeadFortitude: 'Undead Fortitude: dropped to 0 HP by anything but a critical hit or radiant damage, it makes a CON save (DC 5 + the damage) and stays on 1 HP if it succeeds.',
+  swarm: 'Swarm: weapons deal it half damage; it moves through foes; it can’t be grappled, knocked prone, held, frightened or stunned; its bites weaken at half HP.',
   trapSense: 'Keen Eyes: spots traps within 10 ft.',
   skulker: 'Skulker: monsters that have not noticed the party only spot you within 15 ft.',
 };
@@ -168,7 +170,7 @@ export const SPELLS = {
   },
   sacredFlame: {
     name: 'Sacred Flame', level: 0, time: 'action', range: 12, targeting: 'enemy',
-    damage: '1d8', save: 'dex',
+    damage: '1d8', save: 'dex', radiant: true, // rules 8: a zombie's Undead Fortitude can't stand it
     desc: 'Cantrip: radiant flame descends on a foe, 1d8 radiant, DEX save negates.',
   },
   cureWounds: {
