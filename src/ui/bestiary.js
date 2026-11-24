@@ -35,6 +35,7 @@ export const LORE = {
   a: 'Carved to guard the chasm, and still guarding it. It holds still as a statue until you come close.',
   z: 'Eight legs, a heavy tail and a bite that turns flesh to stone. Its den is full of statues.',
   j: 'A mound of yellow ooze that eats through flesh and bone alike. Cut it, and there are two.',
+  i: 'A block of clear jelly that sweeps the halls clean. You see it when you are already inside, with the bones of the last ones.',
   v: 'The beast Nekhet walled into the labyrinth’s heart. A thousand years of pacing have not calmed him.',
 };
 

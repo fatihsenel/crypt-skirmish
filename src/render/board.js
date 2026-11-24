@@ -545,7 +545,7 @@ export class Board {
         const light = new THREE.PointLight(0xffb060, 1, 2.6, 2);
         light.position.set(x + 0.1, 0.95, z + 0.08);
         this.group.add(light);
-        this.candles.push({ light, seed: hash(x, z, 8) * 10, cell: null });
+        this.candles.push({ light, seed: hash(x, z, 8) * 10, cell: null, x, z });
       }
     } else {
       if (!kitPiece('column', 0)) box(0.5, KIT_WALL * 1.5, 0x6f6862);
@@ -554,11 +554,57 @@ export class Board {
     this.group.add(...parts);
     const cell = this.addToCell(x, z, ...parts);
     for (const c of this.candles) c.cell ??= cell;
+    if (kind === 'barrel' || kind === 'crate') (this.propParts ??= new Map()).set(key(x, z), parts);
     if (kind === 'column') {
       const meshes = [];
       for (const p of parts) p.traverse((o) => { if (o.isMesh) meshes.push(o); });
       this.walls.push({ x, z, meshes, opacity: 1 });
     }
+  }
+
+  /** Rules 7: a barrel or crate smashed to pieces: it's gone, and so is a candle on it. */
+  removeProp(x, z) {
+    const k = key(x, z);
+    const parts = this.propParts?.get(k);
+    if (!parts) return;
+    this.propParts.delete(k);
+    const cell = this.cells.get(k);
+    for (const p of parts) {
+      this.group.remove(p);
+      if (cell) cell.objects = cell.objects.filter((o) => o !== p);
+    }
+    this.candles = this.candles.filter((c) => {
+      if (c.x !== x || c.z !== z) return true;
+      this.group.remove(c.light);
+      return false;
+    });
+    this.fogDirty = true;
+  }
+
+  /**
+   * Rules 7: a thrown torch (a stick with a flame) or the Light cantrip (a glowing mote) on a
+   * tile, with a point light reaching about as far as it lights.
+   */
+  addLamp(x, z, radius, spell = false) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    if (spell) {
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfff4c8 }));
+      orb.position.y = 0.7;
+      g.add(orb);
+    } else {
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.42, 6), mat(0x5a3a20));
+      stick.position.set(0, 0.05, 0);
+      stick.rotation.z = Math.PI / 2.3;
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 8), new THREE.MeshBasicMaterial({ color: 0xffa040 }));
+      flame.position.set(0.2, 0.16, 0);
+      g.add(stick, flame);
+    }
+    const light = new THREE.PointLight(spell ? 0xfff0d0 : 0xffa050, spell ? 2.2 : 1.6, radius + 1.5, 2);
+    light.position.set(x, spell ? 0.8 : 0.45, z);
+    this.group.add(g, light);
+    this.addToCell(x, z, g);
+    (this.lamps ??= []).push({ g, light });
   }
 
   /** A brazier: an iron bowl of coals on a stem, lit, that a hero can tip over (tipBrazier). */

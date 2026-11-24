@@ -133,6 +133,12 @@ const ICONS = {
     <path fill="none" stroke="var(--icon-hole)" stroke-width="1.3" stroke-linecap="round" d="M8.5 15.5l5.5-2.5"/>
     <circle cx="16.5" cy="15.5" r="1.1" fill="var(--icon-hole)" stroke="none"/>
     <circle cx="10" cy="10.5" r=".8" fill="var(--icon-hole)" stroke="none"/>`),
+  // the gelatinous cube: a see-through block with a skull caught inside
+  i: svg(`<path fill="none" stroke-width="1.6" stroke-linejoin="round" d="M4 8.5L12 5l8 3.5v9L12 21l-8-3.5z"/>
+    <path fill="none" stroke-width="1.1" opacity=".6" d="M4 8.5l8 3.5 8-3.5M12 12v9"/>
+    <circle cx="9.6" cy="14.6" r="2" stroke="none"/>
+    <circle cx="9" cy="14.4" r=".5" fill="var(--icon-hole)" stroke="none"/>
+    <circle cx="10.3" cy="14.4" r=".5" fill="var(--icon-hole)" stroke="none"/>`),
   v: svg(`<path stroke="none" d="M1.5 4.5c.4 3.8 2.5 6 5.6 6.4L8 8.4C5.6 8.2 3.4 6.9 1.5 4.5zM22.5 4.5c-.4 3.8-2.5 6-5.6 6.4L16 8.4c2.4-.2 4.6-1.5 6.5-3.9z"/>
     <path stroke="none" d="M12 6.5c-3.4 0-5.5 2.3-5.5 5.3 0 1.5.4 2.6 1 3.7L8 19.2c.4 1.8 2 2.8 4 2.8s3.6-1 4-2.8l.5-3.7c.6-1.1 1-2.2 1-3.7 0-3-2.1-5.3-5.5-5.3z"/>
     <circle cx="9.4" cy="11.6" r="1.2" fill="var(--icon-hole)" stroke="none"/>

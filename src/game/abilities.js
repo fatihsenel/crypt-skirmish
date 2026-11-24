@@ -103,6 +103,7 @@ export const CONDITION_INFO = {
   stunned: 'Stunned (a monk’s Stunning Strike): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage. Wears off at the end of its next turn.',
   petrified: 'Petrified (a basilisk’s gaze): turned to stone for a turn. Can’t move, act or react, and fails STR and DEX saves; attacks against it have advantage. Wears off at the end of its next turn.',
   burning: 'Burning (alchemist’s fire): 1d4 fire at the end of each of its turns, until a DC 10 DEX save then puts it out.',
+  engulfed: 'Engulfed: inside a gelatinous cube, restrained. 2d6 acid at the start of each of its turns, then a DC 12 STR save gets it out. Out too when the cube dies or moves away.',
   paralyzed: 'Paralysed (a ghoul’s claws): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage, and a hit from within 5 ft is a critical hit. A CON save as each of its turns starts ends it, in time to act.',
 };
 

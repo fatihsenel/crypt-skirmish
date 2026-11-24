@@ -191,6 +191,7 @@ export const SPECS = {
     show: ['2H_Axe'],
     clips: { melee: '1H_Melee_Attack_Chop' },
   },
+  // The ochre jelly (j) and gelatinous cube (i) have no pack model: models.js builds them.
 };
 
 export const DEFAULT_CLIPS = {

@@ -122,8 +122,9 @@ export const TIPS = [
     id: 'dark',
     on: 'heroTurn',
     when: (c) => c.darkNear,
-    text: () => 'This room is <b>unlit</b>. Your torches show 10 ft around each hero, and anything farther in the dark ' +
-      'is unseen: you can’t see it or pick it, and your attacks at a target in the dark have disadvantage. Monsters see your torches from anywhere.',
+    text: (c) => 'This room is <b>unlit</b>. Your torches show 10 ft around each hero, and anything farther in the dark ' +
+      'is unseen: you can’t see it or pick it, and your attacks at a target in the dark have disadvantage. Monsters see your torches from anywhere.' +
+      (c.rules >= 7 ? ' Under <b>More</b>, <b>Torch</b> throws yours to light a spot (a bonus action, once), and a Wizard, Cleric, Sorcerer or Bard can cast <b>Light</b>.' : ''),
   },
   {
     id: 'feed',

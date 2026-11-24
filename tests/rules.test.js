@@ -2368,7 +2368,7 @@ describe('act four and levels 7–8', () => {
   });
 
   it('the new monsters: mummies and the mummy lord are undead, the fallen knights are not', () => {
-    const game = new Game(levelById('halls'));
+    const game = new Game(levelById('halls'), { rules: 6 });
     const codes = game.units.filter((u) => u.team === 'monsters').map((u) => u.code).sort();
     expect(codes).toEqual(['s', 's', 's', 't', 'y']);
     const knights = new Game(levelById('armory')).units.filter((u) => u.code === 'x');

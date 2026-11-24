@@ -158,6 +158,17 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return why ? { toast: why } : { cmd: { type: 'caltrops', x: t.x, z: t.z } };
   }
 
+  if (selected?.kind === 'torch' || selected?.kind === 'light') { // rules 7
+    const spell = selected.kind === 'light';
+    const why = game.lightProblem(u, t.x, t.z, spell);
+    return why ? { toast: why } : { cmd: { type: 'torch', x: t.x, z: t.z, ...(spell && { spell: true }) } };
+  }
+
+  if (selected?.kind === 'smash') {
+    const why = game.smashProblem(u, t.x, t.z);
+    return why ? { toast: why } : { cmd: { type: 'smash', x: t.x, z: t.z } };
+  }
+
   if (selected?.kind === 'grapple') {
     if (!other || other.team === u.team) return { toast: 'Click an enemy next to you' };
     const why = game.grappleProblem(u, other);

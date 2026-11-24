@@ -116,8 +116,8 @@ export const ACHIEVEMENTS = [
     on: 'room', test: ({ node, daily }) => !daily && node === 'tomb',
   },
   {
-    id: 'scholar', name: 'Scholar of the crypt', desc: 'Meet all 21 kinds of monster in the bestiary.',
-    on: 'room', test: ({ met }) => (met ?? 0) >= 21,
+    id: 'scholar', name: 'Scholar of the crypt', desc: 'Meet all 22 kinds of monster in the bestiary.',
+    on: 'room', test: ({ met }) => (met ?? 0) >= 22,
   },
   {
     id: 'exterminator', name: 'Exterminator', desc: 'Slay 100 monsters, counted across runs.',

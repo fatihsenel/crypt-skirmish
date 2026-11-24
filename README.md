@@ -71,8 +71,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
 - **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Push, Grapple, Help, Ready, drinking a
   potion or giving one to an ally (next to you, or tossed up to 15 ft to one you can see), throwing
-  alchemist's fire and scattering caltrops. Grapple, Disengage, Search, Help, Give potion, Fire and
-  Caltrops wait behind **More** on the action bar, so the moves most turns need stay in one row; so does
+  alchemist's fire, scattering caltrops, throwing your torch into the dark (a bonus action, once a
+  fight; Wizards, Clerics, Sorcerers and Bards can cast **Light** instead) and smashing a barrel or
+  crate next to you. Grapple, Disengage, Search, Help, Give potion, Fire, Caltrops, Torch, Light and
+  Smash wait behind **More** on the action bar, so the moves most turns need stay in one row; so does
   Push, except in a room with a chasm, burning coals or stairs.
 - **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or DEX;
   win and it's pushed 5 ft straight away from you. Over a chasm's edge it falls and is gone (no
@@ -122,7 +124,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 
 - Goblins, skeletons, an orc, giant rats, ghouls, a ghast, a mimic, giant spiders and
   specters. An **ochre jelly** waits in the Cistern's flooded hall: a weapon hit splits it in
-  two, each half the size with half its HP, until the pieces are Small or under 10 HP.
+  two, each half the size with half its HP, until the pieces are Small or under 10 HP. A
+  **gelatinous cube** lurks in the Sunken Halls, all but invisible until you're next to it: it
+  engulfs a hero, who burns in its acid each turn until a STR save gets them out.
 - Act four: mummies, wraiths and fallen knights.
 - Act five: gargoyles that stand as statues until you come close and whose claws can throw a
   hero back, and basilisks whose bite can turn a hero to stone for a turn.
@@ -134,6 +138,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   wake their allies. Some sleep, and some patrol.
 - Goblins hide after shooting. Monsters that lose sight of a hidden hero go to where they last
   saw them and search.
+- **Morale:** goblins, the orc and giant rats may break and run when brought under a quarter of
+  their HP, or when Grukk falls (a WIS save, once a fight). Undead never do.
 
 ## The dungeon
 
@@ -155,7 +161,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   and prone, and leaves a hole no one can cross.
 - **Dark rooms:** the Catacombs' two side rooms are unlit. Your torches show 10 ft around each
   hero; past that a foe is unseen, and attacks at one have disadvantage. Monsters see your
-  torches from anywhere.
+  torches from anywhere. Throw your torch, or cast Light, to light a spot for the rest of the
+  fight; a burning foe lights the tiles around it.
+- **Barrels and crates** give half cover, and a hero can smash one next to them (a barrel takes 5,
+  a crate 8; every blow lands). Broken, it's open floor: nothing left to hide behind.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden, but a foe
   that moves or strikes out of sight leaves dashed rings where it was last heard, until it's
   seen, its tile is seen empty, or it dies.
@@ -238,7 +247,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   quarter have the way down in a sunken chamber, reached only by a stair; a dive already under
   way keeps its floors. A floor's opening line says when it has a chasm or a sunken way down.
   Dives started since the ochre jelly find one now and then from floor 3, in place of a ghoul,
-  skeleton, ghast or specter.
+  skeleton, ghast or specter, and dives started since the gelatinous cube find one now and then
+  from floor 5, in place of a ghoul, ghast or mummy.
   Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
@@ -483,6 +493,18 @@ A few things differ from the SRD to keep the game simple:
 - Heroes always carry torches (10 ft of light) and monsters have no need of darkvision; there is
   no dim light. Fights begun before these rules (rules 5 and earlier) play without the toss,
   the jelly, the supplies, the cracked floor and the dark.
+- A thrown torch lights 10 ft and the Light cantrip 20 ft, both on a tile, not an object held
+  (Light reaches 30 ft rather than touch). There's no dim light, and a hero who throws theirs
+  still sees 10 ft.
+- Morale is a house rule (from the DMG's optional rule): a WIS save (DC 10), and a monster that
+  breaks runs as if turned for two of its turns, whether or not it's hit.
+- A smash always hits a barrel or crate, and its damage is the weapon's, with no damage types.
+- The gelatinous cube's Engulf is an attack (3d6, then DEX save DC 12 or engulfed), not a move
+  into the target's space. The acid is 2d6 (not 6d6), the STR save to get out comes at the start
+  of the engulfed hero's turn without spending an action, and it lets go if it moves away.
+  Transparent: it starts hidden, and only a hero next to it or with passive Perception 15 spots
+  it. Fights begun before these rules (rules 6 and earlier) play without the torches, morale,
+  smashing and the cube.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.

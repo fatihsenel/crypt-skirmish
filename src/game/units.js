@@ -192,6 +192,7 @@ export const TEMPLATES = {
   g: {
     name: 'Goblin', cls: 'Goblin', team: 'monsters', color: 0x5f8f2a,
     hp: 7, ac: 15, speed: 6, prof: 2, xp: 50, cr: 0.25,
+    morale: true, // rules 7: may break and run when badly hurt or when its leader falls
     features: ['nimbleEscape', 'nimbleHide'],
     stealth: 'expert', // SRD Stealth +6
     ai: 'skirmisher', // prefers shooting from a safe distance, then ducks out of sight
@@ -216,6 +217,7 @@ export const TEMPLATES = {
   o: {
     name: 'Orc', cls: 'Orc', team: 'monsters', color: 0x6d7f5a,
     hp: 15, ac: 13, speed: 6, prof: 2, xp: 100, cr: 0.5,
+    morale: true,
     features: ['aggressive'],
     ai: 'brute',
     stats: { str: 16, dex: 12, con: 16, int: 7, wis: 11, cha: 10 },
@@ -227,6 +229,7 @@ export const TEMPLATES = {
   r: {
     name: 'Giant Rat', cls: 'Giant Rat', team: 'monsters', color: 0x6b5a4c,
     hp: 7, ac: 12, speed: 6, prof: 2, xp: 25, cr: 0.125,
+    morale: true,
     passives: ['packTactics'],
     ai: 'brute',
     stats: { str: 7, dex: 15, con: 11, int: 2, wis: 10, cha: 4 },
@@ -235,6 +238,7 @@ export const TEMPLATES = {
   b: {
     name: 'Grukk', cls: 'Goblin Boss', team: 'monsters', color: 0x8a3a2a,
     hp: 21, ac: 17, speed: 6, prof: 2, xp: 200, cr: 1,
+    leader: true, // rules 7: when he falls, his followers test their morale
     features: ['nimbleEscape'],
     multiattack: 2,
     clumsyMultiattack: true, // the second attack has disadvantage (SRD goblin boss)
@@ -460,6 +464,18 @@ export const TEMPLATES = {
     size: 2, // Large; each split is a size smaller, and a Small one splits no more
     stats: { str: 15, dex: 6, con: 14, int: 2, wis: 6, cha: 1 },
     attacks: [{ name: 'Pseudopod', stat: 'str', damage: '5d6', reach: 1 }],
+  },
+  // SRD gelatinous cube, rules 7. Its Engulf is an attack here: a hit makes the target save
+  // (DEX, DC 12) or be engulfed, restrained inside it, taking 2d6 acid at the start of each of its
+  // turns until a STR save (DC 12) then gets it out (Game.digest). Transparent: it starts hidden,
+  // and only a hero next to it or with passive Perception 15 spots it.
+  i: {
+    name: 'Gelatinous Cube', cls: 'Gelatinous Cube', team: 'monsters', color: 0x8fd0c0,
+    hp: 84, ac: 6, speed: 3, prof: 2, xp: 450, cr: 2,
+    ai: 'brute',
+    transparent: true,
+    stats: { str: 14, dex: 3, con: 20, int: 1, wis: 6, cha: 1 },
+    attacks: [{ name: 'Engulf', stat: 'str', damage: '3d6', reach: 1, rider: { save: 'dex', dc: 12, condition: 'engulfed' } }],
   },
 };
 

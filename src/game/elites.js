@@ -11,10 +11,11 @@ import { hash } from './dice.js';
  * it. 5: a foe pushed (or a hero thrown) into a stairwell tumbles down to the floor below,
  * 1d6 damage and prone. 6: a potion can be tossed to an ally 15 ft away, the Ochre Jelly
  * splits, cracked floors give way to the hall below, alchemist's fire and caltrops, and dark
- * chambers. A saved fight, replay or
+ * chambers. 7: torches thrown and the Light cantrip, living monsters breaking
+ * and running (morale), smashable barrels and crates, and the Gelatinous Cube. A saved fight, replay or
  * link carries the number it began under (none means 1), so it plays back by its own rules.
  */
-export const RULES = 6;
+export const RULES = 7;
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits

@@ -69,7 +69,13 @@ server on 5173.
   `caltropTiles`) and dark areas (`dark`, `dim`, `TORCH`: heroes don't see past their torches,
   in `inSight` and the fog). Rooms gate their rules-6 parts through `level.added` (spawns
   `[code, x, z, young]`), `level.below` and `level.dark`; rules-5 fights are replayed by
-  `tests/fixtures/v5-fights.json` (`scripts/v5-fixtures.mjs`).
+  `tests/fixtures/v5-fights.json` (`scripts/v5-fixtures.mjs`). Rules 7: thrown torches and the
+  Light cantrip (`lightTile`, the `torch` command with `spell`, `lamps`; `LIGHT_CLASSES`), morale
+  (`morale` and `leader` stat-block fields, `moraleCheck`: a rout is `turned` with `routed`),
+  smashing barrels and crates (`smash`, `PROP_HP`, `board.removeProp`) and the gelatinous cube
+  (`i`: `transparent`, the `engulfed` condition and `digest`); rooms add rules-7 spawns through
+  `level.added7`, and rules-6 fights are replayed by `tests/fixtures/v6-fights.json`
+  (`scripts/v6-fixtures.mjs`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
@@ -204,7 +210,8 @@ server on 5173.
   pool (`GEN`, `POOL_TWO`, `BOSSES_TWO`). Generation 3 cuts chasms with their own dice
   (`crng`), so a gen-3 floor without one is its gen-2 floor; generation 4 sinks the exit's
   chamber below a stair (`sinkEnd`, its own dice too; a one-tile wall is enough there); generation 5
-  turns a monster into an ochre jelly now and then (`oozeIn`, its own dice); changing `makeFloor`, `POOL` or `floorBudget` itself
+  turns a monster into an ochre jelly now and then (`oozeIn`, its own dice), and generation 6 into a
+  gelatinous cube (`cubeIn`); changing `makeFloor`, `POOL` or `floorBudget` itself
   changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,

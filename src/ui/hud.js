@@ -13,7 +13,7 @@ import { unitCard, shortName } from './unitCard.js';
 
 /** A turn-order name, short enough to tell apart: "Giant Spider 2" shows as "G. Spider 2". */
 const chipName = (name) => esc(shortName(name));
-import { isWeapon, isMelee, longReach } from '../game/combat.js';
+import { isWeapon, isMelee, longReach, LIGHT_CLASSES, PROP_HP } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
 /** Standard actions few turns need: they sit behind More with Grapple, Help and Give potion. */
@@ -57,7 +57,7 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}${s.inspired ? ` (inspired +${s.inspired.total})` : ''}${s.paralyzed ? ' (paralysed: fails)' : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
-const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', petrified: 'turns to stone!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!', stunned: 'is stunned!', burning: 'catches fire!' };
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', petrified: 'turns to stone!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!', stunned: 'is stunned!', burning: 'catches fire!', engulfed: 'is engulfed!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
@@ -640,7 +640,12 @@ export class Hud {
 
   /** A condition starts or ends. (Starting ones from riders and spells are logged with them.) */
   logCondition({ unit, name, on, cause }) {
-    if (on || cause === 'used') return; // (a mockery spent on an attack shows in its line)
+    if (on || cause === 'used' || cause === 'inside') return; // (a mockery spent on an attack shows in its line)
+    if (name === 'engulfed') {
+      if (cause === 'save') this.log(`${who(unit)} <b class="hit">struggles out</b> of the cube.`, 'sys');
+      else if (cause === 'freed') this.log(`${who(unit)} slides free of the cube.`, 'sys');
+      return;
+    }
     const text = {
       stand: `gets up off the floor (half movement).`,
       save: name === 'paralyzed' ? 'shakes off the paralysis.' : name === 'burning' ? 'beats out the flames.' : `shakes off the fear.`,
@@ -862,6 +867,30 @@ export class Hud {
   /** Burning at the end of its turn, then the save to put it out. */
   logAflame(r) {
     this.log(`${who(r.unit)} burns for <b class="hit">${r.damage} fire</b> ${dice(r.roll)}.`);
+  }
+
+  /** Rules 7: a torch thrown, or Light cast, on a tile. */
+  logLight({ unit, spell }) {
+    this.log(spell ? `${who(unit)} casts <b class="spell">Light</b>: a mote of light hangs over the dark.`
+      : `${who(unit)} throws a <b>torch</b> into the dark.`);
+  }
+
+  /** Rules 7: a blow at a barrel or crate. */
+  logSmash({ unit, prop, damage, roll, broken, hp }) {
+    this.log(`${who(unit)} smashes at the ${prop}: <b class="hit">${damage}</b> ${dice(roll)}` +
+      (broken ? `. <b class="crit">It breaks apart.</b>` : `. It holds (${hp} left).`));
+  }
+
+  /** Rules 7: a monster tests its nerve. */
+  logMorale(r) {
+    const why = r.why === 'leader' ? 'sees its leader fall' : 'is badly hurt';
+    this.log(`${who(r.unit)} ${why}. WIS save DC ${r.dc}: ${saveText(r, 'breaks')}` + (r.success ? ': stands its ground.' : ' and <b class="cond">runs</b>!'));
+  }
+
+  /** Rules 7: a gelatinous cube's acid at the start of an engulfed creature's turn. */
+  logDigest(r) {
+    this.log(`${who(r.unit)} burns in the cube’s acid: <b class="hit">${r.damage}</b> ${dice(r.roll)}.` +
+      (r.save ? ` STR save DC ${r.save.dc}: ${saveText({ ...r.save, unit: r.unit }, 'stays stuck')}.` : ''));
   }
 
   logCaltrops({ unit }) {
@@ -1234,6 +1263,41 @@ export class Hud {
           active: selected?.kind === 'caltrops',
         }));
       }
+      // Rules 7: in a room with dark areas, a torch to throw and (for casters) Light.
+      if (game.rules >= 7 && game.dark.size) {
+        const torchWhy = u.torchThrown ? 'Your torch is thrown already.' : u.bonusUsed ? 'Bonus action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
+        more.push(button({
+          kind: 'torch', id: 'torch', name: 'Torch', cls: 'act',
+          sub: u.torchThrown ? 'thrown' : 'bonus · once',
+          tip: { kind: 'Bonus action', chips: ['once a fight', '20 ft', 'lights 10 ft'], desc: 'Throw your torch onto a tile: it lights 10 ft around it for the rest of the fight. You still see 10 ft around you.', how: this.howTo('a tile within 20 ft') },
+          problem: torchWhy,
+          disabled: !!torchWhy,
+          active: selected?.kind === 'torch',
+        }));
+        if (LIGHT_CLASSES.includes(u.cls)) {
+          const lightWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
+          more.push(button({
+            kind: 'light', id: 'light', name: 'Light', cls: 'spell',
+            sub: 'cantrip · action',
+            tip: { kind: 'Cantrip', chips: ['action', '30 ft', 'lights 20 ft'], desc: 'A mote of light on a tile within 30 ft: it lights 20 ft around it for the rest of the fight.', how: this.howTo('a tile within 30 ft') },
+            problem: lightWhy,
+            disabled: !!lightWhy,
+            active: selected?.kind === 'light',
+          }));
+        }
+      }
+      // Rules 7: smash a barrel or crate next to the hero.
+      if (game.rules >= 7 && [...game.grid.props.values()].some((p) => PROP_HP[p.kind] && Math.max(Math.abs(p.x - u.x), Math.abs(p.z - u.z)) === 1)) {
+        const smashWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
+        more.push(button({
+          kind: 'smash', id: 'smash', name: 'Smash', cls: 'act',
+          sub: 'action · 5 ft',
+          tip: { kind: 'Action', chips: ['always hits', 'barrel 5 HP', 'crate 8 HP'], desc: 'Break a barrel or crate next to you with your melee weapon. Broken, it leaves open floor: no cover, nowhere to hide.', how: this.howTo('a barrel or crate next to you') },
+          problem: smashWhy,
+          disabled: !!smashWhy,
+          active: selected?.kind === 'smash',
+        }));
+      }
     }
 
     // Open while the player wants it, or while one of its moves is picked.
@@ -1320,7 +1384,7 @@ export class Hud {
       this.handlers.onChoose({ kind: 'readySpell', id });
     }
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
+    else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'torch', 'light', 'smash', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

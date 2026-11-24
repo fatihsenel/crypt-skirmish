@@ -82,6 +82,10 @@ export function applyCommand(game, cmd) {
     }
     case 'caltrops':
       return game.scatterCaltrops(u, cmd.x, cmd.z);
+    case 'torch': // rules 7
+      return game.lightTile(u, cmd.x, cmd.z, !!cmd.spell);
+    case 'smash':
+      return game.smash(u, cmd.x, cmd.z);
     case 'spell':
       return game.castSpell(u, cmd.id, spellTarget(game, cmd));
     case 'smite':

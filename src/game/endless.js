@@ -31,9 +31,10 @@ const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
  * replays) stay the same. Generation 3 floors are sometimes split by chasms, and generation 4
  * sometimes sinks the stairs' chamber below the rest, down a flight of stairs (see makeFloor).
  * Generation 5 (rules 6) turns an orc, ghoul, ghast or mummy into an ochre jelly now and then,
- * with its own dice (`oozeIn`), so a floor without one is its generation 4 floor.
+ * with its own dice (`oozeIn`), so a floor without one is its generation 4 floor. Generation 6
+ * (rules 7) does the same with a gelatinous cube from floor 5 (`cubeIn`).
  */
-export const GEN = 5;
+export const GEN = 6;
 const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
 const BOSSES_TWO = [...BOSSES, 'v'];
 
@@ -202,6 +203,7 @@ export function makeFloor(seed, floor, gen = 1) {
   }
 
   if (gen >= 5) oozeIn(grid, seed, floor);
+  if (gen >= 6) cubeIn(grid, seed, floor);
 
   // Chests (potions, and gear now and then) and a few hidden traps away from the start.
   const loot = [];
@@ -239,6 +241,21 @@ function oozeIn(grid, seed, floor) {
   if (!spots.length) return;
   const [x, z] = spots[Math.floor(jrng() * spots.length)];
   grid[z][x] = 'j';
+}
+
+/**
+ * Generation 6: from floor 5, now and then one ghoul, ghast or mummy is a gelatinous
+ * cube. Its own dice, so a floor without one is its generation 5 floor.
+ */
+function cubeIn(grid, seed, floor) {
+  if (floor < 5) return;
+  const crng = seeded(hash(`endless ${seed} ${floor} cube`));
+  if (crng() >= 0.3) return;
+  const spots = [];
+  grid.forEach((row, z) => row.forEach((ch, x) => { if ('uhy'.includes(ch)) spots.push([x, z]); }));
+  if (!spots.length) return;
+  const [x, z] = spots[Math.floor(crng() * spots.length)];
+  grid[z][x] = 'i';
 }
 
 /**

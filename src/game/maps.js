@@ -288,6 +288,7 @@ LEVELS.push(
     loot: [['potion', 'potion', 'amuletHealth']],
     asleep: ['9,5'], // the mummy stands in its alcove until disturbed
     patrols: { '12,7': [[12, 2], [9, 9]] },
+    added7: [['i', 3, 9]], // rules 7: a gelatinous cube, unseen, by the side room's chest
   },
   {
     id: 'armory',

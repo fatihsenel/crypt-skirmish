@@ -3,7 +3,7 @@
 // attacks, the odds of an attack or shove, a spell's targets and blast.
 
 import { key, pathFrom } from './game/grid.js';
-import { SPILL_DC, BURN_TURNS, hitChance, diceRange } from './game/combat.js';
+import { SPILL_DC, BURN_TURNS, PROP_HP, hitChance, diceRange } from './game/combat.js';
 import { signed, abilityMod } from './game/dice.js';
 import { SPELLS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { tips } from './ui/tips.js';
@@ -80,6 +80,8 @@ export function createPreview(deps) {
     if (selected?.kind === 'feed') return refreshFeed(u);
     if (selected?.kind === 'flask') return refreshFlask(u);
     if (selected?.kind === 'caltrops') return refreshCaltrops(u);
+    if (selected?.kind === 'torch' || selected?.kind === 'light') return refreshLight(u, selected.kind === 'light');
+    if (selected?.kind === 'smash') return refreshSmash(u);
     if (selected?.kind === 'ready') {
       const spells = u.spells.some((id) => !game.readySpellProblem(u, id));
       hud.hint(`Ready: pick the attack${spells ? ' or spell' : ''} to hold · a melee one strikes a foe stepping into reach, a ranged one${spells ? ' or a spell' : ''} a foe stepping into view · Esc to cancel`);
@@ -219,6 +221,38 @@ export function createPreview(deps) {
     board.hover.set([hovered]);
     const why = game.caltropProblem(u, hovered.x, hovered.z);
     hud.hint(why ? `Caltrops: ${why}` : 'Caltrops here: whoever steps on them saves (DEX 15) or takes 1 and stops', !why);
+  }
+
+  /** Rules 7: a torch or Light: the tiles it can land on; the hover shows what it would light. */
+  function refreshLight(u, spell) {
+    const name = spell ? 'Light' : 'Torch';
+    const range = spell ? 6 : 4;
+    const tiles = [];
+    for (let dz = -range; dz <= range; dz++) for (let dx = -range; dx <= range; dx++) {
+      if (!game.lightProblem(u, u.x + dx, u.z + dz, spell)) tiles.push({ x: u.x + dx, z: u.z + dz });
+    }
+    board.reach.set(tiles);
+    if (!hovered) return hud.hint(`${name}: click a tile within ${spell ? 30 : 20} ft · Esc to cancel`);
+    const why = game.lightProblem(u, hovered.x, hovered.z, spell);
+    const r = spell ? 4 : 2;
+    const lit = [];
+    if (!why) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) lit.push({ x: hovered.x + dx, z: hovered.z + dz });
+    board.hover.set(why ? [hovered] : lit.filter((t) => game.grid.inBounds(t.x, t.z) && !game.grid.isWall(t.x, t.z)));
+    hud.hint(why ? `${name}: ${why}` : `${name} here: lights ${spell ? 20 : 10} ft around it for the rest of the fight`, !why);
+  }
+
+  /** Rules 7: smash: the barrels and crates next to the hero. */
+  function refreshSmash(u) {
+    const tiles = [];
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (!game.smashProblem(u, u.x + dx, u.z + dz)) tiles.push({ x: u.x + dx, z: u.z + dz });
+    }
+    board.reach.set(tiles);
+    if (!hovered) return hud.hint('Smash: click a barrel or crate next to you · Esc to cancel');
+    board.hover.set([hovered]);
+    const why = game.smashProblem(u, hovered.x, hovered.z);
+    const prop = game.grid.props.get(`${hovered.x},${hovered.z}`);
+    hud.hint(why ? `Smash: ${why}` : `Smash the ${prop.kind}: ${prop.hp ?? PROP_HP[prop.kind]} HP left, and it’s cover no more once broken`, !why);
   }
 
   /** Help targeting: adjacent enemies light up, the hint says who it helps. */

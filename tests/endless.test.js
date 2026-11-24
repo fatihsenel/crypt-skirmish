@@ -114,11 +114,11 @@ describe('the Endless Crypt', () => {
 
   it('starts from the won party, rested, and goes deeper floor by floor', () => {
     const s = newEndless(won(), 99);
-    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 5 });
+    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 6 });
     expect(s.done).toBe(false);
     expect(s.gold).toBe(120);
     expect(s.pack).toEqual(['ringProtection']);
-    expect(nextFloor(s)).toBe('deep:99:1:5');
+    expect(nextFloor(s)).toBe('deep:99:1:6');
     const game = new Game(levelOf(nextFloor(s)), { rng: seeded(1), party: s.party });
     game.over = 'victory';
     const done = completeFight(s, nextFloor(s), game).state;

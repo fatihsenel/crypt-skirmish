@@ -788,6 +788,37 @@ function jelly(unit) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Gelatinous cube: a near-clear block of jelly filling its tile, bones and a skull caught inside.
+// ---------------------------------------------------------------------------
+function cube() {
+  const root = new THREE.Group();
+  const body = pivot(root, 0, 0, 0);
+  const head = pivot(body, 0, 0, 0); // a dummy the engulf lunge turns; idle maps it to a wobble
+  const armL = pivot(body, 0.2, 0.4, 0);
+  const armR = pivot(body, -0.2, 0.4, 0);
+  const gel = new THREE.MeshStandardMaterial({ color: 0x9fe0d0, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.34, emissive: 0x0d3a33, emissiveIntensity: 0.5, depthWrite: false });
+  const block = add(body, new THREE.BoxGeometry(0.86, 0.86, 0.86), gel, [0, 0.43, 0]);
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(block.geometry), new THREE.LineBasicMaterial({ color: 0xc8fff0, transparent: true, opacity: 0.35 }));
+  block.add(edge);
+  const bone = mat(0xe8dcc0);
+  add(body, new THREE.SphereGeometry(0.11, 10, 8), bone, [-0.12, 0.3, 0.1]);
+  add(body, new THREE.CylinderGeometry(0.025, 0.025, 0.34, 6), bone, [0.15, 0.5, -0.1], [0.6, 0.2, PI / 3]);
+  add(body, new THREE.CylinderGeometry(0.02, 0.02, 0.26, 6), bone, [0.05, 0.18, -0.2], [PI / 2, 0, 0.3]);
+  add(body, new THREE.BoxGeometry(0.1, 0.06, 0.02), mat(0x8a7a50), [0.2, 0.68, 0.18], [0.4, 0.8, 0]);
+
+  const idle = (t, walking) => {
+    const wob = Math.sin(t * (walking ? 7 : 1.8)) * 0.025 + head.rotation.x * -0.3;
+    block.scale.set(1 + wob, 1 - wob, 1 + wob);
+    gel.emissiveIntensity = 0.4 + Math.sin(t * 1.1) * 0.12;
+  };
+
+  return {
+    root, body, head, armL, armR, legL: null, legR: null, rest: { armL: 0, armR: 0 },
+    height: 0.9, idle, bite: true, dieAxis: 'z',
+  };
+}
+
 const BUILDERS = {
   F: fighter, P: fighter, W: wizard, K: wizard, R: rogue, A: rogue, C: cleric,
   g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer,
@@ -796,7 +827,7 @@ const BUILDERS = {
   k: giantRat, e: skeleton, q: necromancer, // act three
   y: skeleton, t: skeleton, x: fighter, l: necromancer, // act four
   a: skeleton, z: giantRat, v: fighter, // act five
-  j: jelly,
+  j: jelly, i: cube,
 };
 
 export function buildModel(unit) {

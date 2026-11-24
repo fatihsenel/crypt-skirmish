@@ -653,7 +653,9 @@ function updateVision(force = false) {
     if (far) eyes.push(far);
   }
   const doors = [...board.doors.values()].map((d) => (d.opened ? 1 : 0)).join('');
-  const sig = eyes.map((e) => key(e.x, e.z)).join(';') + '|' + doors;
+  // In a dark room, thrown torches, Light and burning creatures change what's lit too.
+  const lit = game.dark.size ? '|' + game.lamps.length + ':' + game.units.filter((u) => u.alive && game.has(u, 'burning')).map((u) => key(u.x, u.z)).join(';') : '';
+  const sig = eyes.map((e) => key(e.x, e.z)).join(';') + '|' + doors + lit;
   if (sig === visionSig && !force) return;
   const first = !visionSig;
   visionSig = sig;
@@ -989,6 +991,22 @@ function startFight(resume, watch = null) {
   // Rules 6: the pedlar's flasks and caltrops.
   game.on('flask', (r) => hud.logFlask(r));
   game.on('caltrops', (r) => hud.logCaltrops(r));
+  game.on('light', (r) => hud.logLight(r));
+  game.on('smash', (r) => hud.logSmash(r));
+  game.on('morale', (r) => {
+    if (unseen(r.unit)) return;
+    hud.logMorale(r);
+    if (!r.success) {
+      floatText(stage.scene, { x: r.unit.x, z: r.unit.z - 0.5 }, 'Flees!', 'warn');
+      view(r.unit)?.updateStatus();
+    }
+  });
+  game.on('digest', (r) => {
+    hud.logDigest(r);
+    sfx.fireImpact();
+    floatText(stage.scene, r.unit, `Acid −${r.damage}`, 'crit');
+    anim.damageReaction(r.unit);
+  });
   game.on('caltropStep', (r) => {
     if (unseen(r.unit)) { if (!r.success) hud.log('Someone yelps on the caltrops in the dark.', 'sys'); } else hud.logCaltropStep(r);
   });
@@ -1012,7 +1030,7 @@ function startFight(resume, watch = null) {
   });
   game.on('condition', (r) => {
     if (!unseen(r.unit)) hud.logCondition(r);
-    if (r.name === 'burning' && !r.on) view(r.unit)?.updateStatus(); // put out between turns
+    if ((r.name === 'burning' || r.name === 'engulfed') && !r.on) view(r.unit)?.updateStatus(); // ended between turns
   });
   game.on('trapFound', (r) => pendingReveals.push(r));
   game.on('alert', (r) => pendingAlerts.push(r));
@@ -1498,6 +1516,8 @@ function stepNote(step) {
   if (step.type === 'feed') return step.thrown ? 'tosses a potion' : 'gives a potion';
   if (step.type === 'flask') return 'throws alchemist’s fire';
   if (step.type === 'caltrops') return 'spreads caltrops';
+  if (step.type === 'torch') return step.spell ? 'casts Light' : 'throws a torch';
+  if (step.type === 'smash') return 'smashes cover';
   if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'brazier') return 'tips a brazier';
   if (step.type === 'lever') return 'pulls the lever';

@@ -22,7 +22,20 @@ export const BURN_DAMAGE = '1d6'; // walking onto burning coals, once a turn
 export const TUMBLE_DAMAGE = '1d6'; // rules 5: pushed down a flight of stairs
 export const TOSS_RANGE = 3;
 /** Rules 6: heroes carry torches; a dark tile farther than this from every hero is unlit. */
-export const TORCH = 2; // rules 6: a potion tossed to an ally, in tiles (15 ft)
+export const TORCH = 2;
+/** Rules 7: a torch thrown (bonus action, once a fight) lights TORCH around where it lands. */
+export const TORCH_THROW = 4;
+/** Rules 7: the Light cantrip (an action) lights LIGHT_RADIUS around a tile within LIGHT_RANGE. */
+export const LIGHT_RANGE = 6; export const LIGHT_RADIUS = 4;
+export const LIGHT_CLASSES = ['Wizard', 'Cleric', 'Sorcerer', 'Bard'];
+/** Rules 7: a `morale` monster's WIS save; on a failure it runs for MORALE_ROUNDS of its turns. */
+export const MORALE_DC = 10; export const MORALE_ROUNDS = 2;
+/** Rules 7: barrels and crates break: their hit points (a smash always hits). */
+export const PROP_HP = { barrel: 5, crate: 8 };
+/** Rules 7: a gelatinous cube's acid at the start of an engulfed creature's turn, and the STR save out. */
+export const ENGULF_DAMAGE = '2d6'; export const ENGULF_DC = 12;
+/** Rules 7: the passive Perception that spots a transparent monster more than 5 ft away. */
+export const TRANSPARENT_DC = 15; // rules 6: a potion tossed to an ally, in tiles (15 ft)
 export const FLASK_RANGE = 4; // rules 6: alchemist's fire thrown at a foe, in tiles (20 ft)
 export const FLASK_DAMAGE = '1d4'; // and the fire it lights, at the end of each of its turns
 export const FLASK_DC = 10; // the DEX save that puts it out
@@ -61,7 +74,7 @@ export const PATROL_PACE = 3;
 //               save at the start of each of its turns ends it (in time to act).
 //   petrified   (a basilisk's gaze, cut down to a turn) can't move, act or react; fails STR and
 //               DEX saves; attacks against it have advantage. Wears off as its next turn ends.
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified', 'burning'];
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified', 'burning', 'engulfed'];
 /** Conditions that simply run out after their `turns`. */
 
 const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified'];
@@ -143,6 +156,7 @@ export class Game extends Spellcasting {
     if (this.rules >= 6 && level.added) {
       this.grid.spawns.push(...level.added.map(([code, x, z, young]) => ({ code, x, z, ...(young && { young }) })));
     }
+    if (this.rules >= 7 && level.added7) this.grid.spawns.push(...level.added7.map(([code, x, z]) => ({ code, x, z })));
     // Rules 6: cracked floor gives way over the lower hall, `below` [dx, dz] from it (level.below).
     // Older fights walk it as plain floor.
     this.below = level.below ?? null;
@@ -154,7 +168,8 @@ export class Game extends Spellcasting {
       }
     }
     if (this.rules < 6 || !this.below) this.grid.cracks.clear();
-    this.holes = new Set(); // cracked floor that gave way (now chasm tiles), by key
+    this.holes = new Set();
+    this.lamps = []; // rules 7: thrown torches and Light, { x, z, r } // cracked floor that gave way (now chasm tiles), by key
     // Hard leaves a few monsters out of its worst rooms (level.thinned, by tile).
     if (difficulty?.thin && level.thinned) {
       this.grid.spawns = this.grid.spawns.filter((s) => !level.thinned.includes(key(s.x, s.z)));
@@ -211,6 +226,7 @@ export class Game extends Spellcasting {
         u.unaware = true;
         const at = key(u.x, u.z);
         if (level.asleep?.includes(at)) u.asleep = true;
+        if (u.transparent && this.rules >= 7) u.hidden = TRANSPARENT_DC;
         const beat = level.patrols?.[at];
         if (beat && !u.asleep) u.patrol = { route: [{ x: u.x, z: u.z }, ...beat.map(([x, z]) => ({ x, z }))], next: 1 };
       }
@@ -441,7 +457,11 @@ export class Game extends Spellcasting {
   /** Rules 6: is (x, z) a dark tile no hero's torch reaches? */
   dim(x, z, lights = this.living('heroes')) {
     if (!this.dark.has(key(x, z))) return false;
-    return !lights.some((l) => gridDistance(l, { x, z }) <= TORCH);
+    const at = { x, z };
+    if (this.lamps.some((l) => gridDistance(l, at) <= l.r)) return false;
+    // Rules 7: a burning creature lights the tiles around it.
+    if (this.rules >= 7 && this.units.some((u) => u.alive && gridDistance(u, at) <= 1 && this.has(u, 'burning'))) return false;
+    return !lights.some((l) => gridDistance(l, at) <= TORCH);
   }
 
   /** Sight works both ways, except that heroes don't see into the dark past their torches. */
@@ -487,6 +507,7 @@ export class Game extends Spellcasting {
     if (!h.alive || !m.alive) return false;
     if (gridDistance(h, m) <= 1) return true;
     if (!this.inSight(h, m)) return false;
+    if (m.transparent) return this.passivePerception(h) >= TRANSPARENT_DC;
     return this.passivePerception(h) >= m.hidden || this.coverBonus(h, m) === 0;
   }
 
@@ -518,6 +539,7 @@ export class Game extends Spellcasting {
     unit.conditions[name] = { turns: turns + (own && turns !== Infinity ? 1 : 0), by, dc };
     if ((name === 'prone' || name === 'restrained') && own) unit.movesLeft = 0; // knocked down or caught mid-move
     if (fresh) this.emit('condition', { unit, name, on: true, by });
+    if (name === 'engulfed') this.addCondition(unit, 'restrained', { by }); // held inside the cube
     if (name === 'paralyzed' || name === 'stunned' || name === 'petrified') this.paralyze(unit);
   }
 
@@ -531,7 +553,9 @@ export class Game extends Spellcasting {
 
   removeCondition(unit, name, cause = 'expired') {
     if (!unit.conditions[name]) return;
+    const was = unit.conditions[name];
     delete unit.conditions[name];
+    if (name === 'engulfed' && unit.conditions.restrained?.by === was.by) this.removeCondition(unit, 'restrained', 'inside');
     this.emit('condition', { unit, name, on: false, cause });
   }
 
@@ -752,6 +776,28 @@ export class Game extends Spellcasting {
     this.updateAwareness();
     this.emit('turnStart', { unit: u });
     this.checkStench(u);
+    this.digest(u);
+  }
+
+  /**
+   * Rules 7: start of an engulfed creature's turn: it's out if the cube is gone or no longer next
+   * to it; else ENGULF_DAMAGE acid, then a STR save (ENGULF_DC) gets it out.
+   */
+  digest(u) {
+    const c = u.conditions?.engulfed;
+    if (!c || !u.alive || this.over) return;
+    const cube = c.by;
+    if (!cube?.alive || gridDistance(cube, u) > 1) { this.removeCondition(u, 'engulfed', 'freed'); return; }
+    const roll = rollExpr(ENGULF_DAMAGE, { rng: this.rng });
+    const result = { unit: u, by: cube, roll, damage: roll.total };
+    this.emit('digest', result);
+    this.cause = 'a gelatinous cube';
+    this.via = 'acid';
+    this.applyDamage(u, roll.total, cube);
+    if (!u.alive || this.over) return;
+    const s = this.save(u, 'str', ENGULF_DC);
+    result.save = { stat: 'str', dc: ENGULF_DC, d20: s.d20, total: s.total, success: s.success };
+    if (s.success) this.removeCondition(u, 'engulfed', 'save');
   }
 
   /**
@@ -774,6 +820,7 @@ export class Game extends Spellcasting {
     if (this.over) return;
     const u = this.current;
     if (u.turned > 0) u.turned--;
+    if (!u.turned) u.routed = false;
     this.burnOn(u);
     if (this.over) return;
     this.tickConditions(u);
@@ -905,7 +952,7 @@ export class Game extends Spellcasting {
     if (target.lurks && amount > 0) target.stirred = true;
     const before = target.hp;
     if (amount > 0) this.reveal(target, 'hurt'); // caught in a blast: no hiding that
-    if (amount > 0) target.turned = 0; // damage breaks Turn Undead
+    if (amount > 0 && !target.routed) target.turned = 0; // damage breaks Turn Undead (not a rout)
     // Temporary HP soak up damage first.
     const soaked = Math.min(target.tempHp ?? 0, Math.max(0, amount));
     if (soaked) target.tempHp -= soaked;
@@ -972,11 +1019,39 @@ export class Game extends Spellcasting {
           blessing = { unit: source, tempHp: gain };
         }
       }
+      for (const u of this.units) if (u.conditions?.engulfed?.by === target) this.removeCondition(u, 'engulfed', 'freed');
+      if (target.conditions?.engulfed) this.removeCondition(target, 'engulfed', 'fell');
       this.emit('death', { unit: target, source, unmarked, blessing, ...(dying && { dying: true }), ...(this.rules >= 2 && !dying && target.team === 'heroes' && { outright: true }) });
       this.checkEnd();
     }
+    if (this.rules >= 7 && !this.over) this.moraleAfter(target, amount);
     if (target.alive && amount > 0) this.concentrationCheck(target, amount);
     if (target.alive && target.rises && !target.roused && target.hp * 2 <= target.maxHp) this.houseRises(target);
+  }
+
+  /**
+   * Rules 7, morale: a `morale` monster brought under a quarter of its HP, or every one of them
+   * when a `leader` falls, makes a WIS save (MORALE_DC) once a fight; on a failure it breaks and
+   * runs as if turned, for MORALE_ROUNDS of its turns, and blows don't stop it.
+   */
+  moraleAfter(target, amount) {
+    if (target.team !== 'monsters') return;
+    if (target.alive && amount > 0 && target.hp * 4 <= target.maxHp) this.moraleCheck(target, 'hurt');
+    if (!target.alive && target.leader) for (const u of this.living('monsters')) this.moraleCheck(u, 'leader');
+  }
+
+  moraleCheck(unit, why) {
+    if (!unit.morale || unit.braved || !unit.alive || unit.asleep) return null;
+    unit.braved = true;
+    const s = this.save(unit, 'wis', MORALE_DC);
+    const result = { unit, why, d20: s.d20, total: s.total, dc: MORALE_DC, success: s.success };
+    if (!s.success) {
+      unit.turned = MORALE_ROUNDS;
+      unit.routed = true;
+      unit.unaware = false;
+    }
+    this.emit('morale', result);
+    return result;
   }
 
   /**
@@ -2199,6 +2274,86 @@ export class Game extends Spellcasting {
       this.applyDamage(unit, 1, unit.team === 'monsters' ? c?.by ?? null : null);
       if (unit.alive) unit.movesLeft = 0;
     }
+    return result;
+  }
+
+  // --- light and smashing (rules 7) -----------------------------------------
+  /**
+   * Why `unit` can't light (x, z): a torch thrown (spell false: a bonus action, once a fight,
+   * 20 ft) or the Light cantrip (an action, 30 ft, Wizards, Clerics, Sorcerers and Bards).
+   */
+  lightProblem(unit, x, z, spell = false) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 7) return 'This fight began before torches';
+    if (unit.team !== 'heroes') return 'Only heroes carry light';
+    if (!this.dark.size) return 'Nothing here needs light';
+    if (unit.turned) return 'Turned: can only flee';
+    if (spell) {
+      if (!LIGHT_CLASSES.includes(unit.cls)) return `${unit.name} doesn’t know Light`;
+      if (unit.actionUsed) return 'Action already used this turn';
+    } else {
+      if (unit.torchThrown) return 'Your torch is thrown already';
+      if (unit.bonusUsed) return 'Bonus action already used this turn';
+    }
+    if (!this.grid.inBounds(x, z) || this.grid.isWall(x, z)) return 'Pick a floor tile';
+    if (gridDistance(unit, { x, z }) > (spell ? LIGHT_RANGE : TORCH_THROW)) return spell ? 'Too far: 30 ft at most' : 'Too far: 20 ft at most';
+    if (!this.grid.lineOfSight(unit.x, unit.z, x, z)) return 'No clear throw';
+    return null;
+  }
+
+  /** Throw a torch, or cast Light, onto (x, z): it lights the tiles around it for the fight. */
+  lightTile(unit, x, z, spell = false) {
+    const problem = this.lightProblem(unit, x, z, spell);
+    if (problem) return { ok: false, reason: problem };
+    if (spell) unit.actionUsed = true;
+    else { unit.bonusUsed = true; unit.torchThrown = true; }
+    const lamp = { x, z, r: spell ? LIGHT_RADIUS : TORCH };
+    this.lamps.push(lamp);
+    const result = { ok: true, kind: spell ? 'light' : 'torch', unit, x, z, radius: lamp.r, spell };
+    this.emit('light', result);
+    this.updateAwareness();
+    return result;
+  }
+
+  /** Why `unit` can't smash the barrel or crate on (x, z), or null. */
+  smashProblem(unit, x, z) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 7) return 'This fight began before smashing';
+    if (unit.team !== 'heroes') return 'Only heroes smash';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    const prop = this.grid.props.get(key(x, z));
+    if (!prop || !PROP_HP[prop.kind]) return 'Pick a barrel or crate';
+    if (gridDistance(unit, prop) > 1) return 'Must stand next to it';
+    if (!this.smashWeapon(unit)) return 'No melee weapon';
+    return null;
+  }
+
+  smashWeapon(unit) {
+    return unit.attacks.find((a) => a.reach === 1) ?? null;
+  }
+
+  /**
+   * Smash (the action): a barrel (5 HP) or crate (8 HP) next to you takes your melee weapon's
+   * damage (it always hits). At 0 it breaks and the tile is open floor: no cover, no hiding.
+   */
+  smash(unit, x, z) {
+    const problem = this.smashProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    this.reveal(unit, 'attack');
+    const k = key(x, z);
+    const prop = this.grid.props.get(k);
+    const weapon = this.smashWeapon(unit);
+    const roll = rollExpr(weapon.damage, { rng: this.rng });
+    const damage = Math.max(1, roll.total + (weapon.addMod === false ? 0 : abilityMod(unit.stats[weapon.stat])));
+    prop.hp = (prop.hp ?? PROP_HP[prop.kind]) - damage;
+    const broken = prop.hp <= 0;
+    if (broken) this.grid.props.delete(k);
+    const result = { ok: true, kind: 'smash', unit, x, z, prop: prop.kind, weapon, roll, damage, hp: Math.max(0, prop.hp), broken };
+    this.emit('smash', result);
+    this.noise(unit);
+    this.updateAwareness();
     return result;
   }
 

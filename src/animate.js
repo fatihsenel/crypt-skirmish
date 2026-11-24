@@ -340,7 +340,7 @@ export function createAnimations(app) {
   }
 
   const BONUS_STRIKE = { flurry: 'Flurry of Blows', martial: 'Martial Arts', frenzy: 'Frenzy' };
-  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!', petrified: 'Turned to stone!', burning: 'Burning!' };
+  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!', petrified: 'Turned to stone!', burning: 'Burning!', engulfed: 'Engulfed!' };
 
   function damageReaction(unit) {
     const v = view(unit);
@@ -653,6 +653,38 @@ export function createAnimations(app) {
     burstFx(stage.scene, { x: r.x, z: r.z }, { colors: [0x9a9aa4, 0x6a6a72], count: 12, speed: 0.6, size: 0.03, y: 0.05, life: 400 });
     app.board().setCaltrops(app.game().caltropTiles);
     await wait(300);
+  }
+
+  /** Rules 7: a torch tossed onto a tile, or the Light cantrip set on one. */
+  async function playLight(r) {
+    await view(r.unit).turnTowards(r.x, r.z);
+    if (r.spell) {
+      sfx.cast();
+      await wait(200);
+      burstFx(stage.scene, { x: r.x, z: r.z }, { colors: [0xfff4c8, 0xffe08a], count: 14, speed: 0.6, size: 0.05, y: 0.7, life: 600 });
+    } else {
+      sfx.whoosh();
+      await lobFx(stage.scene, r.unit, { x: r.x, z: r.z }, { color: 0xffa040, light: 0xffa050 });
+      burstFx(stage.scene, { x: r.x, z: r.z }, { colors: [0xffa040, 0xffd080], count: 10, speed: 0.7, size: 0.04, y: 0.1, life: 450 });
+    }
+    app.board().addLamp(r.x, r.z, r.radius, r.spell);
+    await wait(300);
+  }
+
+  /** Rules 7: a barrel or crate takes a blow, and breaks at 0. */
+  async function playSmash(r) {
+    const v = view(r.unit);
+    await v.turnTowards(r.x, r.z);
+    sfx.whoosh(true);
+    await wait(180);
+    sfx.trap();
+    stage.shake(r.broken ? 0.12 : 0.05, 200);
+    burstFx(stage.scene, { x: r.x, z: r.z }, { colors: [0x7a5a34, 0x5a3a20, 0xa07a4a], count: r.broken ? 22 : 8, speed: r.broken ? 1.3 : 0.7, size: 0.05, y: 0.35, life: 550 });
+    if (r.broken) {
+      app.board().removeProp(r.x, r.z);
+      floatText(stage.scene, { x: r.x, z: r.z }, 'Smashed!', 'crit');
+    } else floatText(stage.scene, { x: r.x, z: r.z }, `−${r.damage}`, 'dmg');
+    await wait(350);
   }
 
   async function playHelp(r) {
@@ -1140,6 +1172,8 @@ export function createAnimations(app) {
       case 'feed': return playFeed(r);
       case 'flask': return playFlask(r);
       case 'caltrops': return playCaltrops(r);
+      case 'torch': return playLight(r);
+      case 'smash': return playSmash(r);
       case 'chest': return playChest(unit, r);
       case 'brazier': return playBrazier(unit, r);
       case 'lever': return playLever(unit, r);

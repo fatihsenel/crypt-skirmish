@@ -45,6 +45,24 @@ describe('fights recorded under rules 5', () => {
   }
 });
 
+// Whole fights recorded under rules 6 by scripts/v6-fixtures.mjs: the Cistern's jelly, the dark
+// Catacombs, the Warren's goblins, the Sunken Halls and generation 5 Endless floors.
+const SIX = JSON.parse(readFileSync(new URL('./fixtures/v6-fights.json', import.meta.url), 'utf8'));
+
+describe('fights recorded under rules 6', () => {
+  for (const f of SIX) {
+    it(`replay ${f.room} (seed ${f.seed}) unchanged`, () => {
+      const party = dailyCampaign({ level: f.level, classes: f.classes }).party;
+      const g = new Game(levelOf(f.room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(f.seed), rules: 6 });
+      const r = replayFight(g, f.log);
+      expect(r.ok).toBe(true);
+      expect(g.over).toBe(f.over);
+      expect(fightCheck(g)).toBe(f.check);
+      expect(g.rng()).toBe(f.next);
+    });
+  }
+});
+
 describe('the rules a fight began under', () => {
   it('ride with a saved record and a link', async () => {
     const { watchable } = await import('../src/game/history.js');
