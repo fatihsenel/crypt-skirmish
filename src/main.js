@@ -675,6 +675,10 @@ stage.tickers.add(() => {
     const t = tileOf(v);
     const show = u.alive ? inView(t) : board.isExplored(t.x, t.z);
     v.group.visible = show && !v.gone;
+    if (heard.has(u.id) && (show || !u.alive || inView(heard.get(u.id)))) {
+      heard.delete(u.id); // seen, gone, or its tile seen empty: no need to guess any more
+      drawHeard();
+    }
     if (show && u.alive && !seenIds.has(u.id)) {
       seenIds.add(u.id);
       kinds.push(u.code);
@@ -820,6 +824,9 @@ function startFight(resume, watch = null) {
     return;
   }
   board = new Board(game.grid, stage);
+  floorButton.hidden = !game.grid.links.size; // rooms on two floors only
+  heard.clear();
+  setPeek(null);
   board.setThreatColors(settings.colorblind);
   stage.scene.add(board.group);
   board.setIce(game.icyTiles()); // a restored fight may have icy ground
@@ -1114,13 +1121,19 @@ function glide(shift) {
  * to where it was. The fog stays as it is: only what the party has seen shows there.
  */
 let peek = null; // { unit, target }: who looked, and where the camera was before
+const floorButton = document.getElementById('floor-toggle');
+floorButton.addEventListener('click', () => peekFloor());
+function setPeek(p) {
+  peek = p;
+  floorButton.setAttribute('aria-pressed', String(!!p));
+}
 function peekFloor() {
   if (!game || !board) return;
   const hero = game.current?.team === 'heroes' ? game.current : game.living('heroes')[0];
   if (!hero) return;
   if (peek?.unit === hero) {
     glide(peek.target.clone().sub(stage.controls.target));
-    peek = null;
+    setPeek(null);
     announce(`Back to ${hero.name}.`);
     return;
   }
@@ -1131,12 +1144,12 @@ function peekFloor() {
   }
   const shift = shiftTo(there.x, there.z);
   if (!shift) return;
-  peek = { unit: hero, target: stage.controls.target.clone() };
+  setPeek({ unit: hero, target: stage.controls.target.clone() });
   glide(shift);
   const hall = there.lower ? 'the lower hall' : 'the hall above';
   announce(`Looking ${there.lower ? 'down' : 'up'} the stairs at ${hall}` +
     (board.explored.has(key(there.x, there.z)) ? '' : `, still dark: stand on the stair to see ${there.lower ? 'down' : 'up'} it`) +
-    '. V again to look back.');
+    `. ${hud.touch ? 'Floor' : 'V'} again to look back.`);
 }
 
 /** Replay a saved fight on the new `game`. False if it didn't land where it was saved. */
@@ -1243,7 +1256,7 @@ function flushReveals() {
 
 async function onTurnStart(unit) {
   flushReveals();
-  peek = null; // a new turn's view starts from here
+  setPeek(null); // a new turn's view starts from here
   for (const v of views.values()) v.setActive(v.unit === unit);
   if (!unseen(unit)) keepInView(unit);
   selected = null;
@@ -1388,6 +1401,17 @@ function whileAway() {
   });
 }
 
+/**
+ * Where each foe out of sight was last heard (unit id -> tile): an aware monster that moves or
+ * strikes where no hero can see it leaves rings on its tile, until it's seen or it dies.
+ * Drawn only: the rules never hear of it.
+ */
+const heard = new Map();
+function drawHeard() {
+  board?.heard.set([...heard.values()]);
+  keepAwake(100);
+}
+
 async function runMonsterTurn(unit) {
   const g = game; // a restart or level change mid-turn abandons this turn
   busy = true;
@@ -1402,8 +1426,10 @@ async function runMonsterTurn(unit) {
     await pace(450);
 
     if (unit.team === 'monsters') hud.beginTurn(unit, () => unseen(unit));
+    let acted = false;
     for (const { step, result } of monsterTurn(g, unit)) {
       if (result.ok) hud.turnNote(stepNote(step));
+      if (result.ok && step.type !== 'end') acted = true;
       try {
         if (result.ok) await play(unit, step.type, result);
       } catch (err) {
@@ -1419,6 +1445,10 @@ async function runMonsterTurn(unit) {
       if (game !== g) return;
     }
 
+    if (acted && unit.team === 'monsters' && unit.alive && unseen(unit)) {
+      heard.set(unit.id, tileOf(view(unit)));
+      drawHeard();
+    }
     if (game !== g || await checkGameOver()) return;
     await pace(300);
     if (game !== g) return;

@@ -134,6 +134,7 @@
               <dt><kbd>Tap a tag</kbd></dt><dd>What it does</dd>
               <dt><kbd>Swipe</kbd></dt><dd>More buttons past a faded edge</dd>
               <dt><kbd>Camera</kbd></dt><dd>Photo mode: turn, pan, save</dd>
+              <dt><kbd>Floor</kbd></dt><dd>Look down or up the stairs (rooms on two floors)</dd>
             </dl>
           </div>
           <div class="help-pad">
@@ -161,6 +162,7 @@
             <li><i class="sw threat"></i>Monster reach</li>
             <li><i class="sw threat-ranged"></i>Monster shot</li>
             <li><i class="sw threat-far"></i>Long shot</li>
+            <li><i class="sw heard"></i>Heard, unseen</li>
           </ul>
         </div>
       </details>
@@ -179,6 +181,13 @@
           <path d="M8 9h6M8 12.5h6M8 16h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
         </svg>
         <span>Log</span>
+      </button>
+      <button id="floor-toggle" type="button" aria-pressed="false" hidden data-tip="Other floor" data-desc="Look down (or up) the stairs nearest the hero" data-key="V">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M3 19h5v-4h4v-4h4V7h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />
+          <path d="M14 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity="0.7" />
+        </svg>
+        <span>Floor</span>
       </button>
       <button id="photo-toggle" type="button" aria-pressed="false" data-tip="Photo mode" data-desc="Hide the HUD, turn the camera and save a picture" data-key="P">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

@@ -148,7 +148,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   up it, but not shoot. A fight is heard on both floors, and monsters use the stairs too, except
   ghouls and basilisks: they lurk on their own floor, at the foot of the stairs at most, until a
   hero comes down or they're hurt. Push a foe into a stairwell and it tumbles down.
-- **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden.
+- **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden, but a foe
+  that moves or strikes out of sight leaves dashed rings where it was last heard, until it's
+  seen, its tile is seen empty, or it dies.
 - Walls in front of a figure turn see-through.
 
 ## The campaign
@@ -226,7 +228,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   (from floor 5), and Tharok after the mummy lord, and dives started since then find about half
   their floors cut by a chasm with a one-tile span, and since the rooms on two floors about a
   quarter have the way down in a sunken chamber, reached only by a stair; a dive already under
-  way keeps its floors. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
+  way keeps its floors. A floor's opening line says when it has a chasm or a sunken way down.
+  Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
@@ -381,7 +384,7 @@ Everything is generated in the browser, with no recordings:
 | Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
 | 1–9, 0 | Pick the action bar's first ten buttons in order (attacks, spells, actions); the number shows on each |
 | R | Read out the hero, enemies in sight (distance, HP, in range) and who's down |
-| V | In a room on two floors, look down (or up) the stair nearest your hero; V again looks back |
+| V | In a room on two floors, look down (or up) the stair nearest your hero; V again looks back (or the Floor button) |
 | Space or Enter | End turn (or throw the die when it's waiting) |
 | Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
@@ -405,6 +408,7 @@ Everything is generated in the browser, with no recordings:
 | Tap a portrait or hold a figure | Show the character card |
 | Log button (top right) | Open the combat log (its number counts new lines); tap a name in it to see that figure, hold it for only its lines |
 | Camera button (top right) | Photo mode: one finger turns, two pan and pinch |
+| Floor button (top right, rooms on two floors) | Look down (or up) the stairs nearest the hero; tap again to look back |
 
 | Gamepad | Action |
 | --- | --- |

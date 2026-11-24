@@ -54,6 +54,8 @@ export function installDebug(app) {
         far: board?.threatFar.meshes.filter((m) => m.visible).length ?? 0,
       };
     },
+    /** The tiles where a foe out of sight was last heard (the rings on the board). */
+    heard: () => (app.board()?.heard.meshes ?? []).filter((m) => m.visible).map((m) => [m.position.x, m.position.z]),
     views: app.views,
     stage: app.stage,
     sfx: app.sfx,

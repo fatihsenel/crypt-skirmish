@@ -133,4 +133,15 @@ describe('the Endless Crypt', () => {
     expect(parseEndless('{"endless":{"seed":1}}')).toBeNull();
     expect(parseEndless('nonsense')).toBeNull();
   });
+
+  it('says in the intro when a floor has a chasm or its way down below a stair', () => {
+    const floors = Array.from({ length: 60 }, (_, seed) => makeFloor(seed, 6, 4));
+    const stairs = floors.find((f) => f.rows.join('').includes('['));
+    const chasm = floors.find((f) => f.rows.join('').includes('_'));
+    const plain = floors.find((f) => !/[[_]/.test(f.rows.join('')));
+    expect(stairs.intro).toMatch(/foot of a flight of stairs/);
+    expect(chasm.intro).toMatch(/A chasm splits the floor/);
+    expect(plain.intro).not.toMatch(/stairs\.|chasm/);
+    expect(makeFloor(5, 6, 1).intro).not.toMatch(/chasm|flight of stairs/); // older generations: neither
+  });
 });

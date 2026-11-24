@@ -118,7 +118,9 @@ server on 5173.
   (`floorBehind`). Screen readers hear log lines, turns and the cursor's tile
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
   press the action bar's first ten buttons (`pickByNumber` in `hud.js`; moves few turns need
-  fold behind its More button, `RARE_ACTIONS` and `more`); R reads `surroundings()`; V looks along the nearest stair (`otherFloor`, `peekFloor` in `main.js`).
+  fold behind its More button, `RARE_ACTIONS` and `more`); R reads `surroundings()`; V (or the Floor button, shown in rooms on two floors) looks along the nearest stair
+  (`otherFloor`, `peekFloor` in `main.js`). A foe that acts out of sight leaves rings where it
+  was heard (`heard` in `main.js`, `board.heard`), drawn only, never in the rules.
   The log can show one figure's lines (`filterLog`: double-click, F or a long press on a name);
   rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
@@ -233,7 +235,7 @@ server on 5173.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.
 - `window.__debug` in the console (set up in `debug.js`): `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`, `reveal()` (no fog until the next fight),
-  `level(n)` (or a room id, an Endless floor too: `level('deep:3:4:3')`), `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`.
+  `level(n)` (or a room id, an Endless floor too: `level('deep:3:4:3')`), `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`, `heard()` (the rings' tiles).
 - Monster turns wait while the page is hidden (`whileAway` in `main.js`): script fights in a
   showing tab or headless Chrome, or they stall.
 - Back up the `crypt-skirmish:*` localStorage keys before a scripted test and restore them

@@ -109,8 +109,8 @@ const overlay = (color, opacity) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
 /**
- * A patterned overlay: diagonal stripes (Ice Storm's frost), a crosshatch (melee reach) or
- * dots (ranged reach). Patterns read on any floor, can't be mistaken for the solid move,
+ * A patterned overlay: diagonal stripes (Ice Storm's frost), a crosshatch (melee reach), dots
+ * (ranged reach) or ripples (a foe heard out of sight). Patterns read on any floor, can't be mistaken for the solid move,
  * attack and heal highlights drawn over them, and tell melee from ranged without colour.
  */
 function stripes(color, opacity, width, pattern = 'stripes') {
@@ -119,7 +119,15 @@ function stripes(color, opacity, width, pattern = 'stripes') {
   const g = c.getContext('2d');
   g.strokeStyle = g.fillStyle = '#fff';
   g.lineWidth = width;
-  if (pattern === 'dots') {
+  if (pattern === 'ripples') {
+    g.setLineDash([7, 5]);
+    for (const r of [10, 19, 28]) {
+      g.globalAlpha = 1 - r / 40;
+      g.beginPath();
+      g.arc(32, 32, r, 0, Math.PI * 2);
+      g.stroke();
+    }
+  } else if (pattern === 'dots') {
     for (let x = 8; x < 64; x += 16) {
       for (let y = 8; y < 64; y += 16) {
         g.beginPath();
@@ -310,6 +318,8 @@ export class Board {
     this.fire = new TileLayer(this.group, overlay(0xff4a10, 0.8), 0.9, 0.0108); // a tipped brazier's coals
     // The figure a name in the combat log points at (hovered or clicked), over everything.
     this.spot = new TileLayer(this.group, overlay(0xffc93c, 0.7), 0.98, 0.018);
+    // Where a foe out of sight was last heard (main.js): faint rings, over the fog.
+    this.heard = new TileLayer(this.group, stripes(0xe4e8ff, 1, 4, 'ripples'), 0.96, 0.0109);
   }
 
   /** The threat colours: red and amber, or purple and yellow for colour-blind players. */
@@ -949,7 +959,7 @@ export class Board {
 
   /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
   showOverlays(on) {
-    for (const l of [...this.layers, this.threatMelee, this.threatRanged, this.threatFar, this.spot]) l.material.visible = on;
+    for (const l of [...this.layers, this.threatMelee, this.threatRanged, this.threatFar, this.spot, this.heard]) l.material.visible = on;
   }
 
   dispose() {

@@ -210,10 +210,15 @@ export function makeFloor(seed, floor, gen = 1) {
 
   if (gen >= 4) sinkEnd(grid, { seed, floor, end, cells, openings, from: heroAt[0] });
 
+  // The opening line, then a word on the floor's lie (words only: no dice).
+  const lie = [
+    grid.some((row) => row.includes('_')) && 'A chasm splits the floor, crossed by a span of bare rock.',
+    grid.some((row) => row.includes('[')) && 'The way down lies below, at the foot of a flight of stairs.',
+  ].filter(Boolean);
   return {
     id: floorId(seed, floor, gen),
     name: `The Deep, floor ${floor}`,
-    intro: floor % 5 === 0 ? 'Something with a name waits on this floor. It has been expecting you.' : pick(INTROS),
+    intro: [floor % 5 === 0 ? 'Something with a name waits on this floor. It has been expecting you.' : pick(INTROS), ...lie].join(' '),
     rows: grid.map((row) => row.join('')),
     loot,
     asleep,

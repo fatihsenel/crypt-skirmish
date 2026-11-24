@@ -664,6 +664,7 @@ kbd {
 #help .sw.danger::before, #help .sw.danger::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #ff3b3b; }
 #help .sw.target { background: rgba(255, 74, 74, 0.55); }
 #help .sw.ally { background: rgba(74, 222, 128, 0.55); }
+#help .sw.heard { width: 10px; margin: 0 2px; background: none; border: 1.5px dashed rgba(214, 220, 255, 0.8); border-radius: 50%; }
 #help .sw.threat {
   --c: rgba(255, 42, 26, 0.8);
   background: repeating-linear-gradient(45deg, var(--c) 0 1.5px, transparent 1.5px 5px), repeating-linear-gradient(-45deg, var(--c) 0 1.5px, transparent 1.5px 5px);
@@ -681,7 +682,7 @@ body.colorblind #help .sw.threat-far { --c: rgba(240, 228, 66, 0.6); }
   gap: 6px;
   z-index: 22; /* above the title and camp screens, so sound and settings work there too */
 }
-#sound, #music, #settings-toggle, #threats-toggle, #photo-toggle {
+#sound, #music, #settings-toggle, #threats-toggle, #photo-toggle, #floor-toggle {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -769,6 +770,8 @@ body.touch .head-tip { display: none; }
 [data-motion=reduce] #audio .corner-tip { transform: none; }
 #log-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
 #settings-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
+#floor-toggle[hidden] { display: none; } /* rooms on one floor */
+#floor-toggle[aria-pressed='true'] { border-color: var(--gold); color: var(--gold); }
 #threats-toggle[aria-pressed='true'] { border-color: #ff7a4a; color: #ff9a6a; background: rgba(255, 90, 46, 0.14); }
 
 /* --- the settings panel, dropped down under the buttons --------------------------- */
@@ -859,7 +862,7 @@ body.touch .head-tip { display: none; }
 /* The corner buttons stay above the banner (sound and settings still work), so the card starts
    below them; the fight's own ones (threats, log, photo) step aside while it's up. */
 #banner { padding-top: calc(env(safe-area-inset-top) + 60px); }
-body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle) { display: none; }
+body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle, #floor-toggle) { display: none; }
 #banner .card:focus { outline: none; } /* focused for keyboard and screen readers, see hud.banner */
 #banner[hidden] { display: none; }
 #banner .card {
@@ -1445,10 +1448,10 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
   #camp-party { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6px; }
 }
 /* The fight HUD steps back while the title or camp is up. */
-#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle),
-#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle) { visibility: hidden; }
-#app:has(#title:not([hidden])) :is(#threats-toggle, #photo-toggle),
-#app:has(#camp:not([hidden])) :is(#threats-toggle, #photo-toggle) { display: none; } /* no gap in the row */
+#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #floor-toggle),
+#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #floor-toggle) { visibility: hidden; }
+#app:has(#title:not([hidden])) :is(#threats-toggle, #photo-toggle, #floor-toggle),
+#app:has(#camp:not([hidden])) :is(#threats-toggle, #photo-toggle, #floor-toggle) { display: none; } /* no gap in the row */
 
 /* Shown while a fight waits for the character models to finish downloading. */
 #loading {
