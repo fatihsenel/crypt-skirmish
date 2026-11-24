@@ -276,6 +276,9 @@ export function surroundings(game, u, { seen }) {
   if (down.length) parts.push(`Down: ${down.map((h) => h.name).join(', ')}.`);
   const brazier = [...game.grid.props.values()].find((p) => p.kind === 'brazier' && !p.tipped && gridDistance(u, p) <= 1);
   if (brazier) parts.push('A lit brazier stands next to you: you can tip it over.');
+  const edge = foes.filter((e) => gridDistance(u, e) <= 1 && !game.shoveProblem(u, e, true) && game.pushTo(u, e).fall);
+  if (edge.length) parts.push(`${edge.map((e) => e.name).join(' and ')} ${edge.length > 1 ? 'stand' : 'stands'} at the chasm’s edge: Push sends ${edge.length > 1 ? 'them' : 'it'} over.`);
+  else if ([...game.grid.chasms].some((k) => { const [x, z] = k.split(',').map(Number); return gridDistance(u, { x, z }) <= 1; })) parts.push('A chasm opens next to you.');
   if ([...game.grid.props.values()].some((p) => p.kind === 'lever' && gridDistance(u, p) <= 1)) {
     parts.push(`A lever stands next to you: pulling it ${game.grid.gates.values().next().value?.down ? 'raises' : 'drops'} the portcullis.`);
   }

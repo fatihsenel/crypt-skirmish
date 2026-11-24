@@ -9,8 +9,8 @@
 const STORAGE_KEY = 'crypt-skirmish:tips';
 
 /** What the player can see right now, from main.js. */
-// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, foeNext, foesComing, hurtAllyNext,
-//        dyingAlly, paralysed, rules, touch, report }
+// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, chasmInSight, edgeFoe, foeNext,
+//        foesComing, hurtAllyNext, dyingAlly, paralysed, petrified, rules, touch, report }
 const click = (ctx, word = 'click') => (ctx.touch ? word.replace('click', 'tap').replace('Click', 'Tap') : word);
 
 /**
@@ -48,6 +48,20 @@ export const TIPS = [
       'and any hit from next to them is a critical. A CON save as each of their turns starts ends it. Keep the ghouls off them.',
   },
   {
+    id: 'petrified',
+    on: 'heroTurn',
+    when: (c) => !!c.petrified,
+    text: (c) => `<b>${c.petrified.name}</b> is turned to <b>stone</b> by a basilisk’s bite: no move, action or reaction ` +
+      'until their next turn is over, STR and DEX saves fail, and hits on them come easy. It wears off by itself. Keep the basilisks off them.',
+  },
+  {
+    id: 'push',
+    on: 'heroTurn',
+    when: (c) => !!c.edgeFoe,
+    text: (c) => `<b>${c.edgeFoe.name}</b> stands at the chasm’s edge, right next to <b>${c.unit.name}</b>. ` +
+      `<b>Push</b> (one attack: Athletics against its STR or DEX) sends it over, gone for good. ${click(c, 'Click')} Push, then the foe.`,
+  },
+  {
     id: 'chest',
     on: 'heroTurn',
     when: (c) => c.chestInSight,
@@ -80,6 +94,13 @@ export const TIPS = [
     on: 'heroTurn',
     when: (c) => c.waterInSight,
     text: () => 'The dark tiles are <b>shallow water</b>: wading costs double movement. Flying foes skim over it.',
+  },
+  {
+    id: 'chasm',
+    on: 'heroTurn',
+    when: (c) => c.chasmInSight,
+    text: (c) => 'The black gaps are a <b>chasm</b>: no one crosses it, not even a flier, but you can see and shoot over it.' +
+      (c.rules >= 3 ? ' A foe standing at its edge can be sent over with <b>Push</b>.' : ''),
   },
   {
     id: 'feed',

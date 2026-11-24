@@ -141,10 +141,12 @@ export function createPreview(deps) {
       const reachers = threats.active ? near.map((r) => r.unit.name) : [];
       const chargers = near.filter((r) => r.charge).map((r) => r.unit.name);
       const stone = [...new Set(near.filter((r) => r.stone).map((r) => r.unit.cls))];
+      const edge = [...new Set(near.filter((r) => r.edge).map((r) => r.unit.cls))];
       hud.hint(`Move ${node.dist * 5} ft` + (who.length ? ` · provokes an opportunity attack from ${who.join(' and ')}` : '')
         + (reachers.length ? ` · in reach of ${listNames(reachers)} next turn` : '')
         + (chargers.length ? ` · ${listNames(chargers)} could charge you here (extra damage, STR save or prone)` : '')
-        + (stone.length ? ` · a ${stone.join(' or ')}’s bite here can turn you to stone` : ''), true);
+        + (stone.length ? ` · a ${stone.join(' or ')}’s bite here can turn you to stone` : '')
+        + (edge.length ? ` · at the chasm’s edge: a ${edge.join(' or ')} could throw you over` : ''), true);
     }
   }
 

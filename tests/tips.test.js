@@ -40,10 +40,13 @@ describe('tips for new players', () => {
     expect(pickTip('heroTurn', { unit: hero(), foesComing: true }, seen).id).toBe('ready');
     expect(pickTip('heroTurn', { unit: hero({ actionUsed: true }), foesComing: true }, seen)).toBeNull();
     expect(pickTip('heroTurn', { unit: hero(), foeNext: true }, seen).id).toBe('teamwork');
+    expect(pickTip('heroTurn', { unit: hero(), chasmInSight: true, rules: 3 }, seen).id).toBe('chasm');
+    expect(pickTip('heroTurn', { unit: hero(), chasmInSight: true, edgeFoe: hero({ name: 'Fallen Knight' }) }, seen).id).toBe('push');
+    expect(pickTip('heroTurn', { unit: hero(), petrified: hero({ name: 'Wren' }) }, seen).id).toBe('petrified');
   });
 
   it('every tip reads for both mouse and touch', () => {
-    const ctx = { unit: hero(), cmd: { type: 'attack' }, report: {}, dyingAlly: hero({ name: 'Ysolde' }), paralysed: hero(), rules: 2 };
+    const ctx = { unit: hero(), cmd: { type: 'attack' }, report: {}, dyingAlly: hero({ name: 'Ysolde' }), paralysed: hero(), petrified: hero(), edgeFoe: hero({ name: 'Gargoyle' }), rules: 2 };
     for (const t of TIPS) {
       expect(t.text({ ...ctx, touch: false })).not.toMatch(/undefined/);
       expect(t.text({ ...ctx, touch: true })).not.toMatch(/\bclick\b|Space/i);

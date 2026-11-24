@@ -957,6 +957,7 @@ function startFight(resume, watch = null) {
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
   game.on('technique', (r) => { if (!unseen(r.target)) hud.logTechnique(r); });
   game.on('shove', (r) => hud.logShove(r));
+  game.on('throw', (r) => hud.logThrow(r));
   game.on('help', (r) => hud.logHelp(r));
   game.on('feed', (r) => hud.logFeed(r));
   game.on('grapple', (r) => hud.logGrapple(r));
@@ -1229,12 +1230,15 @@ async function onTurnStart(unit) {
         brazierNext: [...game.grid.props.values()].some((p) => p.kind === 'brazier' && !p.tipped && near(p)),
         leverNext: [...game.grid.props.values()].some((p) => p.kind === 'lever' && near(p)),
         waterInSight: [...game.grid.water].some((k) => visible.has(k)),
+        chasmInSight: [...game.grid.chasms].some((k) => visible.has(k)),
+        edgeFoe: foes.find((f) => !unseen(f) && near(f) && !game.shoveProblem(unit, f, true) && game.pushTo(unit, f).fall),
         foeNext: foes.some((f) => !unseen(f) && near(f)),
         // Foes on the hunt but none in sight: a moment to Ready.
         foesComing: foes.length > 0 && foes.every((f) => unseen(f)) && foes.some((f) => !f.unaware),
         hurtAllyNext: game.alliesOf(unit).some((a) => near(a) && a.hp * 2 <= a.maxHp),
         dyingAlly: game.units.find((a) => a.team === 'heroes' && a.dying && !unseen(a)),
         paralysed: [unit, ...game.alliesOf(unit)].find((a) => game.has(a, 'paralyzed')),
+        petrified: [unit, ...game.alliesOf(unit)].find((a) => game.has(a, 'petrified')),
         rules: game.rules,
       });
     }

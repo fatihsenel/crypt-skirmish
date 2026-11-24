@@ -28,8 +28,10 @@ function attackLine(game, u, a) {
   const r = a.rider?.v2 && (game.rules ?? RULES) >= 2 ? a.rider.v2 : a.rider; // a ghoul's claws paralyse under rules 2
   const rider = !r ? '' : r.save ? ` · ${r.save.toUpperCase()} DC ${r.dc} or ${r.condition}` : ` · ${r.condition} on a hit`;
   const recharge = a.recharge ? ` · recharge ${a.recharge}–6${u.spent?.[a.name] ? ', spent' : ''}` : '';
-  const charge = a.charge ? ` · after a run of 10 ft: charge +${a.charge.damage}, STR DC ${a.charge.dc} or prone` : '';
-  return `<li><b>${esc(a.name)}</b> ${signed(game.toHitBonus(u, a))} · ${esc(dmg)} · ${reach}${esc(rider)}${esc(charge)}${recharge}</li>`;
+  const rules4 = (game.rules ?? RULES) >= 4;
+  const charge = a.charge ? ` · after a run of 10 ft: charge +${a.charge.damage}, STR DC ${a.charge.dc} or prone${rules4 ? ' and thrown 5 ft back' : ''}` : '';
+  const throws = a.throws && rules4 ? ` · once a turn a hit throws 5 ft back, STR DC ${a.throws.dc}` : '';
+  return `<li><b>${esc(a.name)}</b> ${signed(game.toHitBonus(u, a))} · ${esc(dmg)} · ${reach}${esc(rider)}${esc(charge)}${esc(throws)}${recharge}</li>`;
 }
 
 /** The card's HTML. `game` gives the numbers: a live Game, or OUT_OF_FIGHT. */

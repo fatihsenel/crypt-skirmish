@@ -6,10 +6,12 @@ import { hash } from './dice.js';
 /**
  * The rules new fights are played by. 1: as first released. 2: death saves, concentration,
  * ghoul claws that paralyse, long range and creatures giving cover. 3: a shove can push a foe
- * 5 ft back instead of knocking it prone (into a chasm, it falls). A saved fight, replay or
+ * 5 ft back instead of knocking it prone (into a chasm, it falls). 4: monsters throw heroes
+ * back too (a gargoyle's claws, Tharok's charge); a hero sent over a chasm's edge may catch
+ * it. A saved fight, replay or
  * link carries the number it began under (none means 1), so it plays back by its own rules.
  */
-export const RULES = 3;
+export const RULES = 4;
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits

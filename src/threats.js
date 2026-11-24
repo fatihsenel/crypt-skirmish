@@ -93,19 +93,23 @@ export function createThreats({ game, board, unseen, showing, refresh }) {
 
   /**
    * The same, with what each would bring: `charge` (it could charge in: Tharok's extra dice
-   * and a shove to the floor) and `stone` (its bite can turn a hero to stone). `all: false`
+   * and a shove to the floor), `stone` (its bite can turn a hero to stone) and `edge` (it could
+   * throw a hero standing there over a chasm's edge). `all: false`
    * looks only at the monsters that bring either (cheap enough for every hover).
    */
   function near(x, z, { all = true } = {}) {
     const g = game();
     const k = key(x, z);
-    const special = (m) => m.attacks.some((a) => a.charge || a.rider?.condition === 'petrified');
+    const special = (m) => m.attacks.some((a) => a.charge || a.throws || a.rider?.condition === 'petrified');
+    const edge = [...g.grid.chasms].some((c) => { const [cx, cz] = c.split(',').map(Number); return Math.max(Math.abs(cx - x), Math.abs(cz - z)) <= 1; });
     return g.units.filter((m) => m.team === 'monsters' && m.alive && !m.hidden && !unseen(m) && (all || special(m)))
       .map((m) => ({ unit: m, zone: g.threatOf(m, { ignore: g.current }) }))
       .filter((r) => r.zone.melee.has(k))
       .map(({ unit, zone }) => ({
         unit, charge: zone.charge.has(k),
         stone: unit.attacks.some((a) => a.rider?.condition === 'petrified'),
+        // Rules 4: a thrower in reach of a tile at a chasm's edge could send a hero over it.
+        edge: edge && g.rules >= 4 && unit.attacks.some((a) => a.throws || a.charge),
       }));
   }
 

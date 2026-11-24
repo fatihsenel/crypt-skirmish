@@ -585,6 +585,17 @@ export class Hud {
     }
   }
 
+  /** Rules 4: a gargoyle's claws or Tharok's charge throw a hero back, maybe toward the chasm. */
+  logThrow(r) {
+    const save = r.dc ? `${who(r.target)} <span class="dice">STR save ${r.total} vs DC ${r.dc}</span>: ` : `${who(r.target)} `;
+    const edge = r.edge ? ` <span class="dice">DEX save ${r.edge.total} vs DC ${r.edge.dc}</span>` : '';
+    this.log(`<b class="spell">Thrown back</b>: ${save}` + (r.success ? '<b class="hit">holds firm</b>.'
+      : r.push?.fall ? `is thrown over the chasm’s edge${edge}. <b class="crit">Gone!</b>`
+      : r.edge ? `is thrown to the very edge${edge} and <b class="hit">catches it</b>, prone.`
+      : r.push ? 'is thrown 5 ft back.'
+      : 'has nowhere to go and keeps their ground.'));
+  }
+
   logStench(r) {
     this.log(`The stench of ${who(r.by)} reaches ${who(r.target)}.`);
     this.logRider(r);

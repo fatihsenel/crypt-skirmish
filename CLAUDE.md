@@ -56,6 +56,9 @@ server on 5173.
   concentration (`concentrating`, `endConcentration`), ghoul paralysis (a rider's `v2`), long
   range (`longReach`) and creatures giving cover. Rules 3: Push, a shove's `push` choice
   (`pushTo`, `pushed`, `fall`: over a chasm's edge, `fell` and `raised`, no body left).
+  Rules 4: monsters throw heroes back (`throwBack`: an attack's `throws: { dc }` once a turn,
+  `threw`, and Tharok's failed charge knock; a hero thrown at a chasm saves DEX vs `EDGE_DC` to
+  catch the edge; the `throw` event, `playThrown` in `animate.js`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced

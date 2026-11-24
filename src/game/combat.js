@@ -93,6 +93,9 @@ export function diceRange(expr, bonus = 0) {
 
 export const longReach = (attack) => (isWeapon(attack) && attack.reach > 1 ? attack.long ?? attack.reach * 4 : attack.reach);
 
+/** Rules 4: the DEX save a hero thrown toward a chasm makes to catch its edge. */
+const EDGE_DC = 10;
+
 export class Game extends Spellcasting {
   /**
    * @param level  ASCII rows, or { rows, loot, asleep, patrols } where loot lists the
@@ -664,6 +667,7 @@ export class Game extends Spellcasting {
       readiedSpell: null,
       reckless: false,
       chargeUsed: false,
+      threw: false,
       tookAttack: false,
       strikes: 0,
       quickCast: false,
@@ -1888,7 +1892,7 @@ export class Game extends Spellcasting {
       ok: true, kind: 'attack', attacker, target, attack, opportunity, readied,
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
       hit, crit, fumble, shielded, inspired, cutting, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
-      bonus, resisted, deflect, stun: null, topple: null, charge, knock: null,
+      bonus, resisted, deflect, stun: null, topple: null, charge, knock: null, thrown: null,
     };
     this.emit('attack', result);
     if (shielded) {
@@ -1903,7 +1907,15 @@ export class Game extends Spellcasting {
       // A charge's gore knocks the target down unless it makes a STR save.
       if (charge && target.alive && !this.has(target, 'prone')) {
         result.knock = this.monkSave(target, 'str', attack.charge.dc, 'prone');
+        // Rules 4: and it throws them back 5 ft (no second save).
+        if (this.rules >= 4 && !result.knock.success && target.alive) result.thrown = this.throwBack(attacker, target, null);
       }
+      // Rules 4: a gargoyle's claws throw a foe back once a turn, unless it makes a STR save.
+      if (this.rules >= 4 && attack.throws && !result.thrown && target.alive && !attacker.threw && gridDistance(attacker, target) <= 1) {
+        attacker.threw = true;
+        result.thrown = this.throwBack(attacker, target, attack.throws.dc);
+      }
+      if (result.thrown) this.emit('throw', { attacker, target, ...result.thrown });
       // A monk's hit: Stunning Strike (armed, 1 ki) and Open Hand's push to the floor.
       const dc = 8 + attacker.prof + abilityMod(attacker.stats.wis);
       if (attacker.stunArmed && isMelee(attack) && attacker.ki > 0 && target.alive) {
@@ -2185,6 +2197,31 @@ export class Game extends Spellcasting {
     this.cause = 'a fall';
     this.via = 'fall';
     this.applyDamage(target, target.hp + (target.tempHp ?? 0) + target.maxHp, by);
+  }
+
+  /**
+   * Rules 4: a monster's blow throws `target` 5 ft straight back: a STR save against `dc`
+   * resists it (`dc` null: already failed). Nowhere to go, and it stays put. A hero sent over
+   * a chasm's edge makes a DEX save (DC 10) to catch the lip, and lies prone there instead.
+   * Returns { stat, dc, d20, total, success, push, edge }.
+   */
+  throwBack(attacker, target, dc) {
+    const s = dc ? this.save(target, 'str', dc) : null;
+    const out = { stat: 'str', dc, d20: s?.d20 ?? null, total: s?.total ?? null, success: !!s?.success, push: null, edge: null };
+    if (out.success || target.huge) return out;
+    const to = this.pushTo(attacker, target);
+    if (to.why) return out;
+    if (to.fall && target.team === 'heroes') {
+      const e = this.save(target, 'dex', EDGE_DC);
+      out.edge = { stat: 'dex', dc: EDGE_DC, d20: e.d20, total: e.total, success: e.success };
+      if (e.success) {
+        this.addCondition(target, 'prone', { by: attacker });
+        return out;
+      }
+    }
+    out.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null };
+    this.pushed(target, attacker, to, out.push);
+    return out;
   }
 
   shoveBonus(unit) {

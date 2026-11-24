@@ -413,7 +413,8 @@ export const TEMPLATES = {
   },
   // --- act five: the labyrinth below the tomb ---------------------------------
   // SRD gargoyle: claws twice (its bite folded in), and it stands as a statue until woken
-  // (False Appearance, as `asleep` in the map). No resistance to plain weapons.
+  // (False Appearance, as `asleep` in the map). No resistance to plain weapons. Rules 4: once a
+  // turn its claws throw a foe 5 ft back (STR save), off the bridge if that's what's behind them.
   a: {
     name: 'Gargoyle', cls: 'Gargoyle', team: 'monsters', color: 0x7a7670,
     hp: 52, ac: 15, speed: 6, prof: 2, xp: 450, cr: 2,
@@ -421,7 +422,7 @@ export const TEMPLATES = {
     multiattack: 2,
     ai: 'brute',
     stats: { str: 15, dex: 11, con: 16, int: 6, wis: 11, cha: 7 },
-    attacks: [{ name: 'Claws', stat: 'str', damage: '1d6', reach: 1 }],
+    attacks: [{ name: 'Claws', stat: 'str', damage: '1d6', reach: 1, throws: { dc: 11 } }],
   },
   // SRD basilisk: a poisonous bite (2d6+3 piercing and 2d6 poison, one roll here) and its
   // Petrifying Gaze, cut down to a rider on the bite that turns a hero to stone for a turn.

@@ -12,6 +12,7 @@ Turn-based, isometric dungeon tactics in the browser, built with three.js and SR
 | ![The camp after the Sunken Halls: the party reaches level 8 and finds an Amulet of Health, and the map offers the Black Armory or the Ember Hearth before the Tomb](docs/screenshots/camp.jpg) | ![The title screen: the 3D skull in its crypt doorway, a saved run to continue, the daily and weekly elite crypts, and links to past runs, achievements and the bestiary](docs/screenshots/title.jpg) |
 | ![The bestiary: monster cards with a line of lore and how many were slain, and the Elites section with each trait and how many you've slain](docs/screenshots/bestiary.jpg) | ![A won New Game+ 2 campaign: the skull laughing over the run's facts, 13 elites slain by trait, and each hero's damage, kills, crits, healing and falls](docs/screenshots/victory.jpg) |
 | ![Nekhet bloodied in the Hollow Tomb: his dead rise, and Ice Storm's frost covers the floor](docs/screenshots/tomb.jpg) | ![Wren's sneak attack on a Fallen Knight in the Black Armory, a wraith close behind](docs/screenshots/armory.jpg) |
+| ![Gargoyles crowd Ilsa at the chasm's edge on the Broken Bridge, a Fallen Knight waiting across the span](docs/screenshots/bridge.jpg) | ![Brannoc toe to toe with Tharok the minotaur, Reckless, in the Labyrinth](docs/screenshots/labyrinth.jpg) |
 | <img src="docs/screenshots/phone.jpg" alt="The boss room on a phone, with the specters' reach striped red" width="240"> | <img src="docs/screenshots/phone-card.jpg" alt="Holding Nekhet on a phone opens his character card" width="240"> |
 
 A party of four fights its way down a crypt on a 5-ft grid, room by room, across five acts.
@@ -120,12 +121,12 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - Goblins, skeletons, an orc, giant rats, ghouls, a ghast, a mimic, giant spiders and
   specters.
 - Act four: mummies, wraiths and fallen knights.
-- Act five: gargoyles that stand as statues until you come close, and basilisks whose bite can
-  turn a hero to stone for a turn.
+- Act five: gargoyles that stand as statues until you come close and whose claws can throw a
+  hero back, and basilisks whose bite can turn a hero to stone for a turn.
 - Bosses: **Grukk** the goblin chief, **Morvath** the necromancer (raises the dead),
   **Varek** the wight, **Ysolde** the banshee, **Nekhet** the mummy lord (at half HP his
   dead rise again and his glare frightens heroes near him) and **Tharok** the minotaur, who
-  charges down the labyrinth's corridors and can knock a hero flat.
+  charges down the labyrinth's corridors and can knock a hero flat and throw them back.
 - Monsters start unaware. They notice heroes they can see, hear fighting nearby and shout to
   wake their allies. Some sleep, and some patrol.
 - Goblins hide after shooting. Monsters that lose sight of a hidden hero go to where they last
@@ -136,7 +137,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - Doors that block sight, hidden spike traps, chests with potions and magic items, and stairs
   down.
 - **Chasms** in the fifth act: no one crosses one, not even a flier, but you can see and shoot
-  over it. Push a foe over the edge and it's gone.
+  over it. Push a foe over the edge and it's gone. Gargoyles and Tharok can throw a hero
+  back too: a hero thrown toward the edge gets a DEX save to catch it.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden.
 - Walls in front of a figure turn see-through.
 
@@ -254,7 +256,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   again or copy as a link. Your deepest win (such as Hard NG+2) is kept and shown above them.
 - **Tips for new players:** short hints the first time something matters, such as a brazier
   to tip, water in sight, foes hunting out of sight (Ready), a hurt ally next to you, a dying or
-  paralysed hero, or a spell to concentrate on. They can be turned off.
+  paralysed hero, a spell to concentrate on, a chasm in sight, a foe at its edge to Push, or a
+  hero turned to stone. They can be turned off.
 - **Offline and on your Home Screen:** once everything has loaded, the foot of the title says
   "Saved for offline play", and the game then opens without a signal ("No signal: playing the
   saved copy"). On an iPhone it says how to add it to the Home Screen (Share, then Add to Home
@@ -272,8 +275,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Enemy reach** (T): marks the tiles monsters could reach and hit next turn. A red
   crosshatch means melee, amber dots mean ranged, and fainter dots a long shot at disadvantage.
   Settings can switch them to purple and yellow for colour-blind players. Hovering a tile to move
-  to warns, even with the zones off, when Tharok could charge you there or a basilisk's bite
-  could reach you, and a monster's card lists its charge, Reckless and petrifying bite.
+  to warns, even with the zones off, when Tharok could charge you there, a basilisk's bite
+  could reach you, or a gargoyle or Tharok could throw you over a chasm's edge, and a monster's card lists its charge, Reckless and petrifying bite.
 - **Odds:** hovering (or first tapping) a foe says the chance to hit, with advantage,
   disadvantage and cover counted, and the damage a hit does. Its HP bar shades what the hit
   would take off: dark for the lowest roll, striped up to the highest, and a ☠ by its name when
@@ -334,7 +337,7 @@ Everything is generated in the browser, with no recordings:
   dice don't wobble, and the title's skull holds still.
 - Screen readers hear the combat log as it happens (even with the log panel closed), whose
   turn it is, and what the keyboard cursor rests on with what Enter would do there. R reads
-  out the board around the hero, and the number keys say what they picked. At camp they hear
+  out the board around the hero (and a chasm's edge beside it), and the number keys say what they picked. At camp they hear
   how the last room went, which room is next, each room on the map, and items handed out.
 - The title, camp and New Game+ work from the keyboard alone: Tab to a room on the map, Enter
   to choose it, and focus stays where it was when the camp redraws.
@@ -428,6 +431,10 @@ A few things differ from the SRD to keep the game simple:
   prone). Chasms stop fliers too.
 - A Push sends a foe over a chasm's edge with no saving throw; it simply falls. Tharok knows
   his labyrinth too well to be pushed off.
+- Monsters push back. Once a turn, a gargoyle's claw hit makes the hero save (STR, DC 11) or be
+  thrown 5 ft away, and a hero Tharok's charge knocks down is thrown too. Thrown toward a chasm,
+  the hero makes a DEX save (DC 10): success catches the edge (prone at the lip), failure is a
+  fall. Fights begun before this rule (rules 3 and earlier) play without it.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.

@@ -147,6 +147,18 @@ describe('reading out the surroundings', () => {
   });
 });
 
+describe('reading out a chasm’s edge', () => {
+  it('says a foe next to the hero can be pushed over, or that a chasm is near', () => {
+    const game = new Game(['#######', '#Fs_..#', '#.....#', '#######'], { senses: false });
+    game.start();
+    const f = setTurn(game, 0);
+    expect(surroundings(game, f, { seen: () => true })).toMatch(/Skeleton stands at the chasm’s edge: Push sends it over\./);
+    f.z = 2; f.x = 3;
+    game.units[1].alive = false;
+    expect(surroundings(game, f, { seen: () => true })).toMatch(/A chasm opens next to you\./);
+  });
+});
+
 describe('a long press on a figure', () => {
   const setup = () => {
     const on = {};

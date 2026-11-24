@@ -143,7 +143,7 @@ export function createAnimations(app) {
           wait(350).then(() => floatText(stage.scene, { x: pos.x, z: pos.z - 0.5 }, text, r.rider.success ? 'miss' : 'cond'));
           tv.updateStatus();
         }
-        reaction = damageReaction(target);
+        reaction = r.thrown?.push?.fall ? null : damageReaction(target); // over the edge: playThrown shows the fall
         if (moment === 'kill' || moment === 'crit') quip(attacker, moment);
       } else {
         sfx.miss();
@@ -156,9 +156,43 @@ export function createAnimations(app) {
       await av.swing(pos, onImpact);
     }
     await reaction;
+    if (r.thrown) await playThrown(r);
     if (r.rebuke) await playRebuke(r.rebuke);
     if (r.barbs) await playBarbs(r.barbs);
     hud.renderInitiative(app.game());
+  }
+
+  /** Rules 4: thrown back by a gargoyle or Tharok: a stagger, coals, the chasm, or a grab at its edge. */
+  async function playThrown({ target, thrown: t }) {
+    const v = view(target);
+    if (t.success) {
+      floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, 'Holds firm', 'miss');
+      return;
+    }
+    if (t.edge?.success) {
+      floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, 'Catches the edge!', 'cond');
+      v.updateStatus();
+      return;
+    }
+    if (!t.push) return;
+    if (t.push.fall) {
+      floatText(stage.scene, t.push.from, 'Over the edge!', 'crit');
+      await v.shoved((t.push.from.x + t.push.to.x) / 2, (t.push.from.z + t.push.to.z) / 2);
+      if (!unseen(target)) voices.bark(target, 'die');
+      sfx.death(target.code);
+      if (target.team === 'heroes') quip(downSpeaker(target, app.game().units, seen), 'down', target.name);
+      await v.plunge();
+      return;
+    }
+    floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, 'Thrown back!', 'cond');
+    await v.shoved(t.push.to.x, t.push.to.z);
+    v.updateStatus();
+    if (t.push.burn) {
+      sfx.fireImpact();
+      floatText(stage.scene, target, `Burns −${t.push.burn.damage}`, 'crit');
+      hitFx(stage.scene, target);
+      await damageReaction(target);
+    }
   }
 
   /** A Barbed elite's spines cut the foe that struck it in melee. */

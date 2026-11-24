@@ -2276,6 +2276,37 @@ describe('act four and levels 7–8', () => {
     expect(game.threatOf(z).charge.size).toBe(0);
   });
 
+  it('rules 4: a gargoyle’s claws throw a hero back once a turn; at a chasm a DEX save catches the edge', () => {
+    const game = new Game(['########', '#._Fa..#', '#._Fa..#', '########'], { senses: false });
+    game.start();
+    const [f1, f2] = game.units.filter((u) => u.code === 'F');
+    const [a1, a2] = game.units.filter((u) => u.code === 'a');
+    for (const f of [f1, f2]) f.hp = f.maxHp = 500;
+    setTurn(game, game.units.indexOf(a1));
+    // the attack’s rolls (19 hits, not a crit), then STR save 1 (fails), DEX save 1 (fails): over the edge
+    game.rng = fixed(0.95, 0.5, 0.5, 0.001, 0.001);
+    const r = game.attack(a1, f1, a1.attacks[0]);
+    expect(r.thrown).toMatchObject({ success: false, edge: { success: false }, push: { to: { x: 2, z: 1 }, fall: true } });
+    expect(f1).toMatchObject({ alive: false, fell: true });
+    expect(game.attack(a1, f2, a1.attacks[0]).thrown ?? null).toBe(null); // once a turn
+    setTurn(game, game.units.indexOf(a2));
+    game.rng = fixed(0.95, 0.5, 0.5, 0.001, 0.999); // fails STR, makes DEX: clings, prone at the lip
+    const r2 = game.attack(a2, f2, a2.attacks[0]);
+    expect(r2.thrown).toMatchObject({ success: false, edge: { success: true }, push: null });
+    expect([f2.x, f2.z, f2.alive, game.has(f2, 'prone')]).toEqual([3, 2, true, true]);
+  });
+
+  it('rules 3 fights keep gargoyles that don’t throw', () => {
+    const game = new Game(['######', '#_Fa.#', '######'], { senses: false, rules: 3 });
+    game.start();
+    const [f, a] = [game.units[0], game.units[1]];
+    f.hp = f.maxHp = 500;
+    setTurn(game, 1);
+    game.rng = fixed(0.95, 0.5, 0.001, 0.001);
+    expect(game.attack(a, f, a.attacks[0]).thrown).toBe(null);
+    expect([f.x, f.alive]).toEqual([2, true]);
+  });
+
   it('a pushed foe lands on burning coals and burns', () => {
     const game = new Game(['######', '#Fs..#', '######'], { senses: false });
     game.start();
