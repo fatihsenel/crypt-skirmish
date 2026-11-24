@@ -64,6 +64,12 @@ export class UnitTip {
     if (side === 'below') {
       left = r.left + r.width / 2 - tip.width / 2;
       top = r.bottom + 8;
+      // Above instead, over the board, for a thing in the action bar (the Action, Bonus and
+      // Reaction chips, a hero's tags) or one too low for the card to fit under: below, it
+      // would cover the buttons, or be pushed up over the thing itself.
+      const actions = document.getElementById('actionbar')?.getBoundingClientRect();
+      const inBar = actions?.height && r.top >= actions.top && r.bottom <= actions.bottom;
+      if ((inBar || top + tip.height > app.bottom - pad) && r.top - 8 - tip.height >= app.top + pad) top = r.top - 8 - tip.height;
     } else {
       left = r.right + 14;
       if (left + tip.width > app.right - pad) left = r.left - 14 - tip.width;

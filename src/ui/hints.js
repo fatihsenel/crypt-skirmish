@@ -1,5 +1,6 @@
 // Tooltips for anything marked data-hint (in place of the browser's title, which can stay up
-// over the next screen and never shows on a touch screen): a small card below the thing,
+// over the next screen and never shows on a touch screen): a small card below the thing (above
+// it in the action bar or near the bottom of the screen),
 // after a pause under the mouse, at once on keyboard focus, or for a few seconds when a finger
 // taps something that isn't a button. It goes when the thing is gone or hidden. Screen readers
 // get the note too, always: a control's as its description, a label's as hidden text after it.
