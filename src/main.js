@@ -609,6 +609,7 @@ let board;
 let views = new Map();
 let busy = false;
 let ended = false;
+let revealed = false; // __debug.reveal(): the fog lifted for a screenshot, until the next fight
 /** null = default (click enemy to attack with best weapon, click tile to move),
  *  { kind: 'attack', attack } or { kind: 'spell', id } = targeting mode. */
 let selected = null;
@@ -635,8 +636,8 @@ const unseen = (u) => u.team === 'monsters' && !!view(u) && !inView(tileOf(view(
 function updateVision(force = false) {
   if (!game || !board) return;
   const grid = game.grid;
-  if (game.over && ended) {
-    // The fight is decided: lift the fog (the stairs, who was lurking where).
+  if ((game.over && ended) || revealed) {
+    // The fight is decided (or __debug.reveal()): lift the fog (the stairs, who was lurking where).
     if (visionSig === 'over') return;
     visionSig = 'over';
     visible = new Set();
@@ -823,6 +824,7 @@ function startFight(resume, watch = null) {
 
   busy = false;
   ended = false;
+  revealed = false;
   setUndo(null);
   selected = null;
   pendingReveals = [];
@@ -1775,6 +1777,10 @@ installDebug({
   sfx,
   campaign: () => campaign,
   command: (cmd) => heroCommand(cmd),
+  reveal() {
+    revealed = true;
+    updateVision(true);
+  },
   autoplay(on = true) {
     debugAutoplay = on;
     if (on) record = null; // the AI's hero turns aren't commands: nothing to replay

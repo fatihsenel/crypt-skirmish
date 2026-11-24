@@ -222,7 +222,7 @@ server on 5173.
 - `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.
 - `window.__debug` in the console (set up in `debug.js`): `command({type:'move', x, z})`,
-  `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
+  `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`, `reveal()` (no fog until the next fight),
   `level(n)` (or a room id, an Endless floor too: `level('deep:3:4:3')`), `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`.
 - Monster turns wait while the page is hidden (`whileAway` in `main.js`): script fights in a
   showing tab or headless Chrome, or they stall.

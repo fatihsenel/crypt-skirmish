@@ -65,6 +65,8 @@ export function installDebug(app) {
     level: app.level,
     campaign: app.campaign,
     win: () => felled(app, 'monsters'),
+    /** Lift the fog of war until the next fight (for screenshots). */
+    reveal: app.reveal,
     lose: () => felled(app, 'heroes'),
     /** Zoom the camera onto a tile, e.g. __debug.focus(11, 2, 3). */
     focus: (x, z, zoom = 2.5) => app.lookAt(x, z, zoom),
