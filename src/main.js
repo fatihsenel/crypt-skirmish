@@ -659,6 +659,13 @@ function updateVision(force = false) {
   visionSig = sig;
   const blocks = (x, z) => grid.isWall(x, z) || grid.opaqueProp(x, z) || (grid.doors.has(key(x, z)) && !board.doors.get(key(x, z)).opened);
   visible = grid.visibleFrom(eyes, blocks);
+  // Rules 6: a dark area shows only as far as the heroes' torches reach.
+  if (game.dark.size) {
+    for (const k of game.dark) {
+      const [x, z] = k.split(',').map(Number);
+      if (visible.has(k) && game.dim(x, z, eyes)) visible.delete(k);
+    }
+  }
   board.setVision(visible, { snap: first });
 }
 
@@ -800,7 +807,7 @@ function startFight(resume, watch = null) {
   game.on('spill', (r) => { blow = null; scorched = r.unit; });
   game.on('burn', (r) => { blow = null; scorched = r.unit; });
   game.on('throw', (r) => { if (r.target.team === 'heroes' && r.edge?.success) feats.caught = true; });
-  game.on('shove', (r) => { if (r.push?.stair && r.attacker.team === 'heroes') feats.stairs = true; });
+  game.on('shove', (r) => { if (r.push?.stair && !r.push.crash && r.attacker.team === 'heroes') feats.stairs = true; });
   game.on('grappleEnd', ({ unit, why }) => { if (why === 'fell' && unit.team === 'monsters' && !unit.alive) feats.pinned = true; });
   game.on('death', ({ unit }) => {
     if (clung?.unit === unit && clung.round === game.round) feats.stayDown = true;
@@ -831,6 +838,7 @@ function startFight(resume, watch = null) {
   stage.scene.add(board.group);
   board.setIce(game.icyTiles()); // a restored fight may have icy ground
   board.setFire(game.burningTiles()); // and coals from a tipped brazier
+  board.setCaltrops(game.caltropTiles); // and caltrops (rules 6)
   for (const p of game.grid.props.values()) if (p.tipped) board.tipBrazier(p.x, p.z, p.from.x, p.from.z, true);
   if ([...game.grid.gates.values()].some((g) => g.down)) board.setGates(true, true); // a portcullis already down
   views = new Map();
@@ -974,10 +982,23 @@ function startFight(resume, watch = null) {
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
   game.on('technique', (r) => { if (!unseen(r.target)) hud.logTechnique(r); });
   game.on('shove', (r) => hud.logShove(r));
-  game.on('tumble', (r) => { if (unseen(r.unit)) hud.log('Something tumbles down the stairs in the dark.', 'sys'); else hud.logTumble(r); });
+  game.on('tumble', (r) => { if (unseen(r.unit)) hud.log(r.through ? 'Stone gives way somewhere in the dark.' : 'Something tumbles down the stairs in the dark.', 'sys'); else hud.logTumble(r); });
   game.on('throw', (r) => hud.logThrow(r));
   game.on('help', (r) => hud.logHelp(r));
   game.on('feed', (r) => hud.logFeed(r));
+  // Rules 6: the pedlar's flasks and caltrops.
+  game.on('flask', (r) => hud.logFlask(r));
+  game.on('caltrops', (r) => hud.logCaltrops(r));
+  game.on('caltropStep', (r) => {
+    if (unseen(r.unit)) { if (!r.success) hud.log('Someone yelps on the caltrops in the dark.', 'sys'); } else hud.logCaltropStep(r);
+  });
+  game.on('aflame', (r) => { // burning at the end of its turn (the save comes after)
+    if (unseen(r.unit)) return;
+    hud.logAflame(r);
+    sfx.fireImpact();
+    floatText(stage.scene, r.unit, `Burns −${r.damage}`, 'crit');
+    anim.damageReaction(r.unit);
+  });
   game.on('grapple', (r) => hud.logGrapple(r));
   game.on('struggle', (r) => { if (!unseen(r.unit)) hud.logStruggle(r); });
   game.on('grappleEnd', (r) => {
@@ -989,7 +1010,10 @@ function startFight(resume, watch = null) {
     floatText(stage.scene, r.target, r.rider.success ? 'Resists the stench' : 'Gagging!', r.rider.success ? 'miss' : 'cond');
     view(r.target)?.updateStatus();
   });
-  game.on('condition', (r) => { if (!unseen(r.unit)) hud.logCondition(r); });
+  game.on('condition', (r) => {
+    if (!unseen(r.unit)) hud.logCondition(r);
+    if (r.name === 'burning' && !r.on) view(r.unit)?.updateStatus(); // put out between turns
+  });
   game.on('trapFound', (r) => pendingReveals.push(r));
   game.on('alert', (r) => pendingAlerts.push(r));
   game.on('revealed', (r) => pendingSpotted.push(r));
@@ -1300,6 +1324,8 @@ async function onTurnStart(unit) {
         waterInSight: [...game.grid.water].some((k) => visible.has(k)),
         chasmInSight: [...game.grid.chasms].some((k) => visible.has(k)),
         stairsInSight: [...game.grid.links.keys()].some((k) => visible.has(k)),
+        cracksInSight: [...game.grid.cracks.keys()].some((k) => visible.has(k)),
+        darkNear: [...game.dark].some((k) => visible.has(k)),
         edgeFoe: foes.find((f) => !unseen(f) && near(f) && !game.shoveProblem(unit, f, true) && game.pushTo(unit, f).fall),
         foeNext: foes.some((f) => !unseen(f) && near(f)),
         // Foes on the hunt but none in sight: a moment to Ready.
@@ -1469,7 +1495,9 @@ function stepNote(step) {
   if (step.type === 'shove') return step.push ? 'pushes' : 'shoves';
   if (step.type === 'help') return 'helps';
   if (step.type === 'grapple') return 'grapples';
-  if (step.type === 'feed') return 'gives a potion';
+  if (step.type === 'feed') return step.thrown ? 'tosses a potion' : 'gives a potion';
+  if (step.type === 'flask') return 'throws alchemist’s fire';
+  if (step.type === 'caltrops') return 'spreads caltrops';
   if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'brazier') return 'tips a brazier';
   if (step.type === 'lever') return 'pulls the lever';

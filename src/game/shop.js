@@ -10,6 +10,8 @@ import { ITEMS } from './items.js';
 /** What the pedlar asks for each thing; he pays half for gear from the pack. */
 export const PRICES = {
   potion: 30,
+  fire: 40,
+  caltrops: 15,
   periaptPoison: 150,
   weaponPlus1: 200,
   ringProtection: 250,
@@ -41,7 +43,7 @@ function hash(text) {
   return h;
 }
 
-/** What's for sale here: potions, then two pieces of gear not yet bought at this stop. */
+/** What's for sale here: potions, alchemist's fire and caltrops, then two pieces of gear not yet bought at this stop. */
 export function stock(state) {
   // In the Endless Crypt he carries everything.
   const acts = state.endless ? 9 : state.cleared.filter((c) => NODES[c]?.actBreak).length;
@@ -49,7 +51,7 @@ export function stock(state) {
   const start = hash(`${state.at}:${state.tier ?? 0}`) % pool.length;
   const gear = [pool[start], pool[(start + 1 + (hash(state.at) % (pool.length - 1))) % pool.length]];
   const bought = state.traded?.at === state.at ? state.traded.bought : [];
-  return ['potion', ...gear.filter((id) => !bought.includes(id))];
+  return ['potion', 'fire', 'caltrops', ...gear.filter((id) => !bought.includes(id))];
 }
 
 /** Why `id` can't be bought now, or null. */
@@ -60,7 +62,7 @@ export function buyProblem(state, id) {
   return null;
 }
 
-/** Buy `id`: a potion goes to whoever carries fewest, gear to the pack. Returns the new state. */
+/** Buy `id`: a potion (or a flask, or caltrops) goes to whoever carries fewest, gear to the pack. Returns the new state. */
 export function buy(prev, id) {
   const problem = buyProblem(prev, id);
   if (problem) throw new Error(problem);
@@ -69,6 +71,10 @@ export function buy(prev, id) {
   if (id === 'potion') {
     const code = HERO_CODES.reduce((a, b) => (state.party[b].potions < state.party[a].potions ? b : a));
     state.party[code].potions++;
+  } else if (ITEMS[id]?.kind === 'supply') {
+    const f = ITEMS[id].carry;
+    const code = HERO_CODES.reduce((a, b) => ((state.party[b][f] ?? 0) < (state.party[a][f] ?? 0) ? b : a));
+    state.party[code][f] = (state.party[code][f] ?? 0) + 1;
   } else {
     state.pack.push(id);
     if (state.traded?.at !== state.at) state.traded = { at: state.at, bought: [] };

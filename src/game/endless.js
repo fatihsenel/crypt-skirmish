@@ -30,8 +30,10 @@ const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
  * after the mummy lord. A dive keeps the generation it began with, so its floors (and their
  * replays) stay the same. Generation 3 floors are sometimes split by chasms, and generation 4
  * sometimes sinks the stairs' chamber below the rest, down a flight of stairs (see makeFloor).
+ * Generation 5 (rules 6) turns an orc, ghoul, ghast or mummy into an ochre jelly now and then,
+ * with its own dice (`oozeIn`), so a floor without one is its generation 4 floor.
  */
-export const GEN = 4;
+export const GEN = 5;
 const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
 const BOSSES_TWO = [...BOSSES, 'v'];
 
@@ -199,6 +201,8 @@ export function makeFloor(seed, floor, gen = 1) {
     count++;
   }
 
+  if (gen >= 5) oozeIn(grid, seed, floor);
+
   // Chests (potions, and gear now and then) and a few hidden traps away from the start.
   const loot = [];
   for (let n = 1 + (rng() < 0.5 ? 1 : 0); n > 0; n--) {
@@ -223,6 +227,18 @@ export function makeFloor(seed, floor, gen = 1) {
     loot,
     asleep,
   };
+}
+
+/** Generation 5: from floor 3, about one floor in three swaps a mid-sized monster for an ochre jelly. */
+function oozeIn(grid, seed, floor) {
+  if (floor < 3) return;
+  const jrng = seeded(hash(`endless ${seed} ${floor} ooze`));
+  if (jrng() >= 0.35) return;
+  const spots = [];
+  grid.forEach((row, z) => row.forEach((ch, x) => { if ('ouhy'.includes(ch)) spots.push([x, z]); }));
+  if (!spots.length) return;
+  const [x, z] = spots[Math.floor(jrng() * spots.length)];
+  grid[z][x] = 'j';
 }
 
 /**

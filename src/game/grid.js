@@ -32,6 +32,8 @@ export class Grid {
    *   '_' a chasm: no one can cross it (not even a flier), but it blocks neither sight nor shots.
    *   '[' a stair down to the room's lower hall, ']' the stair up from it: floor tiles, the n-th '['
    *   (in reading order) linked to the n-th ']' as if they were next to each other, one step apart.
+   *   ',' cracked floor over the lower hall: floor to walk on. Rules 6: a creature pushed or thrown
+   *   onto it crashes through (Game.cracked), and it's a hole after that.
    */
   constructor(rows) {
     this.height = rows.length;
@@ -46,6 +48,7 @@ export class Grid {
     this.props = new Map();  // key -> {x, z, kind, cover: 'half' | 'full' | null}
     this.water = new Set();  // keys of shallow water tiles
     this.chasms = new Set(); // keys of chasm tiles
+    this.cracks = new Map(); // key -> {x, z}: cracked floor (rules 6; a broken one is a chasm)
     this.gates = new Map();  // key -> {x, z, down}: portcullis tiles, all worked by the room's levers
     this.links = new Map();  // key -> {x, z}: the stair at the other end of a '[' or ']'
     this.stairways = [];     // [{ down: {x, z}, up: {x, z} }]: the linked stairs, '[' above and ']' below
@@ -63,6 +66,7 @@ export class Grid {
         else if (ch === '%') this.corpses.push({ code: 'g', x, z });
         else if (ch === '~') this.water.add(key(x, z));
         else if (ch === '_') this.chasms.add(key(x, z));
+        else if (ch === ',') this.cracks.set(key(x, z), { x, z });
         else if (ch === ':') this.gates.set(key(x, z), { x, z, down: false });
         else if (ch === '[') downs.push({ x, z });
         else if (ch === ']') ups.push({ x, z });

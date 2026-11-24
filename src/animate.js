@@ -6,8 +6,9 @@ import { ACTIONS } from './game/abilities.js';
 import { ITEMS } from './game/items.js';
 import { shootProjectile, floatText } from './render/unitView.js';
 import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
-import { missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, burstFx, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT } from './render/effects.js';
-import { wait } from './render/tween.js';
+import { lobFx, missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, burstFx, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT } from './render/effects.js';
+import { wait, tween, easeOut } from './render/tween.js';
+import { JELLY_SCALE } from './render/models.js';
 import { sfx } from './audio/sfx.js';
 import { voices } from './audio/voices.js';
 import { attackMoment, spellMoment, lineFor, downSpeaker, replySpeaker, lastWordsSpeaker, canSay, SPEECH } from './speech.js';
@@ -156,9 +157,37 @@ export function createAnimations(app) {
       await av.swing(pos, onImpact);
     }
     await reaction;
+    if (r.split) await playSplit(target, r.split);
     if (r.thrown) await playThrown(r);
     if (r.rebuke) await playRebuke(r.rebuke);
     if (r.barbs) await playBarbs(r.barbs);
+    hud.renderInitiative(app.game());
+  }
+
+  /** Rules 6: an ochre jelly struck in two: it shrinks, and the new half oozes out beside it. */
+  async function playSplit(jelly, spawn) {
+    const v = view(jelly);
+    const nv = addView(spawn);
+    nv.figure.rotation.y = v.figure.rotation.y;
+    const shown = !unseen(jelly);
+    if (shown) {
+      sfx.hit('j');
+      floatText(stage.scene, { x: jelly.x, z: jelly.z - 0.5 }, 'Splits!', 'cond');
+      burstFx(stage.scene, jelly, { colors: [0xc8962a, 0xe0b040, 0x8a6014], count: 12, speed: 1, size: 0.05, y: 0.25, life: 600 });
+    }
+    const from = v.model.root.scale.x, to = JELLY_SCALE[jelly.size] ?? from;
+    const end = JELLY_SCALE[spawn.size] ?? to;
+    nv.model.root.scale.setScalar(0.01);
+    const pos = nv.group.position;
+    await tween(shown ? 450 : 1, (t) => {
+      v.model.root.scale.setScalar(from + (to - from) * t);
+      nv.model.root.scale.setScalar(Math.max(0.01, end * t));
+      pos.x = jelly.x + (spawn.x - jelly.x) * t;
+      pos.z = jelly.z + (spawn.z - jelly.z) * t;
+    }, easeOut);
+    v.updateHp();
+    nv.updateHp?.();
+    syncStatus?.();
     hud.renderInitiative(app.game());
   }
 
@@ -170,8 +199,16 @@ export function createAnimations(app) {
     const v = view(target);
     const board = app.board();
     if (push.stair.x !== push.from.x || push.stair.z !== push.from.z) await v.shoved(push.stair.x, push.stair.z);
-    sfx.stairway(true);
-    await v.takeStairs(push.stair, push.to, board.flightAt?.(push.stair.x, push.stair.z), board.flightAt?.(push.to.x, push.to.z), () => {}, { tumble: true });
+    if (push.crash) { // rules 6: the cracked floor gives way under them
+      board.breakCrack?.(push.stair.x, push.stair.z);
+      if (inView(push.stair)) burstFx(stage.scene, push.stair, { colors: [0x4b423a, 0x6b6259, 0x2a241f], count: 18, speed: 1.4, size: 0.07, y: 0.05, life: 700 });
+      sfx.fall();
+      stage.shake(0.05, 220);
+      await v.takeStairs(push.stair, push.to, { dx: 0, dz: 0, down: true }, null, () => {}, { tumble: true });
+    } else {
+      sfx.stairway(true);
+      await v.takeStairs(push.stair, push.to, board.flightAt?.(push.stair.x, push.stair.z), board.flightAt?.(push.to.x, push.to.z), () => {}, { tumble: true });
+    }
     if (inView(push.to)) burstFx(stage.scene, push.to, { colors: [0x6b6259, 0x8a8076, 0x4d463f], count: 14, speed: 1.2, size: 0.06, y: 0.08, life: 700 });
     sfx.hit(target.code);
     stage.shake(0.04, 200);
@@ -206,7 +243,7 @@ export function createAnimations(app) {
       return;
     }
     if (t.push.stair) {
-      floatText(stage.scene, t.push.from, 'Down the stairs!', 'crit');
+      floatText(stage.scene, t.push.from, t.push.crash ? 'Through the floor!' : 'Down the stairs!', 'crit');
       await tumbleDown(target, t.push);
       return;
     }
@@ -303,7 +340,7 @@ export function createAnimations(app) {
   }
 
   const BONUS_STRIKE = { flurry: 'Flurry of Blows', martial: 'Martial Arts', frenzy: 'Frenzy' };
-  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!', petrified: 'Turned to stone!' };
+  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!', petrified: 'Turned to stone!', burning: 'Burning!' };
 
   function damageReaction(unit) {
     const v = view(unit);
@@ -402,6 +439,20 @@ export function createAnimations(app) {
           hitFx(stage.scene, r.unit);
           await damageReaction(r.unit);
           hud.renderInitiative(app.game());
+          break;
+        }
+        case 'caltrops': { // rules 6: walked onto caltrops
+          const r = step.result;
+          if (unseen(unit)) {
+            view(unit).updateHp();
+            if (!unit.alive) view(unit).die();
+            break;
+          }
+          floatText(stage.scene, r.unit, r.success ? 'Steps clear' : 'Caltrops −1', r.success ? 'miss' : 'crit');
+          if (!r.success) {
+            sfx.hit(unit.code);
+            await damageReaction(r.unit);
+          }
           break;
         }
         case 'trap': {
@@ -519,7 +570,7 @@ export function createAnimations(app) {
       await v.plunge();
       stage.shake(0.06, 260); // far below, it lands
     } else if (push.stair) {
-      floatText(stage.scene, target, 'Down the stairs!', 'crit');
+      floatText(stage.scene, target, push.crash ? 'Through the floor!' : 'Down the stairs!', 'crit');
       await tumbleDown(target, push);
     } else {
       floatText(stage.scene, target, 'Pushed!', 'cond');
@@ -558,13 +609,50 @@ export function createAnimations(app) {
   }
 
   async function playFeed(r) {
-    sfx.potion();
     await view(r.unit).turnTowards(r.target.x, r.target.z);
+    if (r.thrown) { // rules 6: tossed across, drunk as it lands
+      sfx.whoosh?.();
+      await lobFx(stage.scene, r.unit, r.target);
+    }
+    sfx.potion();
     floatText(stage.scene, r.target, `+${r.healed}`, 'heal');
     view(r.target).updateHp();
     await healFx(stage.scene, r.target);
     await rises(r.target);
     hud.renderInitiative(app.game());
+  }
+
+  /** Rules 6: a flask of alchemist's fire lobbed at a foe: it bursts into flame, or smashes wide. */
+  async function playFlask(r) {
+    const v = view(r.unit);
+    await v.turnTowards(r.target.x, r.target.z);
+    sfx.whoosh();
+    const miss = { x: r.target.x + 0.45, z: r.target.z + 0.35 };
+    await lobFx(stage.scene, r.unit, r.hit ? r.target : miss, { color: 0xff7a1a, light: 0xffa040 });
+    sfx.fireImpact();
+    if (!r.hit) {
+      floatText(stage.scene, r.target, 'Miss', 'miss');
+      burstFx(stage.scene, miss, { colors: [0xff7a1a, 0xffc040], count: 10, speed: 0.9, size: 0.05, y: 0.05, life: 500 });
+      await wait(300);
+      return;
+    }
+    fireBurstFx(stage.scene, r.target);
+    floatText(stage.scene, r.target, `${r.crit ? 'Crit! ' : ''}−${r.damage}`, 'crit');
+    await damageReaction(r.target);
+    if (r.target.alive) {
+      wait(350).then(() => floatText(stage.scene, { x: r.target.x, z: r.target.z - 0.5 }, 'Burning!', 'cond'));
+      view(r.target).updateStatus();
+    }
+    hud.renderInitiative(app.game());
+  }
+
+  /** Rules 6: a bag of caltrops spread over a tile. */
+  async function playCaltrops(r) {
+    await view(r.unit).turnTowards(r.x, r.z);
+    sfx.chest?.();
+    burstFx(stage.scene, { x: r.x, z: r.z }, { colors: [0x9a9aa4, 0x6a6a72], count: 12, speed: 0.6, size: 0.03, y: 0.05, life: 400 });
+    app.board().setCaltrops(app.game().caltropTiles);
+    await wait(300);
   }
 
   async function playHelp(r) {
@@ -1050,6 +1138,8 @@ export function createAnimations(app) {
       case 'help': return playHelp(r);
       case 'grapple': return playGrapple(r);
       case 'feed': return playFeed(r);
+      case 'flask': return playFlask(r);
+      case 'caltrops': return playCaltrops(r);
       case 'chest': return playChest(unit, r);
       case 'brazier': return playBrazier(unit, r);
       case 'lever': return playLever(unit, r);

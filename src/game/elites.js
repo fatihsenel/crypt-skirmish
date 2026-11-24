@@ -9,10 +9,12 @@ import { hash } from './dice.js';
  * 5 ft back instead of knocking it prone (into a chasm, it falls). 4: monsters throw heroes
  * back too (a gargoyle's claws, Tharok's charge); a hero sent over a chasm's edge may catch
  * it. 5: a foe pushed (or a hero thrown) into a stairwell tumbles down to the floor below,
- * 1d6 damage and prone. A saved fight, replay or
+ * 1d6 damage and prone. 6: a potion can be tossed to an ally 15 ft away, the Ochre Jelly
+ * splits, cracked floors give way to the hall below, alchemist's fire and caltrops, and dark
+ * chambers. A saved fight, replay or
  * link carries the number it began under (none means 1), so it plays back by its own rules.
  */
-export const RULES = 5;
+export const RULES = 6;
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits

@@ -83,6 +83,7 @@ export const HELP = {
 export const FEED = {
   name: 'Give potion', reach: 1,
   desc: 'Pour one of your potions of healing into an ally next to you: they regain 2d4 + 2 HP. Takes your action.',
+  toss: 'Pour one of your potions of healing into an ally next to you, or toss it to one up to 15 ft away in clear view, who drinks it as it lands: they regain 2d4 + 2 HP, even if dying. Takes your action.',
 };
 
 /** Grapple sits with the attacks: it takes one attack of the Attack action. */
@@ -101,6 +102,7 @@ export const CONDITION_INFO = {
   rotting: 'Rotting (mummy rot): can’t regain hit points. Wears off after two of its own turns.',
   stunned: 'Stunned (a monk’s Stunning Strike): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage. Wears off at the end of its next turn.',
   petrified: 'Petrified (a basilisk’s gaze): turned to stone for a turn. Can’t move, act or react, and fails STR and DEX saves; attacks against it have advantage. Wears off at the end of its next turn.',
+  burning: 'Burning (alchemist’s fire): 1d4 fire at the end of each of its turns, until a DC 10 DEX save then puts it out.',
   paralyzed: 'Paralysed (a ghoul’s claws): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage, and a hit from within 5 ft is a critical hit. A CON save as each of its turns starts ends it, in time to act.',
 };
 

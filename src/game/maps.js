@@ -126,6 +126,7 @@ export const LEVELS = [
     ],
     loot: [['potion', 'potion', 'periaptPoison']],
     asleep: ['1,7'], // a gorged ghoul, sleeping it off
+    dark: [[1, 6, 2, 10], [10, 6, 14, 10]], // rules 6: unlit side rooms, seen only by torchlight
     patrols: { '9,1': [[13, 1], [13, 4]] },
   },
   {
@@ -404,10 +405,10 @@ LEVELS.push(
     rows: [
       '################',
       '#F.R.[.##.]...u#',
-      '#......##.~~...#',
+      '#...,..##.~~...#',
       '#W.C...##.~~...#',
       '#...|..##...u..#',
-      '#......##.=....#',
+      '#..,...##.=....#',
       '#.s..s.##..~~..#',
       '#......##..~~.u#',
       '#[...|.##].$...#',
@@ -416,6 +417,9 @@ LEVELS.push(
       '################',
     ],
     loot: [['weaponPlus1', 'ringProtection', 'potion']],
+    added: [['j', 13, 5, true]], // rules 6: a young ochre jelly (Medium, half HP) in the flooded hall below
+    below: [8, 0], // rules 6: the cracked floor (',') gives way into the hall 8 tiles east
+    asleep: ['13,5'], // rules 6: the jelly lies still in the water until something comes near
   },
   // Act five's middle way: a chapel over an undercroft, its stairs crossing (the first '[' leads to
   // the first ']', at the far end below).
@@ -426,8 +430,8 @@ LEVELS.push(
     rows: [
       '################',
       '#F.R..[....a..[#',
-      '#W.C........x..#',
-      '#..|....a...|..#',
+      '#W.C.,......x..#',
+      '#..|....a,..|..#',
       '#.....$........#',
       '################',
       '################',
@@ -438,6 +442,7 @@ LEVELS.push(
       '################',
     ],
     loot: [['weaponPlus2', 'potion'], ['potion', 'potion']],
+    below: [0, 6], // rules 6: the cracked floor (',') gives way into the undercroft 6 tiles south
     asleep: ['11,1', '8,3'], // gargoyles on their plinths
   },
 );

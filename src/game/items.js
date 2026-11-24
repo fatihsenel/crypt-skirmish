@@ -8,6 +8,15 @@ export const ITEMS = {
     name: 'Potion of Healing', kind: 'potion',
     desc: 'Drink as an action: regain 2d4 + 2 HP.',
   },
+  // Rules 6: the pedlar's supplies, carried like potions (a hero's `flasks` and `caltrops`).
+  fire: {
+    name: 'Alchemist’s Fire', kind: 'supply', carry: 'flasks',
+    desc: 'Throw as an action at a foe within 20 ft: on a hit, 1d4 fire, and it burns for 1d4 at the end of each of its turns until a DC 10 DEX save puts it out.',
+  },
+  caltrops: {
+    name: 'Caltrops', kind: 'supply', carry: 'caltrops',
+    desc: 'Spread as an action on a tile within 10 ft: whoever steps on it saves (DEX 15) or takes 1 piercing and stops there. The party steps round them.',
+  },
   weaponPlus1: {
     name: 'Runed Weapon +1', kind: 'gear',
     desc: '+1 to hit and damage with weapon attacks (not spells).',

@@ -448,6 +448,19 @@ export const TEMPLATES = {
     stats: { str: 18, dex: 11, con: 16, int: 6, wis: 16, cha: 9 },
     attacks: [{ name: 'Greataxe', stat: 'str', damage: '2d12', reach: 1, charge: { damage: '2d8', dc: 14 } }],
   },
+  // SRD ochre jelly: a slow pseudopod (2d6+2 bludgeoning and 3d6 acid, one roll here). Rules 6:
+  // Split (`splits`): a melee weapon hit on a Large or Medium jelly with 10 HP or more left
+  // splits it in two, each with half its HP and a size smaller (Game.split). The game has no
+  // damage types, so it neither resists acid nor shrugs off lightning and slashing.
+  j: {
+    name: 'Ochre Jelly', cls: 'Ochre Jelly', team: 'monsters', color: 0xc89a2a,
+    hp: 45, ac: 8, speed: 2, prof: 2, xp: 450, cr: 2,
+    ai: 'brute',
+    splits: true,
+    size: 2, // Large; each split is a size smaller, and a Small one splits no more
+    stats: { str: 15, dex: 6, con: 14, int: 2, wis: 6, cha: 1 },
+    attacks: [{ name: 'Pseudopod', stat: 'str', damage: '5d6', reach: 1 }],
+  },
 };
 
 let nextId = 1;

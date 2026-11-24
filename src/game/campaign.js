@@ -283,7 +283,7 @@ export function heroUnit(code, rec) {
   u.slot = code;
   applyLevel(u, rec.level, rec.picks);
   applyItems(u, rec.items);
-  for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
+  for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands', 'flasks', 'caltrops']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
   u.hp = Math.min(u.hp, u.maxHp);
   if (rec.name) u.name = rec.name;
   return u;
@@ -790,6 +790,7 @@ export function parseSave(text) {
       const max = rested.layOnHandsMax;
       if (max) r.layOnHands = Number.isFinite(r.layOnHands) ? Math.max(0, Math.min(max, r.layOnHands)) : max;
       else delete r.layOnHands;
+      for (const f of ['flasks', 'caltrops']) if (r[f] !== undefined && !(Number.isInteger(r[f]) && r[f] > 0 && r[f] < 100)) delete r[f];
     }
     if (s.fight !== undefined && !validFight(s.fight)) delete s.fight;
     // A run finished before act two existed ended at the Sanctum: open the way on, after

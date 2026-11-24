@@ -78,6 +78,8 @@ export function createPreview(deps) {
     if (selected?.kind === 'help') return refreshHelp(u);
     if (selected?.kind === 'grapple') return refreshGrapple(u);
     if (selected?.kind === 'feed') return refreshFeed(u);
+    if (selected?.kind === 'flask') return refreshFlask(u);
+    if (selected?.kind === 'caltrops') return refreshCaltrops(u);
     if (selected?.kind === 'ready') {
       const spells = u.spells.some((id) => !game.readySpellProblem(u, id));
       hud.hint(`Ready: pick the attack${spells ? ' or spell' : ''} to hold · a melee one strikes a foe stepping into reach, a ranged one${spells ? ' or a spell' : ''} a foe stepping into view · Esc to cancel`);
@@ -181,12 +183,42 @@ export function createPreview(deps) {
     board.targets.set(game.units.filter((a) => a.team === u.team && !game.feedProblem(u, a)));
     const ally = hovered && (visibleUnitAt(hovered.x, hovered.z) ?? game.dyingAt(hovered.x, hovered.z));
     if (!ally || ally.team !== u.team || ally === u) {
-      hud.hint('Give potion: click an ally next to you · Esc to cancel');
+      hud.hint(`Give potion: click an ally ${game.rules >= 6 ? 'within 15 ft' : 'next to you'} · Esc to cancel`);
       return;
     }
     board.hover.set([hovered]);
     const why = game.feedProblem(u, ally);
     hud.hint(why ? `${ally.name}: ${why}` : `Give potion → ${ally.name}: 2d4 + 2 HP (${ally.hp}/${ally.maxHp} now)`, !why);
+  }
+
+  /** Rules 6, alchemist's fire: foes in reach light up; the hint gives the odds. */
+  function refreshFlask(u) {
+    board.targets.set(game.enemiesOf(u).filter((f) => !unseen(f) && !game.flaskProblem(u, f)));
+    const foe = hovered && visibleUnitAt(hovered.x, hovered.z);
+    if (!foe || foe.team === u.team) {
+      hud.hint('Alchemist’s fire: click an enemy within 20 ft · Esc to cancel');
+      return;
+    }
+    board.hover.set([hovered]);
+    const why = game.flaskProblem(u, foe);
+    if (why) return hud.hint(`${foe.name}: ${why}`);
+    const ac = game.acOf(foe) + game.coverBonus(u, foe);
+    const need = Math.min(20, Math.max(2, ac - (abilityMod(u.stats.dex) + u.prof)));
+    hud.hint(`Alchemist’s fire → ${foe.name}: ${Math.round(((21 - need) / 20) * 100)}% to hit · 1d4 fire, then it burns`, true);
+  }
+
+  /** Rules 6, caltrops: the tiles they can go on light up. */
+  function refreshCaltrops(u) {
+    const tiles = [];
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+      const x = u.x + dx, z = u.z + dz;
+      if (!game.caltropProblem(u, x, z) && board.isExplored(x, z)) tiles.push({ x, z });
+    }
+    board.reach.set(tiles);
+    if (!hovered) return hud.hint('Caltrops: click a floor tile within 10 ft · Esc to cancel');
+    board.hover.set([hovered]);
+    const why = game.caltropProblem(u, hovered.x, hovered.z);
+    hud.hint(why ? `Caltrops: ${why}` : 'Caltrops here: whoever steps on them saves (DEX 15) or takes 1 and stops', !why);
   }
 
   /** Help targeting: adjacent enemies light up, the hint says who it helps. */

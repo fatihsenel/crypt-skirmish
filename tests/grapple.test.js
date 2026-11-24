@@ -3,8 +3,8 @@ import { Game } from '../src/game/combat.js';
 import { applyCommand, unitRef } from '../src/game/replay.js';
 
 /** Brannoc next to an orc, Maela next to Brannoc, on Brannoc's turn. */
-function fight(rng = () => 0.5) {
-  const g = new Game(['########', '#F.o...#', '#C.....#', '########'], { senses: false, rng });
+function fight(rng = () => 0.5, rules) {
+  const g = new Game(['########', '#F.o...#', '#C.....#', '########'], { senses: false, rng, ...(rules && { rules }) });
   g.start();
   const f = g.units.find((u) => u.cls === 'Fighter');
   const c = g.units.find((u) => u.cls === 'Cleric');
@@ -28,14 +28,50 @@ describe('giving a potion', () => {
     expect(g.feedProblem(f, c)).toBe('No potions left');
   });
 
-  it('needs a hurt ally next to you', () => {
-    const { g, f, c, orc } = fight();
+  it('needs a hurt ally next to you, under rules 5', () => {
+    const { g, f, c, orc } = fight(() => 0.5, 5);
     expect(g.feedProblem(f, c)).toBe('Maela is at full HP');
     expect(g.feedProblem(f, orc)).toBe('Choose an ally next to you');
     expect(g.feedProblem(f, f)).toBe('Choose an ally next to you');
     c.hp = 5;
     c.z = 1; c.x = 4; // not next to Brannoc any more (2 tiles off)
     expect(g.feedProblem(f, c)).toBe('Must stand next to them');
+  });
+
+  it('can be tossed to an ally up to 15 ft away in sight, from rules 6', () => {
+    const { g, f, c, orc } = fight();
+    expect(g.feedProblem(f, orc)).toBe('Choose an ally within 15 ft');
+    c.hp = 5;
+    c.z = 2; c.x = 5; // 3 tiles off
+    expect(g.feedProblem(f, c)).toBe(null);
+    c.x = 6; // 4 tiles off
+    expect(g.feedProblem(f, c)).toBe('Too far: 15 ft at most');
+    c.x = 5;
+    const r = applyCommand(g, { type: 'feed', target: unitRef(g, c) });
+    expect(r).toMatchObject({ ok: true, thrown: true });
+    expect(c.hp).toBe(5 + r.healed);
+  });
+
+  it('a tossed potion brings a dying ally back up', () => {
+    const { g, f, c } = fight();
+    c.x = 4; c.z = 2;
+    c.hp = 0; c.alive = false; c.dying = { successes: 0, failures: 2, stable: false };
+    expect(g.feedProblem(f, c)).toBe(null);
+    const r = applyCommand(g, { type: 'feed', target: unitRef(g, c) });
+    expect(r.ok).toBe(true);
+    expect(c.alive).toBe(true);
+    expect(c.hp).toBeGreaterThan(0);
+  });
+
+  it('needs a clear throw past 5 ft', () => {
+    const g = new Game(['#######', '#F#C..#', '#.....#', '#######'], { senses: false, rng: () => 0.5 });
+    g.start();
+    const f = g.units.find((u) => u.cls === 'Fighter');
+    const c = g.units.find((u) => u.cls === 'Cleric');
+    while (g.current !== f) g.endTurn();
+    c.hp = 5;
+    c.x = 4; c.z = 1; // behind the wall from Brannoc at (1,1)
+    expect(g.feedProblem(f, c)).toBe('No clear throw');
   });
 });
 

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { Game } from '../src/game/combat.js';
 import { seeded } from '../src/game/dice.js';
 import { levelById } from '../src/game/maps.js';
+import { levelOf } from '../src/game/endless.js';
 import { dailyCampaign } from '../src/game/daily.js';
 import { DIFFICULTIES } from '../src/game/campaign.js';
 import { replayFight, fightCheck } from '../src/game/replay.js';
@@ -17,6 +18,24 @@ describe('fights recorded under the first rules', () => {
     it(`replay ${f.room} (seed ${f.seed}) unchanged`, () => {
       const party = dailyCampaign({ level: f.level, classes: f.classes }).party;
       const g = new Game(levelById(f.room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(f.seed), rules: 1 });
+      const r = replayFight(g, f.log);
+      expect(r.ok).toBe(true);
+      expect(g.over).toBe(f.over);
+      expect(fightCheck(g)).toBe(f.check);
+      expect(g.rng()).toBe(f.next);
+    });
+  }
+});
+
+// Whole fights recorded under rules 5 by scripts/v5-fixtures.mjs: the rooms on two floors,
+// acts four and five, and a generation 4 Endless floor. Rules 6 must leave them as they were.
+const FIVE = JSON.parse(readFileSync(new URL('./fixtures/v5-fights.json', import.meta.url), 'utf8'));
+
+describe('fights recorded under rules 5', () => {
+  for (const f of FIVE) {
+    it(`replay ${f.room} (seed ${f.seed}) unchanged`, () => {
+      const party = dailyCampaign({ level: f.level, classes: f.classes }).party;
+      const g = new Game(levelOf(f.room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(f.seed), rules: 5 });
       const r = replayFight(g, f.log);
       expect(r.ok).toBe(true);
       expect(g.over).toBe(f.over);

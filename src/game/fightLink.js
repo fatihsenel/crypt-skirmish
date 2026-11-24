@@ -38,6 +38,7 @@ export function cleanParty(party) {
     };
     if (CLASS_CHOICES[code].includes(r.cls) && r.cls !== code) h.cls = r.cls;
     if (int(r.layOnHands, 0, 200)) h.layOnHands = r.layOnHands;
+    for (const f of ['flasks', 'caltrops']) if (int(r[f], 1, 99)) h[f] = r[f];
     const picks = Object.entries(r.picks && typeof r.picks === 'object' ? r.picks : {}).filter(([l, stat]) => /^[1-9]$/.test(l) && cleanPick(stat));
     if (picks.length) h.picks = Object.fromEntries(picks);
     const name = cleanName(r.name);

@@ -2,7 +2,7 @@
 
 import { EndBanner } from './banner.js';
 import { announce } from './announce.js';
-import { signed } from '../game/dice.js';
+import { signed, abilityMod } from '../game/dice.js';
 import { ACTIONS, SPELLS, PASSIVES, SHOVE, PUSH, HELP, FEED, GRAPPLE, CONDITION_INFO } from '../game/abilities.js';
 import { ITEMS } from '../game/items.js';
 import { unitIcon, unknownIcon } from './icons.js';
@@ -57,7 +57,7 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}${s.inspired ? ` (inspired +${s.inspired.total})` : ''}${s.paralyzed ? ' (paralysed: fails)' : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
-const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', petrified: 'turns to stone!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!', stunned: 'is stunned!' };
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', petrified: 'turns to stone!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!', stunned: 'is stunned!', burning: 'catches fire!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
@@ -606,7 +606,7 @@ export class Hud {
   }
 
   logFeed(r) {
-    this.log(`${who(r.unit)} pours a <b>potion of healing</b> into ${who(r.target)}: <b class="heal">+${r.healed} HP</b> ${dice(r.roll)}.`);
+    this.log(`${who(r.unit)} ${r.thrown ? 'tosses' : 'pours'} a <b>potion of healing</b> ${r.thrown ? 'to' : 'into'} ${who(r.target)}: <b class="heal">+${r.healed} HP</b> ${dice(r.roll)}.`);
   }
 
   logGrapple(r) {
@@ -632,6 +632,7 @@ export class Hud {
     this.log(`${who(r.attacker)} shoves ${who(r.target)}: ${roll} vs ${resist}. ` +
       (!r.success ? '<b class="miss">It keeps its feet.</b>'
         : r.push?.fall ? '<b class="crit">Pushed over the edge!</b>'
+        : r.push?.crash ? '<b class="crit">Pushed through the cracked floor!</b>'
         : r.push?.stair ? '<b class="crit">Pushed down the stairs!</b>'
         : r.push ? '<b>Pushed back 5 ft.</b>'
         : '<b class="cond prone">Knocked prone!</b>'));
@@ -642,7 +643,7 @@ export class Hud {
     if (on || cause === 'used') return; // (a mockery spent on an attack shows in its line)
     const text = {
       stand: `gets up off the floor (half movement).`,
-      save: name === 'paralyzed' ? 'shakes off the paralysis.' : `shakes off the fear.`,
+      save: name === 'paralyzed' ? 'shakes off the paralysis.' : name === 'burning' ? 'beats out the flames.' : `shakes off the fear.`,
       concentration: 'is no longer frightened: the spell ended.',
       expired: name === 'poisoned' ? 'is no longer poisoned.' : name === 'frightened' ? 'is no longer frightened.'
         : name === 'restrained' ? 'tears free.' : name === 'rotting' ? 'is free of the rot.'
@@ -851,8 +852,29 @@ export class Hud {
     this.log(`${who(r.unit)} steps onto the coals and takes <b class="hit">${r.damage} fire</b> ${dice(r.roll)}.`);
   }
 
+  /** Rules 6: alchemist's fire thrown. */
+  logFlask(r) {
+    const roll = `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)} = ${r.total}</span>`;
+    this.log(`${who(r.unit)} hurls <b>alchemist’s fire</b> at ${who(r.target)}: ${roll} vs AC ${r.ac}. ` +
+      (r.hit ? `${r.crit ? '<b class="crit">Critical!</b> ' : ''}<b class="hit">${r.damage} fire</b> ${dice(r.roll)}${r.target.alive ? ', and it <b class="cond burning">catches fire</b>.' : '.'}` : '<b class="miss">The flask smashes wide.</b>'));
+  }
+
+  /** Burning at the end of its turn, then the save to put it out. */
+  logAflame(r) {
+    this.log(`${who(r.unit)} burns for <b class="hit">${r.damage} fire</b> ${dice(r.roll)}.`);
+  }
+
+  logCaltrops({ unit }) {
+    this.log(`${who(unit)} spreads <b>caltrops</b> across the floor.`);
+  }
+
+  logCaltropStep(r) {
+    this.log(`${who(r.unit)} steps on the caltrops. DEX save DC ${r.dc}: ${saveText(r)}` +
+      (r.success ? ': picks a way through.' : ', takes <b class="hit">1 piercing</b> and stops there.'));
+  }
+
   logTumble(r) {
-    this.log(`${who(r.unit)} tumbles down the stairs and takes <b class="hit">${r.damage} bludgeoning</b> ${dice(r.roll)}${r.lands ? ', landing prone' : ''}.`);
+    this.log(`${who(r.unit)} ${r.through ? 'crashes through the floor to the hall below' : 'tumbles down the stairs'} and takes <b class="hit">${r.damage} bludgeoning</b> ${dice(r.roll)}${r.lands ? ', landing prone' : ''}.`);
   }
 
   logTrapFound({ unit }) {
@@ -989,6 +1011,8 @@ export class Hud {
         <span>AC <b>${game.acOf(u)}</b></span>
         <span>Move <b>${u.movesLeft * 5}</b> ft</span>
         ${u.team === 'heroes' ? `<span data-hint="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
+        ${u.flasks > 0 ? `<span data-hint="Flasks of alchemist’s fire">Fire <b>${u.flasks}</b></span>` : ''}
+        ${u.caltrops > 0 ? `<span data-hint="Bags of caltrops">Caltrops <b>${u.caltrops}</b></span>` : ''}
         ${u.ki !== undefined ? `<span data-hint="Ki points: your level, back every fight">Ki <b>${u.ki}</b></span>` : ''}
         ${u.sorcery !== undefined ? `<span data-hint="Sorcery points: your level, back every fight">Sorcery <b>${u.sorcery}</b></span>` : ''}
       </div>
@@ -1180,10 +1204,34 @@ export class Hud {
         more.push(button({
           kind: 'feed', id: 'feed', name: FEED.name, cls: 'act',
           sub: `action · ${u.potions} left`,
-          tip: { kind: 'Action', chips: [`${u.potions} left`, '2d4 + 2 HP', '5 ft'], desc: FEED.desc, how: this.howTo('an ally next to you') },
+          tip: game.rules >= 6
+            ? { kind: 'Action', chips: [`${u.potions} left`, '2d4 + 2 HP', '15 ft'], desc: FEED.toss, how: this.howTo('an ally within 15 ft') }
+            : { kind: 'Action', chips: [`${u.potions} left`, '2d4 + 2 HP', '5 ft'], desc: FEED.desc, how: this.howTo('an ally next to you') },
           problem: feedWhy,
           disabled: !!feedWhy,
           active: selected?.kind === 'feed',
+        }));
+      }
+      // Rules 6: the pedlar's alchemist's fire and caltrops, while the hero carries any.
+      const supplyWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
+      if (game.rules >= 6 && u.flasks > 0) {
+        more.push(button({
+          kind: 'flask', id: 'flask', name: ITEMS.fire.name, cls: 'act',
+          sub: `action · ${u.flasks} left`,
+          tip: { kind: 'Action', chips: [`${u.flasks} left`, `${signed(abilityMod(u.stats.dex) + u.prof)} to hit`, '1d4 fire, then burning', '20 ft'], desc: ITEMS.fire.desc, how: this.howTo('an enemy within 20 ft') },
+          problem: supplyWhy,
+          disabled: !!supplyWhy,
+          active: selected?.kind === 'flask',
+        }));
+      }
+      if (game.rules >= 6 && u.caltrops > 0) {
+        more.push(button({
+          kind: 'caltrops', id: 'caltrops', name: ITEMS.caltrops.name, cls: 'act',
+          sub: `action · ${u.caltrops} left`,
+          tip: { kind: 'Action', chips: [`${u.caltrops} left`, 'DEX 15 or stop', '10 ft'], desc: ITEMS.caltrops.desc, how: this.howTo('a floor tile within 10 ft') },
+          problem: supplyWhy,
+          disabled: !!supplyWhy,
+          active: selected?.kind === 'caltrops',
         }));
       }
     }
@@ -1272,7 +1320,7 @@ export class Hud {
       this.handlers.onChoose({ kind: 'readySpell', id });
     }
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (['shove', 'push', 'grapple', 'help', 'feed', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
+    else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

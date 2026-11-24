@@ -76,6 +76,12 @@ export function applyCommand(game, cmd) {
       const target = unit(cmd.target);
       return target ? game.grapple(u, target) : fail('No such target');
     }
+    case 'flask': { // rules 6
+      const target = unit(cmd.target);
+      return target ? game.throwFlask(u, target) : fail('No such target');
+    }
+    case 'caltrops':
+      return game.scatterCaltrops(u, cmd.x, cmd.z);
     case 'spell':
       return game.castSpell(u, cmd.id, spellTarget(game, cmd));
     case 'smite':

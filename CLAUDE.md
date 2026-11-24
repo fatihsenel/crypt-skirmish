@@ -61,7 +61,15 @@ server on 5173.
   `threw`, and Tharok's failed charge knock; a hero thrown at a chasm saves DEX vs `EDGE_DC` to
   catch the edge; the `throw` event, `playThrown` in `animate.js`). Rules 5: a push into a
   stairwell tumbles down (`stairwell`, `tumble`: a push's `stair`, `tumbleDown` in `animate.js`),
-  and a `lurks` monster keeps to its floor (`lurking`, through `passableFor`).
+  and a `lurks` monster keeps to its floor (`lurking`, through `passableFor`). Rules 6: a potion
+  tossed to an ally within `TOSS_RANGE` (`feedPotion`'s `thrown`), the ochre jelly's `splits`
+  (`split`, the `split` event, `playSplit`), cracked floor (`cracked`, `breakCrack`: a push's
+  `crash`, a tumble's `through`), the supplies (`SUPPLIES`: `flasks` and `caltrops`, carried
+  like potions; the `flask` and `caltrops` commands, the `burning` condition's `burnOn`,
+  `caltropTiles`) and dark areas (`dark`, `dim`, `TORCH`: heroes don't see past their torches,
+  in `inSight` and the fog). Rooms gate their rules-6 parts through `level.added` (spawns
+  `[code, x, z, young]`), `level.below` and `level.dark`; rules-5 fights are replayed by
+  `tests/fixtures/v5-fights.json` (`scripts/v5-fixtures.mjs`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
@@ -177,7 +185,8 @@ server on 5173.
   `grid.gates` are solid but see-through), `'_'` a chasm (`grid.chasms`: solid for everyone,
   fliers too, but see-through and no cover), `'['` a stair down and `']'` a stair up (a room on
   two floors: the n-th `[` is linked to the n-th `]` in `grid.links`, one step apart through
-  `neighbors`, so paths, the AI and sound use them; `grid.lower` is the lower hall, drawn shaded;
+  `neighbors`, so paths, the AI and sound use them; `','` cracked floor (`grid.cracks`, plain floor
+  unless the room has `below`, the `[dx, dz]` to the tile under it); `grid.lower` is the lower hall, drawn shaded;
   a `stairs` move step, `takeStairs` in `unitView.js` walking each flight the board drew (`flightAt`); a hero standing on a stair sees from its
   other end too, in `updateVision`, but rules' sight is unchanged). Keep a wall two tiles thick between the
   floors, and the stairs against a far (`-x` or `-z`) wall so the camera sees them. Adding any of these to an existing room changes its
@@ -194,12 +203,14 @@ server on 5173.
   dive keeps the `gen` it began with (none means 1), so new monsters go in a new generation's
   pool (`GEN`, `POOL_TWO`, `BOSSES_TWO`). Generation 3 cuts chasms with their own dice
   (`crng`), so a gen-3 floor without one is its gen-2 floor; generation 4 sinks the exit's
-  chamber below a stair (`sinkEnd`, its own dice too; a one-tile wall is enough there); changing `makeFloor`, `POOL` or `floorBudget` itself
+  chamber below a stair (`sinkEnd`, its own dice too; a one-tile wall is enough there); generation 5
+  turns a monster into an ochre jelly now and then (`oozeIn`, its own dice); changing `makeFloor`, `POOL` or `floorBudget` itself
   changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,
   `PRICES`); `ui/shop.js` is the panel, opened from camp through `onTrade`. A new item for sale
-  needs a price in `PRICES` and a place in `STOCK`.
+  needs a price in `PRICES` and a place in `STOCK`. Supplies (`kind: 'supply'` in `ITEMS`, its
+  `carry` the hero field) are always in stock and go to whoever carries fewest.
 - **Stop with no fight:** a node of `kind: 'event'` in `NODES`, its words and options in
   `EVENTS`, and its rule in `takeEvent` and `eventProblem` (`game/campaign.js`); the camp
   draws its options as buttons (`data-enter="altar:offer"`) and `EVENT_NEWS` in `camp.js` says

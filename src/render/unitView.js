@@ -356,6 +356,7 @@ export class UnitView {
       u.conditions?.restrained && ['restrained', u.conditions.restrained.by?.code === 'D' ? 'Entangled' : 'Webbed'],
       u.conditions?.stunned && ['stunned', 'Stunned'],
       u.conditions?.petrified && ['petrified', 'Petrified'],
+      u.conditions?.burning && ['burning', 'Burning'],
       u.raging && u.alive && ['raging', 'Raging'],
       u.reckless && u.alive && ['reckless', 'Reckless'],
       u.quickened && u.alive && ['rebuke', 'Quickened'],

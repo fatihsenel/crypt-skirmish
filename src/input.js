@@ -142,9 +142,20 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
 
   if (selected?.kind === 'feed') {
     const other = unitAt(t.x, t.z) ?? game.dyingAt(t.x, t.z); // a dying ally lies there too
-    if (!other || other.team !== u.team || other === u) return { toast: 'Click an ally next to you' };
+    if (!other || other.team !== u.team || other === u) return { toast: game.rules >= 6 ? 'Click an ally within 15 ft' : 'Click an ally next to you' };
     const why = game.feedProblem(u, other);
     return why ? { toast: why } : { cmd: { type: 'feed', target: unitRef(game, other) } };
+  }
+
+  if (selected?.kind === 'flask') { // rules 6
+    if (!other || other.team === u.team) return { toast: 'Click an enemy within 20 ft' };
+    const why = game.flaskProblem(u, other);
+    return why ? { toast: why } : { cmd: { type: 'flask', target: unitRef(game, other) } };
+  }
+
+  if (selected?.kind === 'caltrops') {
+    const why = game.caltropProblem(u, t.x, t.z);
+    return why ? { toast: why } : { cmd: { type: 'caltrops', x: t.x, z: t.z } };
   }
 
   if (selected?.kind === 'grapple') {

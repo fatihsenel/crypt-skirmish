@@ -20,6 +20,14 @@ export const SPILL_DC = 12;
 export const SPILL_DAMAGE = '2d6';
 export const BURN_DAMAGE = '1d6'; // walking onto burning coals, once a turn
 export const TUMBLE_DAMAGE = '1d6'; // rules 5: pushed down a flight of stairs
+export const TOSS_RANGE = 3;
+/** Rules 6: heroes carry torches; a dark tile farther than this from every hero is unlit. */
+export const TORCH = 2; // rules 6: a potion tossed to an ally, in tiles (15 ft)
+export const FLASK_RANGE = 4; // rules 6: alchemist's fire thrown at a foe, in tiles (20 ft)
+export const FLASK_DAMAGE = '1d4'; // and the fire it lights, at the end of each of its turns
+export const FLASK_DC = 10; // the DEX save that puts it out
+export const CALTROP_RANGE = 2; // rules 6: caltrops scattered on a tile within 10 ft
+export const CALTROP_DC = 15; // the DEX save of whoever steps on them
 export const BURN_TURNS = 3;      // the coals burn until the end of the tipper's third turn
 
 // Monster senses, in tiles (5 ft). In the dim crypt, unaware monsters spot heroes within
@@ -53,13 +61,15 @@ export const PATROL_PACE = 3;
 //               save at the start of each of its turns ends it (in time to act).
 //   petrified   (a basilisk's gaze, cut down to a turn) can't move, act or react; fails STR and
 //               DEX saves; attacks against it have advantage. Wears off as its next turn ends.
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified'];
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified', 'burning'];
 /** Conditions that simply run out after their `turns`. */
 
 const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
-const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands'];
+const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands', 'flasks', 'caltrops'];
+/** Rules 6: what a hero may carry from the pedlar besides potions (none: absent). */
+export const SUPPLIES = ['flasks', 'caltrops'];
 
 /** Weapon attacks (not spell attacks like Fire Bolt) benefit from +1 weapons. */
 export const isWeapon = (attack) => attack.stat === 'str' || attack.stat === 'dex' || !!attack.weapon; // a druid's Shillelagh too
@@ -128,6 +138,23 @@ export class Game extends Spellcasting {
       }
     });
 
+    // Rules 6: monsters a room gained later (level.added, [code, x, z, young]); older fights keep the
+    // room they had. A young one is a size smaller with half the hit points.
+    if (this.rules >= 6 && level.added) {
+      this.grid.spawns.push(...level.added.map(([code, x, z, young]) => ({ code, x, z, ...(young && { young }) })));
+    }
+    // Rules 6: cracked floor gives way over the lower hall, `below` [dx, dz] from it (level.below).
+    // Older fights walk it as plain floor.
+    this.below = level.below ?? null;
+    // Rules 6: a room's dark areas ([x0, z0, x1, z1] each), lit only by the heroes' torches.
+    this.dark = new Set();
+    if (this.rules >= 6) {
+      for (const [x0, z0, x1, z1] of level.dark ?? []) {
+        for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.dark.add(key(x, z));
+      }
+    }
+    if (this.rules < 6 || !this.below) this.grid.cracks.clear();
+    this.holes = new Set(); // cracked floor that gave way (now chasm tiles), by key
     // Hard leaves a few monsters out of its worst rooms (level.thinned, by tile).
     if (difficulty?.thin && level.thinned) {
       this.grid.spawns = this.grid.spawns.filter((s) => !level.thinned.includes(key(s.x, s.z)));
@@ -141,6 +168,10 @@ export class Game extends Spellcasting {
       // A hero slot may be played by another class (party record `cls`).
       const u = createUnit(party?.[s.code] ? classOf(s.code, party[s.code]) : s.code, s.x, s.z, seen[s.code], totals[s.code]);
       u.slot = s.code;
+      if (s.young) {
+        u.size = Math.max(0, (u.size ?? 1) - 1);
+        u.hp = u.maxHp = Math.ceil(u.maxHp / 2);
+      }
       return u;
     };
     this.difficulty = difficulty; // { hp, bonus } from DIFFICULTIES, or null for as written
@@ -163,7 +194,7 @@ export class Game extends Spellcasting {
         if (saved.level) applyLevel(u, saved.level, saved.picks);
         if (saved.name) u.name = saved.name;
         applyItems(u, saved.items);
-        for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands']) {
+        for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands', ...SUPPLIES]) {
           if (saved[f] !== undefined) u[f] = structuredClone(saved[f]);
         }
         if (!u.alive) Object.assign(u, { alive: true, hp: 1 }); // carried out by the party
@@ -222,7 +253,7 @@ export class Game extends Spellcasting {
     const out = {};
     for (const u of this.units) {
       if (u.team === 'heroes' && !u.corpse && !(u.slot in out)) {
-        out[u.slot] = structuredClone(Object.fromEntries(CARRY.map((f) => [f, u[f]])));
+        out[u.slot] = structuredClone(Object.fromEntries(CARRY.filter((f) => !SUPPLIES.includes(f) || u[f] > 0).map((f) => [f, u[f]])));
       }
     }
     return out;
@@ -407,7 +438,15 @@ export class Game extends Spellcasting {
     return abilityMod(h.stats.dex) + (h.stealth === 'expert' ? 2 * h.prof : h.stealth === 'trained' ? h.prof : 0);
   }
 
+  /** Rules 6: is (x, z) a dark tile no hero's torch reaches? */
+  dim(x, z, lights = this.living('heroes')) {
+    if (!this.dark.has(key(x, z))) return false;
+    return !lights.some((l) => gridDistance(l, { x, z }) <= TORCH);
+  }
+
+  /** Sight works both ways, except that heroes don't see into the dark past their torches. */
   inSight(a, b, range = SIGHT) {
+    if (this.dark.size && a.team === 'heroes' && this.dim(b.x, b.z)) return false;
     return gridDistance(a, b) <= range
       && (this.grid.lineOfSight(a.x, a.z, b.x, b.z) || this.grid.lineOfSight(b.x, b.z, a.x, a.z));
   }
@@ -524,6 +563,25 @@ export class Game extends Spellcasting {
       by, target: u,
       rider: { stat: 'con', dc: by.stench.dc, d20: s.d20, total: s.total, success: s.success, condition: 'poisoned' },
     });
+  }
+
+  /**
+   * Rules 6: alchemist's fire burns at the end of each of the burning creature's turns
+   * (FLASK_DAMAGE), then a DEX save puts it out (a house rule: the SRD spends an action).
+   */
+  burnOn(unit) {
+    const c = unit.conditions?.burning;
+    if (!c || !unit.alive) return;
+    const roll = rollExpr(FLASK_DAMAGE, { rng: this.rng });
+    this.cause = 'alchemist’s fire';
+    this.via = 'fire';
+    const result = { unit, roll, damage: roll.total, by: c.by };
+    this.emit('aflame', result);
+    this.applyDamage(unit, roll.total, unit.team === 'monsters' ? c.by : null);
+    if (!unit.alive || this.over) return;
+    const s = this.save(unit, 'dex', FLASK_DC);
+    result.save = { stat: 'dex', dc: FLASK_DC, d20: s.d20, total: s.total, success: s.success };
+    if (s.success) this.removeCondition(unit, 'burning', 'save');
   }
 
   /** End of a turn: frightened units try to shake it off, and timed conditions tick down. */
@@ -716,6 +774,8 @@ export class Game extends Spellcasting {
     if (this.over) return;
     const u = this.current;
     if (u.turned > 0) u.turned--;
+    this.burnOn(u);
+    if (this.over) return;
     this.tickConditions(u);
     this.thawIce(u);
     this.coolCoals(u);
@@ -920,6 +980,36 @@ export class Game extends Spellcasting {
   }
 
   /**
+   * Rules 6, Split: an ochre jelly of Medium size or more with 10 HP or more left splits in two.
+   * It keeps half its HP (rounded down) and goes a size smaller, and the new jelly takes the
+   * same on the first free tile next to it (east, west, south, north, then the corners; none
+   * free: no split). The new
+   * one acts right after it. Returns the new jelly, or null.
+   */
+  split(jelly) {
+    if (!(jelly.size >= 1) || jelly.hp < 10) return null;
+    let spot = null;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+      const x = jelly.x + dx, z = jelly.z + dz;
+      if (this.grid.isSolid(x, z) || this.units.some((u) => (u.alive || u.dying) && u.x === x && u.z === z)) continue;
+      spot = { x, z };
+      break;
+    }
+    if (!spot) return null;
+    const half = Math.floor(jelly.hp / 2);
+    const unit = createUnit('j', spot.x, spot.z);
+    Object.assign(unit, { team: jelly.team, unaware: false, size: jelly.size - 1, hp: half, maxHp: half });
+    unit.name = `${jelly.name.replace(/ \d+$/, '')} ${this.units.filter((u) => u.code === 'j').length + 1}`;
+    unit.weaponBonus = jelly.weaponBonus; // Hard's bonus to hit and damage
+    jelly.hp = half;
+    jelly.maxHp = half;
+    jelly.size -= 1;
+    this.addUnit(unit, jelly);
+    this.emit('split', { unit: jelly, spawn: unit });
+    return unit;
+  }
+
+  /**
    * Nekhet, bloodied, calls up his house (once a fight): up to `rises` of his fallen undead
    * stand again as skeletons, and fresh ones climb out beside him to make up the number.
    * His glare sweeps every hero within 2 tiles who can see him: WIS save or frightened.
@@ -999,6 +1089,7 @@ export class Game extends Spellcasting {
         const t = this.grid.traps.get(key(x, z));
         if (t && t.revealed && !t.sprung) return false;
         if (this.fire?.length && this.burningTiles().has(key(x, z))) return false; // the party walks around coals
+        if (this.caltropTiles?.has(key(x, z))) return false; // and their own caltrops
       }
       return true;
     };
@@ -1280,6 +1371,21 @@ export class Game extends Spellcasting {
         unit.z = to.z;
         steps.push({ type: 'burn', result: this.burn(unit) });
         if (!unit.alive || this.over) return stop(i + 1);
+      }
+      if (this.caltropTiles?.size && !unit.flies && this.caltropsAt(to.x, to.z)) { // rules 6
+        flush(to);
+        unit.x = to.x;
+        unit.z = to.z;
+        const result = this.stepOnCaltrops(unit);
+        steps.push({ type: 'caltrops', result });
+        if (!unit.alive || this.over) return stop(i + 1);
+        if (!result.success) { // spiked: the move ends here
+          this.emit('move', { unit, path: path.slice(0, i + 2) });
+          for (const st of steps) if (st.type === 'door') this.noise(st, 3);
+          this.revealTraps();
+          this.updateAwareness();
+          return { steps, path: path.slice(0, i + 2), interrupted: true };
+        }
       }
       for (const [h, before] of waiting) {
         const atk = this.readyAttack(h, unit, to, before);
@@ -1624,6 +1730,7 @@ export class Game extends Spellcasting {
     else if (target.unaware) adv.push('unaware');
     if (attacker.hidden && !opportunity) adv.push('hidden');
     if (target.hidden) dis.push('target hidden');
+    if (this.dark.size && attacker.team === 'heroes' && this.dim(target.x, target.z)) dis.push('in the dark');
     const mode = adv.length && !dis.length ? 'adv' : dis.length && !adv.length ? 'dis' : 'normal';
     return { adv, dis, mode };
   }
@@ -1925,6 +2032,8 @@ export class Game extends Spellcasting {
       this.cause = attack.name;
       this.via = attack.reach === 1 ? 'melee' : 'ranged';
       if (damage) this.applyDamage(target, damage, attacker);
+      // Rules 6: a melee weapon hit splits an ochre jelly.
+      if (this.rules >= 6 && damage && target.splits && target.alive && attack.reach === 1 && isWeapon(attack)) result.split = this.split(target);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
       // A charge's gore knocks the target down unless it makes a STR save.
@@ -1966,14 +2075,20 @@ export class Game extends Spellcasting {
     if (!(unit.potions > 0)) return 'No potions left';
     if (unit.actionUsed) return 'Action already used this turn';
     if (unit.turned) return 'Turned: can only flee';
-    if (!(target?.alive || target?.dying) || target.team !== unit.team || target === unit) return 'Choose an ally next to you';
-    if (gridDistance(unit, target) > 1) return 'Must stand next to them';
+    const toss = this.rules >= 6 ? TOSS_RANGE : 1; // rules 6: toss it to an ally up to 15 ft away
+    if (!(target?.alive || target?.dying) || target.team !== unit.team || target === unit) return toss > 1 ? 'Choose an ally within 15 ft' : 'Choose an ally next to you';
+    const d = gridDistance(unit, target);
+    if (d > toss) return toss > 1 ? 'Too far: 15 ft at most' : 'Must stand next to them';
+    if (d > 1 && !this.inSight(unit, target)) return 'No clear throw';
     if (target.hp >= target.maxHp) return `${target.name} is at full HP`;
     if (this.has(target, 'rotting')) return `${target.name} is rotting: no healing takes`;
     return null;
   }
 
-  /** Pour one of `unit`'s potions into an ally next to it: 2d4 + 2 HP. Uses the action. */
+  /**
+   * Pour one of `unit`'s potions into an ally next to it, or (rules 6) toss it to one up to
+   * 15 ft away, who drinks it as it lands: 2d4 + 2 HP. Uses the action.
+   */
   feedPotion(unit, target) {
     const problem = this.feedProblem(unit, target);
     if (problem) return { ok: false, reason: problem };
@@ -1982,8 +2097,108 @@ export class Game extends Spellcasting {
     this.drunk++;
     const roll = rollExpr('2d4+2', { rng: this.rng });
     const healed = this.heal(target, roll.total, unit);
-    const result = { ok: true, kind: 'feed', unit, target, roll, healed };
+    const result = { ok: true, kind: 'feed', unit, target, roll, healed, ...(gridDistance(unit, target) > 1 && { thrown: true }) };
     this.emit('feed', result);
+    return result;
+  }
+
+  // --- the pedlar's flasks and caltrops (rules 6) --------------------------------
+  /** Why `unit` can't throw alchemist's fire at `target`, or null. */
+  flaskProblem(unit, target) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 6) return 'This fight began before flasks';
+    if (!(unit.flasks > 0)) return 'No flasks left';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    if (!target?.alive || target.team === unit.team) return 'Choose an enemy within 20 ft';
+    if (target.hidden) return `${target.name} is hidden: Search to find it`;
+    if (gridDistance(unit, target) > FLASK_RANGE) return 'Too far: 20 ft at most';
+    if (!this.inSight(unit, target)) return 'No clear throw';
+    return null;
+  }
+
+  /**
+   * Alchemist's fire (the action): a ranged attack, DEX + proficiency against AC (cover
+   * counts). A hit deals FLASK_DAMAGE fire and sets the target burning (see burnOn).
+   */
+  throwFlask(unit, target) {
+    const problem = this.flaskProblem(unit, target);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    unit.flasks--;
+    this.reveal(unit, 'attack');
+    const throwing = { name: 'Alchemist’s fire', stat: 'flask', reach: FLASK_RANGE };
+    const mods = this.attackMods(unit, target, throwing);
+    const { d20, rolls } = this.rollD20(mods.mode);
+    const bonus = abilityMod(unit.stats.dex) + unit.prof;
+    const cover = this.coverBonus(unit, target);
+    const ac = this.acOf(target) + cover;
+    const crit = d20 === 20;
+    const hit = crit || (d20 !== 1 && d20 + bonus >= ac);
+    const roll = hit ? rollExpr(FLASK_DAMAGE, { crit, rng: this.rng }) : null;
+    const result = { ok: true, kind: 'flask', unit, target, d20, rolls, mods, bonus, total: d20 + bonus, ac, cover, hit, crit, roll, damage: roll?.total ?? 0 };
+    this.emit('flask', result);
+    this.alert(target, 'hurt');
+    if (hit) {
+      this.cause = 'alchemist’s fire';
+      this.via = 'ranged';
+      this.applyDamage(target, roll.total, unit);
+      if (target.alive) this.addCondition(target, 'burning', { by: unit, dc: FLASK_DC });
+    }
+    this.noise(unit);
+    this.updateAwareness();
+    return result;
+  }
+
+  /** Why `unit` can't scatter caltrops on (x, z), or null. */
+  caltropProblem(unit, x, z) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 6) return 'This fight began before caltrops';
+    if (!(unit.caltrops > 0)) return 'No caltrops left';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    if (!this.grid.inBounds(x, z) || this.grid.isSolid(x, z) || this.grid.closedDoorAt(x, z)) return 'Pick an open floor tile';
+    if (this.grid.links.has(key(x, z))) return 'Not on a stair';
+    if (this.caltropsAt(x, z)) return 'Caltrops lie there already';
+    if (gridDistance(unit, { x, z }) > CALTROP_RANGE) return 'Too far: 10 ft at most';
+    if (!this.grid.lineOfSight(unit.x, unit.z, x, z)) return 'No clear throw';
+    return null;
+  }
+
+  /** The caltrops on (x, z), if any. */
+  caltropsAt(x, z) {
+    return this.caltropTiles?.get(key(x, z)) ?? null;
+  }
+
+  /**
+   * Caltrops (the action): a bag of spikes spread over one tile within 10 ft, for the rest of
+   * the fight. Whoever walks onto them (a flier skims over) makes a DEX save or takes 1
+   * piercing and stops there (see stepOnCaltrops); the party walks round them.
+   */
+  scatterCaltrops(unit, x, z) {
+    const problem = this.caltropProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    unit.caltrops--;
+    (this.caltropTiles ??= new Map()).set(key(x, z), { x, z, by: unit });
+    const result = { ok: true, kind: 'caltrops', unit, x, z };
+    this.emit('caltrops', result);
+    this.updateAwareness();
+    return result;
+  }
+
+  /** `unit` steps onto caltrops: a DEX save, or 1 piercing and its move ends. */
+  stepOnCaltrops(unit) {
+    const c = this.caltropsAt(unit.x, unit.z);
+    const s = this.save(unit, 'dex', CALTROP_DC);
+    const result = { unit, d20: s.d20, total: s.total, dc: CALTROP_DC, success: s.success, damage: s.success ? 0 : 1 };
+    this.emit('caltropStep', result);
+    if (!s.success) {
+      this.cause = 'caltrops';
+      this.via = 'trap';
+      this.applyDamage(unit, 1, unit.team === 'monsters' ? c?.by ?? null : null);
+      if (unit.alive) unit.movesLeft = 0;
+    }
     return result;
   }
 
@@ -2165,6 +2380,8 @@ export class Game extends Spellcasting {
     if (!fall && (blocked(x, z) || g.closedDoorAt(x, z))) return { why: `No room to push ${target.name} back` };
     if (dx && dz && (blocked(target.x + dx, target.z) || blocked(target.x, target.z + dz))) return { why: `No room to push ${target.name} back` };
     if (this.unitAt(x, z)) return { why: `Someone stands behind ${target.name}` };
+    const crash = this.cracked(target, x, z);
+    if (crash) return crash;
     if (fall && target.flies) return { why: `${target.name} would only fly` };
     if (fall && target.surefooted) return { why: `${target.name} won’t be pushed off the edge` };
     return { x, z, fall };
@@ -2184,6 +2401,30 @@ export class Game extends Spellcasting {
     const foot = g.links.get(key(top[0], top[1]));
     if (this.unitAt(foot.x, foot.z)) return null;
     return { x: foot.x, z: foot.z, fall: false, tumble: { x: top[0], z: top[1] } };
+  }
+
+  /**
+   * Rules 6: a push onto cracked floor (or into the hole it left) drops `target` through to the
+   * lower hall, onto the tile `below` it: { x, z, fall: false, tumble: { x, z } (the crack),
+   * crash: true }, or null: no crack there, a flier, or the tile below taken or solid (the crack
+   * holds; a hole then is no way down, and the push is refused).
+   */
+  cracked(target, x, z) {
+    const g = this.grid;
+    const k = key(x, z);
+    if (this.rules < 6 || !this.below || !(g.cracks.has(k) || this.holes.has(k))) return null;
+    const lx = x + this.below[0], lz = z + this.below[1];
+    const free = g.inBounds(lx, lz) && g.lower.has(key(lx, lz)) && !g.isSolid(lx, lz) && !this.unitAt(lx, lz);
+    if (target.flies || !free) return this.holes.has(k) ? { why: target.flies ? `${target.name} would only fly` : `Someone stands below the hole` } : null;
+    return { x: lx, z: lz, fall: false, tumble: { x, z }, crash: true };
+  }
+
+  /** The crack at `at` gives way: a hole to the lower hall from now on, walked round like a chasm. */
+  breakCrack(at) {
+    const k = key(at.x, at.z);
+    if (!this.grid.cracks.delete(k)) return;
+    this.holes.add(k);
+    this.grid.chasms.add(k);
   }
 
   /**
@@ -2210,7 +2451,7 @@ export class Game extends Spellcasting {
     const resist = { d20: b, bonus: resistBonus, total: b + resistBonus };
     const result = { ok: true, kind: 'shove', attacker, target, roll, resist, success: roll.total > resist.total };
     const to = push && result.success ? this.pushTo(attacker, target) : null;
-    if (to) result.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }) };
+    if (to) result.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }), ...(to.crash && { crash: true }) };
     this.emit('shove', result);
     this.alert(target, 'hurt');
     if (to) this.pushed(target, attacker, to, result.push);
@@ -2227,16 +2468,19 @@ export class Game extends Spellcasting {
     if (target.grappling && gridDistance(target, target.grappling) > 1) this.letGo(target, 'pushed');
     if (target.grappledBy && !this.held(target)) this.letGo(target.grappledBy, 'pushed');
     if (to.fall) this.fall(target, by);
-    else if (to.tumble) out.tumble = this.tumble(target, by);
+    else if (to.tumble) {
+      if (to.crash) this.breakCrack(to.tumble);
+      out.tumble = this.tumble(target, by, !!to.crash);
+    }
     else if (this.fire?.length && !target.flies && this.burningTiles().has(key(to.x, to.z))) out.burn = this.burn(target);
   }
 
-  /** Rules 5: down a flight of stone steps: 1d6 bludgeoning, and prone at the bottom. */
-  tumble(target, by) {
+  /** Rules 5: down a flight of stone steps (rules 6: or through cracked floor): 1d6 bludgeoning, and prone at the bottom. */
+  tumble(target, by, through = false) {
     const roll = rollExpr(TUMBLE_DAMAGE, { rng: this.rng });
-    this.cause = 'a fall down the stairs';
+    this.cause = through ? 'a fall through the floor' : 'a fall down the stairs';
     this.via = 'fall';
-    const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0) };
+    const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0), ...(through && { through: true }) };
     target.tumbled = (target.tumbled ?? 0) + 1; // for play stats; no dice
     this.emit('tumble', result);
     this.applyDamage(target, roll.total, by);
@@ -2274,7 +2518,7 @@ export class Game extends Spellcasting {
         return out;
       }
     }
-    out.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }) };
+    out.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }), ...(to.crash && { crash: true }) };
     this.pushed(target, attacker, to, out.push);
     return out;
   }

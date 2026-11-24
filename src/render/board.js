@@ -105,6 +105,36 @@ const LOWER_MAT = new THREE.MeshBasicMaterial({ color: 0x061224, transparent: tr
 // Open-topped and inside-out: the shaft's walls face into the hole.
 const CHASM_GEO = new THREE.BoxGeometry(1, 2.2, 1);
 
+/** Cracked floor (rules 6): a dark web of splits over the tile, drawn once and shared. */
+let crackMat = null;
+function crackMaterial() {
+  if (crackMat) return crackMat;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  g.strokeStyle = '#000';
+  g.lineCap = 'round';
+  let s = 7;
+  const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  const crack = (x, y, a, len, w) => {
+    g.lineWidth = w;
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let i = 0; i < 6 && len > 0; i++) {
+      a += (r() - 0.5) * 0.9;
+      x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6;
+      g.lineTo(x, y);
+      if (r() < 0.3 && w > 1.5) crack(x, y, a + (r() < 0.5 ? 1 : -1), len * 0.45, w * 0.6);
+    }
+    g.stroke();
+  };
+  for (let i = 0; i < 5; i++) crack(64, 64, (i / 5) * Math.PI * 2 + r(), 52 + r() * 14, 4);
+  const map = new THREE.CanvasTexture(c);
+  map.colorSpace = THREE.SRGBColorSpace;
+  crackMat = new THREE.MeshBasicMaterial({ color: 0x0c0806, map, transparent: true, opacity: 0.85, depthWrite: false, alphaTest: 0.02 });
+  return crackMat;
+}
+
 const overlay = (color, opacity) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
 
@@ -125,6 +155,14 @@ function stripes(color, opacity, width, pattern = 'stripes') {
       g.globalAlpha = 1 - r / 40;
       g.beginPath();
       g.arc(32, 32, r, 0, Math.PI * 2);
+      g.stroke();
+    }
+  } else if (pattern === 'spikes') { // caltrops: little four-pointed stars
+    for (const [x, y] of [[14, 16], [40, 12], [26, 34], [52, 38], [12, 50], [42, 54]]) {
+      g.beginPath();
+      g.moveTo(x - 5, y); g.lineTo(x + 5, y);
+      g.moveTo(x, y - 5); g.lineTo(x, y + 5);
+      g.moveTo(x - 3, y - 3); g.lineTo(x + 3, y + 3);
       g.stroke();
     }
   } else if (pattern === 'dots') {
@@ -242,11 +280,18 @@ export class Board {
     // Chasms: a black shaft with rough rock walls dropping out of sight.
     for (const k of grid.chasms) {
       const [x, z] = k.split(',').map(Number);
-      const shaft = new THREE.Mesh(CHASM_GEO, mat(0x1e1a17, { roughness: 1, side: THREE.BackSide }));
-      shaft.position.set(x, -1.1, z);
-      shaft.receiveShadow = true;
-      this.group.add(shaft);
-      this.addToCell(x, z, shaft);
+      this.addShaft(x, z);
+    }
+
+    // Cracked floor (rules 6; the Game clears grid.cracks for older fights).
+    this.cracks = new Map();
+    for (const c of grid.cracks.values()) {
+      const decal = new THREE.Mesh(WATER_GEO, crackMaterial());
+      decal.position.set(c.x, 0.012, c.z);
+      decal.rotation.y = ((c.x * 7 + c.z * 3) % 4) * (Math.PI / 2);
+      this.group.add(decal);
+      this.addToCell(c.x, c.z, decal);
+      this.cracks.set(key(c.x, c.z), decal);
     }
 
     this.torches = [];
@@ -316,6 +361,7 @@ export class Board {
     // Ice Storm's ground (difficult terrain): frost under everything else.
     this.ice = new TileLayer(this.group, stripes(0xd8f0ff, 0.6, 3), 0.98, 0.0106);
     this.fire = new TileLayer(this.group, overlay(0xff4a10, 0.8), 0.9, 0.0108); // a tipped brazier's coals
+    this.caltrops = new TileLayer(this.group, stripes(0xc8c8d4, 0.95, 2.5, 'spikes'), 0.92, 0.0107); // rules 6
     // The figure a name in the combat log points at (hovered or clicked), over everything.
     this.spot = new TileLayer(this.group, overlay(0xffc93c, 0.7), 0.98, 0.018);
     // Where a foe out of sight was last heard (main.js): faint rings, over the fog.
@@ -334,6 +380,11 @@ export class Board {
   }
 
   /** Frost on the tiles that are difficult terrain (a Set of tile keys). */
+  /** Rules 6: the tiles caltrops lie on (the Game's `caltropTiles`, a Map by key), or none. */
+  setCaltrops(tiles) {
+    this.caltrops.set([...(tiles?.values() ?? [])].map(({ x, z }) => ({ x, z })));
+  }
+
   /** The tiles where a tipped brazier's coals burn (`keys`: tile keys), or none. */
   setFire(keys) {
     this.fire.set([...keys].map((k) => {
@@ -352,6 +403,25 @@ export class Board {
 
   // --- fog of war & wall fading ----------------------------------------------
   /** Registers objects standing on a tile, giving each mesh its own material. */
+  /** A chasm's shaft at (x, z). */
+  addShaft(x, z) {
+    const shaft = new THREE.Mesh(CHASM_GEO, mat(0x1e1a17, { roughness: 1, side: THREE.BackSide }));
+    shaft.position.set(x, -1.1, z);
+    shaft.receiveShadow = true;
+    this.group.add(shaft);
+    this.addToCell(x, z, shaft);
+    return shaft;
+  }
+
+  /** Rules 6: the cracked floor at (x, z) gives way: its tile drops out, leaving a shaft. */
+  breakCrack(x, z) {
+    const k = key(x, z);
+    if (!this.cracks.delete(k)) return;
+    for (const o of this.cells.get(k)?.objects ?? []) o.visible = false;
+    this.addShaft(x, z);
+    this.fogDirty = true;
+  }
+
   addToCell(x, z, ...objects) {
     const k = key(x, z);
     let cell = this.cells.get(k);

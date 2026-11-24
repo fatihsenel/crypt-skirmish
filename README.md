@@ -70,8 +70,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
 - **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Push, Grapple, Help, Ready, drinking a
-  potion or giving one to an ally next to you. Grapple, Disengage, Search, Help and Give potion
-  wait behind **More** on the action bar, so the moves most turns need stay in one row; so does
+  potion or giving one to an ally (next to you, or tossed up to 15 ft to one you can see), throwing
+  alchemist's fire and scattering caltrops. Grapple, Disengage, Search, Help, Give potion, Fire and
+  Caltrops wait behind **More** on the action bar, so the moves most turns need stay in one row; so does
   Push, except in a room with a chasm, burning coals or stairs.
 - **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or DEX;
   win and it's pushed 5 ft straight away from you. Over a chasm's edge it falls and is gone (no
@@ -120,7 +121,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 ## Monsters
 
 - Goblins, skeletons, an orc, giant rats, ghouls, a ghast, a mimic, giant spiders and
-  specters.
+  specters. An **ochre jelly** waits in the Cistern's flooded hall: a weapon hit splits it in
+  two, each half the size with half its HP, until the pieces are Small or under 10 HP.
 - Act four: mummies, wraiths and fallen knights.
 - Act five: gargoyles that stand as statues until you come close and whose claws can throw a
   hero back, and basilisks whose bite can turn a hero to stone for a turn.
@@ -148,6 +150,12 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   up it, but not shoot. A fight is heard on both floors, and monsters use the stairs too, except
   ghouls and basilisks: they lurk on their own floor, at the foot of the stairs at most, until a
   hero comes down or they're hurt. Push a foe into a stairwell and it tumbles down.
+- **Cracked floor** in both rooms on two floors: the split tiles over the hall below hold a
+  walker, but a foe pushed (or a hero thrown) onto one crashes through to the floor below, 1d6
+  and prone, and leaves a hole no one can cross.
+- **Dark rooms:** the Catacombs' two side rooms are unlit. Your torches show 10 ft around each
+  hero; past that a foe is unseen, and attacks at one have disadvantage. Monsters see your
+  torches from anywhere.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden, but a foe
   that moves or strikes out of sight leaves dashed rings where it was last heard, until it's
   seen, its tile is seen empty, or it dies.
@@ -175,7 +183,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
     Endless Crypt only, since Tharok is the last boss).
 - **Gold and the pedlar:** every room cleared pays gold, more the deeper it is and twice
   for a boss. A pedlar follows the party down and trades at the rest stops and in camp after
-  each act's boss (Visit the pedlar): potions (30 gold, to whoever carries fewest) and two
+  each act's boss (Visit the pedlar): potions (30 gold), alchemist's fire (40) and caltrops (15), each to whoever carries fewest, and two
   pieces of gear that change from stop to stop, better ones in later acts. He buys spare gear
   from the pack at half price. Saves from before gold start with none.
 - **Stops with no fight:** three side trips on the map, each one choice and no dice. Visit one
@@ -229,6 +237,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   their floors cut by a chasm with a one-tile span, and since the rooms on two floors about a
   quarter have the way down in a sunken chamber, reached only by a stair; a dive already under
   way keeps its floors. A floor's opening line says when it has a chasm or a sunken way down.
+  Dives started since the ochre jelly find one now and then from floor 3, in place of a ghoul,
+  skeleton, ghast or specter.
   Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
@@ -459,6 +469,20 @@ A few things differ from the SRD to keep the game simple:
   bludgeoning, prone), unless it flies or someone stands there. Ghouls and basilisks keep to
   their own floor of a two-floor room until a hero sets foot there or they're hurt. Fights begun
   before these rules (rules 4 and earlier) play without them.
+- A potion can be tossed to an ally up to 15 ft away in sight; it heals where it lands, even a
+  dying ally, with no attack roll.
+- The ochre jelly splits on any melee weapon hit, whatever the damage type, and has no
+  resistances or Pseudopod acid. The Cistern's is a young one: Medium, half the hit points.
+- Alchemist's fire is a ranged attack (DEX and proficiency, 20 ft) that sets the target
+  burning: 1d4 fire at the end of each of its turns, then a DEX save (DC 10) puts it out, with
+  no action spent.
+- Caltrops cover one tile within 10 ft; a creature stepping in makes a DEX save (DC 15) or takes
+  1 piercing and stops there for the turn, with no lasting speed loss. Heroes walk around them.
+- Cracked floor gives way only under a creature pushed or thrown onto it, and only when the
+  tile below is free. Fliers don't fall.
+- Heroes always carry torches (10 ft of light) and monsters have no need of darkvision; there is
+  no dim light. Fights begun before these rules (rules 5 and earlier) play without the toss,
+  the jelly, the supplies, the cracked floor and the dark.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.

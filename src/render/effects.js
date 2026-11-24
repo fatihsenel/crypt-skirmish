@@ -13,6 +13,29 @@ function dispose(obj) {
   });
 }
 
+/**
+ * A flask lobbed in a high arc from one tile to another (a tossed potion, alchemist's fire),
+ * turning as it flies. Resolves as it lands.
+ */
+export async function lobFx(scene, from, to, { color = 0xff5a6a, light = 0xff8090 } = {}) {
+  const flask = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshStandardMaterial({ color, roughness: 0.25, transparent: true, opacity: 0.9 }));
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.08, 8), new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.6 }));
+  neck.position.y = 0.11;
+  flask.add(body, neck, new THREE.PointLight(light, 1.5, 2, 1.5));
+  const a = new THREE.Vector3(from.x, 0.95, from.z);
+  const b = new THREE.Vector3(to.x, 0.55, to.z);
+  const ctrl = a.clone().lerp(b, 0.5).add(new THREE.Vector3(0, 1.2 + a.distanceTo(b) * 0.25, 0));
+  const curve = new THREE.QuadraticBezierCurve3(a, ctrl, b);
+  scene.add(flask);
+  await tween(420 + a.distanceTo(b) * 60, (t) => {
+    flask.position.copy(curve.getPoint(t));
+    flask.rotation.z = t * Math.PI * 2.5;
+  }, linear);
+  scene.remove(flask);
+  dispose(flask);
+}
+
 /** One Magic Missile dart curving from caster to target. `i` varies the arc. */
 export async function missileFx(scene, from, to, i = 0, total = 3) {
   const dart = new THREE.Group();

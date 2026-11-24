@@ -99,13 +99,26 @@ describe('the Endless Crypt', () => {
     }
   });
 
+  it('generation 5 turns a monster into an ochre jelly now and then, with its own dice', () => {
+    const floors = (gen) => Array.from({ length: 60 }, (_, s) => makeFloor(s, 6, gen));
+    expect(floors(4).some((f) => f.rows.join('').includes('j'))).toBe(false);
+    const oozing = floors(5).filter((f) => f.rows.join('').includes('j'));
+    expect(oozing.length).toBeGreaterThan(5);
+    expect(oozing.length).toBeLessThan(35);
+    for (const f of floors(5)) {
+      const { seed, floor } = parseFloorId(f.id);
+      expect(f.rows.join('').replace('j', '?')).toEqual(makeFloor(seed, floor, 4).rows.join('').replace(/[ouhy]/g, (c, i) => (f.rows.join('')[i] === 'j' ? '?' : c)));
+    }
+    expect(makeFloor(1, 2, 5).rows.join('').includes('j')).toBe(false); // not before floor 3
+  });
+
   it('starts from the won party, rested, and goes deeper floor by floor', () => {
     const s = newEndless(won(), 99);
-    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 4 });
+    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 5 });
     expect(s.done).toBe(false);
     expect(s.gold).toBe(120);
     expect(s.pack).toEqual(['ringProtection']);
-    expect(nextFloor(s)).toBe('deep:99:1:4');
+    expect(nextFloor(s)).toBe('deep:99:1:5');
     const game = new Game(levelOf(nextFloor(s)), { rng: seeded(1), party: s.party });
     game.over = 'victory';
     const done = completeFight(s, nextFloor(s), game).state;
@@ -124,7 +137,7 @@ describe('the Endless Crypt', () => {
     expect(state.endless.rested).toBe(true);
     expect(state.tier).toBe(1);
     expect(canTrade({ ...state, at: 'deep:5:3' })).toBe(true);
-    expect(stock({ ...state, at: 'deep:5:3' })).toHaveLength(3);
+    expect(stock({ ...state, at: 'deep:5:3' })).toHaveLength(5);
   });
 
   it('keeps a stored dive and refuses a broken one', () => {

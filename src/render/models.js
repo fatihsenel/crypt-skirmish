@@ -752,6 +752,42 @@ function mimic() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Ochre jelly: a heaving mound of yellow-brown ooze with things floating in it. Smaller each
+// time it splits (JELLY_SCALE by its size).
+// ---------------------------------------------------------------------------
+export const JELLY_SCALE = [0.55, 0.78, 1];
+
+function jelly(unit) {
+  const root = new THREE.Group();
+  root.scale.setScalar(JELLY_SCALE[unit.size ?? 2] ?? 1);
+  const body = pivot(root, 0, 0, 0);
+  const head = pivot(body, 0, 0, 0); // a dummy the bite lunge turns; idle maps it to a heave
+  const armL = pivot(body, 0.2, 0.2, 0);
+  const armR = pivot(body, -0.2, 0.2, 0);
+  const ooze = new THREE.MeshStandardMaterial({ color: 0xc8962a, roughness: 0.18, metalness: 0.05, transparent: true, opacity: 0.82, emissive: 0x3a2400, emissiveIntensity: 0.6 });
+  const dark = mat(0x5a3a12, { roughness: 0.4 });
+  const blob = add(body, new THREE.SphereGeometry(0.42, 24, 16), ooze, [0, 0.24, 0], [0, 0, 0], [1.1, 0.62, 1.1]);
+  const lobes = [[0.28, 0.12, 0.18, 0.2], [-0.3, 0.1, 0.1, 0.18], [0.05, 0.1, -0.32, 0.19], [-0.12, 0.12, 0.3, 0.16]]
+    .map(([x, y, z, r]) => add(body, new THREE.SphereGeometry(r, 14, 10), ooze, [x, y, z], [0, 0, 0], [1, 0.7, 1]));
+  // Bones and grit floating inside.
+  add(body, new THREE.CylinderGeometry(0.025, 0.025, 0.28, 6), mat(0xe8dcc0), [0.05, 0.22, 0.05], [0.4, 0.3, PI / 2.4]);
+  add(body, new THREE.SphereGeometry(0.06, 8, 6), mat(0xe8dcc0), [-0.12, 0.2, -0.08]);
+  for (let i = 0; i < 5; i++) add(body, new THREE.SphereGeometry(0.025 + (i % 2) * 0.015, 6, 4), dark, [Math.cos(i * 2.4) * 0.22, 0.14 + (i % 3) * 0.06, Math.sin(i * 2.4) * 0.2]);
+
+  const idle = (t, walking) => {
+    const heave = Math.sin(t * (walking ? 6 : 2.2)) * 0.06 + head.rotation.x * -0.5;
+    blob.scale.set(1.1 - heave, 0.62 + heave, 1.1 - heave);
+    lobes.forEach((l, i) => { l.position.y = 0.1 + Math.sin(t * 2.6 + i * 1.7) * 0.03; });
+    ooze.emissiveIntensity = 0.5 + Math.sin(t * 1.3) * 0.15;
+  };
+
+  return {
+    root, body, head, armL, armR, legL: null, legR: null, rest: { armL: 0, armR: 0 },
+    height: 0.5, idle, bite: true, dieAxis: 'z',
+  };
+}
+
 const BUILDERS = {
   F: fighter, P: fighter, W: wizard, K: wizard, R: rogue, A: rogue, C: cleric,
   g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer,
@@ -760,6 +796,7 @@ const BUILDERS = {
   k: giantRat, e: skeleton, q: necromancer, // act three
   y: skeleton, t: skeleton, x: fighter, l: necromancer, // act four
   a: skeleton, z: giantRat, v: fighter, // act five
+  j: jelly,
 };
 
 export function buildModel(unit) {

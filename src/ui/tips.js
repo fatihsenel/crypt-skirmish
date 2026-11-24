@@ -9,7 +9,7 @@
 const STORAGE_KEY = 'crypt-skirmish:tips';
 
 /** What the player can see right now, from main.js. */
-// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, chasmInSight, stairsInSight, edgeFoe, foeNext,
+// ctx: { unit, cmd, chestInSight, brazierNext, leverNext, waterInSight, chasmInSight, stairsInSight, cracksInSight, darkNear, edgeFoe, foeNext,
 //        foesComing, hurtAllyNext, dyingAlly, paralysed, petrified, rules, touch, report }
 const click = (ctx, word = 'click') => (ctx.touch ? word.replace('click', 'tap').replace('Click', 'Tap') : word);
 
@@ -38,7 +38,7 @@ export const TIPS = [
     when: (c) => !!c.dyingAlly,
     text: (c) => `<b>${c.dyingAlly.name}</b> is <b>dying</b>. As each of their turns comes round they roll a death save: ` +
       '10 or more is a success, and the pips on their portrait count them. Three failures and they’re out for the fight. ' +
-      'Any healing gets them back up: a healing spell, Lay on Hands, or <b>Give potion</b> from next to them.',
+      `Any healing gets them back up: a healing spell, Lay on Hands, or <b>Give potion</b> from ${c.rules >= 6 ? 'up to 15 ft away' : 'next to them'}.`,
   },
   {
     id: 'paralysis',
@@ -112,11 +112,25 @@ export const TIPS = [
       (c.touch ? '' : ' <b>V</b> looks along the nearest stair.'),
   },
   {
+    id: 'cracks',
+    on: 'heroTurn',
+    when: (c) => c.cracksInSight,
+    text: (c) => 'The split tiles are <b>cracked floor</b> over the hall below. They hold a walker, but a foe ' +
+      `<b>pushed</b> onto one (or a hero thrown onto one) crashes through: 1d6 and prone, down on the lower floor, and the hole stays. ${click(c, 'Click')} Push, then a foe with a crack behind it.`,
+  },
+  {
+    id: 'dark',
+    on: 'heroTurn',
+    when: (c) => c.darkNear,
+    text: () => 'This room is <b>unlit</b>. Your torches show 10 ft around each hero, and anything farther in the dark ' +
+      'is unseen: you can’t see it or pick it, and your attacks at a target in the dark have disadvantage. Monsters see your torches from anywhere.',
+  },
+  {
     id: 'feed',
     on: 'heroTurn',
     when: (c) => c.hurtAllyNext && c.unit.potions > 0,
     text: (c) => `An ally next to <b>${c.unit.name}</b> is badly hurt. <b>Give potion</b> (under <b>More</b>) pours one of ${c.unit.name}’s potions into them, ` +
-      'using the action: handy when theirs are gone.',
+      (c.rules >= 6 ? 'using the action: handy when theirs are gone. It can be tossed to an ally up to 15 ft away, too.' : 'using the action: handy when theirs are gone.'),
   },
   {
     id: 'ready',
