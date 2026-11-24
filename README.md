@@ -214,7 +214,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   monsters the deeper it goes. Every third floor ends in a long rest and the pedlar; monsters
   get tougher every three floors (as New Game+), elites from floor 7, and a named foe waits on
   every fifth. Dives started since act five also meet gargoyles (from floor 4) and basilisks
-  (from floor 5), and Tharok after the mummy lord; a dive already under way keeps its floors. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
+  (from floor 5), and Tharok after the mummy lord, and dives started since then find about half
+  their floors cut by a chasm with a one-tile span; a dive already under way keeps its floors. Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
 - **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
@@ -240,7 +241,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
   keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
   If an update moves the week to another room, its best starts again there.
-- **Achievements:** 38 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 39 goals that carry across runs. Open them from the title screen.
 - **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
   follow the pointer (on a phone, your taps) and flare at the title's buttons. Click or tap it
   (or press K) to play its moves in turn, each with its own sound: gape, chatter, cocked head,
@@ -310,7 +311,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   cards and the names and numbers over the figures), speech bubbles, colour-blind friendly
   enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
-  a daily or weekly started, a room won or lost with its rounds and party classes, a stop's
+  a daily or weekly started, a room won or lost with its rounds, party classes and anyone who fell into a chasm, a stop's
   choice, a run abandoned, a campaign won, an easier difficulty offered or taken, a visit and whether its browser played before, a replay watched, something shared, a fight left
   half-way, with the input it was played by), how smoothly the board draws (a frame-rate band,
   once a visit), to see where runs end, and a crash by where it happened in the code (never its

@@ -181,7 +181,8 @@ server on 5173.
   a campaign state with `endless: { seed, floor, rested, gen }`, saved under
   `crypt-skirmish:endless` (`writeSave` picks the key); `afterFloor` follows `completeFight`. A
   dive keeps the `gen` it began with (none means 1), so new monsters go in a new generation's
-  pool (`GEN`, `POOL_TWO`, `BOSSES_TWO`); changing `makeFloor`, `POOL` or `floorBudget` itself
+  pool (`GEN`, `POOL_TWO`, `BOSSES_TWO`). Generation 3 cuts chasms with their own dice
+  (`crng`), so a gen-3 floor without one is its gen-2 floor; changing `makeFloor`, `POOL` or `floorBudget` itself
   changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,
@@ -222,7 +223,7 @@ server on 5173.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.
 - `window.__debug` in the console (set up in `debug.js`): `command({type:'move', x, z})`,
   `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`,
-  `level(n)`, `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`.
+  `level(n)` (or a room id, an Endless floor too: `level('deep:3:4:3')`), `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`.
 - Monster turns wait while the page is hidden (`whileAway` in `main.js`): script fights in a
   showing tab or headless Chrome, or they stall.
 - Back up the `crypt-skirmish:*` localStorage keys before a scripted test and restore them

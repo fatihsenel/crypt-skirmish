@@ -47,10 +47,16 @@ const fightBase = (nodeId, campaign, mode, input) => ({
   ...(input && { input }),
 });
 /** Heroes on their feet, and how often any of them dropped. */
-const partyState = (game) => ({
-  standing: game.units.filter((u) => u.team === 'heroes' && u.alive && u.hp > 0).length,
-  downed: Object.values(game.stats).reduce((n, h) => n + (h.downed ?? 0), 0),
-});
+const partyState = (game) => {
+  const fell = (team) => game.units.filter((u) => u.team === team && u.fell).length;
+  return {
+    standing: game.units.filter((u) => u.team === 'heroes' && u.alive && u.hp > 0).length,
+    downed: Object.values(game.stats).reduce((n, h) => n + (h.downed ?? 0), 0),
+    // Into a chasm (rules 3 and 4): sent only when someone fell, to keep the tallies small.
+    ...(fell('heroes') && { heroesFell: fell('heroes') }),
+    ...(fell('monsters') && { foesFell: fell('monsters') }),
+  };
+};
 
 /** A fight still going when the page closed or reloaded: where, which round, how the party stood. */
 export const leftEvent = ({ game, nodeId, campaign, mode, input }) => ['fight-left', {

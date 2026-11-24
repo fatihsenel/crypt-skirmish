@@ -33,7 +33,12 @@ describe('play stats', () => {
     expect(name).toBe('fight-won');
     expect(data).toMatchObject({ room: 'crypt', mode: 'campaign', difficulty: 'hard', tier: 0, party: 'PWRC', standing: 4, downed: 0 });
     expect(JSON.stringify(data)).not.toMatch(/Somebody/);
+    expect(data).not.toHaveProperty('heroesFell'); // nobody fell: not sent
     expect(rest).toEqual([]);
+    // Into a chasm: how many fell on each side.
+    g.units.find((u) => u.team === 'monsters').fell = true;
+    g.units.find((u) => u.team === 'heroes').fell = true;
+    expect(fightEvents({ game: g, nodeId: 'crypt', campaign, mode: 'campaign', final: false })[0][1]).toMatchObject({ heroesFell: 1, foesFell: 1 });
     // The last room won: the campaign too.
     const end = fightEvents({ game: g, nodeId: 'throne', campaign: { ...campaign, relics: ['veil'] }, mode: 'campaign', final: true });
     expect(end.map(([n]) => n)).toEqual(['fight-won', 'campaign-won']);

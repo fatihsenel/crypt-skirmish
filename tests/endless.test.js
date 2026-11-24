@@ -52,6 +52,7 @@ describe('the Endless Crypt', () => {
   it('a dive keeps its generation: old dives keep their floors, new ones meet act five', () => {
     expect(parseFloorId('deep:7:3:2')).toEqual({ seed: 7, floor: 3, gen: 2 });
     expect(parseFloorId('deep:7:3:9')).toBeNull();
+    expect(parseFloorId('deep:7:3:3')).toEqual({ seed: 7, floor: 3, gen: 3 });
     expect(nextFloor({ endless: { seed: 7, floor: 3 } })).toBe('deep:7:3'); // saved before generations
     expect(levelOf('deep:7:3').rows).toEqual(makeFloor(7, 3).rows);
     const seen = (gen) => new Set(Array.from({ length: 40 }, (_, s) => makeFloor(s, 8, gen).rows.join('')).join(''));
@@ -61,13 +62,27 @@ describe('the Endless Crypt', () => {
     expect(makeFloor(1, 30).rows.join('')).not.toMatch(/v/);
   });
 
+  it('generation 3 splits some floors with chasms, every tile still reachable', () => {
+    const floors = (gen) => Array.from({ length: 60 }, (_, s) => makeFloor(s, 6, gen));
+    expect(floors(2).some((f) => f.rows.join('').includes('_'))).toBe(false);
+    const split = floors(3).filter((f) => f.rows.join('').includes('_'));
+    expect(split.length).toBeGreaterThan(15);
+    expect(split.length).toBeLessThan(45);
+    for (const f of split) expect(allReachable(f.rows, [1, 1])).toBe(true);
+    // its own dice: a generation 3 floor with no chasm is its generation 2 floor
+    for (const f of floors(3).filter((g) => !g.rows.join('').includes('_'))) {
+      const { seed, floor } = parseFloorId(f.id);
+      expect(f.rows).toEqual(makeFloor(seed, floor, 2).rows);
+    }
+  });
+
   it('starts from the won party, rested, and goes deeper floor by floor', () => {
     const s = newEndless(won(), 99);
-    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 2 });
+    expect(s.endless).toEqual({ seed: 99, floor: 1, gen: 3 });
     expect(s.done).toBe(false);
     expect(s.gold).toBe(120);
     expect(s.pack).toEqual(['ringProtection']);
-    expect(nextFloor(s)).toBe('deep:99:1:2');
+    expect(nextFloor(s)).toBe('deep:99:1:3');
     const game = new Game(levelOf(nextFloor(s)), { rng: seeded(1), party: s.party });
     game.over = 'victory';
     const done = completeFight(s, nextFloor(s), game).state;

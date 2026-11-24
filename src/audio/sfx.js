@@ -653,6 +653,25 @@ class Sfx {
     });
   }
 
+  /** Over a chasm's edge: a rush of air falling away, pebbles after it, and far below, a thud. */
+  fall() {
+    this.play((t) => {
+      this.noise(t, { dur: 1.3, filter: 'bandpass', freq: 1400, freqEnd: 180, q: 0.8, gain: 0.3, attack: 0.08 });
+      for (let i = 0; i < 10; i++) this.click(t + 0.05 + Math.random() * 0.7, rand(1200, 3200), rand(0.03, 0.08));
+      this.tone(t + 1.45, { type: 'sine', freq: 70, freqEnd: 32, dur: 0.5, gain: 0.18 });
+      this.noise(t + 1.45, { dur: 0.35, filter: 'lowpass', freq: 320, gain: 0.12 });
+    });
+  }
+
+  /** Catching a chasm's edge: boots scrabbling on stone and grit spilling over. */
+  scrabble() {
+    this.play((t) => {
+      this.noise(t, { dur: 0.35, filter: 'bandpass', freq: 2200, freqEnd: 900, q: 1.2, gain: 0.22, attack: 0.01 });
+      this.noise(t + 0.18, { dur: 0.25, filter: 'bandpass', freq: 1600, freqEnd: 700, q: 1.2, gain: 0.16, attack: 0.01 });
+      for (let i = 0; i < 8; i++) this.click(t + 0.2 + Math.random() * 0.6, rand(1500, 3800), rand(0.03, 0.07));
+    });
+  }
+
   /** Level up fanfare. */
   levelUp() {
     this.play((t) => {

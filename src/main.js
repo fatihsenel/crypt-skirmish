@@ -115,7 +115,7 @@ let testSeed = new URLSearchParams(location.search).has('level') && new URLSearc
 /** A linked fight being played yourself ({ rec, theirs }: the link's record and how it went), else null. */
 let challenge = null;
 /** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
-let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false, edge: false };
+let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false, edge: false, caught: false };
 
 // The character models load room by room: a fight waits only for the figures it needs.
 // Once the dungeon tiles are in (they gate the title), the next room's models come first,
@@ -788,6 +788,7 @@ function startFight(resume, watch = null) {
   game.on('spell', () => { blow = null; scorched = null; });
   game.on('spill', (r) => { blow = null; scorched = r.unit; });
   game.on('burn', (r) => { blow = null; scorched = r.unit; });
+  game.on('throw', (r) => { if (r.target.team === 'heroes' && r.edge?.success) feats.caught = true; });
   game.on('grappleEnd', ({ unit, why }) => { if (why === 'fell' && unit.team === 'monsters' && !unit.alive) feats.pinned = true; });
   game.on('death', ({ unit }) => {
     if (clung?.unit === unit && clung.round === game.round) feats.stayDown = true;
@@ -1790,7 +1791,8 @@ installDebug({
     challenge = null;
     saving = false;
     campaign = newCampaign();
-    nodeId = LEVELS[Math.min(LEVELS.length, Math.max(1, n)) - 1].id;
+    // A number is a campaign room in order; a string is any room id, an Endless floor too ('deep:3:4:3').
+    nodeId = typeof n === 'string' && levelOf(n) ? n : LEVELS[Math.min(LEVELS.length, Math.max(1, Number(n) || 1)) - 1].id;
     newGame();
   },
   damageReaction,

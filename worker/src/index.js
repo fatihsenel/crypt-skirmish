@@ -34,7 +34,7 @@ const MODES = ['campaign', 'daily', 'weekly'];
 /** Events counted per day at most; past it, events are refused until the next day (UTC). */
 export const EVENT_CAP = 20_000;
 const TALLY_DAYS = 400;
-const FIGHT = ['room', 'mode', 'difficulty', 'tier', 'party', 'rounds', 'standing', 'downed', 'input'];
+const FIGHT = ['room', 'mode', 'difficulty', 'tier', 'party', 'rounds', 'standing', 'downed', 'input', 'heroesFell', 'foesFell'];
 /** The events the game sends and the properties counted for each; anything else is dropped. */
 const TALLY_EVENTS = {
   visit: ['returning'], // played in this browser before

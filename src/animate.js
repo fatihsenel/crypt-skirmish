@@ -171,6 +171,7 @@ export function createAnimations(app) {
     }
     if (t.edge?.success) {
       floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, 'Catches the edge!', 'cond');
+      sfx.scrabble();
       v.updateStatus();
       return;
     }
@@ -179,9 +180,10 @@ export function createAnimations(app) {
       floatText(stage.scene, t.push.from, 'Over the edge!', 'crit');
       await v.shoved((t.push.from.x + t.push.to.x) / 2, (t.push.from.z + t.push.to.z) / 2);
       if (!unseen(target)) voices.bark(target, 'die');
-      sfx.death(target.code);
+      sfx.fall();
       if (target.team === 'heroes') quip(downSpeaker(target, app.game().units, seen), 'down', target.name);
       await v.plunge();
+      stage.shake(0.06, 260); // far below, it lands
       return;
     }
     floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, 'Thrown back!', 'cond');
@@ -471,8 +473,9 @@ export function createAnimations(app) {
       const edge = { x: (push.from.x + push.to.x) / 2, z: (push.from.z + push.to.z) / 2 };
       await v.shoved(edge.x, edge.z);
       if (!unseen(target)) voices.bark(target, 'die');
-      sfx.death(target.code);
+      sfx.fall();
       await v.plunge();
+      stage.shake(0.06, 260); // far below, it lands
     } else {
       floatText(stage.scene, target, 'Pushed!', 'cond');
       await v.shoved(push.to.x, push.to.z);

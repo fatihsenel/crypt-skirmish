@@ -28,9 +28,9 @@ const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
 /**
  * Dives started since act five (`gen` 2) also meet its gargoyles and basilisks, and Tharok
  * after the mummy lord. A dive keeps the generation it began with, so its floors (and their
- * replays) stay the same.
+ * replays) stay the same. Generation 3 floors are sometimes split by chasms (see makeFloor).
  */
-export const GEN = 2;
+export const GEN = 3;
 const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
 const BOSSES_TWO = [...BOSSES, 'v'];
 
@@ -149,6 +149,30 @@ export function makeFloor(seed, floor, gen = 1) {
     }
   }
 
+  // Generation 3: now and then a chasm cuts across a chamber, crossed by a one-tile span, so
+  // Push and the gargoyles' throws matter down here too. Its own dice keep older generations'
+  // floors as they were.
+  if (gen >= 3) {
+    const crng = seeded(hash(`endless ${seed} ${floor} chasm`));
+    let made = 0;
+    for (const cell of cells.slice(1)) {
+      if (made >= 2 || crng() >= 0.15) continue;
+      const tiles = [];
+      if (crng() < 0.5) { // down a column
+        const x = cell.x0 + 1 + Math.floor(crng() * (cell.x1 - cell.x0 - 1));
+        for (let z = cell.z0; z <= cell.z1; z++) tiles.push([x, z]);
+      } else { // along a row
+        const z = cell.z0 + 1 + Math.floor(crng() * (cell.z1 - cell.z0 - 1));
+        for (let x = cell.x0; x <= cell.x1; x++) tiles.push([x, z]);
+      }
+      const span = tiles[1 + Math.floor(crng() * (tiles.length - 2))];
+      const carved = tiles.filter(([x, z]) => (x !== span[0] || z !== span[1]) && grid[z][x] === '.' && !nearOpening(x, z));
+      for (const [x, z] of carved) grid[z][x] = '_';
+      if (carved.length >= 2 && allReachable(grid, heroAt[0])) made++;
+      else for (const [x, z] of carved) grid[z][x] = '.';
+    }
+  }
+
   // Monsters, from the pool this deep, until the floor's budget is spent (a boss every fifth floor).
   const rooms = cells.slice(1);
   let budget = floorBudget(floor);
@@ -203,7 +227,7 @@ function steps(grid, [fx, fz]) {
       const nx = x + dx;
       const nz = z + dz;
       const k = `${nx},${nz}`;
-      if (dist.has(k) || nx < 0 || nz < 0 || nx >= W || nz >= H || '#|&=*'.includes(grid[nz][nx])) continue;
+      if (dist.has(k) || nx < 0 || nz < 0 || nx >= W || nz >= H || '#|&=*_'.includes(grid[nz][nx])) continue;
       dist.set(k, dist.get(`${x},${z}`) + 1);
       todo.push([nx, nz]);
     }
@@ -217,7 +241,7 @@ const cellDistance = (dist, cell) => dist.get(`${cell.x0},${cell.z0}`) ?? 0;
 export function allReachable(grid, from) {
   const rows = grid.map((r) => (Array.isArray(r) ? r : [...r]));
   const dist = steps(rows, from);
-  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (!'#|&=*'.includes(rows[z][x]) && !dist.has(`${x},${z}`)) return false;
+  for (let z = 0; z < H; z++) for (let x = 0; x < W; x++) if (!'#|&=*_'.includes(rows[z][x]) && !dist.has(`${x},${z}`)) return false;
   return true;
 }
 

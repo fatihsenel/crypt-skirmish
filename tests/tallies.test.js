@@ -20,6 +20,16 @@ describe('reading the Worker’s tallies', () => {
     expect(t.rooms[0]).toMatchObject({ won: 1, lost: 4, left: 0, rate: 0.8 });
     expect(t.worst.id).toBe('throne'); // 5 fights
     expect(t.inputs).toEqual({ keys: 3 });
+    expect(t.falls).toEqual({ heroes: 0, foes: 0 });
+  });
+
+  it('adds up falls into chasms: each value is how many fell in a fight', () => {
+    const t = readTallies([
+      { event: 'fight-won', prop: 'foesFell', value: '2', n: 3 },
+      { event: 'fight-lost', prop: 'heroesFell', value: '1', n: 2 },
+      { event: 'fight-left', prop: 'foesFell', value: '1', n: 1 },
+    ]);
+    expect(t.falls).toEqual({ heroes: 2, foes: 7 });
   });
 
   it('names no worst room under 5 fights, and skips junk rows', () => {

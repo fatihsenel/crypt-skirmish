@@ -85,8 +85,8 @@ describe('newer achievements', () => {
   });
   it('counts the board and the new actions: a readied kill, coals, a hold, a helped blow', () => {
     const game = fight({ units: [{ team: 'heroes', alive: true }, { team: 'heroes', alive: true }] });
-    expect(ids(earned('room', { game, node: 'crypt', feats: { held: true, coals: true, pinned: true, teamwork: true } }, won)))
-      .toEqual(['hold-door', 'hot-coals', 'pinned', 'teamwork']);
+    expect(ids(earned('room', { game, node: 'crypt', feats: { held: true, coals: true, pinned: true, teamwork: true, edge: true, caught: true } }, won)))
+      .toEqual(['hold-door', 'hot-coals', 'edge', 'fingertips', 'pinned', 'teamwork']);
   });
   it('knows a last stand, and needs four kills for a sweep', () => {
     const game = fight({ stats: { R: { kills: 3 } }, units: [{ team: 'heroes', alive: true }, { team: 'heroes', alive: false }] });

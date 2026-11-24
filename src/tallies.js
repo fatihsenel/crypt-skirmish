@@ -22,7 +22,7 @@ export const withChange = (n, before) => (before == null ? String(n) : `${n} (${
  * The tallies as numbers: `count(event)`, `values(event, prop)` ({ value: n }), each room's
  * fights ({ id, won, lost, left, rate }, the highest loss rate first), the worst room once it
  * has WORST_MIN fights, the input used in fights, the frame-rate bands and the visits from
- * browsers that played before. With `wider` (the same days plus as many before them, e.g. 14 for
+ * browsers that played before, and the falls into chasms ({ heroes, foes }). With `wider` (the same days plus as many before them, e.g. 14 for
  * 7), `change(event)` gives a count with its change from the period before ("41 (+12)").
  */
 export function readTallies(rows, wider) {
@@ -41,10 +41,14 @@ export function readTallies(rows, wider) {
   }).sort((a, b) => b.rate - a.rate || b.lost - a.lost);
   const inputs = {};
   for (const e of ['fight-won', 'fight-lost', 'fight-left']) for (const [k, n] of Object.entries(values(e, 'input'))) inputs[k] = (inputs[k] ?? 0) + n;
+  // Falls into chasms, summed over every fight that ended or was left (each value is how many fell).
+  const fallen = (prop) => ['fight-won', 'fight-lost', 'fight-left']
+    .reduce((n, e) => n + Object.entries(values(e, prop)).reduce((m, [k, c]) => m + (Number(k) || 0) * c, 0), 0);
+  const falls = { heroes: fallen('heroesFell'), foes: fallen('foesFell') };
   const all = wider ? readTallies(wider) : null;
   const change = (event) => withChange(count(event), all ? all.count(event) - count(event) : null);
   return {
-    count, values, rooms, inputs, change, perf: values('perf', 'fps'),
+    count, values, rooms, inputs, change, falls, perf: values('perf', 'fps'),
     returning: values('visit', 'returning').true ?? 0,
     worst: rooms.find((r) => r.won + r.lost >= WORST_MIN) ?? null,
   };
