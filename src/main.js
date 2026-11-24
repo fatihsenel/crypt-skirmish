@@ -1719,12 +1719,16 @@ function bootProgress(done, total) {
 // them (see newGame and startReplay). Only ?level= waits behind the boot screen.
 let kitLoaded = false;
 const kit = preloadDungeon(bootProgress).then(() => { kitLoaded = true; });
+// The stand-in blocks stay hidden (#stage starts .veiled in index.html), so the crypt fades in
+// once, finished.
 showBackdrop();
 kit.then(() => {
-  if (game) return;
-  stage.scene.remove(board.group);
-  board.dispose();
-  showBackdrop();
+  if (!game) {
+    stage.scene.remove(board.group);
+    board.dispose();
+    showBackdrop();
+  }
+  requestAnimationFrame(() => document.getElementById('stage').classList.remove('veiled'));
 });
 const levelParam = Number(new URLSearchParams(location.search).get('level'));
 if (levelParam >= 1 && levelParam <= LEVELS.length) {

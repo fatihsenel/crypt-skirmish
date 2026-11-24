@@ -36,8 +36,9 @@ server on 5173.
 - `src/boot.js` is the entry: it makes the `Camp` and shows the title before three.js and
   `main.js` arrive, so it must not import three.js or `render/` (`npm run size-check` fails if
   the title's code grows past 80 kB). The camp's handlers are filled in by `main.js`
-  (`later`); a press before then waits for it. The dungeon tiles load behind the title, and
-  `newGame` and `startReplay` wait for them (`kit` in `main.js`). A finished fight is settled in
+  (`later`); a press before then waits for it. The dungeon tiles load behind the title (the backdrop stays hidden,
+  `#stage.veiled`, and fades in once they're here), and `newGame` and `startReplay` wait for them
+  (`kit` in `main.js`). A finished fight is settled in
   `fightEnd.js` (`settleFight`): records, achievements, dailies and the banner's facts.
 - The rules engine (`Game` in `combat.js`, built on `Spellcasting` in `spells.js`) resolves
   everything instantly and emits events (`attack`, `move`, `spell`, `death`, …). `move()` returns steps (doors, traps, coals, and the opportunity and readied attacks it sets off). `src/main.js` turns them
