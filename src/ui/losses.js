@@ -60,6 +60,7 @@ export function statsHtml(rows, wider) {
     line('Crashes', n('error') ? `${c('error')}: ${ranked(t.values('error', 'browser'))}. Where: ${ranked(t.values('error', 'at'))}.` : 'none.'),
     sum(t.inputs) ? line('Input', `${shares(t.inputs)}.`) : '',
     t.falls.heroes + t.falls.foes ? line('Chasms', `${t.falls.heroes} heroes fell, ${t.falls.foes} foes were sent over.`) : '',
+    t.tumbles.heroes + t.tumbles.foes ? line('Stairs', `${t.tumbles.foes} foes pushed down, ${t.tumbles.heroes} heroes thrown down.`) : '',
     sum(t.perf) ? line('Frame rate', `${shares(t.perf)} (${sum(t.perf)} visits).`) : '',
     wider ? '<p class="losses-legend">In brackets: the change from the same number of days before.</p>' : '',
   ].join('');

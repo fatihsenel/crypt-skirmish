@@ -118,7 +118,7 @@ server on 5173.
   (`floorBehind`). Screen readers hear log lines, turns and the cursor's tile
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
   press the action bar's first ten buttons (`pickByNumber` in `hud.js`; moves few turns need
-  fold behind its More button, `RARE_ACTIONS` and `more`); R reads `surroundings()`.
+  fold behind its More button, `RARE_ACTIONS` and `more`); R reads `surroundings()`; V looks along the nearest stair (`otherFloor`, `peekFloor` in `main.js`).
   The log can show one figure's lines (`filterLog`: double-click, F or a long press on a name);
   rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.
   What the hovered tile would do (path, odds, blast, the hint) is drawn by `refresh` in `preview.js`.
@@ -166,6 +166,8 @@ server on 5173.
   apply it through an attack `rider` or a spell's `condition`.
 - **Elite trait:** `ELITE_TRAITS` and `makeElite` in `combat.js`; the bestiary lists them.
 - **Room:** a map in `LEVELS` (`game/maps.js`) and a node in `NODES` (`game/campaign.js`).
+  For the daily and weekly to draw it, add it to a new room list from a date on (like
+  `TWO_FLOORS_DAILY_FROM` in `daily.js`, its weekly list filtered by `TOO_HARD`), so past days keep their room.
   Map symbols are listed in `Grid` (`game/grid.js`): `'~'` shallow water (double cost, through
   `moveCost`; a room without water or ice keeps the plain paths, so its old saves still
   replay), `'*'` a brazier (the `brazier` command, `tipBrazier`; its coals are `this.fire`, a

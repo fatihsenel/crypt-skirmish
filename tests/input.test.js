@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Game } from '../src/game/combat.js';
-import { tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings, floorBehind, longPress } from '../src/input.js';
+import { tileCommand, stepTile, ARROWS, tileSummary, enterStep, surroundings, floorBehind, longPress, otherFloor } from '../src/input.js';
+import { Grid } from '../src/game/grid.js';
+import { levelById } from '../src/game/maps.js';
 
 function setTurn(game, i) {
   game.order = [game.units[i], ...game.units.filter((_, j) => j !== i)];
@@ -214,5 +216,20 @@ describe('a long press on a figure', () => {
     expect(seen).toEqual([]);
     expect(press.consume()).toBe(false);
     vi.useRealTimers();
+  });
+});
+
+describe('otherFloor (V)', () => {
+  it('looks along the nearest stair to its far end, from either floor', () => {
+    const g = new Grid(levelById('undercroft').rows);
+    // Stairs: (6,1) down to (1,7), and (14,1) down to (13,7).
+    expect(otherFloor(g, { x: 2, z: 2 })).toEqual({ x: 1, z: 7, lower: true });
+    expect(otherFloor(g, { x: 13, z: 3 })).toEqual({ x: 13, z: 7, lower: true });
+    expect(otherFloor(g, { x: 12, z: 9 })).toEqual({ x: 14, z: 1, lower: false });
+    expect(otherFloor(g, { x: 1, z: 7 })).toEqual({ x: 6, z: 1, lower: false }); // on a stair: that one
+  });
+
+  it('is null in a room on one floor', () => {
+    expect(otherFloor(new Grid(levelById('crypt').rows), { x: 1, z: 1 })).toBeNull();
   });
 });

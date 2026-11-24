@@ -39,6 +39,10 @@ describe('play stats', () => {
     g.units.find((u) => u.team === 'monsters').fell = true;
     g.units.find((u) => u.team === 'heroes').fell = true;
     expect(fightEvents({ game: g, nodeId: 'crypt', campaign, mode: 'campaign', final: false })[0][1]).toMatchObject({ heroesFell: 1, foesFell: 1 });
+    // Down the stairs: how many tumbles on each side.
+    g.units.find((u) => u.team === 'monsters').tumbled = 2;
+    expect(fightEvents({ game: g, nodeId: 'crypt', campaign, mode: 'campaign', final: false })[0][1]).toMatchObject({ foesTumbled: 2 });
+    expect(fightEvents({ game: g, nodeId: 'crypt', campaign, mode: 'campaign', final: false })[0][1]).not.toHaveProperty('heroesTumbled');
     // The last room won: the campaign too.
     const end = fightEvents({ game: g, nodeId: 'throne', campaign: { ...campaign, relics: ['veil'] }, mode: 'campaign', final: true });
     expect(end.map(([n]) => n)).toEqual(['fight-won', 'campaign-won']);

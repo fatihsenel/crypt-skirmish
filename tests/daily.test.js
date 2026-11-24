@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, DAILY_ROOMS_ACT_FIVE, ACT_FIVE_DAILY_FROM, shareText, keepBest, bestFight, resultFor } from '../src/game/daily.js';
+import { dayKey, prevDay, dailyPlan, dailyCampaign, addDaily, streak, better, parseDaily, DAILY_ROOMS, DAILY_ROOMS_ACT_FOUR, ACT_FOUR_DAILY_FROM, DAILY_ROOMS_ACT_FIVE, ACT_FIVE_DAILY_FROM, DAILY_ROOMS_TWO_FLOORS, TWO_FLOORS_DAILY_FROM, shareText, keepBest, bestFight, resultFor } from '../src/game/daily.js';
 import { NODES } from '../src/game/campaign.js';
 
 describe('daily crypt', () => {
@@ -52,6 +52,22 @@ describe('daily crypt', () => {
       k = dayKey(new Date(y, m - 1, d + 1));
     }
     expect(['tomb', 'bridge', 'lair'].filter((n) => later.has(n))).toEqual(['tomb', 'bridge', 'lair']);
+  });
+
+  it('draws the rooms on two floors only from 7 December, so past dailies never change', () => {
+    let key = prevDay(TWO_FLOORS_DAILY_FROM);
+    for (let i = 0; i < 7; i++, key = prevDay(key)) {
+      const plan = dailyPlan(key);
+      expect([plan.node, plan.level]).toEqual(DAILY_ROOMS_ACT_FIVE[plan.seed % DAILY_ROOMS_ACT_FIVE.length]);
+    }
+    const later = new Set();
+    for (let i = 0, k = TWO_FLOORS_DAILY_FROM; i < 150; i++) {
+      later.add(dailyPlan(k).node);
+      const [y, m, d] = k.split('-').map(Number);
+      k = dayKey(new Date(y, m - 1, d + 1));
+    }
+    expect(['cistern', 'undercroft'].filter((n) => later.has(n))).toEqual(['cistern', 'undercroft']);
+    expect(DAILY_ROOMS_TWO_FLOORS.slice(-2)).toEqual([['cistern', 5], ['undercroft', 8]]);
   });
 
   it('builds a level 8 party for the Armory', () => {

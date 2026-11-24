@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  weekKey, prevWeek, weeklyPlan, weeklyCampaign, weekStreak, weeklyShareText, WEEKLY_ROOMS, WEEKLY_ROOMS_ACT_FIVE, WEEKLY_TIER,
+  weekKey, prevWeek, weeklyPlan, weeklyCampaign, weekStreak, weeklyShareText, WEEKLY_ROOMS, WEEKLY_ROOMS_ACT_FIVE, WEEKLY_ROOMS_TWO_FLOORS, WEEKLY_TIER,
 } from '../src/game/weekly.js';
 import { ELITE_TRAITS, Game } from '../src/game/combat.js';
 import { NODES, roomElite, runDifficulty } from '../src/game/campaign.js';
@@ -51,6 +51,16 @@ describe('weekly elite crypt', () => {
     for (let i = 0, d = new Date(2026, 10, 30); i < 60; i++, d.setDate(d.getDate() + 7)) later.add(weeklyPlan(weekKey(d)).node);
     for (const n of ['tomb', 'bridge', 'lair']) expect(WEEKLY_ROOMS_ACT_FIVE.map(([r]) => r)).toContain(n);
     expect(['tomb', 'lair'].every((n) => later.has(n))).toBe(true);
+  });
+
+  it('brings the rooms on two floors only from 7 December', () => {
+    for (let i = 0, key = '2026-11-30'; i < 30; i++, key = prevWeek(key)) {
+      expect(WEEKLY_ROOMS_ACT_FIVE.map(([n]) => n)).toContain(weeklyPlan(key).node);
+    }
+    expect(WEEKLY_ROOMS_TWO_FLOORS.map(([n]) => n)).toEqual(expect.arrayContaining(['cistern', 'undercroft']));
+    const later = new Set();
+    for (let i = 0, d = new Date(2026, 11, 7); i < 200; i++, d.setDate(d.getDate() + 7)) later.add(weeklyPlan(weekKey(d)).node);
+    expect(['cistern', 'undercroft'].every((n) => later.has(n))).toBe(true);
   });
 
   it('fights at its tier: the room’s strongest monster is an elite with the week’s trait', () => {

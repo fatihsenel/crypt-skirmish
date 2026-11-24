@@ -262,6 +262,19 @@ export function enterStep(armed, t, r) {
 }
 
 /**
+ * V, in a room on two floors: the tile at the far end of the stair nearest `from` on its own
+ * floor (the one it stands on, if any), and whether that end is in the lower hall. Null in a
+ * room on one floor.
+ */
+export function otherFloor(grid, from) {
+  if (!grid.stairways.length) return null;
+  const lower = grid.lower.has(key(from.x, from.z));
+  const ends = grid.stairways.map((s) => (lower ? [s.up, s.down] : [s.down, s.up]));
+  const [, far] = ends.reduce((a, b) => (gridDistance(from, b[0]) < gridDistance(from, a[0]) ? b : a));
+  return { x: far.x, z: far.z, lower: !lower };
+}
+
+/**
  * The board around hero `u` in words, for a screen reader (the R key): the hero's HP and
  * movement, the enemies `seen(unit)` allows, nearest first, with whether `u` can attack each
  * now (in range), and the heroes who are down.

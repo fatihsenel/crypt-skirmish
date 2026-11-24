@@ -187,6 +187,11 @@ export function createControls(deps) {
       if (hero) announce(surroundings(g, hero, { seen: (u) => !!deps.visibleUnitAt(u.x, u.z) }));
       return;
     }
+    // V: look down (or up) the nearest stair, in a room on two floors; V again looks back.
+    if (ev.code === 'KeyV' && boardKeys() && plain) {
+      deps.peekFloor();
+      return;
+    }
     if (ev.code === 'Space' || ev.code === 'Enter') {
       if (ev.target instanceof HTMLButtonElement || ev.target instanceof HTMLElement && ev.target.closest('summary, #log-list')) return;
       ev.preventDefault();

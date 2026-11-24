@@ -14,7 +14,7 @@ player.
 | `run-start` | New campaign or New Game+ | `kind` (new, ngplus), `difficulty`, `tier`, `party` |
 | `run-continue` | Continue from the title | `room`, `cleared`, `difficulty`, `tier`, `midFight` |
 | `run-abandon` | A new campaign replaces an unfinished one | `room`, `cleared`, `difficulty`, `tier` |
-| `fight-won` / `fight-lost` | A real fight ends (not `?level=`) | `room`, `mode`, `difficulty`, `tier`, `party`, `rounds`, `standing`, `downed`, `input`, `heroesFell`, `foesFell` |
+| `fight-won` / `fight-lost` | A real fight ends (not `?level=`) | `room`, `mode`, `difficulty`, `tier`, `party`, `rounds`, `standing`, `downed`, `input`, `heroesFell`, `foesFell`, `heroesTumbled`, `foesTumbled` |
 | `campaign-won` | The Tomb won | `difficulty`, `tier`, `party`, `relics` |
 | `visit` | Once a page, when stats are on (counted by the Worker only) | `returning` (true when this browser has saved anything from the game before) |
 | `ease-offered` | The Defeat banner offers a lower difficulty (a third loss in the same room) | `room`, `difficulty` |
@@ -24,7 +24,7 @@ player.
 | `replay-watched` | Watch replay | `from` (banner, title, link), `room` |
 | `challenge-played` | A `#play=` link opened | `room` |
 | `shared` | A share that went through | `what` (replay, challenge, result, run-card, photo), `how` (share, copy, save) |
-| `fight-left` | The page closed or reloaded mid-fight (not `?level=` or replays) | `room`, `mode`, `difficulty`, `tier`, `party`, `round`, `standing`, `downed`, `input`, `heroesFell`, `foesFell` |
+| `fight-left` | The page closed or reloaded mid-fight (not `?level=` or replays) | `room`, `mode`, `difficulty`, `tier`, `party`, `round`, `standing`, `downed`, `input`, `heroesFell`, `foesFell`, `heroesTumbled`, `foesTumbled` |
 | `perf` | Once a visit, after about 300 frames of movement on the board | `fps` (50+, 30-50, under 30), `dpr` (the pixel ratio drawn at, to a half) |
 | `error` | A crash in the game's own code, up to 3 a visit, each place once | `type` (TypeError, …), `file`, `line`, `col`, `browser` (chrome, safari, firefox, edge, samsung, other) |
 
@@ -32,7 +32,8 @@ player.
 A (Ranger) and B (Bard) in place of their slot's usual class. `mode` is campaign, daily, weekly or challenge.
 `standing` counts heroes on their feet at the end; `downed` counts how often any hero dropped.
 `heroesFell` and `foesFell` count who went into a chasm (sent only when someone did); the digest
-and `?losses` add them up as Chasms.
+and `?losses` add them up as Chasms. `heroesTumbled` and `foesTumbled` count tumbles down a
+flight of stairs (rules 5) the same way, added up as Stairs.
 `input` is what the player pressed most in that fight: touch, mouse, keys (or none).
 
 ## Where to look in Umami

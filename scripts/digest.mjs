@@ -83,6 +83,7 @@ export async function buildDigest({ fetch, keys, now = Date.now() }) {
     out.push('## How they play', '');
     if (sum(inputs)) out.push(`Input: ${shares(inputs)}.`);
     if (t.falls.heroes + t.falls.foes) out.push(`Chasms: ${t.falls.heroes} heroes fell, ${t.falls.foes} foes were sent over.`);
+    if (t.tumbles.heroes + t.tumbles.foes) out.push(`Stairs: ${t.tumbles.foes} foes pushed down, ${t.tumbles.heroes} heroes thrown down.`);
     if (sum(perf)) out.push(`Frame rate: ${shares(perf)} (${sum(perf)} visits).`);
     if (!sum(inputs) && !sum(perf)) out.push('Nothing recorded yet.');
     out.push('');

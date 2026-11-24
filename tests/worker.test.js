@@ -169,6 +169,7 @@ describe('loss replay worker', () => {
       expect(rows).toContainEqual([DAY, 'fight-lost', 'tier', '0']);
       expect(rows).toContainEqual([DAY, 'fight-lost', 'room/difficulty', 'throne/hard']);
       expect(tallyRows('fight-won', { room: 'bridge', foesFell: 2 }, DAY)).toContainEqual([DAY, 'fight-won', 'foesFell', '2']);
+      expect(tallyRows('fight-lost', { room: 'undercroft', heroesTumbled: 1 }, DAY)).toContainEqual([DAY, 'fight-lost', 'heroesTumbled', '1']);
       expect(rows.some((r) => r.includes('Somebody') || r.includes('name'))).toBe(false); // unknown fields are dropped
       const crash = tallyRows('error', { type: 'TypeError', file: 'main-CahFguWJ.js', line: 2, col: 5847, browser: 'safari' }, DAY);
       expect(crash).toContainEqual([DAY, 'error', 'at', 'main-CahFguWJ.js:2:5847']);

@@ -2237,6 +2237,7 @@ export class Game extends Spellcasting {
     this.cause = 'a fall down the stairs';
     this.via = 'fall';
     const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0) };
+    target.tumbled = (target.tumbled ?? 0) + 1; // for play stats; no dice
     this.emit('tumble', result);
     this.applyDamage(target, roll.total, by);
     if (target.alive && target.hp > 0) this.addCondition(target, 'prone', { by });

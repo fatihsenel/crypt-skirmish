@@ -244,7 +244,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory, and
   from 23 November its party (and the weekly's) can bring the Bard, and from 30 November the
   Barbarian, Sorcerer, Monk and Druid, and the room (the weekly's too) can be the Tomb, the
-  Bridge or the Den.
+  Bridge or the Den. From 7 December it (and the weekly) can also be a room on two floors: the
+  Cistern Stair or the Undercroft.
   Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
   A won campaign has the same button. Watch your best replays the day's fastest win from
   the title, and its Copy link and Copy challenge link share it.
@@ -322,7 +323,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   cards and the names and numbers over the figures), speech bubbles, colour-blind friendly
   enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
-  a daily or weekly started, a room won or lost with its rounds, party classes and anyone who fell into a chasm, a stop's
+  a daily or weekly started, a room won or lost with its rounds, party classes and anyone who fell into a chasm or tumbled down the stairs, a stop's
   choice, a run abandoned, a campaign won, an easier difficulty offered or taken, a visit and whether its browser played before, a replay watched, something shared, a fight left
   half-way, with the input it was played by), how smoothly the board draws (a frame-rate band,
   once a visit), to see where runs end, and a crash by where it happened in the code (never its
@@ -380,6 +381,7 @@ Everything is generated in the browser, with no recordings:
 | Enter on the cursor | Pick the tile (the hint shows what happens), Enter again to do it |
 | 1–9, 0 | Pick the action bar's first ten buttons in order (attacks, spells, actions); the number shows on each |
 | R | Read out the hero, enemies in sight (distance, HP, in range) and who's down |
+| V | In a room on two floors, look down (or up) the stair nearest your hero; V again looks back |
 | Space or Enter | End turn (or throw the die when it's waiting) |
 | Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
@@ -412,6 +414,7 @@ Everything is generated in the browser, with no recordings:
 | X | End turn (or throw the die) |
 | Y | Undo the last move |
 | LB / RB | Pick the previous / next action bar button |
+| Right stick press | Look at the other floor (like V) |
 | Start | Settings |
 | Back / View | Show or hide the controls panel, which then lists the pad's buttons |
 

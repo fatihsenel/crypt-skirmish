@@ -37,8 +37,16 @@ export const DAILY_ROOMS_ACT_FOUR = [...DAILY_ROOMS, ['throne', 6], ['halls', 7]
 export const ACT_FIVE_DAILY_FROM = '2026-11-30';
 export const DAILY_ROOMS_ACT_FIVE = [...DAILY_ROOMS_ACT_FOUR, ['tomb', 8], ['bridge', 8], ['lair', 8]];
 
+/**
+ * From this date (a Monday) the daily can also be a room on two floors: the Cistern Stair and
+ * the Undercroft. Days before it keep the lists they had.
+ */
+export const TWO_FLOORS_DAILY_FROM = '2026-12-07';
+export const DAILY_ROOMS_TWO_FLOORS = [...DAILY_ROOMS_ACT_FIVE, ['cistern', 5], ['undercroft', 8]];
+
 /** The room list a day's daily is drawn from. */
-export const dailyRooms = (key) => (key >= ACT_FIVE_DAILY_FROM ? DAILY_ROOMS_ACT_FIVE
+export const dailyRooms = (key) => (key >= TWO_FLOORS_DAILY_FROM ? DAILY_ROOMS_TWO_FLOORS
+  : key >= ACT_FIVE_DAILY_FROM ? DAILY_ROOMS_ACT_FIVE
   : key >= ACT_FOUR_DAILY_FROM ? DAILY_ROOMS_ACT_FOUR : DAILY_ROOMS);
 
 /** A date as its local YYYY-MM-DD. */

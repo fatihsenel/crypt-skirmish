@@ -30,6 +30,8 @@ describe('reading the Worker’s tallies', () => {
       { event: 'fight-left', prop: 'foesFell', value: '1', n: 1 },
     ]);
     expect(t.falls).toEqual({ heroes: 2, foes: 7 });
+    expect(t.tumbles).toEqual({ heroes: 0, foes: 0 });
+    expect(readTallies([{ event: 'fight-won', prop: 'foesTumbled', value: '2', n: 2 }]).tumbles).toEqual({ heroes: 0, foes: 4 });
   });
 
   it('names no worst room under 5 fights, and skips junk rows', () => {

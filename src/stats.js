@@ -49,12 +49,16 @@ const fightBase = (nodeId, campaign, mode, input) => ({
 /** Heroes on their feet, and how often any of them dropped. */
 const partyState = (game) => {
   const fell = (team) => game.units.filter((u) => u.team === team && u.fell).length;
+  const tumbled = (team) => game.units.reduce((n, u) => n + (u.team === team ? u.tumbled ?? 0 : 0), 0);
   return {
     standing: game.units.filter((u) => u.team === 'heroes' && u.alive && u.hp > 0).length,
     downed: Object.values(game.stats).reduce((n, h) => n + (h.downed ?? 0), 0),
     // Into a chasm (rules 3 and 4): sent only when someone fell, to keep the tallies small.
     ...(fell('heroes') && { heroesFell: fell('heroes') }),
     ...(fell('monsters') && { foesFell: fell('monsters') }),
+    // Down a flight of stairs (rules 5), the same way: how many times on each side.
+    ...(tumbled('heroes') && { heroesTumbled: tumbled('heroes') }),
+    ...(tumbled('monsters') && { foesTumbled: tumbled('monsters') }),
   };
 };
 

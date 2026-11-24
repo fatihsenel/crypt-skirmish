@@ -42,6 +42,7 @@ import { createLinks } from './links.js';
 import { createThreats } from './threats.js';
 import { createAnimations } from './animate.js';
 import { createControls } from './controls.js';
+import { otherFloor } from './input.js';
 import { createGamepad } from './gamepad.js';
 import { createPhotoMode } from './photo.js';
 import { cleanRelics, RELICS } from './game/items.js';
@@ -1024,6 +1025,16 @@ function lookAt(x, z, zoom) {
   const cam = stage.camera;
   cam.zoom = zoom;
   cam.updateProjectionMatrix();
+  const shift = shiftTo(x, z);
+  if (!shift) return;
+  stage.controls.target.add(shift);
+  cam.position.add(shift);
+  keepAwake(100);
+}
+
+/** How far the camera must slide over the ground to put a tile in the middle of the free area. */
+function shiftTo(x, z) {
+  const cam = stage.camera;
   cam.updateMatrixWorld();
   const w = window.innerWidth;
   const h = window.innerHeight;
@@ -1032,11 +1043,8 @@ function lookAt(x, z, zoom) {
   const ndc = new THREE.Vector2(((w - right) / 2 / w) * 2 - 1, -(((top + h - bottom) / 2) / h) * 2 + 1);
   raycaster.setFromCamera(ndc, cam);
   const ground = new THREE.Vector3();
-  if (!raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ground)) return;
-  const shift = new THREE.Vector3(x, 0, z).sub(ground);
-  stage.controls.target.add(shift);
-  cam.position.add(shift);
-  keepAwake(100);
+  if (!raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ground)) return null;
+  return new THREE.Vector3(x, 0, z).sub(ground);
 }
 
 /**
@@ -1071,7 +1079,12 @@ function keepInView(unit) {
   const from = toGround(sx - dx, sy - dy);
   const to = toGround(sx, sy);
   if (!from || !to) return;
-  const shift = to.sub(from);
+  glide(to.sub(from));
+}
+
+/** Slide the camera over the ground by `shift`, in 350 ms (at once with reduced motion). */
+function glide(shift) {
+  const cam = stage.camera;
   const ticket = ++panTween;
   if (calm()) { // reduced motion: jump there
     stage.controls.target.add(shift);
@@ -1093,6 +1106,37 @@ function keepInView(unit) {
     if (t < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
+}
+
+/**
+ * V (or a press of the right stick), in a room on two floors: the camera glides to the far end
+ * of the stair nearest the hero whose turn it is, to look down (or up) it; V again glides back
+ * to where it was. The fog stays as it is: only what the party has seen shows there.
+ */
+let peek = null; // { unit, target }: who looked, and where the camera was before
+function peekFloor() {
+  if (!game || !board) return;
+  const hero = game.current?.team === 'heroes' ? game.current : game.living('heroes')[0];
+  if (!hero) return;
+  if (peek?.unit === hero) {
+    glide(peek.target.clone().sub(stage.controls.target));
+    peek = null;
+    announce(`Back to ${hero.name}.`);
+    return;
+  }
+  const there = otherFloor(game.grid, hero);
+  if (!there) {
+    announce('This room has one floor.');
+    return;
+  }
+  const shift = shiftTo(there.x, there.z);
+  if (!shift) return;
+  peek = { unit: hero, target: stage.controls.target.clone() };
+  glide(shift);
+  const hall = there.lower ? 'the lower hall' : 'the hall above';
+  announce(`Looking ${there.lower ? 'down' : 'up'} the stairs at ${hall}` +
+    (board.explored.has(key(there.x, there.z)) ? '' : `, still dark: stand on the stair to see ${there.lower ? 'down' : 'up'} it`) +
+    '. V again to look back.');
 }
 
 /** Replay a saved fight on the new `game`. False if it didn't land where it was saved. */
@@ -1199,6 +1243,7 @@ function flushReveals() {
 
 async function onTurnStart(unit) {
   flushReveals();
+  peek = null; // a new turn's view starts from here
   for (const v of views.values()) v.setActive(v.unit === unit);
   if (!unseen(unit)) keepInView(unit);
   selected = null;
@@ -1689,7 +1734,7 @@ const controls = createControls({
   game: () => game, board: () => board, views: () => views, busy: () => busy, replay: () => replay,
   hovered: () => hovered, setHovered: (t) => { hovered = t; },
   selected: () => selected, setSelected: (s) => { selected = s; },
-  isHeroTurn, refresh, heroCommand, endHeroTurn, undoMove, endReplay, keepInView,
+  isHeroTurn, refresh, heroCommand, endHeroTurn, undoMove, endReplay, keepInView, peekFloor,
   toggleSound, toggleMusic, visibleUnitAt, spellTargetAt, photo: () => photo.active,
 });
 // A gamepad drives the same cursor and keys, and moves focus in the menus (gamepad.js).

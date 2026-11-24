@@ -45,10 +45,11 @@ export function readTallies(rows, wider) {
   const fallen = (prop) => ['fight-won', 'fight-lost', 'fight-left']
     .reduce((n, e) => n + Object.entries(values(e, prop)).reduce((m, [k, c]) => m + (Number(k) || 0) * c, 0), 0);
   const falls = { heroes: fallen('heroesFell'), foes: fallen('foesFell') };
+  const tumbles = { heroes: fallen('heroesTumbled'), foes: fallen('foesTumbled') };
   const all = wider ? readTallies(wider) : null;
   const change = (event) => withChange(count(event), all ? all.count(event) - count(event) : null);
   return {
-    count, values, rooms, inputs, change, falls, perf: values('perf', 'fps'),
+    count, values, rooms, inputs, change, falls, tumbles, perf: values('perf', 'fps'),
     returning: values('visit', 'returning').true ?? 0,
     worst: rooms.find((r) => r.won + r.lost >= WORST_MIN) ?? null,
   };

@@ -127,6 +127,7 @@ describe('rooms on two floors', () => {
     expect(r.push).toMatchObject({ to: { x: 5, z: 1 }, stair: { x: 3, z: 1 } });
     expect([g.x, g.z]).toEqual([5, 1]);
     expect(hp - g.hp).toBe(r.push.tumble.damage);
+    expect(g.tumbled).toBe(1); // counted for play stats
     if (g.alive) expect(game.has(g, 'prone')).toBe(true);
   });
 
