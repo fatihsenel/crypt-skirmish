@@ -122,6 +122,12 @@ export const SPECS = {
     file: 'Skeleton_Warrior', height: 1.32, tint: 0x8f9a72,
     clips: { melee: 'Unarmed_Melee_Attack_Punch_A', walk: 'Walking_D_Skeletons', idle: 'Unarmed_Idle' },
   },
+  // Rules 9: the cult fanatic, the hooded rogue in blood-red robes with a dagger in each hand.
+  f: {
+    file: 'Rogue_Hooded', height: 1.3, tint: 0xc0505a,
+    show: ['Knife', 'Knife_Offhand'],
+    clips: { melee: 'Dualwield_Melee_Attack_Stab', javelin: 'Throw', cast: 'Spellcast_Raise' },
+  },
   // The ghast: a bigger, darker ghoul.
   h: {
     file: 'Skeleton_Minion', height: 1.38, tint: 0x6f8060,

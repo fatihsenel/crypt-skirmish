@@ -142,6 +142,10 @@ const ICONS = {
     <path stroke="none" d="M11.5 18.5c0-2.2 2-4 4.8-4 1.7 0 3 .6 3.8 1.5l1.8-.4 1 1.5-1.3 1c-.2 1.6-1.7 2.4-4.1 2.4H13c-.9 0-1.5-.8-1.5-2z"/>
     <path stroke="none" d="M6 11c0-2.2 2-4 4.8-4 1.7 0 3 .6 3.8 1.5l1.8-.4 1 1.5-1.3 1c-.2 1.6-1.7 2.4-4.1 2.4H7.5C6.6 13 6 12.2 6 11z"/>
     <path fill="none" stroke-width="1.2" d="M6 11.5c-1.5 0-2.5 1-2.5 2.2M2 19.5c-1 .2-1.4 1-1 1.5"/>`),
+  // rules 9: the cult fanatic, a pointed hood over a dagger
+  f: svg(`<path stroke="none" d="M12 2 5.5 13.5c-.8 1.4-1 3-.5 4.5L6 21h12l1-3c.5-1.5.3-3.1-.5-4.5z"/>
+    <path stroke="none" fill="var(--icon-hole)" d="M12 9.5c-2 0-3.3 1.6-3.3 3.6 0 1.2.5 2.2 1.2 2.9h4.2c.7-.7 1.2-1.7 1.2-2.9 0-2-1.3-3.6-3.3-3.6z"/>
+    <circle cx="10.7" cy="13" r=".7" stroke="none"/><circle cx="13.3" cy="13" r=".7" stroke="none"/>`),
   // the gelatinous cube: a see-through block with a skull caught inside
   i: svg(`<path fill="none" stroke-width="1.6" stroke-linejoin="round" d="M4 8.5L12 5l8 3.5v9L12 21l-8-3.5z"/>
     <path fill="none" stroke-width="1.1" opacity=".6" d="M4 8.5l8 3.5 8-3.5M12 12v9"/>

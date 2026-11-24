@@ -16,7 +16,7 @@ describe('the bestiary', () => {
   afterEach(() => { delete globalThis.localStorage; });
 
   it('lists every monster kind once, with a line of lore and a card', () => {
-    expect(MONSTERS.length).toBe(24);
+    expect(MONSTERS.length).toBe(25);
     expect(new Set(MONSTERS).size).toBe(MONSTERS.length);
     expect(Object.keys(LORE).sort()).toEqual([...MONSTERS].sort());
     for (const code of MONSTERS) {

@@ -505,6 +505,22 @@ export const TEMPLATES = {
     stats: { str: 9, dex: 11, con: 9, int: 2, wis: 10, cha: 3 },
     attacks: [{ name: 'Bites', stat: 'dex', damage: '2d6', weak: '1d6', reach: 1 }],
   },
+  // SRD cult fanatic, rules 9 (`summons`): as its turn starts it spends its action calling up a
+  // skeleton beside it while it has fewer than `summons` (a house rule), and they fall to dust
+  // with it. They're worth no XP.
+  f: {
+    name: 'Cult Fanatic', cls: 'Cult Fanatic', team: 'monsters', color: 0x7a2630,
+    hp: 33, ac: 13, speed: 6, prof: 2, xp: 450, cr: 2,
+    multiattack: 2, // two daggers
+    ai: 'caster', // keeps its distance
+    summons: 2,
+    passives: ['darkCalling'],
+    stats: { str: 11, dex: 14, con: 12, int: 10, wis: 13, cha: 14 },
+    attacks: [
+      { name: 'Dagger', stat: 'dex', damage: '1d4', reach: 1 },
+      { name: 'Thrown Dagger', stat: 'dex', damage: '1d4', reach: 4, projectile: 'javelin' },
+    ],
+  },
 };
 
 let nextId = 1;

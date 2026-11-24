@@ -34,6 +34,11 @@ export const MORALE_DC = 10; export const MORALE_ROUNDS = 2;
 export const PROP_HP = { barrel: 5, crate: 8 };
 /** Rules 8: the STR check a monster makes to break a barred door; each failure splinters it, 2 easier. */
 export const BAR_DC = 15; export const BAR_SPLINTER = 2;
+// Rules 9: the Wizard's or Warlock's owl familiar flies this far (60 ft) once a turn, and a monster
+// next to it as its turn starts swats at it (AC OWL_AC); a secret door is found against SECRET_DC.
+export const OWL_RANGE = 12; export const OWL_AC = 11;
+export const FAMILIAR_CLASSES = ['Wizard', 'Warlock'];
+export const SECRET_DC = 15;
 /** Rules 7: a gelatinous cube's acid at the start of an engulfed creature's turn, and the STR save out. */
 export const ENGULF_DAMAGE = '2d6'; export const ENGULF_DC = 12;
 /** Rules 7: the passive Perception that spots a transparent monster more than 5 ft away. */
@@ -160,6 +165,30 @@ export class Game extends Spellcasting {
     }
     if (this.rules >= 7 && level.added7) this.grid.spawns.push(...level.added7.map(([code, x, z]) => ({ code, x, z })));
     if (this.rules >= 8 && level.added8) this.grid.spawns.push(...level.added8.map(([code, x, z]) => ({ code, x, z })));
+    // Rules 9: the room's later monsters, its alarm gong, its prisoner, its hold-out waves and its
+    // secret doors. `arrivals` lists the monsters who come in as a round begins (see newRound).
+    this.arrivals = {};
+    this.gong = null;
+    this.captive = null;
+    this.hold = null;
+    this.secrets = new Map();
+    if (this.rules >= 9) {
+      if (level.added9) this.grid.spawns.push(...level.added9.map(([code, x, z]) => ({ code, x, z })));
+      if (level.gong) {
+        this.gong = { ...level.gong, rung: 0 };
+        this.grid.props.set(key(level.gong.x, level.gong.z), { x: level.gong.x, z: level.gong.z, kind: 'gong', cover: null });
+      }
+      if (level.captive) {
+        const { x, z, until, loot = [] } = level.captive;
+        this.captive = { x, z, until, loot: [...loot], freed: false, lost: false };
+        this.grid.props.set(key(x, z), { x, z, kind: 'captive', cover: null });
+      }
+      if (level.hold) {
+        this.hold = { rounds: level.hold.rounds };
+        for (const [round, wave] of Object.entries(level.hold.waves ?? {})) this.arrivals[round] = wave.map((w) => [...w, 'hold']);
+      }
+      for (const [x, z] of level.secrets ?? []) this.secrets.set(key(x, z), { x, z, found: false });
+    }
     // Rules 6: cracked floor gives way over the lower hall, `below` [dx, dz] from it (level.below).
     // Older fights walk it as plain floor.
     this.below = level.below ?? null;
@@ -219,6 +248,19 @@ export class Game extends Spellcasting {
         u.hp = Math.min(u.hp, u.maxHp); // an Amulet of Health handed back at camp
       }
     }
+    // Rules 9: whoever stands by the gong rings it once it knows the party is here, and a
+    // Wizard or Warlock comes in with an owl familiar beside them.
+    if (this.gong) {
+      const ringer = this.units.find((u) => u.team === 'monsters' && key(u.x, u.z) === this.gong.by);
+      if (ringer) ringer.ringer = true;
+    }
+    if (this.rules >= 9) {
+      for (const u of this.units) {
+        if (u.team !== 'heroes' || !u.alive || !FAMILIAR_CLASSES.includes(u.cls)) continue;
+        const spot = this.freeNear(u, 1, (x, z) => !this.units.some((o) => o.familiar?.x === x && o.familiar?.z === z));
+        if (spot) u.familiar = { ...spot, alive: true };
+      }
+    }
     // The Labyrinth Thread: every hero moves a tile further.
     if (this.relics.includes('thread')) for (const u of this.units) if (u.team === 'heroes') u.speed += 1;
 
@@ -264,7 +306,8 @@ export class Game extends Spellcasting {
   /** XP for every monster slain in this fight (risen dead included, old corpses not). */
   xpEarned() {
     return this.units
-      .filter((u) => u.team === 'monsters' && !u.alive && !u.corpse)
+      // A room held to the end (rules 9) pays for the monsters still standing too.
+      .filter((u) => u.team === 'monsters' && (!u.alive || this.heldOut) && !u.corpse && !u.summoned)
       .reduce((sum, u) => sum + (TEMPLATES[u.code].xp ?? 0), 0);
   }
 
@@ -778,6 +821,7 @@ export class Game extends Spellcasting {
       if (amount) this.emit('regen', { unit: u, amount });
     }
     this.updateAwareness();
+    if (this.rules >= 9) this.turnStarts(u);
     this.emit('turnStart', { unit: u });
     this.checkStench(u);
     this.digest(u);
@@ -837,6 +881,10 @@ export class Game extends Spellcasting {
         this.turn = 0;
         this.round++;
         this.emit('round', { round: this.round });
+        if (this.rules >= 9) {
+          this.newRound();
+          if (this.over) return;
+        }
       }
       if (this.current.dying && !this.current.dying.stable) this.deathSave(this.current);
     } while (!this.current.alive);
@@ -1037,6 +1085,18 @@ export class Game extends Spellcasting {
       if (target.conditions?.engulfed) this.removeCondition(target, 'engulfed', 'fell');
       this.emit('death', { unit: target, source, unmarked, blessing, ...(dying && { dying: true }), ...(this.rules >= 2 && !dying && target.team === 'heroes' && { outright: true }) });
       this.checkEnd();
+      // Rules 9: the skeletons a cult fanatic called fall to dust with it.
+      const called = this.rules >= 9 ? this.units.filter((c) => c.alive && c.summonedBy === target.id) : [];
+      if (called.length) {
+        const [cause, via] = [this.cause, this.via];
+        this.emit('crumble', { unit: target, called });
+        for (const c of called) {
+          this.cause = 'its caller’s fall';
+          this.via = null;
+          this.applyDamage(c, c.hp, null);
+        }
+        [this.cause, this.via] = [cause, via];
+      }
     }
     if (this.rules >= 7 && !this.over) this.moraleAfter(target, amount);
     if (target.alive && amount > 0) this.concentrationCheck(target, amount);
@@ -1157,7 +1217,8 @@ export class Game extends Spellcasting {
 
   checkEnd() {
     if (this.over) return;
-    if (!this.living('monsters').length) this.over = 'victory';
+    // Rules 9: monsters still to come (a wave the gong called, or a hold-out's) keep it going.
+    if (!this.living('monsters').length && !Object.keys(this.arrivals).length) this.over = 'victory';
     else if (!this.living('heroes').length) this.over = 'defeat';
     if (this.over) this.emit('gameOver', { result: this.over });
   }
@@ -1558,6 +1619,14 @@ export class Game extends Spellcasting {
   /** Heroes with Keen Eyes spot hidden traps within 2 tiles they can see. */
   revealTraps() {
     const found = [];
+    // Rules 9: a secret door next to a hero whose passive Perception reaches SECRET_DC, or
+    // within 10 ft of one with Keen Eyes, gives itself away.
+    for (const sd of this.secrets.values()) {
+      if (sd.found) continue;
+      const by = this.living('heroes').find((u) => gridDistance(u, sd) <= (u.passives.includes('trapSense') ? 2 : 1)
+        && (u.passives.includes('trapSense') || this.passivePerception(u) >= SECRET_DC));
+      if (by) this.openSecret(sd, by, 'eye');
+    }
     for (const u of this.living('heroes')) {
       if (!u.passives.includes('trapSense')) continue;
       for (const t of this.grid.traps.values()) {
@@ -1830,6 +1899,7 @@ export class Game extends Spellcasting {
     if (target.turned) adv.push('target is fleeing');
     const helper = this.helperFor(attacker, target);
     if (helper) adv.push(`help from ${helper.name}`);
+    else if (this.owlFor(attacker, target)) adv.push('the owl');
     if (target.asleep) adv.push('asleep');
     else if (target.unaware) adv.push('unaware');
     if (attacker.hidden && !opportunity) adv.push('hidden');
@@ -2392,6 +2462,200 @@ export class Game extends Spellcasting {
 
   // --- doors and traps (rules 8) ---------------------------------------------
   /** The door next to `unit` at (x, z) that it could shut and bar, or why not. */
+  // --- rules 9: gongs, waves, prisoners, the owl, secret doors and the cult fanatic -------
+  /** The free tile nearest `at` within `maxR` tiles (ring by ring, in reading order), or null. */
+  freeNear(at, maxR, ok = () => true, center = false) {
+    const free = (x, z) => !this.grid.isSolid(x, z) && ok(x, z)
+      && !this.units.some((u) => (u.alive || u.dying) && u.x === x && u.z === z);
+    if (center && free(at.x, at.z)) return { x: at.x, z: at.z };
+    for (let r = 1; r <= maxR; r++) {
+      for (let dz = -r; dz <= r; dz++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) === r && free(at.x + dx, at.z + dz)) return { x: at.x + dx, z: at.z + dz };
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * As `u`'s turn starts: its owl's distraction ends; a monster that knows the party is here
+   * swats at an owl beside it, rings the gong it stands by, or calls up a skeleton.
+   */
+  turnStarts(u) {
+    if (u.familiar) {
+      u.owlUsed = false;
+      for (const o of this.units) if (o.owlHelp === u.id) o.owlHelp = null;
+    }
+    if (u.team !== 'monsters' || !u.alive || u.unaware || u.turned) return;
+    if (this.has(u, 'paralyzed') || this.has(u, 'stunned') || this.has(u, 'petrified')) return;
+    for (const h of this.units) {
+      const owl = h.team === 'heroes' && h.familiar;
+      if (!owl?.alive || gridDistance(u, owl) > 1) continue;
+      const attack = u.attacks.find((a) => a.reach === 1 && a.damage) ?? u.attacks[0];
+      const d20 = rollDice(1, 20, this.rng).total;
+      const total = d20 + this.toHitBonus(u, attack);
+      const hit = d20 === 20 || (d20 !== 1 && total >= OWL_AC);
+      if (hit) {
+        owl.alive = false;
+        for (const o of this.units) if (o.owlHelp === h.id) o.owlHelp = null;
+      }
+      this.emit('owlSwat', { unit: u, master: h, attack, d20, total, ac: OWL_AC, hit });
+    }
+    if (u.ringer && this.gong && !this.gong.rung && !u.actionUsed && gridDistance(u, this.gong) <= 1) this.ringGong(u);
+    else if (u.summons && !u.actionUsed && this.units.filter((c) => c.alive && c.summonedBy === u.id).length < u.summons) this.summon(u);
+  }
+
+  /** The gong is struck (the ringer's action): the room wakes, and its wave comes in `after` rounds. */
+  ringGong(u) {
+    u.actionUsed = true;
+    this.gong.rung = this.round;
+    const round = this.round + (this.gong.after ?? 2);
+    (this.arrivals[round] ??= []).push(...this.gong.wave.map((w) => [...w, 'gong']));
+    const result = { unit: u, x: this.gong.x, z: this.gong.z, round, count: this.gong.wave.length };
+    this.emit('gong', result);
+    this.noise(this.gong, 99);
+    return result;
+  }
+
+  /** A cult fanatic (`summons`: how many at once) spends its action calling up a skeleton nearby. */
+  summon(u) {
+    const spot = this.freeNear(u, 2);
+    if (!spot) return null;
+    u.actionUsed = true;
+    const unit = createUnit(u.summonCode ?? 's', spot.x, spot.z);
+    const n = this.units.filter((c) => c.summoned).length + 1;
+    Object.assign(unit, { team: u.team, unaware: false, summoned: true, summonedBy: u.id, name: `Called ${unit.cls} ${n}` });
+    this.toughen(unit);
+    this.addUnit(unit, u);
+    this.emit('summon', { unit: u, spawn: unit });
+    return unit;
+  }
+
+  /**
+   * A new round (rules 9): a prisoner not freed in time is dragged off, a hold-out the heroes
+   * lasted through is won, and the monsters due this round come in.
+   */
+  newRound() {
+    const c = this.captive;
+    if (c && !c.freed && !c.lost && c.until && this.round > c.until) {
+      c.lost = true;
+      this.grid.props.delete(key(c.x, c.z));
+      this.emit('captive', { kind: 'lost', x: c.x, z: c.z });
+    }
+    if (this.hold && this.round > this.hold.rounds) {
+      this.over = 'victory';
+      this.heldOut = true;
+      this.emit('gameOver', { result: this.over, held: true });
+      return;
+    }
+    const wave = this.arrivals[this.round];
+    if (!wave) return;
+    delete this.arrivals[this.round];
+    const units = [];
+    for (const [code, x, z] of wave) {
+      const spot = this.freeNear({ x, z }, 3, () => true, true);
+      if (!spot) continue;
+      const unit = createUnit(code, spot.x, spot.z);
+      unit.name = `${unit.name} ${this.units.filter((o) => o.code === code).length + 1}`;
+      unit.unaware = false;
+      this.toughen(unit);
+      this.addUnit(unit, this.order.at(-1));
+      units.push(unit);
+    }
+    if (units.length) this.emit('arrive', { units, why: wave[0][3] });
+    this.updateAwareness();
+    this.checkEnd();
+  }
+
+  /** The hero whose owl is distracting `target` for `attacker`'s side, or null. */
+  owlFor(attacker, target) {
+    if (!target.owlHelp || attacker.team !== 'heroes') return null;
+    const master = this.units.find((u) => u.id === target.owlHelp);
+    return master?.familiar?.alive ? master : null;
+  }
+
+  /** Why `unit`'s owl can't fly to (x, z) now, or null. */
+  owlProblem(unit, x, z) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 9) return 'This fight began before familiars';
+    const owl = unit.familiar;
+    if (!owl) return 'No familiar';
+    if (!owl.alive) return 'Your owl is gone until the next fight';
+    if (unit.owlUsed) return 'The owl has flown this turn';
+    if (this.grid.isWall(x, z) || (this.grid.isSolid(x, z) && !this.grid.chasms.has(key(x, z)))) return 'The owl can’t perch there';
+    if (owl.x === x && owl.z === z) return 'The owl is already there';
+    if (this.unitAt(x, z) || this.dyingAt(x, z)) return 'Someone is there';
+    if (gridDistance(owl, { x, z }) > OWL_RANGE) return 'Too far: the owl flies 60 ft';
+    return null;
+  }
+
+  /** The foe an owl at `at` would distract: the weakest one next to it that `unit` knows of. */
+  owlTarget(unit, at) {
+    return this.knownFoes(unit).filter((e) => gridDistance(e, at) <= 1).sort((a, b) => a.hp - b.hp)[0] ?? null;
+  }
+
+  /**
+   * Once a turn, free: the owl flies to (x, z) (Flyby: no opportunity attacks) and takes the Help
+   * action against the weakest foe next to it, so the next hero to attack it has advantage,
+   * until its master's next turn. Rolls nothing.
+   */
+  sendOwl(unit, x, z) {
+    const problem = this.owlProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    unit.owlUsed = true;
+    for (const o of this.units) if (o.owlHelp === unit.id) o.owlHelp = null;
+    const owl = unit.familiar;
+    const from = { x: owl.x, z: owl.z };
+    Object.assign(owl, { x, z });
+    const target = this.owlTarget(unit, owl);
+    if (target) target.owlHelp = unit.id;
+    const result = { ok: true, kind: 'owl', unit, from, x, z, target };
+    this.emit('owl', result);
+    return result;
+  }
+
+  /** A secret door is found (`how`: 'eye' or 'search'): the wall is a closed door from now on. */
+  openSecret(sd, unit, how) {
+    sd.found = true;
+    this.grid.walls[sd.z][sd.x] = false;
+    this.grid.doors.set(key(sd.x, sd.z), { x: sd.x, z: sd.z, open: false });
+    this.emit('secret', { unit, x: sd.x, z: sd.z, how });
+  }
+
+  /** Why `unit` can't free the prisoner at (x, z), or null. */
+  freeProblem(unit, x, z) {
+    if (this.over) return 'The battle is over';
+    if (this.rules < 9) return 'This fight began before prisoners';
+    const c = this.captive;
+    if (!c || c.x !== x || c.z !== z) return 'Pick the prisoner';
+    if (c.freed) return 'Already free';
+    if (c.lost) return 'Too late: they’re gone';
+    if (unit.team !== 'heroes') return 'Only heroes free prisoners';
+    if (unit.actionUsed) return 'Action already used this turn';
+    if (unit.turned) return 'Turned: can only flee';
+    if (gridDistance(unit, c) > 1) return 'Must stand next to them';
+    return null;
+  }
+
+  /** Free (the action): the prisoner slips away and hands over what they kept hidden. */
+  freeCaptive(unit, x, z) {
+    const problem = this.freeProblem(unit, x, z);
+    if (problem) return { ok: false, reason: problem };
+    unit.actionUsed = true;
+    const c = this.captive;
+    c.freed = true;
+    this.grid.props.delete(key(x, z));
+    const loot = c.loot.splice(0);
+    for (const item of loot) {
+      if (item === 'potion') unit.potions++;
+      else this.found.push(item);
+    }
+    const result = { ok: true, kind: 'free', unit, x, z, loot };
+    this.emit('captive', result);
+    return result;
+  }
+
   barProblem(unit, x, z) {
     if (this.over) return 'The battle is over';
     if (this.rules < 8) return 'This fight began before barring doors';
@@ -2615,6 +2879,7 @@ export class Game extends Spellcasting {
   /** An attack roll against a helped foe uses the Help up. */
   useHelp(attacker, target) {
     if (this.helperFor(attacker, target)) this.endHelp(target.helped);
+    else if (this.owlFor(attacker, target)) target.owlHelp = null;
   }
 
   endHelp(helper) {
@@ -2871,7 +3136,7 @@ export class Game extends Spellcasting {
         : this.enemiesOf(unit).find((e) => !e.unaware && this.inSight(e, unit));
       if (watcher) return `${watcher.name} is watching you`;
     }
-    if (id === 'search' && unit.team === 'heroes'
+    if (id === 'search' && unit.team === 'heroes' && this.rules < 9
         && !this.enemiesOf(unit).some((e) => e.hidden && this.inSight(unit, e))) {
       return 'Nothing hidden in sight';
     }
@@ -2929,6 +3194,13 @@ export class Game extends Spellcasting {
             return { unit: h, d20, bonus, total: d20 + bonus, dc: h.hidden, success: d20 + bonus >= h.hidden };
           });
         result.found = result.checks.filter((c) => c.success).map((c) => c.unit);
+        // Rules 9: and runs a hand along the walls within 10 ft for a secret door.
+        if (unit.team === 'heroes' && this.rules >= 9) {
+          result.walls = [...this.secrets.values()].filter((sd) => !sd.found && gridDistance(unit, sd) <= 2).map((sd) => {
+            const { d20 } = this.rollD20(this.has(unit, 'poisoned') ? 'dis' : 'normal');
+            return { door: sd, d20, bonus, total: d20 + bonus, dc: SECRET_DC, success: d20 + bonus >= SECRET_DC };
+          });
+        }
         break;
       }
       case 'disengage':
@@ -3003,6 +3275,7 @@ export class Game extends Spellcasting {
       }
     }
     this.emit('action', result);
+    for (const w of result.walls ?? []) if (w.success) this.openSecret(w.door, unit, 'search');
     for (const h of result.found ?? []) {
       this.reveal(h, 'searched', unit);
       if (h.team === 'heroes') h.lastSeen = { x: h.x, z: h.z };

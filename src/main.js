@@ -21,7 +21,8 @@ import { UnitView, floatText } from './render/unitView.js';
 import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
-import { spiritWeapon } from './render/effects.js';
+import { spiritWeapon, raiseFx } from './render/effects.js';
+import { createOwl } from './render/owl.js';
 import { wait, playback, calm, setMotion, onSystemMotion, keepAwake } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Bestiary } from './ui/bestiary.js';
@@ -370,6 +371,7 @@ function backToTitle() {
   sfx.ui();
   ++fightTicket;
   for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
+  clearOwls();
   if (board) {
     stage.scene.remove(board.group);
     board.dispose();
@@ -647,6 +649,8 @@ function updateVision(force = false) {
     return;
   }
   const eyes = game.units.filter((u) => u.team === 'heroes' && u.alive && view(u)).map((u) => tileOf(view(u)));
+  // Rules 9: an owl sees from its perch, in the dark too (drawn only: the rules' sight is the heroes').
+  const owlEyes = [...owls.values()].map((o) => o.tile).filter(Boolean);
   // A hero on a stair to the other floor sees down (or up) it: from the stair at its other end too.
   for (const e of [...eyes]) {
     const far = grid.links.get(key(e.x, e.z));
@@ -655,7 +659,7 @@ function updateVision(force = false) {
   const doors = [...board.doors.values()].map((d) => (d.opened ? 1 : 0)).join('');
   // In a dark room, thrown torches, Light and burning creatures change what's lit too.
   const lit = game.dark.size ? '|' + game.lamps.length + ':' + game.units.filter((u) => u.alive && game.has(u, 'burning')).map((u) => key(u.x, u.z)).join(';') : '';
-  const sig = eyes.map((e) => key(e.x, e.z)).join(';') + '|' + doors + lit;
+  const sig = eyes.map((e) => key(e.x, e.z)).join(';') + '|' + owlEyes.map((e) => key(e.x, e.z)).join(';') + '|' + doors + lit;
   if (sig === visionSig && !force) return;
   const first = !visionSig;
   visionSig = sig;
@@ -668,6 +672,7 @@ function updateVision(force = false) {
       if (visible.has(k) && game.dim(x, z, eyes)) visible.delete(k);
     }
   }
+  if (owlEyes.length) for (const k of grid.visibleFrom(owlEyes, blocks)) visible.add(k);
   board.setVision(visible, { snap: first });
 }
 
@@ -729,8 +734,14 @@ function addView(u) {
 // --- setup ----------------------------------------------------------------
 /** Spectral weapons on the board, by the id of the cleric who summoned them. */
 const spiritWeapons = new Map();
+/** Rules 9: the wizards' and warlocks' owls on the board, by their master's id. */
+const owls = new Map();
+function clearOwls() {
+  for (const o of owls.values()) o.remove();
+  owls.clear();
+}
 const anim = createAnimations({
-  stage, hud, settings, spiritWeapons, view, addView, unseen, inView, flushReveals, syncStatus, keepInView,
+  stage, hud, settings, spiritWeapons, owls, view, addView, unseen, inView, flushReveals, syncStatus, keepInView,
   game: () => game, board: () => board, selected: () => selected, busy: () => busy, touching: () => controls.touching,
   autoplaying: () => debugAutoplay, replaying: () => !!replay,
 });
@@ -765,6 +776,7 @@ function newGame(resume = null) {
 /** Start a fight, or (`watch`: a record) a replay of a finished one. */
 function startFight(resume, watch = null) {
   for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
+  clearOwls();
   if (board) {
     stage.scene.remove(board.group);
     board.dispose();
@@ -845,6 +857,7 @@ function startFight(resume, watch = null) {
   if ([...game.grid.gates.values()].some((g) => g.down)) board.setGates(true, true); // a portcullis already down
   views = new Map();
   for (const u of game.units) addView(u);
+  for (const u of game.units) if (u.alive && u.familiar?.alive) owls.set(u.id, createOwl(stage.scene, u.familiar));
 
   busy = false;
   ended = false;
@@ -887,7 +900,7 @@ function startFight(resume, watch = null) {
     const elite = game.units.find((u) => u.elite && u.alive);
     if (elite && unseen(elite)) hud.log('Something strong lurks here: an <b>elite</b>.', 'sys');
   });
-  game.on('round', ({ round }) => hud.log(`Round ${round}`, 'round'));
+  game.on('round', ({ round }) => hud.log(game.hold ? `Round ${round} of ${game.hold.rounds}` : `Round ${round}`, 'round'));
   game.on('turnStart', ({ unit }) => onTurnStart(unit));
   game.on('turnEnd', () => hud.endTurn()); // before the next round's heading
   game.on('attack', (r) => {
@@ -1048,9 +1061,68 @@ function startFight(resume, watch = null) {
   game.on('trapFound', (r) => pendingReveals.push(r));
   game.on('alert', (r) => pendingAlerts.push(r));
   game.on('revealed', (r) => pendingSpotted.push(r));
+  // Rules 9: the gong, those who answer it, the fanatic's skeletons, the owl, secret doors and the prisoner.
+  game.on('gong', (r) => {
+    hud.logGong(r);
+    sfx.gong();
+    stage.shake(0.15, 500);
+    board.strikeGong();
+    floatText(stage.scene, { x: r.x, z: r.z - 0.5 }, 'GONG!', 'warn');
+    keepAwake(1000);
+  });
+  game.on('arrive', (r) => {
+    hud.logArrive(r);
+    if (r.why === 'hold') sfx.raise();
+    for (const u of r.units) {
+      if (inView(u)) raiseFx(stage.scene, u);
+      addView(u).rise();
+    }
+    hud.renderInitiative(game);
+  });
+  game.on('summon', (r) => {
+    if (unseen(r.unit)) hud.log('Someone chants in the dark.', 'sys');
+    else hud.logSummon(r);
+    sfx.raise();
+    if (inView(r.spawn)) raiseFx(stage.scene, r.spawn);
+    addView(r.spawn).rise();
+    hud.renderInitiative(game);
+  });
+  game.on('crumble', (r) => {
+    hud.logCrumble(r);
+    for (const u of r.called) wait(300).then(() => view(u)?.die());
+  });
+  game.on('owl', (r) => hud.logOwl(r));
+  game.on('owlSwat', (r) => {
+    hud.logOwlSwat(r);
+    if (!r.hit) return;
+    owls.get(r.master.id)?.vanish();
+    owls.delete(r.master.id);
+    floatText(stage.scene, { x: r.master.familiar.x, z: r.master.familiar.z - 0.5 }, 'Owl lost!', 'crit');
+  });
+  game.on('secret', (r) => {
+    hud.logSecret(r);
+    board.revealSecret(r.x, r.z);
+    sfx.discover();
+    floatText(stage.scene, { x: r.x, z: r.z - 0.5 }, 'Secret door!', 'spell');
+  });
+  game.on('captive', (r) => {
+    hud.logCaptive(r);
+    if (r.kind !== 'lost') return; // a freeing plays out in playFree (animate.js)
+    board.removeProp(r.x, r.z);
+    floatText(stage.scene, { x: r.x, z: r.z - 0.5 }, 'Dragged off!', 'crit');
+  });
+  // A hold-out is won as a round begins, not on anyone's move.
+  game.on('gameOver', (r) => {
+    if (!r.held) return;
+    hud.log(`The heroes held out to the end of round ${game.hold.rounds}!`, 'sys');
+    const g = game;
+    Promise.resolve().then(() => { if (game === g) checkGameOver(); });
+  });
 
   frameParty();
   if (!resume) {
+    if (game.hold) hud.log(`<b>Hold out</b> until the end of round ${game.hold.rounds}: the dead will keep coming.`, 'sys');
+    if (game.captive) hud.log(`A <b>prisoner</b> is chained here. Free them (stand beside them: More → Free prisoner) before round ${game.captive.until + 1}, or they’re dragged off.`, 'sys');
     game.start();
     saveFight();
   } else if (game.over) {
@@ -1536,6 +1608,8 @@ function stepNote(step) {
   if (step.type === 'chest') return 'opens a chest';
   if (step.type === 'brazier') return 'tips a brazier';
   if (step.type === 'lever') return 'pulls the lever';
+  if (step.type === 'owl') return 'sends the owl';
+  if (step.type === 'free') return 'frees the prisoner';
   if (step.type === 'spell') return `casts ${SPELLS[step.id]?.name ?? 'a spell'}`;
   if (step.type === 'action' || step.type === 'bonus') return STEP_VERBS[step.id] ?? ACTIONS[step.id]?.name.toLowerCase() ?? null;
   return null;

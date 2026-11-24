@@ -3,7 +3,7 @@
 // attacks, the odds of an attack or shove, a spell's targets and blast.
 
 import { key, pathFrom } from './game/grid.js';
-import { SPILL_DC, BURN_TURNS, PROP_HP, BAR_DC, TRAP_DC, hitChance, diceRange } from './game/combat.js';
+import { SPILL_DC, BURN_TURNS, PROP_HP, BAR_DC, TRAP_DC, OWL_RANGE, hitChance, diceRange } from './game/combat.js';
 import { signed, abilityMod } from './game/dice.js';
 import { SPELLS, coneTiles, lineTiles, areaTiles, directionTo } from './game/abilities.js';
 import { tips } from './ui/tips.js';
@@ -84,6 +84,8 @@ export function createPreview(deps) {
     if (selected?.kind === 'smash') return refreshSmash(u);
     if (selected?.kind === 'bar') return refreshBar(u);
     if (selected?.kind === 'disarm') return refreshDisarm(u);
+    if (selected?.kind === 'owl') return refreshOwl(u);
+    if (selected?.kind === 'free') return refreshFree(u);
     if (selected?.kind === 'ready') {
       const spells = u.spells.some((id) => !game.readySpellProblem(u, id));
       hud.hint(`Ready: pick the attack${spells ? ' or spell' : ''} to hold · a melee one strikes a foe stepping into reach, a ranged one${spells ? ' or a spell' : ''} a foe stepping into view · Esc to cancel`);
@@ -288,6 +290,34 @@ export function createPreview(deps) {
     const ok = pct(TRAP_DC - bonus);
     const boom = 100 - pct(TRAP_DC - 4 - bonus); // a total of DC − 5 or less
     hud.hint(`Disarm: ${ok}% to rig it against the monsters (DEX ${signed(bonus)} vs DC ${TRAP_DC}) · ${boom}% it goes off on you`, true);
+  }
+
+  /** Rules 9: the owl's flight: the tiles it can reach, and the foe it would distract there. */
+  function refreshOwl(u) {
+    const owl = u.familiar;
+    const tiles = [];
+    for (let dz = -OWL_RANGE; dz <= OWL_RANGE; dz++) for (let dx = -OWL_RANGE; dx <= OWL_RANGE; dx++) {
+      const x = owl.x + dx, z = owl.z + dz;
+      if (board.isExplored(x, z) && !game.owlProblem(u, x, z)) tiles.push({ x, z });
+    }
+    board.reach.set(tiles);
+    if (!hovered) return hud.hint('Owl: click a tile within 60 ft of it · Esc to cancel');
+    board.hover.set([hovered]);
+    const why = game.owlProblem(u, hovered.x, hovered.z);
+    if (why) return hud.hint(`Owl: ${why}`);
+    const foe = game.owlTarget(u, hovered);
+    if (foe && !unseen(foe)) board.targets.set([foe]);
+    const near = game.living('monsters').some((m) => !m.unaware && Math.max(Math.abs(m.x - hovered.x), Math.abs(m.z - hovered.z)) <= 1);
+    hud.hint(foe && !unseen(foe) ? `Owl: distract ${foe.name}: the next hero to attack it has advantage${near ? ' · a monster beside it may swat it' : ''}` : 'Owl: fly here and look around', true);
+  }
+
+  /** Rules 9: the prisoner next to the hero. */
+  function refreshFree(u) {
+    board.reach.set(around(u, (h, x, z) => game.freeProblem(h, x, z)));
+    if (!hovered) return hud.hint('Free prisoner: click the prisoner next to you · Esc to cancel');
+    board.hover.set([hovered]);
+    const why = game.freeProblem(u, hovered.x, hovered.z);
+    hud.hint(why ? `Free prisoner: ${why}` : 'Break their chains: they slip away and give you what they hid', !why);
   }
 
   /** Help targeting: adjacent enemies light up, the hint says who it helps. */

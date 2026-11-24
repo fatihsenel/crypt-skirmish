@@ -13,6 +13,10 @@
 // (block movement and sight), '*' braziers (a hero next to one can tip it: burning coals).
 // '~' shallow water: costs double to wade through.
 // '_' a chasm: no one crosses it, but it blocks neither sight nor shots.
+// Rules 9: `gong` {x, z, by, after, wave} (the monster on tile `by` strikes it once it knows the
+// party is here; `wave` comes in `after` rounds later), `captive` {x, z, until, loot} (freed
+// before round `until` + 1, or lost), `hold` {rounds, waves} (won at the end of round `rounds`;
+// `waves` by round), `secrets` [[x, z]] (walls that are secret doors) and `added9` spawns.
 // `asleep` lists monsters asleep at the start, by tile ('x,z'); `patrols` maps a monster's
 // tile to the waypoints it walks between while it hasn't noticed the party.
 // The campaign map that links these levels lives in campaign.js.
@@ -62,6 +66,9 @@ export const LEVELS = [
     loot: [['potion', 'weaponPlus1']],
     asleep: ['10,8', '1,10', '12,10'], // the orc sleeps off last night's ale
     patrols: { '11,2': [[8, 2], [13, 3]], '13,8': [[9, 6]] },
+    // Rules 9: Grukk's war gong. Once he knows you're here he strikes it, and two rounds later
+    // three more goblins pour out of the burrows in the north room.
+    gong: { x: 12, z: 5, by: '11,6', after: 3, wave: [['g', 14, 1], ['g', 14, 3]] },
   },
   {
     id: 'ossuary',
@@ -131,6 +138,8 @@ export const LEVELS = [
     asleep: ['1,7'], // a gorged ghoul, sleeping it off
     dark: [[1, 6, 2, 10], [10, 6, 14, 10]], // rules 6: unlit side rooms, seen only by torchlight
     patrols: { '9,1': [[13, 1], [13, 4]] },
+    // Rules 9: hold the catacombs until the end of round 7 while the dead climb out of their niches.
+    hold: { rounds: 6, waves: { 3: [['s', 1, 9], ['s', 13, 6]] } },
   },
   {
     id: 'vault',
@@ -155,6 +164,7 @@ export const LEVELS = [
     asleep: ['2,7'],
     patrols: { '9,8': [[13, 9], [7, 9]] },
     added8: [['d', 3, 9]], // rules 8: a zombie in the lower hall
+    secrets: [[13, 6]], // rules 9: a secret door from the vault's upper room to the lower hall
   },
   {
     id: 'barrow',
@@ -202,6 +212,9 @@ LEVELS.push({
   loot: [['weaponPlus1', 'potion'], ['potion', 'potion']],
   asleep: ['3,7'], // gnawing on something in the side room
   patrols: { '11,1': [[14, 1], [14, 2]] },
+  // Rules 9: a prisoner chained by the larder's west wall. Free them before round 8 and they hand
+  // over what they hid; after that the ghouls drag them off.
+  captive: { x: 7, z: 9, until: 7, loot: ['potion', 'potion', 'ringProtection'] },
 });
 
 // Act three, below the barrow: spiders, then the haunted gallery or the shrine, then the
@@ -293,6 +306,7 @@ LEVELS.push(
     asleep: ['9,5'], // the mummy stands in its alcove until disturbed
     patrols: { '12,7': [[12, 2], [9, 9]] },
     added7: [['i', 3, 9]], // rules 7: a gelatinous cube, unseen, by the side room's chest
+    added9: [['f', 13, 9]], // rules 9: a cult fanatic calling the dead up by the stair
   },
   {
     id: 'armory',
@@ -314,6 +328,7 @@ LEVELS.push(
     ],
     loot: [['weaponPlus2', 'potion'], ['potion']],
     patrols: { '12,6': [[13, 9], [9, 7]] },
+    secrets: [[10, 5]], // rules 9: a secret door from the upper hall to the lower one
   },
   {
     id: 'tomb',

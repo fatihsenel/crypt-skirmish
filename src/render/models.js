@@ -860,7 +860,7 @@ function swarm() {
 
 const BUILDERS = {
   F: fighter, P: fighter, W: wizard, K: wizard, R: rogue, A: rogue, C: cleric,
-  g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer,
+  g: goblin, s: skeleton, o: orc, r: giantRat, b: goblinBoss, n: necromancer, f: rogue,
   // act two: ghouls and the wight fall back to the skeleton miniature if their .glb fails
   u: skeleton, w: skeleton, m: mimic,
   k: giantRat, e: skeleton, q: necromancer, // act three

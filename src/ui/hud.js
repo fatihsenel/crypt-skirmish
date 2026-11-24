@@ -13,7 +13,7 @@ import { unitCard, shortName } from './unitCard.js';
 
 /** A turn-order name, short enough to tell apart: "Giant Spider 2" shows as "G. Spider 2". */
 const chipName = (name) => esc(shortName(name));
-import { isWeapon, isMelee, longReach, LIGHT_CLASSES, PROP_HP, TRAP_DC } from '../game/combat.js';
+import { isWeapon, isMelee, longReach, LIGHT_CLASSES, PROP_HP, TRAP_DC, OWL_RANGE } from '../game/combat.js';
 
 const $ = (sel) => document.querySelector(sel);
 /** Standard actions few turns need: they sit behind More with Grapple, Help and Give potion. */
@@ -911,6 +911,52 @@ export class Hud {
       (r.success ? ': it <b class="crit">gets back up</b> on 1 HP!' : '.'));
   }
 
+  /** Rules 9: the owl flies off, and maybe distracts a foe. */
+  logOwl({ unit, target }) {
+    this.log(`${who(unit)}’s <b class="spell">owl</b> swoops ` + (target
+      ? `round ${who(target)}: the next hero to attack it has <b>advantage</b>.`
+      : 'to a new perch.'));
+  }
+
+  /** Rules 9: a monster swats at an owl beside it. */
+  logOwlSwat({ unit, master, d20, total, ac, hit }) {
+    this.log(`${who(unit)} swats at ${who(master)}’s owl <span class="dice">d20 ${d20} ${signed(total - d20)} = ${total} vs AC ${ac}</span>` +
+      (hit ? ': <b class="crit">it vanishes</b> in a puff of feathers, gone until the next fight.' : ': it flaps clear.'));
+  }
+
+  /** Rules 9: the alarm gong. */
+  logGong({ unit, round }) {
+    this.log(`${who(unit)} strikes the <b class="crit">war gong</b>! Every monster here hears it, and more are coming: round ${round}.`, 'sys');
+  }
+
+  /** Rules 9: monsters arrive (the gong's wave, or the dead rising in a hold-out). */
+  logArrive({ units, why }) {
+    const list = units.map((u) => who(u)).join(', ');
+    this.log(why === 'hold' ? `The dead climb out of their niches: ${list}.` : `Answering the gong: ${list}.`, 'sys');
+  }
+
+  /** Rules 9: a cult fanatic calls up a skeleton. */
+  logSummon({ unit, spawn }) {
+    this.log(`${who(unit)} chants, and ${who(spawn)} claws its way up beside it.`);
+  }
+
+  /** Rules 9: the fanatic falls, and what it called falls with it. */
+  logCrumble({ called }) {
+    this.log(`With its caller gone, ${called.map((u) => who(u)).join(' and ')} ${called.length > 1 ? 'fall' : 'falls'} to dust.`, 'sys');
+  }
+
+  /** Rules 9: a secret door found. */
+  logSecret({ unit, how }) {
+    this.log(`${who(unit)} ${how === 'search' ? 'finds' : 'spots'} a <b class="spell">secret door</b> in the wall!`, 'sys');
+  }
+
+  /** Rules 9: the prisoner freed, or dragged off. */
+  logCaptive(r) {
+    if (r.kind === 'lost') { this.log('Too late: the prisoner is dragged off into the dark.', 'sys'); return; }
+    const names = r.loot.map((i) => (i === 'potion' ? 'a potion of healing' : esc(ITEMS[i]?.name ?? i)));
+    this.log(`${who(r.unit)} breaks the prisoner’s chains. They slip away, pressing ${names.length ? names.join(' and ') : 'their thanks'} into ${who(r.unit)}’s hands.`);
+  }
+
   /** Rules 7: a monster tests its nerve. */
   logMorale(r) {
     const why = r.why === 'leader' ? 'sees its leader fall' : 'is badly hurt';
@@ -973,7 +1019,7 @@ export class Hud {
       stepOfTheWind: `moves with the <b class="spell">Step of the Wind</b>: Dash and Disengage <span class="dice">1 ki, ${r.left} left</span>.`,
       wholeness: `uses <b>Wholeness of Body</b> and regains <b class="heal">${r.healed} HP</b>.`,
       search: !r.checks?.length
-        ? 'searches the shadows but finds nothing.'
+        ? (r.walls?.some((w) => w.success) ? 'runs a hand along the walls…' : 'searches the shadows but finds nothing.')
         : 'searches the shadows: ' + r.checks.map((c) =>
           // A hero's Stealth roll is shown; a goblin's stays secret.
           `<b>Perception ${c.total}</b> <span class="dice">d20 ${c.d20} ${signed(c.bonus)}</span> vs <span class="${c.unit.team}">${esc(c.unit.name)}</span>${c.unit.team === 'heroes' ? `’s Stealth ${c.dc}` : ''}${c.success ? ': found' : ', misses'}`,
@@ -1340,6 +1386,29 @@ export class Hud {
           active: selected?.kind === 'disarm',
         }));
       }
+      // Rules 9: send the owl familiar, or free the prisoner next to the hero.
+      if (u.familiar) {
+        const owlWhy = !u.familiar.alive ? 'Your owl is gone until the next fight.' : u.owlUsed ? 'The owl has flown this turn.' : null;
+        more.push(button({
+          kind: 'owl', id: 'owl', name: 'Owl', cls: 'spell',
+          sub: u.familiar.alive ? 'free · 60 ft' : 'gone',
+          tip: { kind: 'Familiar', chips: ['once a turn', `${OWL_RANGE * 5} ft`, 'Help', 'AC 11, 1 HP'], desc: 'Your owl flies to a tile and distracts the weakest foe next to it: the next hero to attack that foe has advantage, until your next turn. It sees in the dark, but a monster beside it as its turn starts swats at it.', how: this.howTo('a tile within 60 ft of the owl') },
+          problem: owlWhy,
+          disabled: !!owlWhy,
+          active: selected?.kind === 'owl',
+        }));
+      }
+      const c = game.captive;
+      if (c && !c.freed && !c.lost && Math.max(Math.abs(c.x - u.x), Math.abs(c.z - u.z)) <= 1) {
+        more.push(button({
+          kind: 'free', id: 'free', name: 'Free prisoner', cls: 'act',
+          sub: 'action · 5 ft',
+          tip: { kind: 'Action', chips: ['breaks the chains', `before round ${c.until + 1}`], desc: 'Break the prisoner’s chains. They slip away, and give you what they kept hidden.', how: this.howTo('the prisoner next to you') },
+          problem: actWhy,
+          disabled: !!actWhy,
+          active: selected?.kind === 'free',
+        }));
+      }
       // Rules 7: smash a barrel or crate next to the hero.
       if (game.rules >= 7 && [...game.grid.props.values()].some((p) => PROP_HP[p.kind] && Math.max(Math.abs(p.x - u.x), Math.abs(p.z - u.z)) === 1)) {
         const smashWhy = u.actionUsed ? 'Action already used this turn.' : u.turned ? 'Turned: can only flee.' : null;
@@ -1438,7 +1507,7 @@ export class Hud {
       this.handlers.onChoose({ kind: 'readySpell', id });
     }
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
-    else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'torch', 'light', 'smash', 'bar', 'disarm', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
+    else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'torch', 'light', 'smash', 'bar', 'disarm', 'owl', 'free', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
   }
 

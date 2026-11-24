@@ -33,9 +33,10 @@ const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
  * Generation 5 (rules 6) turns an orc, ghoul, ghast or mummy into an ochre jelly now and then,
  * with its own dice (`oozeIn`), so a floor without one is its generation 4 floor. Generation 6
  * (rules 7) does the same with a gelatinous cube from floor 5 (`cubeIn`), and generation 7
- * (rules 8) now and then makes a skeleton a zombie and a giant rat a swarm of rats (`restlessIn`).
+ * (rules 8) now and then makes a skeleton a zombie and a giant rat a swarm of rats (`restlessIn`);
+ * generation 8 (rules 9) a skeleton, from floor 3, a cult fanatic who calls up more (`cultIn`).
  */
-export const GEN = 7;
+export const GEN = 8;
 const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
 const BOSSES_TWO = [...BOSSES, 'v'];
 
@@ -206,6 +207,7 @@ export function makeFloor(seed, floor, gen = 1) {
   if (gen >= 5) oozeIn(grid, seed, floor);
   if (gen >= 6) cubeIn(grid, seed, floor);
   if (gen >= 7) restlessIn(grid, seed, floor);
+  if (gen >= 8) cultIn(grid, seed, floor);
 
   // Chests (potions, and gear now and then) and a few hidden traps away from the start.
   const loot = [];
@@ -274,6 +276,17 @@ function restlessIn(grid, seed, floor) {
     const [x, z] = spots[Math.floor(rrng() * spots.length)];
     grid[z][x] = to;
   }
+}
+
+/** Generation 8: now and then, from floor 3, a skeleton is a cult fanatic. Its own dice. */
+function cultIn(grid, seed, floor) {
+  const crng = seeded(hash(`endless ${seed} ${floor} cult`));
+  if (floor < 3 || crng() >= 0.3) return;
+  const spots = [];
+  grid.forEach((row, z) => row.forEach((ch, x) => { if (ch === 's') spots.push([x, z]); }));
+  if (!spots.length) return;
+  const [x, z] = spots[Math.floor(crng() * spots.length)];
+  grid[z][x] = 'f';
 }
 
 /**

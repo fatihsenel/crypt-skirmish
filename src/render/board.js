@@ -429,6 +429,7 @@ export class Board {
       cell = { objects: [], mats: [], f: 1, target: 1 };
       this.cells.set(k, cell);
     }
+    cell.applied = null; // the fog is applied to the new parts on the next tick
     for (const obj of objects) {
       cell.objects.push(obj);
       obj.traverse((o) => {
@@ -534,6 +535,8 @@ export class Board {
     };
     if (kind === 'brazier') return this.addBrazier(x, z);
     if (kind === 'lever') return this.addLever(x, z);
+    if (kind === 'gong') return this.addGong(x, z);
+    if (kind === 'captive') return this.addCaptive(x, z);
     if (kind === 'barrel') {
       if (!kitPiece('barrel_small', 0.5, -0.12, -0.1)) box(0.5, 0.5, 0x6b4a2c);
       else if (hash(x, z, 6) > 0.4) kitPiece('barrel_small', 0.36, 0.24, 0.2);
@@ -560,6 +563,110 @@ export class Board {
       for (const p of parts) p.traverse((o) => { if (o.isMesh) meshes.push(o); });
       this.walls.push({ x, z, meshes, opacity: 1 });
     }
+  }
+
+  /** Rules 9: an alarm gong, a bronze disc hung in a dark wooden frame. */
+  addGong(x, z) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    g.rotation.y = Math.PI / 4; // its face toward the camera
+    const wood = mat(0x3a2618);
+    for (const s of [-1, 1]) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.95, 0.07), wood);
+      post.position.set(s * 0.36, 0.475, 0);
+      g.add(post);
+    }
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.08, 0.09), wood);
+    beam.position.y = 0.95;
+    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.035, 28), mat(0xb8892e, { metalness: 0.85, roughness: 0.35, emissive: 0x2a1a04 }));
+    disc.rotation.x = Math.PI / 2;
+    disc.position.y = 0.55;
+    const boss = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), mat(0xd8a848, { metalness: 0.9, roughness: 0.3 }));
+    boss.scale.z = 0.4;
+    boss.position.set(0, 0.55, 0.02);
+    g.add(beam, disc, boss);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+    this.group.add(g);
+    this.addToCell(x, z, g);
+    this.gongDisc = disc;
+  }
+
+  /** Rules 9: the gong is struck: it shivers for a moment. */
+  async strikeGong() {
+    const d = this.gongDisc;
+    if (!d) return;
+    await tween(900, (t) => { d.rotation.z = Math.sin(t * Math.PI * 9) * 0.12 * (1 - t); });
+    d.rotation.z = 0;
+  }
+
+  /** Rules 9: a prisoner in rags, chained to a post. Freed or dragged off, `removeProp` takes them away. */
+  addCaptive(x, z) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    g.rotation.y = Math.PI / 4; // facing the camera, the post behind
+    g.scale.setScalar(1.7); // a figure's height
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.9, 8), mat(0x4a3424));
+    post.position.set(0, 0.45, -0.16);
+    const rags = mat(0x8a7a5c);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.17, 0.36, 10), rags);
+    body.position.set(0, 0.2, 0);
+    body.rotation.x = 0.15;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 10), mat(0xc49a7c));
+    head.position.set(0, 0.47, 0.03);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.105, 12, 10, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x3a2a1e));
+    hair.position.copy(head.position);
+    const iron = mat(0x3b3b40, { metalness: 0.7, roughness: 0.45 });
+    const chain = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.015, 6, 18), iron);
+    chain.rotation.x = Math.PI / 2;
+    chain.position.set(0, 0.3, -0.05);
+    g.add(post, body, head, hair, chain);
+    g.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; });
+    this.group.add(g);
+    this.addToCell(x, z, g);
+    (this.propParts ??= new Map()).set(key(x, z), [g]);
+  }
+
+  /**
+   * Rules 9: a secret door is found: its wall goes, the walls around it are drawn again to frame
+   * a doorway, and a closed door stands there (the grid already has it).
+   */
+  revealSecret(x, z) {
+    const k = key(x, z);
+    if (this.doors.has(k)) return;
+    const cell = this.cells.get(k);
+    if (cell) {
+      for (const o of cell.objects) this.group.remove(o);
+      cell.objects = [];
+      cell.mats = [];
+    }
+    this.walls = this.walls.filter((w) => w.x !== x || w.z !== z);
+    if (this.kit) {
+      this.addKitFloor(x, z);
+      for (const [dx, dz] of DIRS4) this.redrawKitWall(x + dx, z + dz);
+    } else {
+      const tile = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 1), mat(0x4a4540));
+      tile.position.set(x, -0.1, z);
+      tile.receiveShadow = true;
+      this.group.add(tile);
+      this.addToCell(x, z, tile);
+    }
+    const d = this.grid.doors.get(k) ?? { x, z, open: false };
+    this.doors.set(k, { ...this.addDoor(d), opened: d.open });
+    this.fogDirty = true;
+  }
+
+  /** A kit wall tile drawn again (its neighbours changed), keeping whatever else stands in its cell. */
+  redrawKitWall(x, z) {
+    const k = key(x, z);
+    const old = this.kitWalls?.get(k);
+    if (!old || !this.grid.isWall(x, z)) return;
+    const cell = this.cells.get(k);
+    for (const p of old) {
+      this.group.remove(p);
+      if (cell) cell.objects = cell.objects.filter((o) => o !== p);
+    }
+    this.walls = this.walls.filter((w) => w.x !== x || w.z !== z);
+    this.addKitWall(x, z);
   }
 
   /** Rules 7: a barrel or crate smashed to pieces: it's gone, and so is a candle on it. */
@@ -784,6 +891,7 @@ export class Board {
     const all = floor ? [...parts, floor] : parts;
     this.group.add(...all);
     this.addToCell(x, z, ...all);
+    (this.kitWalls ??= new Map()).set(key(x, z), all);
     const meshes = [];
     for (const p of parts) p.traverse((o) => { if (o.isMesh) meshes.push(o); });
     this.walls.push({ x, z, meshes, opacity: 1 });

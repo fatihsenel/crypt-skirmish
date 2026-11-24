@@ -82,7 +82,17 @@ server on 5173.
   radiant or a `radiant` spell) and the swarm of rats (`c`: `swarm`, half weapon damage, through
   foes in `passableFor`, an attack's `weak` dice at half HP); rooms add rules-8 spawns through
   `level.added8`, and rules-7 fights are replayed by `tests/fixtures/v7-fights.json`
-  (`scripts/v7-fixtures.mjs`).
+  (`scripts/v7-fixtures.mjs`). Rules 9: mid-fight arrivals (`addUnit`, `arrivals[round]`, spawned
+  by `newRound` with the `arrive` event), the alarm gong (`level.gong`, a `gong` prop; its
+  `ringer` strikes it in `turnStarts`, `ringGong`), holding out (`level.hold`: waves by round, won
+  as round `rounds + 1` begins, `gameOver` with `held`), the prisoner (`level.captive`, a
+  `captive` prop, the `free` command, `freeCaptive`), the owl familiar (`FAMILIAR_CLASSES`,
+  `u.familiar`, the `owl` command, `sendOwl`, `owlHelp`, swatted in `turnStarts`; drawn by
+  `render/owl.js`, its eyes only in the fog), secret doors (`level.secrets`, found by Search,
+  passive Perception or Keen Eyes, `openSecret`, `board.revealSecret`) and the cult fanatic (`f`:
+  `summons`, `summon`, the called crumble with it, no XP); rooms add rules-9 spawns through
+  `level.added9`, and rules-8 fights are replayed by `tests/fixtures/v8-fights.json`
+  (`scripts/v8-fixtures.mjs`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
@@ -218,8 +228,8 @@ server on 5173.
   (`crng`), so a gen-3 floor without one is its gen-2 floor; generation 4 sinks the exit's
   chamber below a stair (`sinkEnd`, its own dice too; a one-tile wall is enough there); generation 5
   turns a monster into an ochre jelly now and then (`oozeIn`, its own dice), generation 6 into a
-  gelatinous cube (`cubeIn`), and generation 7 a skeleton into a zombie and a rat into a swarm
-  (`restlessIn`); changing `makeFloor`, `POOL` or `floorBudget` itself
+  gelatinous cube (`cubeIn`), generation 7 a skeleton into a zombie and a rat into a swarm
+  (`restlessIn`), and generation 8 a skeleton into a cult fanatic (`cultIn`); changing `makeFloor`, `POOL` or `floorBudget` itself
   changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,

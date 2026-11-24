@@ -11,7 +11,7 @@ import { loadSettings, levelGain } from '../game/settings.js';
 const STORAGE_KEY = 'crypt-skirmish:muted';
 const rand = (a, b) => a + Math.random() * (b - a);
 /** Monsters that borrow another's voice: the ghast and the ghosts hiss like ghouls, spiders and the basilisk like rats, gargoyles like the wight, the ochre jelly like the mimic, zombies like ghouls and a swarm like the rats. */
-const SOUND_ALIAS = { h: 'u', e: 'u', q: 'u', k: 'r', y: 'u', t: 'u', x: 'w', l: 'w', z: 'r', a: 'w', v: 'o', j: 'm', i: 'm', d: 'u', c: 'r' };
+const SOUND_ALIAS = { h: 'u', e: 'u', q: 'u', k: 'r', y: 'u', t: 'u', x: 'w', l: 'w', z: 'r', a: 'w', v: 'o', j: 'm', i: 'm', d: 'u', c: 'r', f: 'n' };
 
 function loadMuted() {
   try {
@@ -613,6 +613,17 @@ class Sfx {
         this.tone(t + d, { type: 'sine', freq: f, freqEnd: f * 1.6, dur: 0.09, gain: 0.07, attack: 0.003 });
       });
       this.noise(t, { dur: 0.9, filter: 'lowpass', freq: 700, gain: 0.05, attack: 0.2 });
+    });
+  }
+
+  /** Rules 9: the alarm gong, a deep bronze crash that hangs in the air. */
+  gong() {
+    this.play((t) => {
+      this.noise(t, { dur: 0.25, filter: 'bandpass', freq: 600, gain: 0.35, attack: 0.002 });
+      for (const [f, g] of [[98, 0.3], [147, 0.18], [233, 0.12], [311, 0.08], [415, 0.05]]) {
+        this.tone(t, { type: 'sine', freq: f, freqEnd: f * 0.97, dur: 2.6, gain: g, attack: 0.01 });
+      }
+      this.noise(t + 0.05, { dur: 2.2, filter: 'bandpass', freq: 900, freqEnd: 400, q: 4, gain: 0.06, attack: 0.05 });
     });
   }
 

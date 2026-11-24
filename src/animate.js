@@ -22,7 +22,7 @@ import { speak, speaking } from './render/speechBubble.js';
  * `replaying()`, `flushReveals()`, `syncStatus()` and `keepInView(u)`.
  */
 export function createAnimations(app) {
-  const { stage, hud, settings, spiritWeapons, view, addView, unseen, inView, flushReveals, syncStatus, keepInView } = app;
+  const { stage, hud, settings, spiritWeapons, owls, view, addView, unseen, inView, flushReveals, syncStatus, keepInView } = app;
   let risings = []; // Nekhet's house rising, shown once the blow that bloodied him has played
   const attacked = new WeakMap(); // each fight's attackers so far: a hero's first attack speaks
   const recentLines = new Map(); // the last line of each kind of speaker, so it doesn't repeat
@@ -534,6 +534,34 @@ export function createAnimations(app) {
     await app.board().setGates(r.down);
     if (r.down) stage.shake(0.1, 220);
     await wait(200);
+  }
+
+  /** Rules 9: the owl flies to its perch and harries the foe beside it. */
+  async function playOwl(r) {
+    const owl = owls?.get(r.unit.id);
+    sfx.whoosh();
+    if (owl) await owl.flyTo(r.x, r.z);
+    if (r.target && !unseen(r.target)) {
+      floatText(stage.scene, { x: r.target.x, z: r.target.z - 0.5 }, 'Distracted!', 'cond');
+      view(r.target)?.updateStatus();
+    }
+    await wait(200);
+  }
+
+  /** Rules 9: a hero breaks the prisoner's chains; they slip away. */
+  async function playFree(unit, r) {
+    await view(unit).turnTowards(r.x, r.z);
+    sfx.maneuver();
+    await wait(250);
+    app.board().removeProp(r.x, r.z);
+    floatText(stage.scene, { x: r.x, z: r.z - 0.5 }, 'Freed!', 'heal');
+    if (r.loot.length) {
+      sfx.chest();
+      await wait(350);
+      floatText(stage.scene, { x: unit.x, z: unit.z - 0.5 }, `+${r.loot.length} item${r.loot.length > 1 ? 's' : ''}`, 'heal');
+    }
+    view(unit)?.updateStatus();
+    await wait(300);
   }
 
   /** A tipped brazier: it goes over, coals spill, and whoever stood there is burned. */
@@ -1231,6 +1259,8 @@ export function createAnimations(app) {
       case 'chest': return playChest(unit, r);
       case 'brazier': return playBrazier(unit, r);
       case 'lever': return playLever(unit, r);
+      case 'owl': return playOwl(r);
+      case 'free': return playFree(unit, r);
       case 'bonus':
       case 'action': return playAction(unit, r);
       case 'spell': return playSpell(r);

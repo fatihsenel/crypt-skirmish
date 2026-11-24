@@ -13,10 +13,12 @@ import { hash } from './dice.js';
  * splits, cracked floors give way to the hall below, alchemist's fire and caltrops, and dark
  * chambers. 7: torches thrown and the Light cantrip, living monsters breaking
  * and running (morale), smashable barrels and crates, and the Gelatinous Cube. 8: doors shut and barred, traps disarmed and turned on monsters,
- * zombies (Undead Fortitude) and swarms of rats. A saved fight, replay or
+ * zombies (Undead Fortitude) and swarms of rats. 9: alarm gongs and the monsters they call,
+ * rooms to hold and prisoners to free, the owl familiar, secret doors and the cult fanatic who
+ * calls up skeletons. A saved fight, replay or
  * link carries the number it began under (none means 1), so it plays back by its own rules.
  */
-export const RULES = 8;
+export const RULES = 9;
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits

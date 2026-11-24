@@ -56,7 +56,7 @@ export const ACTIONS = {
   nimbleEscape: { name: 'Nimble Escape', time: 'bonus', feature: true, desc: 'Disengage as a bonus action.' },
   aggressive: { name: 'Aggressive', time: 'bonus', feature: true, desc: 'Move up to its speed toward an enemy.' },
   nimbleHide: { name: 'Nimble Hide', time: 'bonus', feature: true, desc: 'Nimble Escape: Hide as a bonus action, behind cover or out of sight.' },
-  search: { name: 'Search', time: 'action', desc: 'Roll Perception against the Stealth of every hidden enemy you can see; a success finds them.' },
+  search: { name: 'Search', time: 'action', desc: 'Roll Perception against the Stealth of every hidden enemy you can see; a success finds them. It also feels the walls within 10 ft for a secret door.' },
 };
 
 export const STANDARD_ACTIONS = ['dash', 'dodge', 'disengage', 'hide', 'search'];
@@ -140,7 +140,8 @@ export const PASSIVES = {
   packTactics:'Pack Tactics: advantage when an ally is next to the target.',
   undeadFortitude: 'Undead Fortitude: dropped to 0 HP by anything but a critical hit or radiant damage, it makes a CON save (DC 5 + the damage) and stays on 1 HP if it succeeds.',
   swarm: 'Swarm: weapons deal it half damage; it moves through foes; it can’t be grappled, knocked prone, held, frightened or stunned; its bites weaken at half HP.',
-  trapSense: 'Keen Eyes: spots traps within 10 ft.',
+  darkCalling: 'Dark Calling: as its turn starts, it spends its action calling up a skeleton beside it, while it has fewer than two. They fall to dust when it dies, and are worth no XP.',
+  trapSense: 'Keen Eyes: spots traps and secret doors within 10 ft.',
   skulker: 'Skulker: monsters that have not noticed the party only spot you within 15 ft.',
 };
 

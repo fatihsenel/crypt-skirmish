@@ -36,6 +36,7 @@ const fail = (reason) => ({ ok: false, reason });
  * feed {target} (give a potion), chest {x, z}, brazier {x, z}, lever {x, z},
  * action {id, attack?, spell?} (attack or spell: Ready's pick),
  * flask {target}, caltrops {x, z}, torch {x, z, spell?}, smash {x, z}, bar {x, z}, disarm {x, z},
+ * owl {x, z}, free {x, z},
  * spell {id, unit | x, z}, smite, rebuke, end. Returns the engine's result.
  */
 export function applyCommand(game, cmd) {
@@ -91,6 +92,10 @@ export function applyCommand(game, cmd) {
       return game.barDoor(u, cmd.x, cmd.z);
     case 'disarm':
       return game.disarm(u, cmd.x, cmd.z);
+    case 'owl': // rules 9
+      return game.sendOwl(u, cmd.x, cmd.z);
+    case 'free':
+      return game.freeCaptive(u, cmd.x, cmd.z);
     case 'spell':
       return game.castSpell(u, cmd.id, spellTarget(game, cmd));
     case 'smite':

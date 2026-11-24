@@ -73,8 +73,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   potion or giving one to an ally (next to you, or tossed up to 15 ft to one you can see), throwing
   alchemist's fire, scattering caltrops, throwing your torch into the dark (a bonus action, once a
   fight; Wizards, Clerics, Sorcerers and Bards can cast **Light** instead), smashing a barrel or
-  crate next to you, barring a door and disarming a trap you've found. Grapple, Disengage, Search,
-  Help, Give potion, Fire, Caltrops, Torch, Light, Smash, Bar door and Disarm wait behind **More**
+  crate next to you, barring a door, disarming a trap you've found and freeing a prisoner. Grapple,
+  Disengage, Search, Help, Give potion, Fire, Caltrops, Torch, Light, Smash, Bar door, Disarm, Owl
+  and Free prisoner wait behind **More**
   on the action bar, so the moves most turns need stay in one row; so does
   Push, except in a room with a chasm, burning coals or stairs.
 - **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or DEX;
@@ -133,6 +134,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   radiant (Divine Smite, Divine Strike, Sacred Flame). A **swarm of rats** fills the Flooded
   Ossuary: weapons deal it half damage (spells don't), it pours through heroes, it can't be
   grappled, tripped or frightened, and its bites weaken at half HP.
+- A **cult fanatic** stands by the stair in the Sunken Halls: as its turn starts it calls up a
+  skeleton beside it (its action), up to two at once, and they fall to dust when it does.
 - Act four: mummies, wraiths and fallen knights.
 - Act five: gargoyles that stand as statues until you come close and whose claws can throw a
   hero back, and basilisks whose bite can turn a hero to stone for a turn.
@@ -176,6 +179,17 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   check against DC 13 (Wren, the Monk and the Ranger add their proficiency). Succeed and it's
   rigged against the monsters: heroes walk over it, and the next monster to step on it sets it
   off. Fail by 5 or more and it goes off on you.
+- **Secret doors** in the Sealed Vault and the Armory: Search finds one within 10 ft (WIS
+  Perception against DC 15), a hero standing next to one notices it with passive Perception 15,
+  and Wren's Keen Eyes spot one within 10 ft. Found, it's a door like any other.
+- **The alarm gong:** in the Goblin Warren Grukk strikes his gong once he knows you're there,
+  every goblin hears it, and two more come running in from the side room three rounds later.
+  A pending wave keeps the fight going after the last monster falls.
+- **Holding out:** the Catacombs are a hold-out. Two more dead climb out of their niches on
+  round 3, and the room is won when round 6 ends, whoever is still standing.
+- **The prisoner:** someone is chained up in the Ghoul Larder. Stand next to them and free them
+  (an action) before round 8 and they press two potions and a ring of protection into your hands;
+  wait too long and the ghouls drag them off.
 - **Barrels and crates** give half cover, and a hero can smash one next to them (a barrel takes 5,
   a crate 8; every blow lands). Broken, it's open floor: nothing left to hide behind.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden, but a foe
@@ -262,7 +276,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   Dives started since the ochre jelly find one now and then from floor 3, in place of a ghoul,
   skeleton, ghast or specter, and dives started since the gelatinous cube find one now and then
   from floor 5, in place of a ghoul, ghast or mummy. Dives started since the zombies find one in
-  place of a skeleton, and a swarm in place of a giant rat, on about a third of their floors.
+  place of a skeleton, and a swarm in place of a giant rat, on about a third of their floors, and
+  dives started since the cult fanatic find one in place of a skeleton on some floors from 3.
   Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
@@ -528,6 +543,14 @@ A few things differ from the SRD to keep the game simple:
   Divine Smite, Divine Strike or Sacred Flame keeps a zombie down, and a swarm takes half from
   every weapon. A swarm can't end its move in a hero's space. Fights begun before these rules
   (rules 7 and earlier) play without bars, disarming, zombies and swarms.
+- The owl familiar comes with every Wizard and Warlock (no casting needed) and is no figure in the
+  initiative: once a turn, free, it flies up to 60 ft and takes the Help action against the
+  weakest foe next to it, until its master's next turn. A monster that starts its turn beside it
+  swats at it (its first melee attack against AC 11) and one hit sends it away until the next
+  fight. It sees in the dark, for the fog only. The cult fanatic calls skeletons instead of
+  casting spells, and they give no XP. A gong's wave and a hold-out's dead arrive at the start of
+  a round, at the end of the initiative order. Fights begun before these rules (rules 8 and
+  earlier) play without gongs, prisoners, hold-outs, owls, secret doors and the fanatic.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.
@@ -689,6 +712,7 @@ src/
     models.js        procedural figures (the mimic and fallbacks)
     unitView.js      a unit's base, label and animations
     speechBubble.js  the speech bubble over a figure's label: typed, held, faded
+    owl.js           the Wizard's and Warlock's owl familiar
     effects.js       spell effects, hit particles
     rollBadge.js     the d20 badge over attacks and saves
     tween.js         promise-based tweening and playback speed

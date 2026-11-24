@@ -169,6 +169,11 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     return why ? { toast: why } : { cmd: { type: 'smash', x: t.x, z: t.z } };
   }
 
+  if (selected?.kind === 'owl' || selected?.kind === 'free') { // rules 9
+    const why = selected.kind === 'owl' ? game.owlProblem(u, t.x, t.z) : game.freeProblem(u, t.x, t.z);
+    return why ? { toast: why } : { cmd: { type: selected.kind, x: t.x, z: t.z } };
+  }
+
   if (selected?.kind === 'bar' || selected?.kind === 'disarm') { // rules 8
     const why = selected.kind === 'bar' ? game.barProblem(u, t.x, t.z) : game.disarmProblem(u, t.x, t.z);
     return why ? { toast: why } : { cmd: { type: selected.kind, x: t.x, z: t.z } };

@@ -81,6 +81,25 @@ describe('fights recorded under rules 7', () => {
   }
 });
 
+// Whole fights recorded under rules 8 by scripts/v8-fixtures.mjs: the rooms rules 9 changes (the
+// Warren's gong, the Larder's prisoner, the Catacombs' hold-out, the secret doors, the Halls), a
+// Warlock's and a Sorcerer's party and generation 7 Endless floors.
+const EIGHT = JSON.parse(readFileSync(new URL('./fixtures/v8-fights.json', import.meta.url), 'utf8'));
+
+describe('fights recorded under rules 8', () => {
+  for (const f of EIGHT) {
+    it(`replay ${f.room} (seed ${f.seed}) unchanged`, () => {
+      const party = dailyCampaign({ level: f.level, classes: f.classes }).party;
+      const g = new Game(levelOf(f.room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(f.seed), rules: 8 });
+      const r = replayFight(g, f.log);
+      expect(r.ok).toBe(true);
+      expect(g.over).toBe(f.over);
+      expect(fightCheck(g)).toBe(f.check);
+      expect(g.rng()).toBe(f.next);
+    });
+  }
+});
+
 describe('the rules a fight began under', () => {
   it('ride with a saved record and a link', async () => {
     const { watchable } = await import('../src/game/history.js');

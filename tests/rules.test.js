@@ -1017,10 +1017,13 @@ describe('stealth', () => {
       expect(g.hidden).toBe(0);
     });
 
-    it("Search is greyed out for heroes when nothing is hidden in sight", () => {
+    it("Search is greyed out for heroes when nothing is hidden in sight (before rules 9)", () => {
       const { game, w } = setup();
       setTurn(game, game.units.indexOf(w));
+      game.rules = 8;
       expect(game.actionProblem(w, 'search')).toMatch(/Nothing hidden/);
+      game.rules = 9; // it feels the walls for secret doors
+      expect(game.actionProblem(w, 'search')).toBe(null);
     });
 
     it('the goblin AI ends its turn hidden when it can', () => {
