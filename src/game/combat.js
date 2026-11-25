@@ -5,7 +5,7 @@
 import { rollDice, rollExpr, parseDice, abilityMod } from './dice.js';
 import { Grid, key, gridDistance, pathFrom } from './grid.js';
 import { createUnit, applyLevel, classOf, TEMPLATES } from './units.js';
-import { applyItems } from './items.js';
+import { applyItems, ITEMS, readsScroll } from './items.js';
 import { ACTIONS, STANDARD_ACTIONS, SPELLS } from './abilities.js';
 import { Spellcasting, NOISE, dexSaveDamage } from './spells.js';
 import { RULES, ELITE_TRAITS, ELITE_REGEN, ELITE_BARBS, eliteTrait } from './elites.js';
@@ -39,6 +39,15 @@ export const BAR_DC = 15; export const BAR_SPLINTER = 2;
 export const OWL_RANGE = 12; export const OWL_AC = 11;
 export const FAMILIAR_CLASSES = ['Wizard', 'Warlock'];
 export const SECRET_DC = 15;
+// Rules 10: a pit trap drops a hero 10 ft (DEX save to catch the edge; PIT_DAMAGE and prone on a
+// failure), and a STR check as each of its turns starts climbs out. A cracked ceiling brought down
+// (a charge, Shatter or Thunderwave next to it) drops CAVE_DAMAGE on everyone within 5 ft of it
+// (DEX save for half, prone on a failure) and leaves rubble, difficult terrain. The bosses' lair
+// actions save against LAIR_DC; Counterspell reaches COUNTER_RANGE.
+export const PIT_DC = 12; export const PIT_DAMAGE = '1d6'; export const CLIMB_DC = 10;
+export const CAVE_DC = 13; export const CAVE_DAMAGE = '2d6';
+export const LAIR_DC = { hands: 13, quake: 12 };
+export const COUNTER_RANGE = 12;
 /** Rules 7: a gelatinous cube's acid at the start of an engulfed creature's turn, and the STR save out. */
 export const ENGULF_DAMAGE = '2d6'; export const ENGULF_DC = 12;
 /** Rules 7: the passive Perception that spots a transparent monster more than 5 ft away. */
@@ -79,15 +88,17 @@ export const PATROL_PACE = 3;
 //   paralyzed   (rules 2, a ghoul's claws) can't move, act or react; fails STR and DEX saves;
 //               attacks against it have advantage, and a hit from within 5 ft is a crit. A CON
 //               save at the start of each of its turns ends it (in time to act).
+//   pit         (rules 10) at the bottom of a pit: speed 0 until a STR check as a turn starts
+//               climbs out; its attacks at foes outside have disadvantage, ranged ones at it too.
 //   petrified   (a basilisk's gaze, cut down to a turn) can't move, act or react; fails STR and
 //               DEX saves; attacks against it have advantage. Wears off as its next turn ends.
-export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified', 'burning', 'engulfed'];
+export const CONDITIONS = ['prone', 'poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified', 'burning', 'engulfed', 'pit'];
 /** Conditions that simply run out after their `turns`. */
 
 const TIMED = ['poisoned', 'frightened', 'restrained', 'rotting', 'mocked', 'paralyzed', 'stunned', 'petrified'];
 
 /** Hero fields carried from one level to the next. Level and items rebuild the rest. */
-const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands', 'flasks', 'caltrops'];
+const CARRY = ['level', 'items', 'hp', 'alive', 'slots', 'potions', 'layOnHands', 'flasks', 'caltrops', 'scrolls'];
 /** Rules 6: what a hero may carry from the pedlar besides potions (none: absent). */
 export const SUPPLIES = ['flasks', 'caltrops'];
 
@@ -189,6 +200,20 @@ export class Game extends Spellcasting {
       }
       for (const [x, z] of level.secrets ?? []) this.secrets.set(key(x, z), { x, z, found: false });
     }
+    // Rules 10: pit traps, cracked ceilings, the room's later monsters and its scrolls in chests.
+    this.ceilings = new Map(); // key -> {x, z, fallen}
+    this.rubble = new Set();   // keys of fallen ceilings' tiles (difficult terrain)
+    this.grease = new Map();   // key -> the DC of the Grease spread there (difficult, slippery)
+    this.fogs = [];            // Fog Cloud: { by, tiles } while its caster concentrates
+    this.sandstorm = 0;        // the round Nekhet's sandstorm blows in
+    // A boss's lair acts only in its own room, not when it turns up on an Endless floor.
+    this.lairs = this.rules >= 10 && !String(level.id ?? '').startsWith('deep:');
+    if (this.rules >= 10) {
+      if (level.added10) this.grid.spawns.push(...level.added10.map(([code, x, z]) => ({ code, x, z })));
+      for (const [x, z] of level.pits ?? []) this.grid.traps.set(key(x, z), { x, z, revealed: false, sprung: false, pit: true });
+      for (const [x, z] of level.ceilings ?? []) this.ceilings.set(key(x, z), { x, z, fallen: false });
+      [...this.grid.chests.values()].forEach((c, i) => { if (level.loot10?.[i] && !c.mimic) c.loot = [...level.loot10[i]]; });
+    }
     // Rules 6: cracked floor gives way over the lower hall, `below` [dx, dz] from it (level.below).
     // Older fights walk it as plain floor.
     this.below = level.below ?? null;
@@ -241,7 +266,7 @@ export class Game extends Spellcasting {
         if (saved.level) applyLevel(u, saved.level, saved.picks);
         if (saved.name) u.name = saved.name;
         applyItems(u, saved.items);
-        for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands', ...SUPPLIES]) {
+        for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands', ...SUPPLIES, 'scrolls']) {
           if (saved[f] !== undefined) u[f] = structuredClone(saved[f]);
         }
         if (!u.alive) Object.assign(u, { alive: true, hp: 1 }); // carried out by the party
@@ -515,7 +540,29 @@ export class Game extends Spellcasting {
   inSight(a, b, range = SIGHT) {
     if (this.dark.size && a.team === 'heroes' && this.dim(b.x, b.z)) return false;
     return gridDistance(a, b) <= range
-      && (this.grid.lineOfSight(a.x, a.z, b.x, b.z) || this.grid.lineOfSight(b.x, b.z, a.x, a.z));
+      && (this.grid.lineOfSight(a.x, a.z, b.x, b.z) || this.grid.lineOfSight(b.x, b.z, a.x, a.z))
+      && !this.fogBlocks(a, b);
+  }
+
+  /** Rules 10: Fog Cloud's tiles. */
+  fogTiles() {
+    const out = new Set();
+    for (const f of this.fogs) for (const k of f.tiles) out.add(k);
+    return out;
+  }
+
+  /** Rules 10: does fog hide `b` from `a`? It does past 5 ft if either stands in it or it lies between. */
+  fogBlocks(a, b) {
+    if (!this.fogs.length || gridDistance(a, b) <= 1) return false;
+    const fog = this.fogTiles();
+    if (fog.has(key(a.x, a.z)) || fog.has(key(b.x, b.z))) return true;
+    const through = (x0, z0, x1, z1) => [...this.grid.lineBetween(x0, z0, x1, z1)].some(([x, z]) => fog.has(key(x, z)));
+    return through(a.x, a.z, b.x, b.z) && through(b.x, b.z, a.x, a.z);
+  }
+
+  /** A clear line from `a` to `b` for a shot or a spell: walls, doors and (rules 10) fog in the way. */
+  clearShot(a, b) {
+    return this.grid.lineOfSight(a.x, a.z, b.x, b.z) && !this.fogBlocks(a, b);
   }
 
   /**
@@ -806,6 +853,7 @@ export class Game extends Spellcasting {
     if (u.helping) this.endHelp(u); // Help lasts until the helper's next turn
     this.standUp(u);
     if (this.has(u, 'restrained')) u.movesLeft = 0;
+    if (this.has(u, 'pit')) this.climbOut(u);
     // Paralysed: a CON save as the turn starts shakes it off in time to act (the SRD's is at the end).
     if (this.has(u, 'paralyzed')) {
       if (this.save(u, 'con', u.conditions.paralyzed.dc).success) this.removeCondition(u, 'paralyzed', 'save');
@@ -928,6 +976,10 @@ export class Game extends Spellcasting {
     caster.concentrating = null;
     const touched = [];
     if (id === 'callLightning') caster.storm = null;
+    if (id === 'fogCloud') { // rules 10: the fog thins away
+      this.fogs = this.fogs.filter((f) => f.by !== caster);
+      this.emit('fog', { tiles: this.fogTiles() });
+    }
     if (caster.mark && (id === 'hex' || id === 'huntersMark')) {
       const old = this.units.find((u) => u.id === caster.mark.id);
       if (old?.marked === caster.mark.spell) { old.marked = false; touched.push(old); }
@@ -1285,9 +1337,20 @@ export class Game extends Spellcasting {
    */
   moveCost(unit = null) {
     const water = this.grid.water;
-    if ((!this.ice?.length && !water.size) || unit?.flies) return null;
+    const rough = this.rules >= 10 ? this.roughTiles() : null;
+    if ((!this.ice?.length && !water.size && !rough?.size) || unit?.flies) return null;
     const icy = this.icyTiles();
-    return (x, z) => (icy.has(key(x, z)) || water.has(key(x, z)) ? 2 : 1);
+    return (x, z) => {
+      const k = key(x, z);
+      return icy.has(k) || water.has(k) || rough?.has(k) ? 2 : 1;
+    };
+  }
+
+  /** Rules 10: rubble, grease and open pits, difficult terrain. */
+  roughTiles() {
+    const out = new Set([...this.rubble, ...this.grease.keys()]);
+    for (const t of this.grid.traps.values()) if (t.pit && t.sprung) out.add(key(t.x, t.z));
+    return out;
   }
 
   /** Ice Storm's ground stays difficult until the end of the caster's next turn. */
@@ -1459,6 +1522,7 @@ export class Game extends Spellcasting {
 
     const steps = [];
     let walked = [path[0]];
+    let slipped = false; // rules 10: one save on Grease a move
     const flush = (from) => {
       if (walked.length > 1) steps.push({ type: 'walk', path: walked });
       walked = [from];
@@ -1552,6 +1616,21 @@ export class Game extends Spellcasting {
           return { steps, path: path.slice(0, i + 2), interrupted: true };
         }
       }
+      if (this.grease.size && !unit.flies && !slipped && this.grease.has(key(to.x, to.z))) { // rules 10
+        flush(to);
+        unit.x = to.x;
+        unit.z = to.z;
+        slipped = true;
+        const result = this.slip(unit);
+        steps.push({ type: 'slip', result });
+        if (!result.success) { // down on the grease: the move ends here
+          this.emit('move', { unit, path: path.slice(0, i + 2) });
+          for (const st of steps) if (st.type === 'door') this.noise(st, 3);
+          this.revealTraps();
+          this.updateAwareness();
+          return { steps, path: path.slice(0, i + 2), interrupted: true };
+        }
+      }
       for (const [h, before] of waiting) {
         const atk = this.readyAttack(h, unit, to, before);
         if (!atk) continue;
@@ -1598,6 +1677,7 @@ export class Game extends Spellcasting {
   }
 
   springTrap(trap, unit) {
+    if (trap.pit) return this.fallInPit(trap, unit);
     trap.sprung = true;
     trap.revealed = true;
     const { d20, total, success } = this.save(unit, 'dex', TRAP_DC);
@@ -1797,11 +1877,13 @@ export class Game extends Spellcasting {
     if (c.mimic) return this.springMimic(unit, c);
     c.opened = true;
     const loot = c.loot.splice(0);
+    const scrolls = [];
     for (const item of loot) {
       if (item === 'potion') unit.potions++;
+      else if (ITEMS[item]?.kind === 'scroll') scrolls.push({ item, to: this.takeScroll(unit, item) });
       else this.found.push(item);
     }
-    const result = { ok: true, unit, chest: c, loot };
+    const result = { ok: true, unit, chest: c, loot, ...(scrolls.length && { scrolls }) };
     this.emit('chest', result);
     return result;
   }
@@ -1840,6 +1922,7 @@ export class Game extends Spellcasting {
     const d = gridDistance(attacker, target);
     const far = this.rules >= 2 ? longReach(attack) : attack.reach;
     if (d > far) return `Out of range (${d * 5} ft, ${attack.name} reaches ${far * 5} ft${far > attack.reach ? ' at long range' : ''})`;
+    if (d > 1 && this.grid.lineOfSight(attacker.x, attacker.z, target.x, target.z) && this.fogBlocks(attacker, target)) return 'The fog hides it';
     if (d > 1 && !this.grid.lineOfSight(attacker.x, attacker.z, target.x, target.z)) {
       const lower = this.grid.lower;
       if (lower.size && lower.has(key(attacker.x, attacker.z)) !== lower.has(key(target.x, target.z))) return 'On the other floor: take the stairs first';
@@ -1905,6 +1988,9 @@ export class Game extends Spellcasting {
     if (attacker.hidden && !opportunity) adv.push('hidden');
     if (target.hidden) dis.push('target hidden');
     if (this.dark.size && attacker.team === 'heroes' && this.dim(target.x, target.z)) dis.push('in the dark');
+    if (this.has(attacker, 'pit') && !this.has(target, 'pit')) dis.push('in a pit');
+    if (this.has(target, 'pit') && gridDistance(attacker, target) > 1) dis.push('target in a pit');
+    if (this.sandstorm && this.sandstorm === this.round && attack.reach > 1 && gridDistance(attacker, target) > 1) dis.push('sandstorm');
     const mode = adv.length && !dis.length ? 'adv' : dis.length && !adv.length ? 'dis' : 'normal';
     return { adv, dis, mode };
   }
@@ -1979,7 +2065,7 @@ export class Game extends Spellcasting {
     if (!warlock.rebukeArmed || !warlock.alive || warlock.reactionUsed || !foe?.alive) return null;
     if (foe.team === warlock.team || !this.hasSlot(warlock, 1)) return null;
     const d = gridDistance(warlock, foe);
-    if (d > 12 || (d > 1 && !this.grid.lineOfSight(warlock.x, warlock.z, foe.x, foe.z))) return null;
+    if (d > 12 || (d > 1 && !this.clearShot(warlock, foe))) return null;
     warlock.rebukeArmed = false;
     warlock.reactionUsed = true;
     const slot = this.spendSlot(warlock, 1);
@@ -2226,6 +2312,8 @@ export class Game extends Spellcasting {
         result.thrown = this.throwBack(attacker, target, attack.throws.dc);
       }
       if (result.thrown) this.emit('throw', { attacker, target, ...result.thrown });
+      // Rules 10: the charge shakes a cracked ceiling down over the charger.
+      if (charge && this.rules >= 10 && attacker.alive) result.caveIns = this.shake([attacker], 1);
       // A monk's hit: Stunning Strike (armed, 1 ki) and Open Hand's push to the floor.
       const dc = 8 + attacker.prof + abilityMod(attacker.stats.wis);
       if (attacker.stunArmed && isMelee(attack) && attacker.ki > 0 && target.alive) {
@@ -2506,6 +2594,146 @@ export class Game extends Spellcasting {
     else if (u.summons && !u.actionUsed && this.units.filter((c) => c.alive && c.summonedBy === u.id).length < u.summons) this.summon(u);
   }
 
+  // --- rules 10: lair actions, pits, cave-ins, Grease, scrolls and Counterspell ---------------
+  /**
+   * A boss's lair acts as a round begins (initiative 20), once it knows the party is here:
+   * Morvath's grasping hands restrain the nearest hero (STR save), every other round Nekhet's
+   * sandstorm puts every ranged attack that round at disadvantage and Tharok's labyrinth shakes
+   * (each hero a DEX save or prone).
+   */
+  lairAction(u) {
+    const result = { unit: u, kind: u.lair, saves: [] };
+    const heroes = this.living('heroes').filter((h) => !h.dying);
+    if (u.lair === 'hands') {
+      const h = heroes.filter((o) => !this.has(o, 'restrained') && gridDistance(o, u) <= 12)
+        .sort((a, b) => gridDistance(a, u) - gridDistance(b, u) || a.id - b.id)[0];
+      if (!h) return null;
+      const s = { ...this.save(h, 'str', LAIR_DC.hands), dc: LAIR_DC.hands };
+      result.saves.push(s);
+      this.emit('lair', result);
+      if (!s.success) this.addCondition(h, 'restrained', { turns: 1, by: u });
+    } else if (u.lair === 'sandstorm') {
+      if (this.round % 2) return null;
+      this.sandstorm = this.round;
+      this.emit('lair', result);
+    } else if (u.lair === 'quake') {
+      if (this.round % 2) return null;
+      result.saves = heroes.filter((h) => !h.flies).map((h) => ({ ...this.save(h, 'dex', LAIR_DC.quake), dc: LAIR_DC.quake }));
+      this.emit('lair', result);
+      for (const s of result.saves) if (!s.success) this.addCondition(s.unit, 'prone', { by: u });
+    } else return null;
+    return result;
+  }
+
+  /** A pit trap gives way under `unit`: a DEX save catches the edge; else it falls in, hurt and prone. */
+  fallInPit(trap, unit) {
+    trap.sprung = true;
+    trap.revealed = true;
+    const { d20, total, success } = this.save(unit, 'dex', PIT_DC);
+    const roll = success ? null : rollExpr(PIT_DAMAGE, { rng: this.rng });
+    const result = { trap, unit, pit: true, d20, total, dc: PIT_DC, success, roll, damage: roll?.total ?? 0, prone: !success };
+    this.emit('trap', result);
+    if (success) return result;
+    this.cause = 'a pit';
+    this.via = 'trap';
+    this.applyDamage(unit, result.damage, null);
+    if (unit.alive) {
+      this.addCondition(unit, 'pit');
+      this.addCondition(unit, 'prone');
+      unit.movesLeft = 0;
+    }
+    return result;
+  }
+
+  /** As its turn starts, a creature in a pit climbs out with a STR check (half its movement), or stays. */
+  climbOut(u) {
+    const trap = this.grid.traps.get(key(u.x, u.z));
+    if (!trap?.pit) { this.removeCondition(u, 'pit', 'moved'); return null; } // pushed or teleported out
+    const d20 = rollDice(1, 20, this.rng).total;
+    const total = d20 + abilityMod(u.stats.str);
+    const success = total >= CLIMB_DC;
+    const result = { unit: u, d20, total, dc: CLIMB_DC, success };
+    this.emit('climb', result);
+    if (success) {
+      this.removeCondition(u, 'pit', 'climb');
+      u.movesLeft = Math.min(u.movesLeft, Math.floor(u.speed / 2));
+    } else u.movesLeft = 0;
+    return result;
+  }
+
+  /** `unit` walks onto Grease: a DEX save against its caster's DC, or it falls and stops there. */
+  slip(unit) {
+    const dc = this.grease.get(key(unit.x, unit.z));
+    const s = this.save(unit, 'dex', dc);
+    const result = { unit, d20: s.d20, total: s.total, dc, success: s.success };
+    this.emit('slip', result);
+    if (!s.success) this.addCondition(unit, 'prone');
+    return result;
+  }
+
+  /** Bring down every cracked ceiling within `reach` of any of `spots` (rules 10); the cave-ins, or null. */
+  shake(spots, reach = 0) {
+    if (!this.ceilings.size) return null;
+    const down = [...this.ceilings.values()].filter((c) => !c.fallen && spots.some((p) => gridDistance(p, c) <= reach));
+    const out = down.map((c) => this.caveIn(c)).filter(Boolean);
+    return out.length ? out : null;
+  }
+
+  /** A cracked ceiling falls: CAVE_DAMAGE on everyone within 5 ft (DEX save for half, prone on a failure); rubble after. */
+  caveIn(c) {
+    if (c.fallen || this.over) return null;
+    c.fallen = true;
+    const tiles = [];
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const x = c.x + dx;
+        const z = c.z + dz;
+        if (!this.grid.isSolid(x, z)) tiles.push({ x, z });
+      }
+    }
+    const roll = rollExpr(CAVE_DAMAGE, { rng: this.rng });
+    const victims = tiles.map((t) => this.unitAt(t.x, t.z)).filter((v) => v?.alive);
+    const result = { x: c.x, z: c.z, tiles, roll, dc: CAVE_DC, saves: this.areaSaves(victims, CAVE_DC, roll.total) };
+    for (const t of tiles) this.rubble.add(key(t.x, t.z));
+    this.emit('caveIn', result);
+    this.cause = 'a cave-in';
+    this.via = 'trap';
+    for (const sv of result.saves) {
+      this.applyDamage(sv.unit, sv.damage, null);
+      if (!sv.success && sv.unit.alive) this.addCondition(sv.unit, 'prone');
+      if (this.over) break;
+    }
+    this.noise(c, 8);
+    this.updateAwareness();
+    return result;
+  }
+
+  /** A scroll from a chest: the opener keeps it if they can read it, else the reader carrying fewest (else the opener). */
+  takeScroll(opener, item) {
+    const readers = this.living('heroes').filter((h) => readsScroll(h.code, item));
+    const to = readers.includes(opener) ? opener
+      : readers.reduce((a, b) => (!a || (b.scrolls?.length ?? 0) < (a.scrolls?.length ?? 0) ? b : a), null) ?? opener;
+    (to.scrolls ??= []).push(item);
+    return to;
+  }
+
+  /** The hero who would Counterspell `caster`'s spell (rules 10): in range and sight, reaction and a 3rd-level slot to spare. */
+  counterer(caster) {
+    return this.living('heroes').find((h) => h.spells.includes('counterspell') && !h.reactionUsed && !h.dying
+      && !this.has(h, 'paralyzed') && !this.has(h, 'stunned') && !this.has(h, 'petrified')
+      && this.hasSlot(h, 3) && gridDistance(h, caster) <= COUNTER_RANGE && this.inSight(h, caster)) ?? null;
+  }
+
+  /** `h` Counterspells a spell of `level`: a 3rd-level slot stops one of 3rd or lower; higher ones take a check. */
+  counterspell(h, level) {
+    h.reactionUsed = true;
+    const slot = this.spendSlot(h, 3);
+    if (level <= slot) return { by: h, slot, success: true };
+    const d20 = rollDice(1, 20, this.rng).total;
+    const total = d20 + abilityMod(h.stats[h.castStat]);
+    return { by: h, slot, d20, total, dc: 10 + level, success: total >= 10 + level };
+  }
+
   /** The gong is struck (the ringer's action): the room wakes, and its wave comes in `after` rounds. */
   ringGong(u) {
     u.actionUsed = true;
@@ -2537,6 +2765,12 @@ export class Game extends Spellcasting {
    * lasted through is won, and the monsters due this round come in.
    */
   newRound() {
+    if (this.rules >= 10) { // initiative 20: the bosses' lairs act first
+      for (const u of this.units) {
+        if (this.lairs && u.lair && u.alive && u.team === 'monsters' && !u.unaware && !u.asleep) this.lairAction(u);
+        if (this.over) return;
+      }
+    }
     const c = this.captive;
     if (c && !c.freed && !c.lost && c.until && this.round > c.until) {
       c.lost = true;

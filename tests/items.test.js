@@ -10,7 +10,7 @@ const withPack = (...items) => ({ ...newCampaign('normal'), pack: [...items] });
 
 describe('magic items', () => {
   it('lists every item in some chest, but those of the stops with no fight', () => {
-    const found = new Set(LEVELS.flatMap((l) => (l.loot ?? []).flat()));
+    const found = new Set(LEVELS.flatMap((l) => [...(l.loot ?? []), ...(l.loot10 ?? [])].flat()));
     const fromStops = ['periaptWounds', 'altarBlessing']; // the reliquary and the altar
     for (const id of Object.keys(ITEMS)) if (ITEMS[id].kind !== 'supply') expect(found.has(id) || fromStops.includes(id), id).toBe(true); // supplies: the pedlar's
   });

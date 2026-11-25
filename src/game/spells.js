@@ -3,9 +3,10 @@
 // game, with its dice, saves, damage and conditions.
 
 import { rollExpr, abilityMod } from './dice.js';
-import { gridDistance } from './grid.js';
+import { gridDistance, key } from './grid.js';
 import { createUnit } from './units.js';
 import { SPELLS, coneTiles, lineTiles, areaTiles, directionTo } from './abilities.js';
+import { ITEMS, readsScroll } from './items.js';
 
 /** How far a fight is heard, in tiles (combat.js has the rest of the senses); a 3rd-level spell is louder. */
 export const NOISE = 5;
@@ -83,24 +84,33 @@ export class Spellcasting {
     const s = SPELLS.massHealingWord;
     return this.units.filter((t) => t.team === caster.team && (t.alive || t.dying))
       .filter((t) => t.hp < t.maxHp && !this.has(t, 'rotting') && gridDistance(caster, t) <= s.range
-        && this.grid.lineOfSight(caster.x, caster.z, t.x, t.z))
+        && this.clearShot(caster, t))
       .slice(0, 6);
   }
 
   /** Valid targets for a unit-targeted spell ('enemy' / 'ally' / 'corpse'). */
-  spellTargets(caster, id) {
+  spellTargets(caster, id, opts = {}) {
     const s = SPELLS[id];
     const pool = s.targeting === 'enemy' ? this.enemiesOf(caster)
       : s.targeting === 'ally' ? this.units.filter((u) => u.team === caster.team && (u.alive || u.dying))
         : s.targeting === 'corpse' ? this.corpses() : [];
-    return pool.filter((t) => !this.spellProblem(caster, id, t));
+    return pool.filter((t) => !this.spellProblem(caster, id, t, opts));
   }
 
-  /** `readied`: a readied spell going off, its action and slot already spent. */
-  spellProblem(caster, id, target, { readied = false } = {}) {
+  /**
+   * `readied`: a readied spell going off, its action and slot already spent. `scroll` (rules 10):
+   * the item id of a spell scroll the caster reads instead of spending a slot.
+   */
+  spellProblem(caster, id, target, { readied = false, scroll = null } = {}) {
     const s = SPELLS[id];
-    if (!s || !caster.spells.includes(id)) return 'Unknown spell';
+    if (!s || !(caster.spells.includes(id) || scroll)) return 'Unknown spell';
     if (this.over) return 'The battle is over';
+    if (s.rules > this.rules) return `This fight began before ${s.name}`;
+    if (scroll) {
+      if (this.rules < 10) return 'This fight began before spell scrolls';
+      if (ITEMS[scroll]?.spell !== id || !caster.scrolls?.includes(scroll)) return 'No such scroll';
+      if (!readsScroll(caster.code, scroll)) return `${s.name} isn’t on your spell list`;
+    }
     if (s.time === 'reaction') return 'Cast automatically as a reaction';
     if (caster.turned) return 'Turned: can only flee';
     const quick = !readied && s.time === 'action' && caster.quickened; // Quickened Spell: a bonus action
@@ -108,8 +118,8 @@ export class Spellcasting {
     if (!readied && (s.time === 'bonus' || quick) && caster.bonusUsed) return 'Bonus action already used this turn';
     if (!readied && s.time === 'action' && s.level > 0 && caster.quickCast) return 'After a Quickened spell, your action can cast only a cantrip';
     if (quick && s.level > 0 && caster.leveledCast) return 'You cast a spell this turn: a Quickened one must be a cantrip';
-    const free = readied || this.freeRecast(caster, id);
-    const again = id === 'spiritualWeapon' && free; // strikes again for free
+    const free = readied || !!scroll || this.freeRecast(caster, id);
+    const again = id === 'spiritualWeapon' && free && !scroll; // strikes again for free
     if (!free && !this.hasSlot(caster, s.level)) return `No level ${s.level}+ spell slots left`;
     if (s.pool && !(caster.layOnHands > 0)) return 'Your healing pool is spent';
     if (s.uses && !(caster.inspiration > 0)) return 'No Bardic Inspiration left this fight';
@@ -121,7 +131,7 @@ export class Spellcasting {
     if (!target) return null; // only checking whether the spell is castable at all
 
     const inRange = (t) => gridDistance(caster, t) <= s.range
-      && (gridDistance(caster, t) <= 1 || this.grid.lineOfSight(caster.x, caster.z, t.x, t.z));
+      && (gridDistance(caster, t) <= 1 || this.clearShot(caster, t));
     switch (s.targeting) {
       case 'enemy':
         if (!target.alive || target.team === caster.team) return 'Choose an enemy';
@@ -214,7 +224,7 @@ export class Spellcasting {
     const hpOf = (u) => left.get(u.id) ?? u.hp;
     const inReach = (u) => {
       const d = gridDistance(caster, u);
-      return d <= spell.range && (d <= 1 || this.grid.lineOfSight(caster.x, caster.z, u.x, u.z));
+      return d <= spell.range && (d <= 1 || this.clearShot(caster, u));
     };
     const rays = [];
     let t = target;
@@ -247,10 +257,11 @@ export class Spellcasting {
   }
 
   /** `readied`: the slot a readied spell was given (see castReadied); its action is long spent. */
-  castSpell(caster, id, target, { readied = null } = {}) {
-    const problem = this.spellProblem(caster, id, target, { readied: readied !== null });
+  castSpell(caster, id, target, { readied = null, scroll = null } = {}) {
+    const problem = this.spellProblem(caster, id, target, { readied: readied !== null, scroll });
     if (problem) return { ok: false, reason: problem };
     const spell = SPELLS[id];
+    if (scroll) caster.scrolls.splice(caster.scrolls.indexOf(scroll), 1); // read, the scroll crumbles
     this.cause = spell.name;
     this.via = 'spell';
     const quick = readied === null && spell.time === 'action' && caster.quickened;
@@ -262,15 +273,27 @@ export class Spellcasting {
       caster.quickened = false;
       caster.quickCast = true;
     } else if (spell.time === 'action' && spell.level > 0) caster.leveledCast = true;
-    const again = readied === null && this.freeRecast(caster, id);
-    const slot = readied ?? (again ? (caster.storm ?? caster.spiritWeapon).slot : this.spendSlot(caster, spell.level));
+    const again = readied === null && !scroll && this.freeRecast(caster, id);
+    const slot = readied ?? (scroll ? spell.level : again ? (caster.storm ?? caster.spiritWeapon).slot : this.spendSlot(caster, spell.level));
     const upcast = Math.max(0, slot - spell.level);
     this.reveal(caster, 'spell');
     const focus = this.rules >= 2 && spell.concentration; // rules 2: one concentration spell at a time
     // A new mark moves the old one itself (the case below clears its tag).
     const moving = ['hex', 'huntersMark', 'callLightning'].includes(id) && caster.concentrating === id;
     if (focus && !moving) this.endConcentration(caster, 'switch');
-    const result = { ok: true, kind: 'spell', id, spell, caster, slot: again ? 0 : slot, ...(readied !== null && { readied: true }), ...(quick && { quickened: true }) };
+    const result = { ok: true, kind: 'spell', id, spell, caster, slot: again || scroll ? 0 : slot, ...(readied !== null && { readied: true }), ...(quick && { quickened: true }), ...(scroll && { scroll }) };
+    // Rules 10: a hero's Counterspell stops a monster's spell; its action and slot are spent all the same.
+    const counter = this.rules >= 10 && caster.team === 'monsters' && spell.level > 0 ? this.counterer(caster) : null;
+    if (counter) {
+      result.target = target?.team ? target : undefined;
+      result.countered = this.counterspell(counter, slot);
+      this.emit('counterspell', result);
+      if (result.countered.success) {
+        this.alert(caster, 'hurt');
+        this.updateAwareness();
+        return result;
+      }
+    }
 
     switch (id) {
       case 'magicMissile': {
@@ -360,6 +383,7 @@ export class Spellcasting {
         result.saves = this.areaSaves(victims, dc, roll.total, 'con');
         this.emit('spell', result);
         for (const s of result.saves) this.applyDamage(s.unit, s.damage, caster);
+        if (this.rules >= 10) result.caveIns = this.shake(tiles); // rules 10: the ringing brings a cracked ceiling down
         break;
       }
       case 'thunderwave': {
@@ -372,6 +396,28 @@ export class Spellcasting {
         for (const s of result.saves) {
           this.applyDamage(s.unit, s.damage, caster);
           if (!s.success && s.unit.alive) this.addCondition(s.unit, 'prone', { by: caster });
+          this.alert(s.unit, 'hurt');
+        }
+        if (this.rules >= 10 && caster.alive) result.caveIns = this.shake([caster], 1);
+        break;
+      }
+      case 'fogCloud': { // rules 10
+        const tiles = areaTiles(this.grid, target, spell.radius);
+        this.fogs.push({ by: caster, tiles: new Set(tiles.map((t) => key(t.x, t.z))) });
+        Object.assign(result, { center: { x: target.x, z: target.z }, tiles });
+        this.emit('spell', result);
+        break;
+      }
+      case 'grease': { // rules 10
+        const tiles = areaTiles(this.grid, target, spell.radius);
+        const dc = this.spellDC(caster);
+        for (const t of tiles) this.grease.set(key(t.x, t.z), dc);
+        const victims = tiles.map((t) => this.unitAt(t.x, t.z)).filter((u) => u?.alive && !u.flies);
+        Object.assign(result, { center: { x: target.x, z: target.z }, tiles, dc });
+        result.saves = victims.map((v) => this.save(v, 'dex', dc));
+        this.emit('spell', result);
+        for (const s of result.saves) {
+          if (!s.success) this.addCondition(s.unit, 'prone', { by: caster });
           this.alert(s.unit, 'hurt');
         }
         break;

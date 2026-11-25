@@ -92,7 +92,17 @@ server on 5173.
   passive Perception or Keen Eyes, `openSecret`, `board.revealSecret`) and the cult fanatic (`f`:
   `summons`, `summon`, the called crumble with it, no XP); rooms add rules-9 spawns through
   `level.added9`, and rules-8 fights are replayed by `tests/fixtures/v8-fights.json`
-  (`scripts/v8-fixtures.mjs`).
+  (`scripts/v8-fixtures.mjs`). Rules 10: lair actions (a boss's `lair`: `hands`, `sandstorm`,
+  `quake`; `lairAction` in `newRound`, the `lair` event), spell scrolls (`kind: 'scroll'` items,
+  carried in `u.scrolls`, `readsScroll` and `classSpells`; a spell command's `scroll`, `takeScroll`
+  from chests, the pedlar's one in `stock`), Counterspell (`counterer`, `counterspell`, a spell
+  result's `countered`), pit traps (`level.pits`, a trap's `pit`, `fallInPit`, the `pit` condition,
+  `climbOut`), cracked ceilings (`level.ceilings`, `shake` from a charge, Shatter or Thunderwave,
+  `caveIn`, `rubble`; a result's `caveIns`, `playCaveIns`), Fog Cloud (`fogs`, `fogBlocks`,
+  `clearShot`; kept out of `Grid`) and Grease (`grease`, a `slip` move step); rubble, grease and
+  open pits are difficult through `roughTiles`. Rooms add rules-10 chest loot through
+  `level.loot10` (and spawns through `level.added10`), and rules-9 fights are replayed by
+  `tests/fixtures/v9-fights.json` (`scripts/v9-fixtures.mjs`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced

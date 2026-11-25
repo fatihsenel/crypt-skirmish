@@ -52,7 +52,7 @@ export class Shop {
     this.el.querySelector('.shop-gold').innerHTML = `The party has <b class="gold">${state.gold ?? 0} gold</b>.`;
     this.el.querySelector('.buy').innerHTML = stock(state).map((id) => {
       const problem = buyProblem(state, id);
-      return `<li><div><b class="loot">${esc(ITEMS[id].name)}</b><small>${esc(ITEMS[id].desc)}${id === 'potion' || ITEMS[id].kind === 'supply' ? ' Goes to whoever carries fewest.' : ' Goes into the pack.'}</small></div>
+      return `<li><div><b class="loot">${esc(ITEMS[id].name)}</b><small>${esc(ITEMS[id].desc)}${id === 'potion' || ITEMS[id].kind === 'supply' ? ' Goes to whoever carries fewest.' : ITEMS[id].kind === 'scroll' ? ' Goes to a hero who can read it.' : ' Goes into the pack.'}</small></div>
         <button type="button" data-buy="${id}"${problem ? ` disabled data-hint="${esc(problem)}"` : ''}>Buy · ${PRICES[id]} gold</button></li>`;
     }).join('');
     const spare = state.pack.map((id, i) => [id, i]).filter(([id]) => sellPrice(id));

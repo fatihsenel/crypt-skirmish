@@ -553,7 +553,7 @@ export class Camp {
       return `<div class="hero-card ${code}">
         <div class="hero-top"><b>${esc(u.name)}</b> <small>${esc(u.cls)} · Lv ${u.level}${u.level >= MAX_LEVEL ? ' (max)' : ''}</small></div>
         <div class="hp-line"><span class="hpbar"><i style="width:${pct}%"></i></span><span>${u.hp}/${u.maxHp} HP</span><span>AC ${u.ac + u.acBonus}</span></div>
-        <div class="hero-meta">${slots}<span data-hint="Potions of healing">Potions ${u.potions}</span>${u.flasks > 0 ? `<span data-hint="Flasks of alchemist’s fire">Fire ${u.flasks}</span>` : ''}${u.caltrops > 0 ? `<span data-hint="Bags of caltrops">Caltrops ${u.caltrops}</span>` : ''}</div>
+        <div class="hero-meta">${slots}<span data-hint="Potions of healing">Potions ${u.potions}</span>${u.flasks > 0 ? `<span data-hint="Flasks of alchemist’s fire">Fire ${u.flasks}</span>` : ''}${u.caltrops > 0 ? `<span data-hint="Bags of caltrops">Caltrops ${u.caltrops}</span>` : ''}${u.scrolls?.length ? `<span data-hint="${esc(u.scrolls.map((x) => ITEMS[x].name).join(', '))}">Scrolls ${u.scrolls.length}</span>` : ''}</div>
         ${items ? `<div class="hero-items">${items}</div>` : ''}
         ${this.pickHtml(state, code, u)}
       </div>`;

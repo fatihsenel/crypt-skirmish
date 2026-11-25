@@ -57,7 +57,7 @@ const dice = (roll) => `<span class="dice">[${roll.rolls.join('+')}${roll.bonus 
 const stealthRoll = (r) => !r.rolls ? '' : `<span class="dice">${r.rolls.length > 1 ? `d20 [${r.rolls.join(', ')}] → ${r.d20}` : `d20 ${r.d20}`} ${signed(r.bonus)}${r.noisy ? ' · noisy armour' : ''}${r.poisoned ? ' · poisoned' : ''}</span>`;
 const saveText = (s, fail = 'fails') =>
   `${who(s.unit)} <span class="dice">${s.total}${s.aura ? ` (aura +${s.aura})` : ''}${s.inspired ? ` (inspired +${s.inspired.total})` : ''}${s.paralyzed ? ' (paralysed: fails)' : ''}</span> ` + (s.success ? '<b class="hit">saves</b>' : `<b class="crit">${fail}</b>`);
-const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', petrified: 'turns to stone!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!', stunned: 'is stunned!', burning: 'catches fire!', engulfed: 'is engulfed!' };
+const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', frightened: 'is frightened!', restrained: 'is caught in the web!', petrified: 'turns to stone!', rotting: 'is wracked by mummy rot!', mocked: 'is mocked!', paralyzed: 'is paralysed!', stunned: 'is stunned!', burning: 'catches fire!', engulfed: 'is engulfed!', pit: 'is in a pit!' };
 
 /** Blessed Healer's line under a healing spell, if the cleric healed too. */
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
@@ -641,6 +641,7 @@ export class Hud {
   /** A condition starts or ends. (Starting ones from riders and spells are logged with them.) */
   logCondition({ unit, name, on, cause }) {
     if (on || cause === 'used' || cause === 'inside') return; // (a mockery spent on an attack shows in its line)
+    if (name === 'pit') return; // logged by logClimb
     if (name === 'engulfed') {
       if (cause === 'save') this.log(`${who(unit)} <b class="hit">struggles out</b> of the cube.`, 'sys');
       else if (cause === 'freed') this.log(`${who(unit)} slides free of the cube.`, 'sys');
@@ -708,7 +709,7 @@ export class Hud {
 
   logSpell(r) {
     if (r.readied) this.log(`<b class="opp">Readied spell!</b> ${who(r.target)} steps into ${who(r.caster)}’s view.`);
-    const slot = (r.slot ? `<span class="dice">${ordinal(r.slot)}-level slot</span>` : '<span class="dice">cantrip</span>')
+    const slot = (r.scroll ? '<span class="dice">from a scroll</span>' : r.slot ? `<span class="dice">${ordinal(r.slot)}-level slot</span>` : '<span class="dice">cantrip</span>')
       + (r.quickened ? ' <span class="dice">Quickened: bonus action</span>' : '');
     const name = `<b class="spell">${esc(r.spell.name)}</b>`;
     if (r.id === 'shield') {
@@ -827,10 +828,52 @@ export class Hud {
     } else if (r.id === 'animateDead') {
       this.log(`${who(r.caster)} casts ${name}. The ${esc(r.corpse.cls.toLowerCase())} corpse rises as ` +
         `<span class="monsters">${esc(r.risen.name)}</span>! ${slot}`, 'death');
+    } else if (r.id === 'fogCloud') {
+      this.log(`${who(r.caster)} casts ${name}: thick fog fills ${r.tiles.length} tiles. Nobody sees into or through it past 5 ft while they concentrate. ${slot}`);
+    } else if (r.id === 'grease') {
+      const saves = r.saves.length ? r.saves.map((s) => saveText(s, 'falls prone')).join('<br>') : '';
+      this.log(`${who(r.caster)} casts ${name}: slick grease covers ${r.tiles.length} tiles (difficult; DEX save DC ${r.dc} or fall). ${slot}${saves && `<br>${saves}`}`);
     }
   }
 
+  /** Rules 10: a boss's lair acts as the round begins. */
+  logLair({ unit, kind, saves }) {
+    if (kind === 'hands') {
+      const s = saves[0];
+      this.log(`<b class="crit">Lair:</b> grasping hands claw up from the floor around ${who(s.unit)}. STR save DC ${s.dc}: ${saveText(s, 'is held fast')}${s.success ? '.' : ' (restrained until their turn ends).'}`, 'sys');
+    } else if (kind === 'sandstorm') {
+      this.log(`<b class="crit">Lair:</b> a sandstorm howls through ${who(unit)}’s tomb. Ranged attacks past 5 ft have disadvantage this round.`, 'sys');
+    } else {
+      this.log(`<b class="crit">Lair:</b> the labyrinth shakes. DEX save DC ${saves[0]?.dc ?? ''}:<br>${saves.map((s) => saveText(s, 'falls prone')).join('<br>')}`, 'sys');
+    }
+  }
+
+  logClimb(r) {
+    this.log(`${who(r.unit)} tries to climb out of the pit: <span class="dice">STR ${r.total} vs DC ${r.dc}</span> ${r.success ? '<b class="hit">out</b>, with half their movement left.' : '<b class="crit">slips back</b>, stuck this turn.'}`);
+  }
+
+  logSlip(r) {
+    this.log(`${who(r.unit)} steps onto the grease. DEX save DC ${r.dc}: ${saveText(r, 'falls prone')}${r.success ? '.' : ', and their move ends.'}`);
+  }
+
+  logCaveIn(r) {
+    const saves = r.saves.length ? r.saves.map((s) => `${who(s.unit)} <span class="dice">DEX ${s.total}</span> ` +
+      (s.success ? `saves, <b class="hit">${s.damage}</b>` : `fails, <b class="crit">${s.damage}</b> and is knocked prone`)).join('<br>') : '<span class="miss">It catches no one.</span>';
+    this.log(`<b class="crit">The cracked ceiling caves in!</b> <span class="dice">${r.roll.total} bludgeoning [${r.roll.rolls.join('+')}], DC ${r.dc}</span>. Rubble covers the floor.<br>${saves}`);
+  }
+
+  logCounterspell({ caster, spell, countered: c }) {
+    const check = c.d20 != null ? ` <span class="dice">check ${c.total} vs DC ${c.dc}</span>` : '';
+    this.log(`${who(c.by)} casts <b class="spell">Counterspell</b> as ${who(caster)} casts <b class="spell">${esc(spell.name)}</b>${check}: ` +
+      (c.success ? '<b class="hit">the spell fizzles</b>.' : '<b class="crit">it breaks through</b>.') + ' <span class="dice">reaction, 3rd-level slot</span>');
+  }
+
   logTrap(r) {
+    if (r.pit) { // rules 10
+      this.log(`<b class="crit">A pit!</b> The floor gives way under ${who(r.unit)}. DEX save DC ${r.dc}: ${saveText(r)}` +
+        (r.success ? ', catching the edge.' : `, falls in for <b class="hit">${r.damage} bludgeoning</b> ${dice(r.roll)}, prone (STR DC 10 to climb out).`));
+      return;
+    }
     const opener = r.trap.rigged && r.unit.team === 'monsters' ? '<b class="crit">The rigged trap!</b>' // rules 8
       : r.trap.revealed && r.unit.team === 'heroes' && r.unit === this.disarming ? '<b class="crit">The trap goes off!</b>' : '<b class="crit">A hidden trap!</b>';
     this.disarming = null;
@@ -986,11 +1029,12 @@ export class Hud {
     this.log(`${who(unit)} spots a <b class="opp">hidden trap</b>. Heroes will walk around it.`);
   }
 
-  logChest({ unit, loot }) {
+  logChest({ unit, loot, scrolls = [] }) {
     const n = loot.filter((l) => l === 'potion').length;
     const parts = [
       ...(n ? [`<b class="heal">${n} potion${n > 1 ? 's' : ''} of healing</b>`] : []),
-      ...loot.filter((l) => l !== 'potion').map((l) => `<b class="loot">${esc(ITEMS[l].name)}</b> (into the pack)`),
+      ...scrolls.map((s) => `a <b class="loot">${esc(ITEMS[s.item].name)}</b> (to ${who(s.to)})`),
+      ...loot.filter((l) => l !== 'potion' && ITEMS[l]?.kind !== 'scroll').map((l) => `<b class="loot">${esc(ITEMS[l].name)}</b> (into the pack)`),
     ];
     this.log(`${who(unit)} opens the chest: ${parts.length ? `${parts.join(' and ')}.` : 'it is empty.'}`);
   }
@@ -1118,6 +1162,7 @@ export class Hud {
         ${u.team === 'heroes' ? `<span data-hint="Potions of healing">Potions <b>${u.potions}</b></span>` : ''}
         ${u.flasks > 0 ? `<span data-hint="Flasks of alchemist’s fire">Fire <b>${u.flasks}</b></span>` : ''}
         ${u.caltrops > 0 ? `<span data-hint="Bags of caltrops">Caltrops <b>${u.caltrops}</b></span>` : ''}
+        ${u.scrolls?.length ? `<span data-hint="${esc(u.scrolls.map((x) => ITEMS[x].name).join(', '))}">Scrolls <b>${u.scrolls.length}</b></span>` : ''}
         ${u.ki !== undefined ? `<span data-hint="Ki points: your level, back every fight">Ki <b>${u.ki}</b></span>` : ''}
         ${u.sorcery !== undefined ? `<span data-hint="Sorcery points: your level, back every fight">Sorcery <b>${u.sorcery}</b></span>` : ''}
       </div>
@@ -1266,9 +1311,26 @@ export class Hud {
         },
         problem: problem && `${problem}.`,
         disabled: !!problem,
-        active: selected?.kind === 'spell' && selected.id === id,
+        active: selected?.kind === 'spell' && selected.id === id && !selected.scroll,
       });
     });
+    // Rules 10: each kind of scroll the hero carries, read like the spell but without a slot.
+    for (const item of [...new Set(u.scrolls ?? [])]) {
+      const it = ITEMS[item];
+      const s = SPELLS[it.spell];
+      const n = u.scrolls.filter((x) => x === item).length;
+      const problem = this.readying ? 'Scrolls can’t be readied' : game.spellProblem(u, it.spell, undefined, { scroll: item });
+      spells.push(button({
+        kind: 'scroll', id: item, name: `${s.name} scroll`, cls: 'spell',
+        sub: `${n > 1 ? `${n} · ` : ''}one use · ${s.time === 'bonus' ? 'bonus' : 'action'}`,
+        tip: { kind: `${it.name} · one use, no slot`, chips: spellChips(s, u), desc: s.desc,
+          how: ['enemy', 'cone'].includes(s.targeting) ? this.howTo(s.targeting === 'cone' ? 'where to aim' : 'an enemy')
+            : s.targeting === 'ally' ? this.howTo('an ally (or yourself)') : s.targeting === 'tile' || s.targeting === 'area' ? this.howTo('a spot') : null },
+        problem: problem && `${problem}.`,
+        disabled: !!problem,
+        active: selected?.kind === 'spell' && selected.scroll === item,
+      }));
+    }
 
     const acts = [];
     for (const id of game.actionsFor(u)) {
@@ -1509,6 +1571,7 @@ export class Hud {
     else if (kind === 'attack') this.handlers.onChoose({ kind, attack: this.current.attacks[Number(id)] });
     else if (['shove', 'push', 'grapple', 'help', 'feed', 'flask', 'caltrops', 'torch', 'light', 'smash', 'bar', 'disarm', 'owl', 'free', 'ready', 'smite', 'rebuke'].includes(kind)) this.handlers.onChoose({ kind });
     else if (kind === 'spell' || kind === 'action') this.handlers.onChoose({ kind, id });
+    else if (kind === 'scroll') this.handlers.onChoose({ kind: 'spell', id: ITEMS[id].spell, scroll: id }); // rules 10
   }
 
   setMusic(on) {

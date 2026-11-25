@@ -165,6 +165,28 @@ function stripes(color, opacity, width, pattern = 'stripes') {
       g.moveTo(x - 3, y - 3); g.lineTo(x + 3, y + 3);
       g.stroke();
     }
+  } else if (pattern === 'slick') { // rules 10: Grease, glossy dark blots
+    g.globalAlpha = 0.55;
+    g.fillRect(0, 0, 64, 64);
+    g.globalAlpha = 1;
+    for (const [x, y, r] of [[18, 20, 12], [44, 16, 9], [36, 42, 14], [12, 50, 8], [56, 54, 7]]) {
+      g.beginPath();
+      g.ellipse(x, y, r, r * 0.7, 0.4, 0, Math.PI * 2);
+      g.fill();
+    }
+  } else if (pattern === 'cracks') { // rules 10: a cracked ceiling's shadow, jagged lines from the middle
+    const shade = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+    shade.addColorStop(0, 'rgba(255,255,255,0.45)');
+    shade.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = shade;
+    g.fillRect(0, 0, 64, 64);
+    for (const [x, y, a, b] of [[32, 32, 6, 8], [32, 32, 58, 20], [32, 32, 20, 60], [32, 32, 54, 56], [32, 32, 10, 40]]) {
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo((x + a) / 2 + 5, (y + b) / 2 - 4);
+      g.lineTo(a, b);
+      g.stroke();
+    }
   } else if (pattern === 'dots') {
     for (let x = 8; x < 64; x += 16) {
       for (let y = 8; y < 64; y += 16) {
@@ -362,6 +384,12 @@ export class Board {
     this.ice = new TileLayer(this.group, stripes(0xd8f0ff, 0.6, 3), 0.98, 0.0106);
     this.fire = new TileLayer(this.group, overlay(0xff4a10, 0.8), 0.9, 0.0108); // a tipped brazier's coals
     this.caltrops = new TileLayer(this.group, stripes(0xc8c8d4, 0.95, 2.5, 'spikes'), 0.92, 0.0107); // rules 6
+    // Rules 10: cracked ceilings (their shadow on the floor), Grease's slick and Fog Cloud's tiles.
+    this.cracksAbove = new TileLayer(this.group, stripes(0x140e0a, 0.95, 3.5, 'cracks'), 0.98, 0.0105);
+    this.grease = new TileLayer(this.group, stripes(0x5a4408, 0.85, 4, 'slick'), 0.96, 0.0107);
+    this.fogPuffs = new THREE.Group();
+    this.group.add(this.fogPuffs);
+    this.rubbleTiles = new Set();
     // The figure a name in the combat log points at (hovered or clicked), over everything.
     this.spot = new TileLayer(this.group, overlay(0xffc93c, 0.7), 0.98, 0.018);
     // Where a foe out of sight was last heard (main.js): faint rings, over the fog.
@@ -392,6 +420,68 @@ export class Board {
       return { x, z };
     }));
     this.fireLit = keys.size > 0;
+  }
+
+  /** Rules 10: the cracked ceilings still up (the Game's `ceilings`, a Map of {x, z, fallen}). */
+  setCeilings(ceilings) {
+    this.cracksAbove.set([...(ceilings?.values() ?? [])].filter((c) => !c.fallen));
+  }
+
+  /** Rules 10: the tiles Grease covers (tile keys). */
+  setGrease(keys) {
+    this.grease.set([...(keys ?? [])].map((k) => {
+      const [x, z] = String(k).split(',').map(Number);
+      return { x, z };
+    }));
+  }
+
+  /** Rules 10: Fog Cloud's tiles (a Set of keys): grey puffs that hide what is in them. */
+  setFog(keys) {
+    const want = new Set(keys ?? []);
+    for (const p of [...this.fogPuffs.children]) {
+      if (!want.has(p.userData.k)) this.fogPuffs.remove(p);
+      else want.delete(p.userData.k);
+    }
+    const m = mat(0xc8ccd0, { transparent: true, opacity: 0.82, depthWrite: false, roughness: 1 });
+    for (const k of want) {
+      const [x, z] = k.split(',').map(Number);
+      const g = new THREE.Group();
+      g.userData.k = k;
+      for (let i = 0; i < 3; i++) {
+        const r = 0.32 + ((x * 7 + z * 3 + i) % 3) * 0.05;
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), m);
+        puff.scale.y = 0.75;
+        puff.position.set((i - 1) * 0.22, 0.28 + (i % 2) * 0.22, ((i * 5 + x) % 3 - 1) * 0.14);
+        g.add(puff);
+      }
+      g.position.set(x, 0, z);
+      this.fogPuffs.add(g);
+    }
+    keepAwake(200);
+  }
+
+  /** Rules 10: rubble from a cave-in on each tile (difficult terrain): a few fallen stones. */
+  addRubble(tiles) {
+    const stone = mat(0x6e6458, { roughness: 1 });
+    for (const { x, z } of tiles) {
+      const k = key(x, z);
+      if (this.rubbleTiles.has(k)) continue;
+      this.rubbleTiles.add(k);
+      const g = new THREE.Group();
+      for (let i = 0; i < 4; i++) {
+        const s = 0.09 + ((x * 3 + z * 5 + i * 7) % 4) * 0.025;
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), stone);
+        const a = i * 1.7 + x + z;
+        rock.position.set(Math.cos(a) * 0.25, s * 0.6, Math.sin(a) * 0.25);
+        rock.rotation.set(a, a * 2, 0);
+        rock.castShadow = true;
+        g.add(rock);
+      }
+      g.position.set(x, 0, z);
+      this.group.add(g);
+      this.addToCell(x, z, g);
+    }
+    this.fogDirty = true;
   }
 
   setIce(keys) {
@@ -1149,6 +1239,7 @@ export class Board {
   async showTrap(trap) {
     const k = key(trap.x, trap.z);
     let t = this.traps.get(k);
+    if (!t && trap.pit) t = this.addPit(trap, k);
     if (!t) {
       const g = new THREE.Group();
       g.position.set(trap.x, 0, trap.z);
@@ -1187,12 +1278,42 @@ export class Board {
       t.cell = cell;
     }
     if (trap.rigged && !trap.sprung && !t.rigged) this.rigTrap(trap);
+    if (t.pit) {
+      if (trap.sprung && !t.sprung) { // the planks drop away
+        t.sprung = true;
+        await tween(220, (p) => { t.lid.position.y = 0.02 - p * 0.6; t.lid.rotation.z = p * 0.9; }, easeOut);
+        t.lid.visible = false;
+      }
+      return;
+    }
     if (trap.sprung && !t.sprung) {
       t.sprung = true;
       t.edge.material.color.set(0x888888);
       t.cell.mats.find((e) => e.m === t.edge.material)?.base.set(0x888888);
       await tween(110, (p) => { t.spikes.position.y = t.lo * (1 - p); }, easeOut);
     }
+  }
+
+  /** Rules 10: a pit trap: a black hole under rotten planks, its edge marked once found. */
+  addPit(trap, k) {
+    const g = new THREE.Group();
+    g.position.set(trap.x, 0, trap.z);
+    this.group.add(g);
+    const hole = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 0.78).rotateX(-Math.PI / 2), mat(0x080605, { roughness: 1 }));
+    hole.position.y = 0.006;
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.03, 0.76), mat(0x5a4632));
+    lid.position.y = 0.02;
+    const edge = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.46, 4, 1, Math.PI / 4).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0xff6a3a, transparent: true, opacity: 0.6, depthWrite: false }));
+    edge.position.y = 0.04;
+    g.add(hole, lid, edge);
+    const t = { g, edge, lid, pit: true, sprung: false };
+    this.traps.set(k, t);
+    const cell = this.addToCell(trap.x, trap.z, g);
+    cell.applied = null;
+    this.fogDirty = true;
+    t.cell = cell;
+    return t;
   }
 
   /** Rules 8: a disarmed trap, reset against the monsters: its edge turns from red to green. */
@@ -1207,7 +1328,7 @@ export class Board {
   /** Lower the spikes again after the victim has moved on. */
   async retractTrap(trap) {
     const t = this.traps.get(key(trap.x, trap.z));
-    if (t) await tween(500, (p) => { t.spikes.position.y = t.lo * p; }, easeInOut);
+    if (t && !t.pit) await tween(500, (p) => { t.spikes.position.y = t.lo * p; }, easeInOut);
   }
 
   clearHighlights() {

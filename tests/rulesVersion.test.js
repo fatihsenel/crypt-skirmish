@@ -100,6 +100,25 @@ describe('fights recorded under rules 8', () => {
   }
 });
 
+// Whole fights recorded under rules 9 by scripts/v9-fixtures.mjs: the bosses rules 10 gives lair
+// actions, a Wizard and a Sorcerer against Morvath, the rooms with pits and cracked ceilings, and
+// generation 8 Endless floors.
+const NINE = JSON.parse(readFileSync(new URL('./fixtures/v9-fights.json', import.meta.url), 'utf8'));
+
+describe('fights recorded under rules 9', () => {
+  for (const f of NINE) {
+    it(`replay ${f.room} (seed ${f.seed}) unchanged`, () => {
+      const party = dailyCampaign({ level: f.level, classes: f.classes }).party;
+      const g = new Game(levelOf(f.room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(f.seed), rules: 9 });
+      const r = replayFight(g, f.log);
+      expect(r.ok).toBe(true);
+      expect(g.over).toBe(f.over);
+      expect(fightCheck(g)).toBe(f.check);
+      expect(g.rng()).toBe(f.next);
+    });
+  }
+});
+
 describe('the rules a fight began under', () => {
   it('ride with a saved record and a link', async () => {
     const { watchable } = await import('../src/game/history.js');

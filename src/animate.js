@@ -6,7 +6,7 @@ import { ACTIONS } from './game/abilities.js';
 import { ITEMS } from './game/items.js';
 import { shootProjectile, floatText } from './render/unitView.js';
 import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
-import { lobFx, missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, burstFx, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT } from './render/effects.js';
+import { lobFx, missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, burstFx, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT, CAVE_TINT, FOG_TINT, GREASE_TINT } from './render/effects.js';
 import { wait, tween, easeOut } from './render/tween.js';
 import { JELLY_SCALE } from './render/models.js';
 import { sfx } from './audio/sfx.js';
@@ -161,7 +161,29 @@ export function createAnimations(app) {
     if (r.thrown) await playThrown(r);
     if (r.rebuke) await playRebuke(r.rebuke);
     if (r.barbs) await playBarbs(r.barbs);
+    if (r.caveIns) await playCaveIns(r.caveIns);
     hud.renderInitiative(app.game());
+  }
+
+  /** Rules 10: cracked ceilings come down: dust, the saves, the hurt, and rubble left on the floor. */
+  async function playCaveIns(list) {
+    for (const c of list) {
+      const b = app.board();
+      b.setCeilings(app.game().ceilings);
+      sfx.fall();
+      stage.shake(0.35, 500);
+      if (inView(c)) floatText(stage.scene, { x: c.x, z: c.z - 0.5 }, 'Cave-in!', 'warn');
+      await turnFx(stage.scene, c, 1.5, CAVE_TINT);
+      b.addRubble(c.tiles);
+      await showSaves(c.saves, 'DEX', c.dc);
+      await Promise.all(c.saves.map((s) => {
+        if (unseen(s.unit)) { view(s.unit)?.updateHp(); if (!s.unit.alive) view(s.unit)?.die(); return null; }
+        floatText(stage.scene, s.unit, s.success ? `Save −${s.damage}` : `−${s.damage} · Prone!`, 'crit');
+        if (s.damage) hitFx(stage.scene, s.unit);
+        view(s.unit)?.updateStatus();
+        return damageReaction(s.unit);
+      }));
+    }
   }
 
   /** Rules 6: an ochre jelly struck in two: it shrinks, and the new half oozes out beside it. */
@@ -340,7 +362,7 @@ export function createAnimations(app) {
   }
 
   const BONUS_STRIKE = { flurry: 'Flurry of Blows', martial: 'Martial Arts', frenzy: 'Frenzy' };
-  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!', petrified: 'Turned to stone!', burning: 'Burning!', engulfed: 'Engulfed!' };
+  const CONDITION_FLOAT = { prone: 'Prone!', poisoned: 'Poisoned!', frightened: 'Frightened!', restrained: 'Webbed!', rotting: 'Rotting!', mocked: 'Mocked!', paralyzed: 'Paralysed!', stunned: 'Stunned!', petrified: 'Turned to stone!', burning: 'Burning!', engulfed: 'Engulfed!', pit: 'In a pit!' };
 
   function damageReaction(unit) {
     const v = view(unit);
@@ -469,6 +491,17 @@ export function createAnimations(app) {
           }
           break;
         }
+        case 'slip': { // rules 10: walked onto Grease
+          const r = step.result;
+          if (unseen(unit)) { view(unit).updateStatus(); break; }
+          floatText(stage.scene, r.unit, r.success ? 'Keeps footing' : 'Slips! Prone', r.success ? 'miss' : 'cond');
+          if (!r.success) {
+            sfx.fall();
+            view(r.unit).updateStatus();
+            await wait(300);
+          }
+          break;
+        }
         case 'trap': {
           const r = step.result;
           sfx.trap();
@@ -478,6 +511,18 @@ export function createAnimations(app) {
             break;
           }
           await app.board().showTrap(r.trap);
+          if (r.pit) { // rules 10: the planks give way
+            if (r.success) floatText(stage.scene, r.unit, 'Catches the edge', 'miss');
+            else {
+              sfx.fall();
+              floatText(stage.scene, r.unit, `Falls in −${r.damage}`, 'crit');
+              hitFx(stage.scene, r.unit);
+              await damageReaction(r.unit);
+              view(r.unit).updateStatus();
+            }
+            hud.renderInitiative(app.game());
+            break;
+          }
           floatText(stage.scene, r.unit, r.success ? `Save −${r.damage}` : `Trap −${r.damage}`, 'crit');
           hitFx(stage.scene, r.unit);
           await damageReaction(r.unit);
@@ -874,9 +919,46 @@ export function createAnimations(app) {
     }
     // A big spell, a heal on a friend, or now and then a monster's spell, said as it's cast.
     const healed = r.heals ? r.heals.map((h) => h.unit) : r.healed != null && r.target ? [r.target] : [];
+    if (r.countered) { // rules 10: a hero's Counterspell
+      const c = r.countered;
+      await cv.cast(r.target ?? null, async () => { sfx.cast(); });
+      sfx.shield();
+      floatText(stage.scene, c.by, 'Counterspell!', 'spell');
+      view(c.by).updateStatus();
+      if (c.d20 != null && settings.rolls) await rollBadge(stage.scene, c.by, badgeHeight(c.by), { rolls: [c.d20], d20: c.d20, line: `Check ${c.total} vs DC ${c.dc}`, result: c.success ? 'Stops it' : 'Fails', tone: c.success ? 'save' : 'fail' });
+      if (c.success) {
+        await shieldFx(stage.scene, caster);
+        if (!unseen(caster)) floatText(stage.scene, { x: caster.x, z: caster.z - 0.5 }, 'Countered', 'miss');
+        hud.renderInitiative(app.game());
+        return;
+      }
+      floatText(stage.scene, { x: caster.x, z: caster.z - 0.5 }, 'Breaks through', 'warn');
+      await wait(300);
+    }
+    if (r.scroll && !unseen(caster)) floatText(stage.scene, { x: caster.x, z: caster.z - 0.6 }, 'Scroll', 'spell');
     const said = spellMoment({ caster, id, healed });
     if (said) quip(caster, said.moment, said.friend?.name);
     switch (id) {
+      case 'fogCloud': // rules 10
+        await cv.cast(r.center, async () => {
+          sfx.cast();
+          await turnFx(stage.scene, r.center, r.spell.radius + 0.5, FOG_TINT);
+        });
+        app.board().setFog(app.game().fogTiles());
+        break;
+      case 'grease': // rules 10
+        await cv.cast(r.center, async () => {
+          sfx.cast();
+          await turnFx(stage.scene, r.center, r.spell.radius + 0.5, GREASE_TINT);
+        });
+        app.board().setGrease(app.game().grease.keys());
+        await showSaves(r.saves, 'DEX', r.dc);
+        for (const s of r.saves) {
+          floatText(stage.scene, s.unit, s.success ? 'Keeps footing' : 'Slips! Prone', s.success ? 'miss' : 'cond');
+          view(s.unit).updateStatus();
+        }
+        await wait(300);
+        break;
       case 'magicMissile':
         await cv.cast(r.target, async () => {
           sfx.cast();
@@ -1199,6 +1281,7 @@ export function createAnimations(app) {
       default:
         throw new Error(`playSpell: no animation for "${id}"`);
     }
+    if (r.caveIns) await playCaveIns(r.caveIns);
     hud.renderInitiative(app.game());
   }
 

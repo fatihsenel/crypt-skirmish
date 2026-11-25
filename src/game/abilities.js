@@ -104,6 +104,7 @@ export const CONDITION_INFO = {
   petrified: 'Petrified (a basilisk’s gaze): turned to stone for a turn. Can’t move, act or react, and fails STR and DEX saves; attacks against it have advantage. Wears off at the end of its next turn.',
   burning: 'Burning (alchemist’s fire): 1d4 fire at the end of each of its turns, until a DC 10 DEX save then puts it out.',
   engulfed: 'Engulfed: inside a gelatinous cube, restrained. 2d6 acid at the start of each of its turns, then a DC 12 STR save gets it out. Out too when the cube dies or moves away.',
+  pit: 'In a pit: at the bottom of a pit trap. Attacks from beyond 5 ft against it have disadvantage, and its own have disadvantage. As its turn starts, a DC 10 STR check climbs out (half its movement left).',
   paralyzed: 'Paralysed (a ghoul’s claws): can’t move, act or react, and fails STR and DEX saves. Attacks against it have advantage, and a hit from within 5 ft is a critical hit. A CON save as each of its turns starts ends it, in time to act.',
 };
 
@@ -282,6 +283,19 @@ export const SPELLS = {
     name: 'Call Lightning', level: 3, time: 'action', range: 24, radius: 1, targeting: 'area', concentration: true,
     damage: '3d10', save: 'dex',
     desc: 'A storm cloud gathers: a bolt strikes a point within 120 ft, 3d10 lightning to everyone within 5 ft of it, DEX save for half. +1d10 per slot level above 3rd. While you keep concentrating, your action can call another bolt at no slot. Hits allies too! Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
+  },
+  // Rules 10 (a spell's `rules`: a fight begun under older rules can't cast it).
+  counterspell: {
+    name: 'Counterspell', level: 3, time: 'reaction', range: 12, targeting: 'none', rules: 10,
+    desc: 'Reaction when a foe within 60 ft you can see casts a spell: it fails, its slot spent (cast automatically, with a 3rd-level slot). A spell of 4th level or higher takes a check with your spellcasting ability, DC 10 + its level.',
+  },
+  fogCloud: {
+    name: 'Fog Cloud', level: 1, time: 'action', range: 24, radius: 2, targeting: 'area', concentration: true, rules: 10,
+    desc: 'A sphere of thick fog, 10 ft in radius, within 120 ft: no one sees into, out of or through it, so no one shoots or casts at a creature in it, or from it, unless it stands right next to them. It stays while you concentrate. Concentration: taking damage calls for a CON save (DC 10, or half the damage) to keep it, and it ends if you drop or cast another such spell.',
+  },
+  grease: {
+    name: 'Grease', level: 1, time: 'action', range: 12, radius: 1, targeting: 'area', save: 'dex', rules: 10,
+    desc: 'Slick grease covers a 15-ft square within 60 ft for the rest of the fight: everyone in it makes a DEX save or falls prone. It is difficult terrain, and whoever walks onto it saves or falls, the move over. Fliers glide past. Hits allies too!',
   },
   animateDead: {
     name: 'Animate Dead', level: 3, time: 'action', range: 6, targeting: 'corpse',

@@ -31,15 +31,15 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 | Brannoc | Fighter | Second Wind, Extra Attack at level 5 |
 | | *or* Paladin | Divine Smite, Lay on Hands, Shield of Faith, Aura of Protection |
 | | *or* Barbarian | Rage, Reckless Attack, Danger Sense, a bonus Frenzy attack |
-| Ilsa | Wizard | Magic Missile, Burning Hands, Misty Step, Shield, then Fireball and Lightning Bolt |
-| | *or* Warlock | Eldritch Blast, Hex, Scorching Ray, Hellish Rebuke, temp HP on kills |
-| | *or* Sorcerer | Fire Bolt, Burning Hands, Scorching Ray, Quickened Spell, Elemental Affinity |
+| Ilsa | Wizard | Magic Missile, Burning Hands, Grease, Fog Cloud, Misty Step, Shield, then Fireball, Lightning Bolt and Counterspell |
+| | *or* Warlock | Eldritch Blast, Hex, Scorching Ray, Hellish Rebuke, temp HP on kills, Counterspell at 5 |
+| | *or* Sorcerer | Fire Bolt, Burning Hands, Fog Cloud, Scorching Ray, Quickened Spell, Elemental Affinity, Counterspell at 5 |
 | Wren | Rogue | Sneak Attack, Cunning Action, hides as a bonus action, spots traps |
 | | *or* Ranger | Longbow with Archery, Hunter's Mark, Colossus Slayer |
 | | *or* Monk | Martial Arts, Flurry of Blows, Deflect Missiles, Stunning Strike |
 | Maela | Cleric | Healing, Sacred Flame, Turn Undead, Spiritual Weapon |
 | | *or* Bard | Bardic Inspiration, Cutting Words, Vicious Mockery, Shatter, Healing Word, Fear |
-| | *or* Druid | Entangle, Thunderwave, Shillelagh, healing, Call Lightning |
+| | *or* Druid | Entangle, Thunderwave, Fog Cloud, Shillelagh, healing, Call Lightning |
 
 - Each hero has three classes to pick from. Pick one and rename the heroes under New campaign
   on the title screen.
@@ -104,6 +104,13 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   for the fight. A 1 counts twice; a 20 brings them back with 1 HP. Any healing (a spell, Lay
   on Hands, a potion from an ally) gets them back up, prone. The pips on their initiative chip
   count the saves.
+- **Counterspell:** a Wizard, Sorcerer or Warlock of level 5 casts it by itself, like Shield,
+  when a monster within 60 ft they can see casts a spell: their reaction and a 3rd-level slot. It
+  stops a spell of 3rd level or lower; a higher one takes a spellcasting check (DC 10 + its level).
+- **Fog Cloud and Grease:** Fog Cloud (Wizard, Sorcerer, Druid) fills a 10-ft radius with fog
+  while the caster concentrates: no one sees into, out of or through it past 5 ft. Grease
+  (Wizard) slicks a 15-ft square: difficult terrain, and anyone in it or stepping onto it makes a
+  DEX save or falls prone.
 - **Concentration:** Hex, Hunter's Mark, Shield of Faith, Fear and Greater Invisibility last
   while the caster concentrates. Taking damage calls for a CON save (DC 10, or half the
   damage); a failure, dropping, being paralysed or casting another of them ends it.
@@ -139,6 +146,10 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - Act four: mummies, wraiths and fallen knights.
 - Act five: gargoyles that stand as statues until you come close and whose claws can throw a
   hero back, and basilisks whose bite can turn a hero to stone for a turn.
+- **Lair actions:** as each round begins, once they know you're there, Morvath's lair claws at the
+  nearest hero with grasping hands (STR save DC 13 or restrained); every other round a sandstorm
+  blows through Nekhet's tomb (ranged attacks past 5 ft at disadvantage that round) and Tharok's
+  labyrinth shakes (DEX save DC 12 or prone).
 - Bosses: **Grukk** the goblin chief, **Morvath** the necromancer (raises the dead),
   **Varek** the wight, **Ysolde** the banshee, **Nekhet** the mummy lord (at half HP his
   dead rise again and his glare frightens heroes near him) and **Tharok** the minotaur, who
@@ -192,6 +203,16 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   wait too long and the ghouls drag them off.
 - **Barrels and crates** give half cover, and a hero can smash one next to them (a barrel takes 5,
   a crate 8; every blow lands). Broken, it's open floor: nothing left to hide behind.
+- **Pit traps** in the Flooded Ossuary and the Broken Bridge: rotten planks over a hole. Step on
+  one unawares and a DEX save (DC 12) catches the edge; fail and you fall in for 1d6, prone. In a
+  pit you shoot at disadvantage and are hard to hit from afar; as your turn starts a STR check (DC
+  10) climbs out with half your movement. An open pit is difficult terrain.
+- **Cracked ceilings** (the dark lines on the floor) in the Spider Nest, the Sunken Halls and the
+  Labyrinth: a charge under one, Shatter or Thunderwave brings it down, 2d6 to everyone within 5 ft
+  (DEX save DC 13 for half, prone on a failure). Its rubble is difficult terrain.
+- **Spell scrolls:** some chests hold one, and the pedlar sells one. A scroll casts its spell
+  once, without a slot, and only a hero with that spell on their class's list can read it (it
+  goes to one). It waits on the action bar beside the spells.
 - **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden, but a foe
   that moves or strikes out of sight leaves dashed rings where it was last heard, until it's
   seen, its tile is seen empty, or it dies.
@@ -219,7 +240,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
     Endless Crypt only, since Tharok is the last boss).
 - **Gold and the pedlar:** every room cleared pays gold, more the deeper it is and twice
   for a boss. A pedlar follows the party down and trades at the rest stops and in camp after
-  each act's boss (Visit the pedlar): potions (30 gold), alchemist's fire (40) and caltrops (15), each to whoever carries fewest, and two
+  each act's boss (Visit the pedlar): potions (30 gold), alchemist's fire (40) and caltrops (15), each to whoever carries fewest, a spell scroll (60 to 180) for a hero who can read it, and two
   pieces of gear that change from stop to stop, better ones in later acts. He buys spare gear
   from the pack at half price. Saves from before gold start with none.
 - **Stops with no fight:** three side trips on the map, each one choice and no dice. Visit one
@@ -551,6 +572,13 @@ A few things differ from the SRD to keep the game simple:
   casting spells, and they give no XP. A gong's wave and a hold-out's dead arrive at the start of
   a round, at the end of the initiative order. Fights begun before these rules (rules 8 and
   earlier) play without gongs, prisoners, hold-outs, owls, secret doors and the fanatic.
+- Lair actions come as a round begins, before anyone's turn, rather than on initiative 20, and
+  each lair has one action. Counterspell is automatic, against monsters only, always with a
+  3rd-level slot. Fog Cloud's radius is 10 ft (not 20) and Grease covers a 15-ft square around the
+  spot (not 10 ft). A spell scroll can be read at any level, with no check. A pit is 10 ft deep for
+  1d6, climbing out is a STR check as the turn starts, and a falling ceiling is a house trap.
+  Fights begun before these rules (rules 9 and earlier) play without lairs, scrolls,
+  Counterspell, Fog Cloud, Grease, pits and cracked ceilings.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.

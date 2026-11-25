@@ -5,7 +5,7 @@
 import {
   TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf, asiLevels, asiDefault, cleanPick, ABILITY_NAMES,
 } from './units.js';
-import { ITEMS, applyItems, relicFrom, cleanRelics } from './items.js';
+import { ITEMS, applyItems, relicFrom, cleanRelics, readsScroll } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
 import { ELITE_TRAITS, eliteTrait, RULES } from './elites.js';
@@ -283,7 +283,7 @@ export function heroUnit(code, rec) {
   u.slot = code;
   applyLevel(u, rec.level, rec.picks);
   applyItems(u, rec.items);
-  for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands', 'flasks', 'caltrops']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
+  for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands', 'flasks', 'caltrops', 'scrolls']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
   u.hp = Math.min(u.hp, u.maxHp);
   if (rec.name) u.name = rec.name;
   return u;
@@ -535,7 +535,11 @@ export function completeFight(prev, id, game) {
   for (const c of game.grid.chests.values()) {
     if (c.opened || c.mimic) continue; // a sleeping mimic is best left alone
     for (const item of c.loot) {
-      if (item !== 'potion') loot.push(item);
+      if (ITEMS[item]?.kind === 'scroll') { // rules 10: to a hero who can read it (none: left behind)
+        const can = HERO_CODES.filter((code) => readsScroll(classOf(code, state.party[code]), item));
+        const code = can.reduce((a, b) => (!a || (state.party[b].scrolls?.length ?? 0) < (state.party[a].scrolls?.length ?? 0) ? b : a), null);
+        if (code) (state.party[code].scrolls ??= []).push(item);
+      } else if (item !== 'potion') loot.push(item);
       else {
         potions++;
         const code = HERO_CODES.reduce((a, b) => (state.party[b].potions < state.party[a].potions ? b : a));
@@ -791,6 +795,10 @@ export function parseSave(text) {
       if (max) r.layOnHands = Number.isFinite(r.layOnHands) ? Math.max(0, Math.min(max, r.layOnHands)) : max;
       else delete r.layOnHands;
       for (const f of ['flasks', 'caltrops']) if (r[f] !== undefined && !(Number.isInteger(r[f]) && r[f] > 0 && r[f] < 100)) delete r[f];
+      if (r.scrolls !== undefined) {
+        r.scrolls = Array.isArray(r.scrolls) ? r.scrolls.filter((id) => ITEMS[id]?.kind === 'scroll').slice(0, 20) : [];
+        if (!r.scrolls.length) delete r.scrolls;
+      }
     }
     if (s.fight !== undefined && !validFight(s.fight)) delete s.fight;
     // A run finished before act two existed ended at the Sanctum: open the way on, after

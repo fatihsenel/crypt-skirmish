@@ -1,4 +1,5 @@
 import { abilityMod } from './dice.js';
+import { classSpells } from './units.js';
 
 // Loot found in chests. Potions go straight to whoever opens the chest; the rest go
 // to the party's pack and are handed out at camp between fights.
@@ -17,6 +18,14 @@ export const ITEMS = {
     name: 'Caltrops', kind: 'supply', carry: 'caltrops',
     desc: 'Spread as an action on a tile within 10 ft: whoever steps on it saves (DEX 15) or takes 1 piercing and stops there. The party steps round them.',
   },
+  // Rules 10: spell scrolls, one use each, carried by a hero (`scrolls`, the item ids). Only a
+  // class with the spell on its list reads one (classSpells); it casts at the spell's own level
+  // and costs no slot.
+  scrollCureWounds: { name: 'Scroll of Cure Wounds', kind: 'scroll', spell: 'cureWounds', desc: 'One use: cast Cure Wounds without a slot. A Cleric, Bard or Druid can read it.' },
+  scrollMagicMissile: { name: 'Scroll of Magic Missile', kind: 'scroll', spell: 'magicMissile', desc: 'One use: cast Magic Missile without a slot. A Wizard can read it.' },
+  scrollFogCloud: { name: 'Scroll of Fog Cloud', kind: 'scroll', spell: 'fogCloud', desc: 'One use: cast Fog Cloud without a slot. A Wizard, Sorcerer or Druid can read it.' },
+  scrollMistyStep: { name: 'Scroll of Misty Step', kind: 'scroll', spell: 'mistyStep', desc: 'One use: cast Misty Step without a slot. A Wizard or Sorcerer can read it.' },
+  scrollFireball: { name: 'Scroll of Fireball', kind: 'scroll', spell: 'fireball', desc: 'One use: cast Fireball without a slot. A Wizard, Sorcerer or Warlock can read it.' },
   weaponPlus1: {
     name: 'Runed Weapon +1', kind: 'gear',
     desc: '+1 to hit and damage with weapon attacks (not spells).',
@@ -122,3 +131,8 @@ export function relicFrom(levelId) {
 export function cleanRelics(list) {
   return Array.isArray(list) ? Object.keys(RELICS).filter((id) => list.includes(id)) : [];
 }
+
+/** Rules 10: the spell scrolls, cheapest first. */
+export const SCROLLS = Object.keys(ITEMS).filter((id) => ITEMS[id].kind === 'scroll');
+/** Can a hero of class `code` read scroll `id`? Only with the spell on the class's list. */
+export const readsScroll = (code, id) => ITEMS[id]?.kind === 'scroll' && classSpells(code).has(ITEMS[id].spell);

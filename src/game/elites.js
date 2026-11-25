@@ -15,10 +15,11 @@ import { hash } from './dice.js';
  * and running (morale), smashable barrels and crates, and the Gelatinous Cube. 8: doors shut and barred, traps disarmed and turned on monsters,
  * zombies (Undead Fortitude) and swarms of rats. 9: alarm gongs and the monsters they call,
  * rooms to hold and prisoners to free, the owl familiar, secret doors and the cult fanatic who
- * calls up skeletons. A saved fight, replay or
+ * calls up skeletons. 10: bosses' lair actions, spell scrolls, Counterspell, pit traps, cracked
+ * ceilings that cave in, Fog Cloud and Grease. A saved fight, replay or
  * link carries the number it began under (none means 1), so it plays back by its own rules.
  */
-export const RULES = 9;
+export const RULES = 10;
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits

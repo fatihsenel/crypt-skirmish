@@ -37,7 +37,7 @@ const fail = (reason) => ({ ok: false, reason });
  * action {id, attack?, spell?} (attack or spell: Ready's pick),
  * flask {target}, caltrops {x, z}, torch {x, z, spell?}, smash {x, z}, bar {x, z}, disarm {x, z},
  * owl {x, z}, free {x, z},
- * spell {id, unit | x, z}, smite, rebuke, end. Returns the engine's result.
+ * spell {id, unit | x, z, scroll?} (scroll: rules 10, the item read), smite, rebuke, end. Returns the engine's result.
  */
 export function applyCommand(game, cmd) {
   const u = game.current;
@@ -97,7 +97,7 @@ export function applyCommand(game, cmd) {
     case 'free':
       return game.freeCaptive(u, cmd.x, cmd.z);
     case 'spell':
-      return game.castSpell(u, cmd.id, spellTarget(game, cmd));
+      return game.castSpell(u, cmd.id, spellTarget(game, cmd), { scroll: cmd.scroll });
     case 'smite':
       return game.toggleSmite(u);
     case 'rebuke':

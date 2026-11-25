@@ -73,7 +73,7 @@ export function createPreview(deps) {
     hud.hint('');
     if (!isHeroTurn() || busy) return;
 
-    if (selected?.kind === 'spell') return refreshSpell(u, selected.id);
+    if (selected?.kind === 'spell') return refreshSpell(u, selected.id, { scroll: selected.scroll ?? null });
     if (selected?.kind === 'shove' || selected?.kind === 'push') return refreshShove(u, selected.kind === 'push');
     if (selected?.kind === 'help') return refreshHelp(u);
     if (selected?.kind === 'grapple') return refreshGrapple(u);
@@ -427,18 +427,18 @@ export function createPreview(deps) {
   }
   const ordinalSlot = (u, level) => ({ 1: '1st', 2: '2nd', 3: '3rd' })[lowestSlot(u, level)] ?? `${lowestSlot(u, level)}th`;
 
-  function refreshSpell(u, id) {
+  function refreshSpell(u, id, opts) {
     const s = SPELLS[id];
     switch (s.targeting) {
       case 'enemy':
       case 'ally':
       case 'corpse': {
         const layer = s.targeting === 'ally' ? board.allies : board.targets;
-        layer.set(game.spellTargets(u, id).filter((t) => !unseen(t)));
+        layer.set(game.spellTargets(u, id, opts).filter((t) => !unseen(t)));
         const t = spellTargetAt(hovered, s);
         if (t) {
           board.hover.set([hovered]);
-          const why = game.spellProblem(u, id, t);
+          const why = game.spellProblem(u, id, t, opts);
           hud.hint(why ? `${t.name}: ${why}` : spellPreview(u, id, t), !why);
         } else {
           const what = { enemy: 'an enemy', ally: 'an ally or yourself', corpse: 'a corpse' }[s.targeting];
@@ -495,7 +495,7 @@ export function createPreview(deps) {
           hud.hint(`${s.name}: pick the point of the blast · Esc to cancel`);
           return;
         }
-        const why = game.spellProblem(u, id, hovered);
+        const why = game.spellProblem(u, id, hovered, opts);
         if (why) {
           hud.hint(`${s.name}: ${why}`);
           return;
@@ -531,7 +531,7 @@ export function createPreview(deps) {
       case 'tile': {
         board.teleport.set(game.teleportTiles(u));
         if (hovered) {
-          const ok = !game.spellProblem(u, id, hovered);
+          const ok = !game.spellProblem(u, id, hovered, opts);
           if (ok) board.hover.set([hovered]);
           hud.hint(ok ? `${s.name}: teleport here (bonus action)` : 'Pick an empty spot you can see within 30 ft', ok);
         } else {

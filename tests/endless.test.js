@@ -137,7 +137,7 @@ describe('the Endless Crypt', () => {
     expect(state.endless.rested).toBe(true);
     expect(state.tier).toBe(1);
     expect(canTrade({ ...state, at: 'deep:5:3' })).toBe(true);
-    expect(stock({ ...state, at: 'deep:5:3' })).toHaveLength(5);
+    expect(stock({ ...state, at: 'deep:5:3' })).toHaveLength(6);
   });
 
   it('keeps a stored dive and refuses a broken one', () => {

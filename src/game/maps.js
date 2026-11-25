@@ -92,6 +92,8 @@ export const LEVELS = [
     asleep: ['8,6', '3,7', '5,9'],
     patrols: { '11,1': [[14, 1], [14, 4]], '12,5': [[7, 6]] },
     added8: [['c', 1, 7]], // rules 8: a swarm of rats in the flooded room
+    pits: [[8, 2], [11, 6]], // rules 10: pit traps past the door and by the column
+    loot10: [['ringProtection', 'scrollMagicMissile'], ['potion', 'potion', 'bracersDefense']],
   },
   {
     id: 'sanctum',
@@ -241,6 +243,8 @@ LEVELS.push(
     loot: [['potion', 'potion', 'gauntletsOgre']],
     asleep: ['3,7', '2,8'], // rats nesting in the silk
     patrols: { '12,1': [[14, 3], [12, 2]] },
+    ceilings: [[10, 7], [10, 2]], // rules 10: cracked ceilings a charge, Shatter or Thunderwave brings down
+    loot10: [['potion', 'potion', 'gauntletsOgre', 'scrollFogCloud']],
   },
   {
     id: 'gallery',
@@ -262,6 +266,7 @@ LEVELS.push(
     ],
     loot: [['cloakProtection', 'potion'], ['weaponPlus1', 'potion']],
     patrols: { '9,1': [[14, 1], [14, 4]] },
+    loot10: [['cloakProtection', 'potion', 'scrollCureWounds'], ['weaponPlus1', 'potion']],
   },
   {
     id: 'throne',
@@ -307,6 +312,8 @@ LEVELS.push(
     patrols: { '12,7': [[12, 2], [9, 9]] },
     added7: [['i', 3, 9]], // rules 7: a gelatinous cube, unseen, by the side room's chest
     added9: [['f', 13, 9]], // rules 9: a cult fanatic calling the dead up by the stair
+    ceilings: [[11, 1]], // rules 10
+    loot10: [['potion', 'potion', 'amuletHealth', 'scrollFireball']],
   },
   {
     id: 'armory',
@@ -371,6 +378,8 @@ LEVELS.push(
     ],
     loot: [['potion', 'potion']],
     asleep: ['12,1', '13,4', '12,7', '13,9'], // statues until something comes close (False Appearance)
+    pits: [[9, 3], [10, 8]], // rules 10: rotten planks on both crossings
+    loot10: [['potion', 'potion', 'scrollMistyStep']],
   },
   {
     id: 'lair',
@@ -416,6 +425,7 @@ LEVELS.push(
     loot: [['potion', 'potion']],
     asleep: ['9,9', '13,9', '14,4'], // gargoyles on their plinths
     thinned: ['14,4'], // Hard leaves this gargoyle out
+    ceilings: [[10, 5], [11, 9]], // rules 10: Tharok's charges can bring these down
   },
   // Act two's third way: a room on two floors. The stairs '[' lead down to ']' in the lower hall.
   {

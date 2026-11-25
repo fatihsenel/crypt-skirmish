@@ -134,8 +134,9 @@ export function tileCommand(game, u, t, selected, { unitAt, spellTarget }) {
     const s = SPELLS[id];
     const target = UNIT_TARGETING.includes(s.targeting) ? spellTarget(t, s) : t;
     if (!target) return { toast: `Click ${s.targeting === 'ally' ? 'an ally' : 'a target'}` };
-    const why = game.spellProblem(u, id, target);
-    return why ? { toast: why } : { cmd: { type: 'spell', id, ...targetRef(game, target) } };
+    const scroll = selected.scroll ?? null; // rules 10: read from a scroll
+    const why = game.spellProblem(u, id, target, { scroll });
+    return why ? { toast: why } : { cmd: { type: 'spell', id, ...targetRef(game, target), ...(scroll && { scroll }) } };
   }
 
   if (selected?.kind === 'ready') return { toast: 'Pick the attack to hold from the bar' };

@@ -365,6 +365,9 @@ export async function turnFx(scene, at, radius, tint = [0xffe08a, 0xffd060, 0xff
 export const SHATTER_TINT = [0xbfe6ff, 0x8cc8ff, 0x9fd4ff];
 export const ENTANGLE_TINT = [0x7fc24a, 0x4f9a2a, 0x9ad46a];
 export const STORM_TINT = [0xe8f4ff, 0xa8d0ff, 0xfff6b0];
+export const CAVE_TINT = [0xa89880, 0x7a6a58, 0xc8b8a0]; // rules 10: a cave-in's dust
+export const FOG_TINT = [0xe0e4e8, 0xc0c6cc, 0xf0f2f4]; // Fog Cloud
+export const GREASE_TINT = [0x8a7a3a, 0x6a5a2a, 0xa89a50]; // Grease
 
 /** Animate Dead: green wisps spiralling down into a corpse. */
 export async function raiseFx(scene, at) {

@@ -659,12 +659,23 @@ function updateVision(force = false) {
   const doors = [...board.doors.values()].map((d) => (d.opened ? 1 : 0)).join('');
   // In a dark room, thrown torches, Light and burning creatures change what's lit too.
   const lit = game.dark.size ? '|' + game.lamps.length + ':' + game.units.filter((u) => u.alive && game.has(u, 'burning')).map((u) => key(u.x, u.z)).join(';') : '';
-  const sig = eyes.map((e) => key(e.x, e.z)).join(';') + '|' + owlEyes.map((e) => key(e.x, e.z)).join(';') + '|' + doors + lit;
+  const fog = game.fogs?.length ? game.fogTiles() : null; // rules 10: Fog Cloud
+  const sig = eyes.map((e) => key(e.x, e.z)).join(';') + '|' + owlEyes.map((e) => key(e.x, e.z)).join(';') + '|' + doors + lit + (fog ? '|' + [...fog].join(';') : '');
   if (sig === visionSig && !force) return;
   const first = !visionSig;
   visionSig = sig;
   const blocks = (x, z) => grid.isWall(x, z) || grid.opaqueProp(x, z) || (grid.doors.has(key(x, z)) && !board.doors.get(key(x, z)).opened);
-  visible = grid.visibleFrom(eyes, blocks);
+  if (fog) {
+    // Rules 10: nobody sees into, out of or through Fog Cloud past 5 ft.
+    const inFog = (e) => fog.has(key(e.x, e.z));
+    visible = grid.visibleFrom(eyes.filter((e) => !inFog(e)), (x, z) => blocks(x, z) || fog.has(key(x, z)));
+    const near = (x, z) => eyes.some((e) => Math.abs(e.x - x) <= 1 && Math.abs(e.z - z) <= 1);
+    for (const k of fog) {
+      const [x, z] = k.split(',').map(Number);
+      if (!near(x, z)) visible.delete(k);
+    }
+    for (const e of eyes) for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) visible.add(key(e.x + dx, e.z + dz));
+  } else visible = grid.visibleFrom(eyes, blocks);
   // Rules 6: a dark area shows only as far as the heroes' torches reach.
   if (game.dark.size) {
     for (const k of game.dark) {
@@ -853,6 +864,10 @@ function startFight(resume, watch = null) {
   board.setIce(game.icyTiles()); // a restored fight may have icy ground
   board.setFire(game.burningTiles()); // and coals from a tipped brazier
   board.setCaltrops(game.caltropTiles); // and caltrops (rules 6)
+  board.setCeilings(game.ceilings); // rules 10: cracked ceilings, rubble, Grease and Fog Cloud
+  board.addRubble([...game.rubble].map((k) => { const [x, z] = k.split(',').map(Number); return { x, z }; }));
+  board.setGrease(game.grease.keys());
+  board.setFog(game.fogTiles());
   for (const p of game.grid.props.values()) if (p.tipped) board.tipBrazier(p.x, p.z, p.from.x, p.from.z, true);
   if ([...game.grid.gates.values()].some((g) => g.down)) board.setGates(true, true); // a portcullis already down
   views = new Map();
@@ -1110,6 +1125,42 @@ function startFight(resume, watch = null) {
     if (r.kind !== 'lost') return; // a freeing plays out in playFree (animate.js)
     board.removeProp(r.x, r.z);
     floatText(stage.scene, { x: r.x, z: r.z - 0.5 }, 'Dragged off!', 'crit');
+  });
+  // Rules 10: lair actions, climbing out of pits, Counterspell and Fog Cloud lifting.
+  game.on('lair', (r) => {
+    hud.logLair(r);
+    const at = r.unit;
+    if (r.kind === 'hands') {
+      sfx.necro();
+      for (const s of r.saves) {
+        floatText(stage.scene, s.unit, s.success ? 'Breaks free' : 'Grasped!', s.success ? 'miss' : 'cond');
+        wait(50).then(() => view(s.unit)?.updateStatus());
+      }
+    } else if (r.kind === 'sandstorm') {
+      sfx.whoosh(true);
+      if (inView(at)) floatText(stage.scene, { x: at.x, z: at.z - 0.5 }, 'Sandstorm!', 'warn');
+    } else {
+      sfx.fall();
+      stage.shake(0.3, 600);
+      for (const s of r.saves) {
+        floatText(stage.scene, s.unit, s.success ? 'Keeps footing' : 'Knocked prone!', s.success ? 'miss' : 'cond');
+        wait(50).then(() => view(s.unit)?.updateStatus());
+      }
+    }
+    keepAwake(800);
+  });
+  game.on('climb', (r) => {
+    if (unseen(r.unit)) return;
+    hud.logClimb(r);
+    floatText(stage.scene, r.unit, r.success ? 'Climbs out' : 'Still in the pit', r.success ? 'spell' : 'miss');
+    wait(50).then(() => view(r.unit)?.updateStatus());
+  });
+  game.on('counterspell', (r) => hud.logCounterspell(r));
+  game.on('slip', (r) => { if (!unseen(r.unit)) hud.logSlip(r); });
+  game.on('caveIn', (r) => hud.logCaveIn(r));
+  game.on('fog', (r) => {
+    board.setFog(r.tiles);
+    hud.log('The fog cloud thins away.', 'sys');
   });
   // A hold-out is won as a round begins, not on anyone's move.
   game.on('gameOver', (r) => {
@@ -1883,11 +1934,11 @@ function choose(choice) {
     return;
   }
   if (choice.kind === 'spell' && SPELLS[choice.id].targeting === 'self') {
-    heroCommand({ type: 'spell', id: choice.id });
+    heroCommand({ type: 'spell', id: choice.id, ...(choice.scroll && { scroll: choice.scroll }) });
     return;
   }
   const same = selected?.kind === choice.kind
-    && (choice.kind === 'attack' ? selected.attack === choice.attack : selected.id === choice.id);
+    && (choice.kind === 'attack' ? selected.attack === choice.attack : selected.id === choice.id && selected.scroll === choice.scroll);
   selected = same ? null : choice;
   controls.disarm();
   if (controls.touching) hovered = null; // aim afresh: a tap from before must not cast at once

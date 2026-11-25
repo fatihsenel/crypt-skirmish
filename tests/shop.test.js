@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newCampaign, parseSave, serialize, NODES, heroUnit } from '../src/game/campaign.js';
-import { goldFor, canTrade, stock, buy, buyProblem, sell, sellPrice, PRICES } from '../src/game/shop.js';
+import { goldFor, canTrade, stock, buy, buyProblem, sell, sellPrice, PRICES, readers } from '../src/game/shop.js';
+import { ITEMS } from '../src/game/items.js';
 
 const at = (id, over = {}) => ({ ...newCampaign(), at: id, cleared: ['crypt', 'warren', 'ossuary', id].filter((c, i, a) => a.indexOf(c) === i), ...over });
 
@@ -21,12 +22,13 @@ describe('gold and the pedlar', () => {
     expect(canTrade(at('tomb', { done: true }))).toBe(false);
   });
 
-  it('always sells potions, alchemist’s fire, caltrops and two different pieces of gear, the same each visit', () => {
+  it('always sells potions, alchemist’s fire, caltrops, a spell scroll and two different pieces of gear, the same each visit', () => {
     const s = at('chapel');
     const items = stock(s);
     expect(items.slice(0, 3)).toEqual(['potion', 'fire', 'caltrops']);
-    expect(items).toHaveLength(5);
-    expect(new Set(items).size).toBe(5);
+    expect(ITEMS[items[3]].kind).toBe('scroll');
+    expect(items).toHaveLength(6);
+    expect(new Set(items).size).toBe(6);
     expect(stock(s)).toEqual(items);
     for (const id of items) expect(PRICES[id]).toBeGreaterThan(0);
   });
@@ -38,7 +40,7 @@ describe('gold and the pedlar', () => {
     expect(s.gold).toBe(1000 - PRICES.potion);
     expect(Object.values(s.party).reduce((n, r) => n + r.potions, 0)).toBe(Object.values(at('chapel').party).reduce((n, r) => n + r.potions, 0) + 1);
     expect(fewest).toBeGreaterThanOrEqual(0);
-    const gear = stock(s)[3];
+    const gear = stock(s).at(-1);
     s = buy(s, gear);
     expect(s.pack).toContain(gear);
     expect(stock(s)).not.toContain(gear);
@@ -60,6 +62,22 @@ describe('gold and the pedlar', () => {
     expect(parseSave(serialize(s)).party[code].flasks).toBe(1);
   });
 
+  it('a scroll goes to a hero who can read it, once a stop, and rides into the next fight', () => {
+    let s = at('chapel', { gold: 1000 });
+    expect(readers(s, 'scrollFireball')).toEqual(['W']);
+    expect(readers(s, 'scrollCureWounds')).toEqual(['C']);
+    const scroll = stock(s)[3];
+    s = buy(s, scroll);
+    const code = readers(s, scroll)[0];
+    expect(s.party[code].scrolls).toEqual([scroll]);
+    expect(stock(s)).not.toContain(scroll);
+    expect(heroUnit(code, s.party[code]).scrolls).toEqual([scroll]);
+    expect(parseSave(serialize(s)).party[code].scrolls).toEqual([scroll]);
+    const fighters = at('chapel', { gold: 1000 });
+    fighters.party.W.cls = 'K';
+    expect(buyProblem(fighters, 'scrollMagicMissile')).toMatch(/can read|for sale/);
+  });
+
   it('refuses without the gold or away from the pedlar', () => {
     expect(buyProblem(at('chapel', { gold: 5 }), 'potion')).toBe('Not enough gold');
     expect(buyProblem(at('warren', { gold: 500 }), 'potion')).toBe('The pedlar isn’t here');
@@ -79,8 +97,8 @@ describe('gold and the pedlar', () => {
   it('deeper stops carry better gear', () => {
     const early = new Set();
     const late = new Set();
-    for (const id of ['chapel', 'well']) for (const g of stock(at(id)).slice(3)) early.add(g);
-    for (const g of stock({ ...at('hearth'), cleared: Object.keys(NODES) }).slice(3)) late.add(g);
+    for (const id of ['chapel', 'well']) for (const g of stock(at(id)).slice(4)) early.add(g);
+    for (const g of stock({ ...at('hearth'), cleared: Object.keys(NODES) }).slice(4)) late.add(g);
     expect([...early].every((g) => PRICES[g] <= PRICES.ringProtection)).toBe(true);
     expect(late.size).toBe(2);
   });

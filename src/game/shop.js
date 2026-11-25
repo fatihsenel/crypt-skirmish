@@ -5,13 +5,19 @@
 // dice, and what's bought rides with the party (potions, the pack), so fight records need nothing.
 
 import { NODES, HERO_CODES } from './campaign.js';
-import { ITEMS } from './items.js';
+import { ITEMS, SCROLLS, readsScroll } from './items.js';
+import { classOf } from './units.js';
 
 /** What the pedlar asks for each thing; he pays half for gear from the pack. */
 export const PRICES = {
   potion: 30,
   fire: 40,
   caltrops: 15,
+  scrollCureWounds: 60,
+  scrollMagicMissile: 60,
+  scrollFogCloud: 60,
+  scrollMistyStep: 90,
+  scrollFireball: 180,
   periaptPoison: 150,
   weaponPlus1: 200,
   ringProtection: 250,
@@ -43,7 +49,10 @@ function hash(text) {
   return h;
 }
 
-/** What's for sale here: potions, alchemist's fire and caltrops, then two pieces of gear not yet bought at this stop. */
+/** The heroes (slot codes) who can read scroll `id`. */
+export const readers = (state, id) => HERO_CODES.filter((c) => state.party[c] && readsScroll(classOf(c, state.party[c]), id));
+
+/** What's for sale here: potions, alchemist's fire and caltrops, a spell scroll, then two pieces of gear not yet bought at this stop. */
 export function stock(state) {
   // In the Endless Crypt he carries everything.
   const acts = state.endless ? 9 : state.cleared.filter((c) => NODES[c]?.actBreak).length;
@@ -51,7 +60,8 @@ export function stock(state) {
   const start = hash(`${state.at}:${state.tier ?? 0}`) % pool.length;
   const gear = [pool[start], pool[(start + 1 + (hash(state.at) % (pool.length - 1))) % pool.length]];
   const bought = state.traded?.at === state.at ? state.traded.bought : [];
-  return ['potion', 'fire', 'caltrops', ...gear.filter((id) => !bought.includes(id))];
+  const scroll = SCROLLS[hash(`${state.at}:${state.tier ?? 0}:scroll`) % SCROLLS.length];
+  return ['potion', 'fire', 'caltrops', ...[scroll, ...gear].filter((id) => !bought.includes(id))];
 }
 
 /** Why `id` can't be bought now, or null. */
@@ -59,6 +69,7 @@ export function buyProblem(state, id) {
   if (!canTrade(state)) return 'The pedlar isn’t here';
   if (!stock(state).includes(id)) return 'Not for sale here';
   if ((state.gold ?? 0) < PRICES[id]) return 'Not enough gold';
+  if (ITEMS[id]?.kind === 'scroll' && !readers(state, id).length) return 'No one in the party can read it';
   return null;
 }
 
@@ -75,6 +86,11 @@ export function buy(prev, id) {
     const f = ITEMS[id].carry;
     const code = HERO_CODES.reduce((a, b) => ((state.party[b][f] ?? 0) < (state.party[a][f] ?? 0) ? b : a));
     state.party[code][f] = (state.party[code][f] ?? 0) + 1;
+  } else if (ITEMS[id]?.kind === 'scroll') { // to the reader who carries fewest
+    const code = readers(state, id).reduce((a, b) => ((state.party[b].scrolls?.length ?? 0) < (state.party[a].scrolls?.length ?? 0) ? b : a));
+    (state.party[code].scrolls ??= []).push(id);
+    if (state.traded?.at !== state.at) state.traded = { at: state.at, bought: [] };
+    state.traded.bought.push(id);
   } else {
     state.pack.push(id);
     if (state.traded?.at !== state.at) state.traded = { at: state.at, bought: [] };

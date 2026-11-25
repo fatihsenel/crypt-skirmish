@@ -39,6 +39,8 @@ export function cleanParty(party) {
     if (CLASS_CHOICES[code].includes(r.cls) && r.cls !== code) h.cls = r.cls;
     if (int(r.layOnHands, 0, 200)) h.layOnHands = r.layOnHands;
     for (const f of ['flasks', 'caltrops']) if (int(r[f], 1, 99)) h[f] = r[f];
+    const scrolls = Array.isArray(r.scrolls) ? r.scrolls.filter((i) => ITEMS[i]?.kind === 'scroll').slice(0, 20) : [];
+    if (scrolls.length) h.scrolls = scrolls;
     const picks = Object.entries(r.picks && typeof r.picks === 'object' ? r.picks : {}).filter(([l, stat]) => /^[1-9]$/.test(l) && cleanPick(stat));
     if (picks.length) h.picks = Object.fromEntries(picks);
     const name = cleanName(r.name);
@@ -48,7 +50,7 @@ export function cleanParty(party) {
   return Object.keys(out).length ? out : null;
 }
 
-const COMMAND_KEYS = { type: 'string', id: 'string', x: 'number', z: 'number', target: 'number', attack: 'number', unit: 'number', spell: 'string' };
+const COMMAND_KEYS = { type: 'string', id: 'string', x: 'number', z: 'number', target: 'number', attack: 'number', unit: 'number', spell: 'string', scroll: 'string' };
 
 /** A command from a link with only the fields commands use, or null. */
 function cleanCommand(c) {

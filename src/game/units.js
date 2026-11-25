@@ -56,7 +56,7 @@ export const TEMPLATES = {
     name: 'Ilsa', cls: 'Wizard', team: 'heroes', color: 0x8b4fd6,
     hp: 20, ac: 15, speed: 6, prof: 2, level: 3, // AC from Mage Armor
     castStat: 'int',
-    spells: ['magicMissile', 'burningHands', 'mistyStep', 'shield'],
+    spells: ['magicMissile', 'burningHands', 'mistyStep', 'shield', 'grease', 'fogCloud'],
     slots: { 1: 4, 2: 2 },
     autoShield: true,
     stats: { str: 8, dex: 14, con: 12, int: 16, wis: 12, cha: 10 },
@@ -71,7 +71,7 @@ export const TEMPLATES = {
     name: 'Ilsa', cls: 'Sorcerer', team: 'heroes', color: 0xd0532a,
     hp: 23, ac: 15, speed: 6, prof: 2, level: 3,
     castStat: 'cha',
-    spells: ['burningHands', 'scorchingRay', 'mistyStep', 'shield'],
+    spells: ['burningHands', 'scorchingRay', 'mistyStep', 'shield', 'fogCloud'],
     slots: { 1: 4, 2: 2 },
     autoShield: true,
     features: ['quicken'],
@@ -181,7 +181,7 @@ export const TEMPLATES = {
     hp: 24, ac: 15, speed: 6, prof: 2, level: 3, // hide armour + a wooden shield
     dexCap: 2, // medium armour: at most +2 from DEX
     castStat: 'wis',
-    spells: ['entangle', 'thunderwave', 'healingWord', 'cureWounds'],
+    spells: ['entangle', 'thunderwave', 'healingWord', 'cureWounds', 'fogCloud'],
     slots: { 1: 4, 2: 2 },
     stats: { str: 10, dex: 12, con: 14, int: 12, wis: 16, cha: 8 },
     attacks: [
@@ -255,6 +255,7 @@ export const TEMPLATES = {
     castStat: 'int',
     spells: ['animateDead', 'dread'],
     slots: { 1: 2, 3: 2 },
+    lair: 'hands', // rules 10: as each round begins, grasping hands from the floor (Game.lairAction)
     ai: 'caster', // keeps its distance, raises the dead, frightens the bold
     stats: { str: 9, dex: 14, con: 12, int: 17, wis: 12, cha: 11 },
     attacks: [
@@ -413,6 +414,7 @@ export const TEMPLATES = {
     spells: ['dread'],
     slots: { 1: 3 },
     rises: 2, // at half HP his house rises (Game.houseRises)
+    lair: 'sandstorm', // rules 10: a sandstorm each round, ranged attacks at disadvantage
     stats: { str: 18, dex: 10, con: 17, int: 11, wis: 18, cha: 16 },
     attacks: [{ name: 'Rotting Fist', stat: 'str', damage: '4d6', reach: 1, rider: { save: 'con', dc: 16, condition: 'rotting', turns: 2 } }],
   },
@@ -449,6 +451,7 @@ export const TEMPLATES = {
     ai: 'brute',
     recklessBrute: true,
     surefooted: true, // he knows every edge of his labyrinth: no push sends him over
+    lair: 'quake', // rules 10: every other round the labyrinth shakes, DEX save or prone
     stats: { str: 18, dex: 11, con: 16, int: 6, wis: 16, cha: 9 },
     attacks: [{ name: 'Greataxe', stat: 'str', damage: '2d12', reach: 1, charge: { damage: '2d8', dc: 14 } }],
   },
@@ -616,7 +619,7 @@ export const PROGRESSION = {
   },
   W: {
     4: { hp: 5, stats: { int: 2 }, slots: { 2: 3 }, note: 'Intelligence 18, a third 2nd-level slot' },
-    5: { hp: 5, prof: 3, slots: { 3: 2 }, spells: ['fireball', 'lightningBolt'], note: 'Fireball, Lightning Bolt and two 3rd-level slots' },
+    5: { hp: 5, prof: 3, slots: { 3: 2 }, spells: ['fireball', 'lightningBolt', 'counterspell'], note: 'Fireball, Lightning Bolt, Counterspell and two 3rd-level slots' },
     6: {
       hp: 5, slots: { 3: 3 }, sculpt: true, passives: ['sculptSpells'],
       note: 'Sculpt Spells: Fireball, Lightning Bolt and Burning Hands spare the party; a third 3rd-level slot',
@@ -627,8 +630,8 @@ export const PROGRESSION = {
   K: {
     4: { hp: 7, stats: { cha: 2 }, note: 'Charisma 18: +1 to Eldritch Blast hits and damage, and to your spell DC' },
     5: {
-      hp: 7, prof: 3, slots: { 2: 0, 3: 2 }, spells: ['fireball'], extraAttack: 2, extraAttackWith: 'Eldritch Blast',
-      note: 'Eldritch Blast fires two beams, Fireball, and your pact slots become 3rd level',
+      hp: 7, prof: 3, slots: { 2: 0, 3: 2 }, spells: ['fireball', 'counterspell'], extraAttack: 2, extraAttackWith: 'Eldritch Blast',
+      note: 'Eldritch Blast fires two beams, Fireball, Counterspell, and your pact slots become 3rd level',
     },
     6: { hp: 7, passives: ['ownLuck'], note: 'Dark One’s Own Luck: once per room, add 1d10 to a failed save' },
     7: { hp: 7, slots: { 3: 0, 4: 2 }, note: 'Your pact slots become 4th level' },
@@ -686,7 +689,7 @@ export const PROGRESSION = {
   },
   S: {
     4: { hp: 6, stats: { cha: 2 }, slots: { 2: 3 }, note: 'Charisma 18, a third 2nd-level slot' },
-    5: { hp: 6, prof: 3, slots: { 3: 2 }, spells: ['fireball'], note: 'Fireball and two 3rd-level slots' },
+    5: { hp: 6, prof: 3, slots: { 3: 2 }, spells: ['fireball', 'counterspell'], note: 'Fireball, Counterspell and two 3rd-level slots' },
     6: {
       hp: 6, slots: { 3: 3 }, passives: ['elementalAffinity'],
       note: 'Elemental Affinity: add your CHA to Fire Bolt, Burning Hands and Fireball damage; a third 3rd-level slot',
@@ -714,6 +717,13 @@ export const PROGRESSION = {
 };
 
 export const MAX_LEVEL = 8;
+
+/** Every spell on class `code`'s list (rules 10: the spell scrolls it can read). */
+export function classSpells(code) {
+  const out = new Set(TEMPLATES[code]?.spells ?? []);
+  for (const g of Object.values(PROGRESSION[code] ?? {})) for (const id of g.spells ?? []) out.add(id);
+  return out;
+}
 
 export const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 export const ABILITY_NAMES = { str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma' };
