@@ -1,7 +1,7 @@
 // Spell and ability effects: short-lived meshes animated with tweens.
 
 import * as THREE from 'three';
-import { tween, wait, easeOut, linear } from './tween.js';
+import { tween, wait, easeOut, linear, calm } from './tween.js';
 import { SpellLight } from './lights.js';
 
 const glow = (color, opacity = 1) =>
@@ -658,4 +658,156 @@ export async function d20Fx(scene, at, value) {
     dispose(group);
   });
   await wait(250);
+}
+
+// --- weapon trails and dust -------------------------------------------------------
+const SLASH_SEGS = 18;
+/** A curved ribbon, brightest at its leading end (additive, so black is clear). */
+function slashGeometry(color) {
+  const pos = [];
+  const col = [];
+  const c = new THREE.Color(color);
+  const span = Math.PI * 0.75;
+  for (let i = 0; i <= SLASH_SEGS; i++) {
+    const f = i / SLASH_SEGS;
+    const a = -span / 2 + f * span;
+    const r1 = 0.36;
+    const r2 = 0.4 + 0.16 * f; // widens toward the blade
+    pos.push(Math.sin(a) * r1, 0, Math.cos(a) * r1, Math.sin(a) * r2, 0, Math.cos(a) * r2);
+    const k = f ** 1.6;
+    for (let n = 0; n < 2; n++) col.push(c.r * k, c.g * k, c.b * k);
+  }
+  const idx = [];
+  for (let i = 0; i < SLASH_SEGS; i++) {
+    const a = i * 2;
+    idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+/**
+ * A melee swing's trail: a pale arc sweeping across in front of the attacker toward `to`,
+ * gold on a critical hit. Drawn at `y` (the swing's height) on a slant; fades in 0.3 s.
+ */
+export async function slashFx(scene, from, to, { crit = false, y = 0.55, flip = false } = {}) {
+  const group = new THREE.Group();
+  group.position.set(from.x, from.y ?? 0, from.z);
+  group.rotation.y = Math.atan2(to.x - from.x, to.z - from.z);
+  const tilt = new THREE.Group();
+  tilt.position.y = y;
+  tilt.rotation.z = (flip ? 1 : -1) * 0.55; // a diagonal cut
+  group.add(tilt);
+  const mesh = new THREE.Mesh(slashGeometry(crit ? 0xffc860 : 0xc4cee0), new THREE.MeshBasicMaterial({
+    vertexColors: true, transparent: true, opacity: 1, depthWrite: false, side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending, toneMapped: false,
+  }));
+  if (flip) mesh.scale.x = -1;
+  tilt.add(mesh);
+  scene.add(group);
+  const still = calm();
+  await tween(still ? 220 : 300, (t) => {
+    mesh.rotation.y = still ? 0 : (flip ? 1 : -1) * (-1.1 + Math.min(1, t * 2.2) * 1.6);
+    mesh.material.opacity = t < 0.45 ? 1 : 1 - (t - 0.45) / 0.55;
+  }, linear);
+  scene.remove(group);
+  dispose(group);
+}
+
+let puffMap = null;
+/** A soft round puff for dust and smoke sprites. */
+function puff() {
+  if (puffMap) return puffMap;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,0.85)');
+  grad.addColorStop(0.5, 'rgba(255,255,255,0.35)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  puffMap = new THREE.CanvasTexture(c);
+  return puffMap;
+}
+
+/**
+ * A puff of dust kicked up at floor level: a figure knocked down, shoved, landing or a door
+ * slamming open. `dir` ({x, z}) blows it one way; `y` is the floor's height there.
+ */
+export async function dustFx(scene, at, { count = 10, size = 0.5, color = 0xe2d6c2, dir = null, y = 0, life = 700 } = {}) {
+  const group = new THREE.Group();
+  group.position.set(at.x, y, at.z);
+  scene.add(group);
+  const bias = dir ? new THREE.Vector2(dir.x, dir.z).normalize() : new THREE.Vector2();
+  const parts = Array.from({ length: count }, (_, i) => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puff(), color, transparent: true, opacity: 0, depthWrite: false }));
+    const a = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+    s.userData = { vx: Math.cos(a) * 0.55 + bias.x * 0.5, vz: Math.sin(a) * 0.55 + bias.y * 0.5, k: 0.7 + Math.random() * 0.6 };
+    s.position.set(Math.cos(a) * 0.12, 0.1, Math.sin(a) * 0.12);
+    group.add(s);
+    return s;
+  });
+  const still = calm();
+  await tween(life, (t) => {
+    const spread = still ? 0.3 : 1 - (1 - t) ** 3;
+    for (const s of parts) {
+      const { vx, vz, k } = s.userData;
+      s.position.set(vx * spread * 0.7 * k, 0.1 + t * 0.25 * k, vz * spread * 0.7 * k);
+      s.scale.setScalar(size * k * (0.6 + t * 1.1));
+      s.material.opacity = 0.75 * (t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85);
+    }
+  }, linear);
+  scene.remove(group);
+  for (const s of parts) s.material.dispose();
+}
+
+let starMap = null;
+/** A four-pointed glint. */
+function star() {
+  if (starMap) return starMap;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 10);
+  grad.addColorStop(0, 'rgba(255,255,255,1)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  for (const [w, h] of [[2.5, 30], [30, 2.5]]) {
+    g.beginPath();
+    g.ellipse(32, 32, w, h, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  starMap = new THREE.CanvasTexture(c);
+  return starMap;
+}
+
+/** Gold glinting up out of an opened chest: small stars that twinkle and drift up. */
+export async function glintFx(scene, at, { color = 0xc89438, count = 10, y = 0.3 } = {}) {
+  const group = new THREE.Group();
+  group.position.set(at.x, y, at.z);
+  scene.add(group);
+  const still = calm();
+  const parts = Array.from({ length: count }, () => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: star(), color, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+    s.userData = { x: (Math.random() - 0.5) * 0.45, z: (Math.random() - 0.5) * 0.45, rise: 0.2 + Math.random() * 0.4, at: Math.random() * 0.5, k: 0.12 + Math.random() * 0.1 };
+    group.add(s);
+    return s;
+  });
+  await tween(1300, (t) => {
+    for (const s of parts) {
+      const { x, z, rise, at: start, k } = s.userData;
+      const p = Math.max(0, Math.min(1, (t - start) / 0.5));
+      s.position.set(x, (still ? 0.1 : p * rise), z);
+      s.scale.setScalar(k * Math.sin(p * Math.PI));
+      s.material.opacity = 0.5 * Math.sin(p * Math.PI);
+    }
+  }, linear);
+  scene.remove(group);
+  for (const s of parts) s.material.dispose();
 }

@@ -161,7 +161,7 @@ export function createAnimations(app) {
     if (attack.projectile) {
       await av.shoot(pos, attack.projectile, () => shootProjectile(stage.scene, attacker, pos, attack.projectile), onImpact);
     } else {
-      await av.swing(pos, onImpact);
+      await av.swing(pos, onImpact, { crit: !!r.crit });
     }
     await reaction;
     if (r.split) await playSplit(target, r.split);
@@ -576,7 +576,7 @@ export function createAnimations(app) {
       return;
     }
     sfx.chest();
-    await app.board().openChest(x, z);
+    await app.board().openChest(x, z, { gold: r.loot.length > 0 });
     const n = r.loot.filter((l) => l === 'potion').length;
     const items = r.loot.filter((l) => l !== 'potion').map((l) => ITEMS[l].name);
     const text = [...(n ? [`+${n} potion${n > 1 ? 's' : ''}`] : []), ...items].join(' · ');
@@ -790,7 +790,7 @@ export function createAnimations(app) {
     stage.shake(r.broken ? 0.12 : 0.05, 200);
     burstFx(stage.scene, { x: r.x, z: r.z }, { colors: [0x7a5a34, 0x5a3a20, 0xa07a4a], count: r.broken ? 22 : 8, speed: r.broken ? 1.3 : 0.7, size: 0.05, y: 0.35, life: 550 });
     if (r.broken) {
-      app.board().removeProp(r.x, r.z);
+      app.board().smashProp(r.x, r.z);
       floatText(stage.scene, { x: r.x, z: r.z }, 'Smashed!', 'crit');
     } else floatText(stage.scene, { x: r.x, z: r.z }, `−${r.damage}`, 'dmg');
     await wait(350);
@@ -958,6 +958,8 @@ export function createAnimations(app) {
       await wait(300);
     }
     if (r.scroll && !unseen(caster)) floatText(stage.scene, { x: caster.x, z: caster.z - 0.6 }, 'Scroll', 'spell');
+    // A monster's area spell: its rune circle flares where it will land first.
+    if (caster.team === 'monsters' && r.center && r.spell?.radius && !unseen(caster)) await app.board().flashRunes(r.center, r.spell.radius, id);
     const said = spellMoment({ caster, id, healed });
     if (said) quip(caster, said.moment, said.friend?.name);
     switch (id) {

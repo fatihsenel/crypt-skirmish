@@ -144,6 +144,12 @@ server on 5173.
   skipped on a restored fight and under `calm()`); while it does, `liftAt` carries each tile's
   offset, so figures and overlays ride up with it. Outlines (`render/outline.js`,
   `UnitView.setOutline`) follow `board.hover` and `board.targets` from a ticker in `main.js`.
+  An area spell's rune circle is `board.setRunes` (the preview) and `flashRunes` (a monster's
+  cast, awaited in `animate.js`). A wounded figure stoops and sways through its `lean` group
+  (`animateHurt`, from the HP its bar shows). In a dark room (`board.setDark`, `DARK_SEEN`) each
+  hero gets a torch at the fight's start (`carryTorch`): those lights are made once a fight,
+  never added later. Banners, cobwebs, drips and the rat out of sight are `render/life.js`,
+  drawn only. A smashed prop goes through `board.smashProp` (debris), not `removeProp` alone.
   Clamp any `pow` in vertex or colour maths (`Math.max(0, …)`): one NaN pixel spreads over the
   whole screen through the glow's bloom.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still

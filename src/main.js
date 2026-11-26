@@ -3,7 +3,7 @@
 
 import { camp, later, loadSave, loadWonRun, hideBoot, SAVE_KEY, WON_KEY } from './boot.js';
 import * as THREE from 'three';
-import { Game, ELITE_TRAITS, RULES } from './game/combat.js';
+import { Game, ELITE_TRAITS, RULES, TORCH } from './game/combat.js';
 import { LEVELS } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
@@ -908,6 +908,12 @@ function startFight(resume, watch = null) {
   views = new Map();
   for (const u of game.units) addView(u);
   for (const u of game.units) if (u.alive && u.familiar?.alive) owls.set(u.id, createOwl(stage.scene, u.familiar));
+  if (game.dark.size) {
+    // Rules 6: each hero carries a torch, lit while dark lies within its reach.
+    board.setDark(game.dark);
+    const near = (x, z) => { for (let dz = -TORCH; dz <= TORCH; dz++) for (let dx = -TORCH; dx <= TORCH; dx++) if (game.dark.has(key(x + dx, z + dz))) return true; return false; };
+    for (const v of views.values()) if (v.unit.team === 'heroes') v.carryTorch(near, TORCH + 2);
+  }
 
   busy = false;
   ended = false;

@@ -453,7 +453,14 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   the fight only: a restored fight starts clean). Bolts and blasts light the walls and figures
   around them, a cold haze curls where the explored map meets the dark and lies over a lower
   hall, water ripples, and chasms drop away into mist with dust falling in. The hovered figure
-  gets a warm outline and each foe in reach a red one.
+  gets a warm outline and each foe in reach a red one. Blades leave a trail as they swing (gold
+  on a critical hit), and a shove or a fall raises dust. An area spell's rune circle turns on
+  the floor while you aim it, and flashes under a monster's before it lands. A hero below half
+  their hit points stoops, and below a quarter sways with a red pulse at their feet. In a dark
+  room each hero carries a torch that lights what's around them. Banners and cobwebs stir as
+  someone passes, water drips into pools, and now and then a rat runs along a wall out of
+  sight. Doors swing open in a puff of dust, a chest with gold glints, and a smashed barrel or
+  crate leaves its pieces behind.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
@@ -497,7 +504,8 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place, the dice
   don't wobble, the title's skull holds still, torches burn steady without embers or dust,
   the haze at the edge of the dark holds still, a room appears at once instead of rising,
-  and a struck figure doesn't freeze for its hit-stop.
+  a struck figure doesn't freeze for its hit-stop, a wounded one doesn't sway, and banners,
+  cobwebs, drips and rats keep still.
 - **Text size** and **colour-blind friendly enemy reach** are in Settings.
 
 ## Sound
@@ -848,6 +856,7 @@ src/
     lights.js        spell light: a few kept point lights lent to bolts and blasts
     wisps.js         haze at the edge of the explored map and over a lower hall
     outline.js       the outlines on the hovered figure and the foes in reach
+    life.js          banners and cobwebs stirring, drips into pools, a rat out of sight
     motes.js         embers rising from fires and dust in their light
     post.js          glow (bloom) and photo mode's blur, loaded only when one is on
     dissolve.js      a slain monster burning away, with an ember, blue or green rim

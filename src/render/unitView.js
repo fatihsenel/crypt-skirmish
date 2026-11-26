@@ -12,6 +12,7 @@ import { voices } from '../audio/voices.js';
 import { liftAt } from './board.js';
 import { dissolvable, edgeColor } from './dissolve.js';
 import { SpellLight } from './lights.js';
+import { slashFx, dustFx } from './effects.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const WHITE = new THREE.Color(0xffffff);
@@ -102,7 +103,12 @@ export class UnitView {
     // `tilt` lays the figure down while it is prone.
     this.tilt = new THREE.Group();
     this.tilt.add(this.model.root);
-    this.figure.add(this.tilt);
+    // `lean` stoops a badly hurt figure (below half HP) and sways it (below a quarter).
+    this.lean = new THREE.Group();
+    this.lean.add(this.tilt);
+    this.figure.add(this.lean);
+    this.hurt = 0; // 0 unhurt, 1 below half, 2 below a quarter (from the bar as drawn)
+    this.hurtGlow = null;
     this.prone = false;
     this.raise.add(this.figure);
     this.figure.rotation.y = unit.team === 'heroes' ? Math.PI / 4 : -Math.PI * 0.75;
@@ -259,6 +265,23 @@ export class UnitView {
     const from = this.group.position.clone();
     const to = new THREE.Vector3(x, 0, z);
     await tween(260, (t) => this.group.position.lerpVectors(from, to, t), easeOut);
+    this.dust({ x: to.x - from.x, z: to.z - from.z });
+  }
+
+  /** A melee swing's trail across the figure's front (render/effects.js). */
+  trail(target, crit = false) {
+    const p = this.group.position;
+    slashFx(this.stage.scene, { x: p.x, y: this.raise.position.y, z: p.z }, target, {
+      crit,
+      y: Math.min(0.75, this.model.height * 0.55), flip: Math.random() < 0.35,
+    });
+  }
+
+  /** Dust kicked up round the figure's feet: knocked down, shoved, landing. */
+  dust(dir = null, opts = {}) {
+    if (!this.group.visible || this.gone) return;
+    const p = this.group.position;
+    dustFx(this.stage.scene, p, { dir, y: this.raise.position.y + Math.max(0, p.y), ...opts });
   }
 
   /** Over a chasm's edge: a drop into the dark, and gone. */
@@ -363,8 +386,11 @@ export class UnitView {
       this.marker.userData.halo.scale.setScalar(1 + pulse * 0.12);
       this.marker.userData.halo.material.opacity = 0.2 + pulse * 0.35;
     }
+    this.animateHurt(t, dt);
+    if (this.torch) this.animateTorch(t, dt);
     if (this.rig) {
-      this.rig.update(dt, this.walking);
+      // A badly hurt figure's walk drags.
+      this.rig.update(this.walking && this.hurt ? dt * (this.hurt === 2 ? 0.7 : 0.82) : dt, this.walking);
       return;
     }
     if (!this.unit.alive) return;
@@ -389,6 +415,57 @@ export class UnitView {
     m.idle?.(ts, this.walking);
   }
 
+  /**
+   * Wounds: below half HP the figure stoops; below a quarter it also sways and a faint red glow
+   * pulses at its feet. Eased in and out; reduced motion keeps the stoop and a steady glow.
+   */
+  animateHurt(t, dt) {
+    const down = this.prone || !this.unit.alive || this.down;
+    const level = down ? 0 : this.hurt;
+    const still = calm();
+    const k = 1 - Math.exp(-dt * 6);
+    const stoop = level ? (level === 2 ? 0.3 : 0.18) : 0;
+    const sway = level === 2 && !still ? Math.sin((t + this.seed) * 2.1) * 0.07 : 0;
+    this.lean.rotation.x += (stoop - this.lean.rotation.x) * k;
+    this.lean.rotation.z += (sway - this.lean.rotation.z) * k;
+    if (level === 2 && !this.hurtGlow) {
+      this.hurtGlow = new THREE.Mesh(
+        new THREE.RingGeometry(0.4, 0.66, 40).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0xd02020, transparent: true, opacity: 0, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending }),
+      );
+      this.hurtGlow.position.y = 0.012;
+      this.hurtGlow.renderOrder = 1;
+      this.raise.add(this.hurtGlow);
+    }
+    if (this.hurtGlow) {
+      const want = level === 2 && this.group.visible && !this.ghost ? (still ? 0.45 : 0.25 + 0.35 * (0.5 + 0.5 * Math.sin((t + this.seed) * 3.2))) : 0;
+      const m = this.hurtGlow.material;
+      m.opacity += (want - m.opacity) * k;
+      this.hurtGlow.visible = m.opacity > 0.005;
+    }
+  }
+
+  /**
+   * A hero's torch in a dark room: a warm light over the figure, flickering, lit while `near`
+   * (x, z) says dark lies close and the hero stands. One per hero for the whole fight, so the
+   * scene's light count doesn't change (a change recompiles every lit material).
+   */
+  carryTorch(near, reach) {
+    this.torch = new THREE.PointLight(0xffa860, 0, reach, 1.6);
+    this.torch.position.set(0.15, 0.95, 0.1);
+    this.torch.userData.near = near;
+    this.raise.add(this.torch);
+  }
+
+  animateTorch(t, dt) {
+    const l = this.torch;
+    const p = this.group.position;
+    const on = this.unit.alive && !this.down && !this.gone && this.group.visible && l.userData.near(Math.round(p.x), Math.round(p.z));
+    const flicker = calm() ? 1 : 0.88 + 0.08 * Math.sin((t + this.seed) * 11) + 0.04 * Math.sin((t + this.seed) * 23.7);
+    const want = on ? 2.6 * flicker : 0;
+    l.intensity += (want - l.intensity) * (1 - Math.exp(-dt * (on ? 10 : 4)));
+  }
+
   /** The elite is first seen: its band swells and flares, then settles. */
   flashElite() {
     const band = this.base.getObjectByName('elite-band');
@@ -405,6 +482,7 @@ export class UnitView {
     const bar = this.label.element.querySelector('.hpbar i');
     bar.style.width = `${pct}%`;
     bar.dataset.level = pct > 50 ? 'high' : pct > 25 ? 'mid' : 'low';
+    this.hurt = !this.unit.alive || pct <= 0 ? 0 : pct < 25 ? 2 : pct < 50 ? 1 : 0;
     // Temporary HP: a pale band laid over the bar, as a share of max HP.
     const temp = this.label.element.querySelector('.hpbar b');
     temp.style.width = `${Math.min(100, ((this.unit.tempHp ?? 0) / this.unit.maxHp) * 100)}%`;
@@ -497,6 +575,7 @@ export class UnitView {
   setProne(on) {
     if (on === this.prone) return;
     this.prone = on;
+    if (on) wait(200).then(() => this.dust(null, { count: 8, size: 0.42 }));
     const axis = this.model.dieAxis === 'z' ? 'z' : 'x';
     const down = axis === 'z' ? 1.25 : -1.2;
     const from = this.tilt.rotation[axis];
@@ -592,13 +671,14 @@ export class UnitView {
   }
 
   /** Melee: wind up overhead, step in and strike, recover. */
-  async swing(target, onImpact) {
+  async swing(target, onImpact, { crit = false } = {}) {
     if (this.model.bite) return this.bite(target, onImpact);
     this.cry('attack');
     await this.turnTowards(target.x, target.z);
     if (this.rig) {
       const { hit, done } = this.rig.play('melee', { at: 0.45, speed: 1.15 });
       wait(180).then(() => sfx.whoosh(this.unit.code === 'F' || this.unit.code === 'P'));
+      wait(150).then(() => this.trail(target, crit));
       await hit;
       onImpact?.();
       await done;
@@ -615,6 +695,7 @@ export class UnitView {
       armL.rotation.x = lerp(rest.armL, rest.armL - 0.3, t);
     }, easeOut);
     sfx.whoosh(this.unit.code === 'F' || this.unit.code === 'P');
+    this.trail(target, crit);
     await tween(120, (t) => {
       armR.rotation.x = lerp(-2.9, -0.25, t);
       this.group.position.copy(home).addScaledVector(dir, t);

@@ -503,6 +503,7 @@ export function createPreview(deps) {
         const tiles = areaTiles(game.grid, hovered, s.radius);
         board.cone.set(tiles);
         board.hover.set([hovered]);
+        board.setRunes(hovered, s.radius, id);
         const caught = tiles.map((t) => visibleUnitAt(t.x, t.z)).filter(Boolean);
         const allies = caught.filter((c) => c.team === u.team);
         const foes = caught.filter((c) => c.team !== u.team);

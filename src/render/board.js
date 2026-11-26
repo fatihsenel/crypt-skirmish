@@ -2,10 +2,12 @@
 
 import * as THREE from 'three';
 import { key } from '../game/grid.js';
-import { tween, easeOut, easeInOut, linear, keepAwake, calm } from './tween.js';
+import { tween, wait, easeOut, easeInOut, linear, keepAwake, calm } from './tween.js';
+import { dustFx, glintFx } from './effects.js';
 import { Motes } from './motes.js';
 import { Marks } from './marks.js';
 import { Wisps } from './wisps.js';
+import { Life } from './life.js';
 import { kitReady, piece } from './dungeonKit.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
@@ -43,6 +45,67 @@ const RISE_MAX_DELAY = 450;
 /** Ease out with a small overshoot, so a tile settles into place. */
 const settle = (t) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2;
 
+/** The colour of each area spell's rune circle. */
+export const RUNE_COLORS = {
+  fireball: 0xff8a2a, iceStorm: 0x9fd4ff, shatter: 0xb98cff, entangle: 0x7ed35a,
+  callLightning: 0xcfe0ff, fogCloud: 0xc8d0dc, grease: 0xd8c060,
+};
+
+let runeMap = null;
+/** A circle of runes: two rings, a star between them and marks around the band (white, tinted). */
+function runes() {
+  if (runeMap) return runeMap;
+  const c = document.createElement('canvas');
+  c.width = c.height = 512;
+  const g = c.getContext('2d');
+  g.translate(256, 256);
+  g.strokeStyle = '#fff';
+  g.fillStyle = '#fff';
+  g.lineCap = 'round';
+  const ring = (r, w) => { g.lineWidth = w; g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke(); };
+  ring(246, 7);
+  ring(204, 4);
+  ring(120, 3);
+  // A seven-pointed star inside the inner band.
+  g.lineWidth = 3;
+  g.beginPath();
+  for (let i = 0; i <= 7; i++) {
+    const a = (i * 3 * Math.PI * 2) / 7 - Math.PI / 2;
+    if (i === 0) g.moveTo(Math.cos(a) * 200, Math.sin(a) * 200);
+    else g.lineTo(Math.cos(a) * 200, Math.sin(a) * 200);
+  }
+  g.stroke();
+  // Angular marks round the band between the outer rings.
+  let seed = 31;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const n = 18;
+  g.lineWidth = 4;
+  for (let i = 0; i < n; i++) {
+    g.save();
+    g.rotate((i / n) * Math.PI * 2);
+    g.translate(0, -225);
+    g.beginPath();
+    g.moveTo(0, -12);
+    g.lineTo(0, 12);
+    const k = Math.floor(rnd() * 4);
+    if (k === 0) { g.moveTo(-8, -6); g.lineTo(8, 6); }
+    if (k === 1) { g.moveTo(0, -4); g.lineTo(9, -12); g.moveTo(0, 4); g.lineTo(-9, 12); }
+    if (k === 2) { g.moveTo(-8, 0); g.lineTo(8, 0); }
+    if (k === 3) { g.moveTo(0, -12); g.lineTo(8, -4); }
+    g.stroke();
+    g.restore();
+  }
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 - Math.PI / 2;
+    g.beginPath();
+    g.arc(Math.cos(a) * 162, Math.sin(a) * 162, 7, 0, Math.PI * 2);
+    g.fill();
+  }
+  runeMap = new THREE.CanvasTexture(c);
+  runeMap.anisotropy = 4;
+  return runeMap;
+}
+
 /** A reusable set of flat tile overlays sharing one material. */
 class TileLayer {
   constructor(parent, material, size = 0.9, y = 0.012) {
@@ -74,6 +137,7 @@ class TileLayer {
   }
 }
 
+const DEBRIS_GEO = new THREE.BoxGeometry(1, 1, 1);
 const LEDGE_GEO = new THREE.BoxGeometry(0.99, LEDGE, 0.99);
 
 // Ambient occlusion, baked: a dark strip on the floor along the foot of each wall and ledge,
@@ -125,6 +189,9 @@ function torchSpots(grid) {
 
 /** How bright a tile the heroes saw before, but can't see now, is drawn. */
 const REMEMBERED = 0.3;
+// A dark area's tiles in sight are drawn dimmer, so the heroes' torches (UnitView.carryTorch)
+// make a warm pool with a visible edge.
+const DARK_SEEN = 0.62;
 /** How see-through a wall gets when it stands in front of someone. */
 const FADED = 0.28;
 
@@ -441,6 +508,7 @@ export class Board {
     this.marks = new Marks(this, ledgeAt); // soot, charring and remains (marks.js)
     this.torches = [];
     const torches = torchSpots(grid);
+    this.banners = [];
     for (const spot of torches) this.addTorch(spot);
     if (this.kit) for (const spot of bannerSpots(grid, torches)) this.addBanner(spot);
 
@@ -454,9 +522,18 @@ export class Board {
     this.gates = [...grid.gates.values()].map((g) => this.addGate(g));
     this.chests = new Map();
     for (const c of grid.chests.values()) this.chests.set(key(c.x, c.z), this.addChest(c));
+    this.life = new Life(this, ledgeAt); // banners and cobwebs stirring, drips, a rat (life.js)
     this.traps = new Map();
     for (const s of grid.stairs) this.stairs = this.addStairs(s);
 
+    // An area spell's circle of runes on the floor where it will land (preview and monster casts).
+    this.runes = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ map: runes(), transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }),
+    );
+    this.runes.renderOrder = 3;
+    this.runes.visible = false;
+    this.group.add(this.runes);
     this.tick = (t, dt) => {
       if (this.fogDirty) this.tickFog(dt);
       if (this.fadeSources) this.tickFade(dt);
@@ -483,6 +560,12 @@ export class Board {
       this.motes.tick(t, dt);
       if (ripples && sway) ripples.offset.set(t * 0.025, t * 0.016); // the water's ripples drift
       this.wisps.tick(t);
+      this.life?.tick(t, dt);
+      if (this.runes.visible) {
+        // Turning slowly and breathing; still under reduced motion.
+        this.runes.rotation.y = sway ? t * 0.35 : 0;
+        this.runes.material.opacity = (this.runes.userData.alpha ?? 0.8) * (sway ? 0.85 + 0.15 * Math.sin(t * 3) : 1);
+      }
     };
     stage.tickers.add(this.tick);
     this.stage = stage;
@@ -776,12 +859,17 @@ export class Board {
   setVision(visible, { snap = false } = {}) {
     for (const k of visible) this.explored.add(k);
     for (const [k, cell] of this.cells) {
-      cell.target = visible.has(k) ? 1 : this.explored.has(k) ? REMEMBERED : 0;
+      cell.target = visible.has(k) ? (this.dark?.has(k) ? DARK_SEEN : 1) : this.explored.has(k) ? REMEMBERED : 0;
       if (snap) cell.f = cell.target;
     }
     this.fogDirty = true;
     this.wisps.dirty = true;
     if (snap) this.tickFog(0);
+  }
+
+  /** The room's dark tiles (rules 6), drawn dimmer when in sight; set before the first setVision. */
+  setDark(keys) {
+    this.dark = new Set(keys);
   }
 
   isExplored(x, z) {
@@ -887,6 +975,7 @@ export class Board {
     const cell = this.addToCell(x, z, ...parts);
     for (const c of this.candles) c.cell ??= cell;
     if (kind === 'barrel' || kind === 'crate') (this.propParts ??= new Map()).set(key(x, z), parts);
+    if (kind === 'barrel' || kind === 'crate') (this.propKinds ??= new Map()).set(key(x, z), kind);
     if (kind === 'column') {
       const meshes = [];
       for (const p of parts) p.traverse((o) => { if (o.isMesh) meshes.push(o); });
@@ -997,6 +1086,48 @@ export class Board {
     }
     this.walls = this.walls.filter((w) => w.x !== x || w.z !== z);
     this.addKitWall(x, z);
+  }
+
+  /**
+   * Rules 7: a barrel or crate smashed: it goes (removeProp) and leaves broken staves and boards
+   * lying round its tile for the rest of the fight (drawn only).
+   */
+  smashProp(x, z) {
+    const kind = this.propKinds?.get(key(x, z));
+    this.removeProp(x, z);
+    if (!this.canDebris(x, z)) return;
+    const wood = kind === 'barrel' ? [0x7a5634, 0x5e4026, 0x8a6a44] : [0x8a6a44, 0x6e5232, 0x9a7a50];
+    const y0 = liftAt(x, z);
+    const pieces = [];
+    const n = 6 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const long = Math.random() < 0.6;
+      const m = new THREE.Mesh(DEBRIS_GEO, mat(wood[i % wood.length], { roughness: 0.9 }));
+      m.scale.set(long ? 0.05 : 0.09, 0.025, long ? 0.2 + Math.random() * 0.12 : 0.09);
+      const a = Math.random() * Math.PI * 2;
+      const d = 0.1 + Math.random() * 0.32;
+      m.position.set(x + Math.cos(a) * d, y0 + 0.015 + Math.random() * 0.012, z + Math.sin(a) * d);
+      m.rotation.set((Math.random() - 0.5) * 0.25, Math.random() * Math.PI, (Math.random() - 0.5) * 0.25);
+      m.castShadow = m.receiveShadow = true;
+      this.group.add(m);
+      pieces.push(m);
+    }
+    if (kind === 'barrel') {
+      // A hoop off the barrel.
+      const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.012, 4, 18).rotateX(Math.PI / 2), mat(0x3a3634, { roughness: 0.5, metalness: 0.6 }));
+      hoop.position.set(x + 0.12, y0 + 0.014, z - 0.08);
+      hoop.rotation.z = 0.08;
+      this.group.add(hoop);
+      pieces.push(hoop);
+    }
+    this.addToCell(x, z, ...pieces);
+    this.fogDirty = true;
+  }
+
+  /** Whether broken pieces can lie on (x, z): not over water, a chasm or a pit. */
+  canDebris(x, z) {
+    const k = key(x, z);
+    return !this.grid.water?.has(k) && !this.grid.chasms?.has(k);
   }
 
   /** Rules 7: a barrel or crate smashed to pieces: it's gone, and so is a candle on it. */
@@ -1235,10 +1366,17 @@ export class Board {
     const b = piece('banner_red');
     if (!b) return;
     b.scale.set(0.42, KIT_WALL / 4, 0.5);
-    b.position.set(x, 0, z);
-    b.rotation.y = Math.atan2(dx, dz);
-    this.group.add(b);
-    this.addToCell(x, z, b);
+    // Hung from a pivot at its top edge, so it can swing out from the wall (render/life.js).
+    const top = new THREE.Box3().setFromObject(b).max.y;
+    b.position.set(0, -top, 0);
+    const pivot = new THREE.Group();
+    pivot.rotation.order = 'YXZ'; // the swing turns about the wall's own horizontal
+    pivot.position.set(x, top, z);
+    pivot.rotation.y = Math.atan2(dx, dz);
+    pivot.add(b);
+    this.group.add(pivot);
+    this.addToCell(x, z, pivot);
+    this.banners.push({ pivot, x: x + dx * 0.5, z: z + dz * 0.5, kick: 0, ph: Math.random() * 6.3 });
   }
 
   // --- props ------------------------------------------------------------------
@@ -1320,7 +1458,14 @@ export class Board {
     if (!d || d.opened) return;
     d.opened = true;
     d.bar.visible = false;
-    await tween(420, (t) => { d.hinge.rotation.y = -1.7 * t; }, easeOut);
+    if (calm()) {
+      await tween(300, (t) => { d.hinge.rotation.y = -1.7 * t; }, easeOut);
+      return;
+    }
+    // It swings wide, knocks back off the wall a little and settles, raising dust.
+    await tween(380, (t) => { d.hinge.rotation.y = -1.82 * t; }, easeOut);
+    dustFx(this.stage.scene, { x, z }, { count: 8, size: 0.4, y: liftAt(x, z) });
+    await tween(220, (t) => { d.hinge.rotation.y = -1.82 + 0.12 * Math.sin(t * Math.PI) + 0.12 * t; }, easeOut);
   }
 
   /** Rules 8: a hero swings the door shut and drops its bar. */
@@ -1400,9 +1545,10 @@ export class Board {
     this.pickables = this.pickables.filter((p) => p !== c.g);
   }
 
-  async openChest(x, z) {
+  async openChest(x, z, { gold = false } = {}) {
     const c = this.chests.get(key(x, z));
     if (!c) return;
+    if (gold) wait(250).then(() => glintFx(this.stage.scene, { x, z }, { y: liftAt(x, z) + 0.3 }));
     await tween(500, (t) => {
       c.lid.rotation.x = -1.9 * t;
       c.shine.intensity = Math.sin(t * Math.PI) * 6 + t * 1;
@@ -1575,13 +1721,44 @@ export class Board {
     if (t && !t.pit) await tween(500, (p) => { t.spikes.position.y = t.lo * p; }, easeInOut);
   }
 
+  /**
+   * The rune circle of area spell `id` round tile `at` (`radius` tiles out), or none with no
+   * `at`. Drawn under the figures, over the floor's tint.
+   */
+  setRunes(at, radius = 1, id = null) {
+    if (!at) {
+      this.runes.visible = false;
+      return;
+    }
+    const size = (radius + 0.5) * 2;
+    this.runes.scale.set(size, 1, size);
+    this.runes.position.set(at.x, liftAt(at.x, at.z) + 0.02, at.z);
+    this.runes.material.color.setHex(RUNE_COLORS[id] ?? 0xffd36b);
+    this.runes.userData.alpha = 0.8;
+    this.runes.visible = this.overlaysOn !== false;
+  }
+
+  /** A monster's area spell: its circle flares up where it will land, then the spell follows. */
+  async flashRunes(at, radius, id) {
+    this.setRunes(at, radius, id);
+    keepAwake(700);
+    await tween(calm() ? 350 : 550, (t) => {
+      const s = (radius + 0.5) * 2 * (calm() ? 1 : 0.6 + 0.4 * easeOut(Math.min(1, t * 2)));
+      this.runes.scale.set(s, 1, s);
+      this.runes.userData.alpha = 0.9 * Math.min(1, t * 4);
+    }, linear);
+    this.setRunes(null);
+  }
+
   clearHighlights() {
+    this.setRunes(null);
     for (const l of this.layers) l.clear();
   }
 
   /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
   showOverlays(on) {
     this.overlaysOn = on;
+    if (!on) this.runes.visible = false;
     for (const l of [...this.layers, this.threatMelee, this.threatRanged, this.threatFar, this.spot, this.heard]) l.material.visible = on;
   }
 
@@ -1592,6 +1769,7 @@ export class Board {
     });
     this.stage.tickers.delete(this.tick);
     this.riseId = -1;
+    this.life?.dispose();
     rising.clear();
     this.motes.dispose();
     this.wisps.dispose();
