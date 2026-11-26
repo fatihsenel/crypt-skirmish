@@ -6,8 +6,9 @@ import { canTrade } from '../game/shop.js';
 import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
-  cleanName, roomElite, EVENTS, eventProblem, openPicks, pickOptions, heroStyle,
+  cleanName, roomElite, EVENTS, eventProblem, openPicks, pickOptions, heroStyle, nodeShown,
 } from '../game/campaign.js';
+import { SCENES, pendingScene, TENDING } from '../game/story.js';
 import { TEMPLATES, CLASS_CHOICES, ABILITY_NAMES, FIGHTING_STYLES } from '../game/units.js';
 import { ITEMS, RELICS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
@@ -45,6 +46,8 @@ const EVENT_NEWS = {
   'pilgrim:rob': 'You take the pilgrim’s purse: two potions, shared out. He curses you as you go.',
   'altar:offer': 'Each hero bleeds on the altar, a quarter of their HP maximum. The party is blessed for its next fight: +1 to hit and +1 AC.',
   'reliquary:open': 'The Iron Key turns. Inside lies a Periapt of Wound Closure; hand it out from the pack.',
+  'study:scrolls': 'You take Morvath’s scroll case, and share out the scrolls among the heroes who can read them.',
+  'study:silver': 'You pry the silver from Morvath’s desk: 60 gold.',
 };
 
 /** One line on what each swappable class brings, for the title screen's class picker. */
@@ -398,7 +401,7 @@ export class Camp {
     const news = [...$('#camp-report').children].filter((e) => !e.classList.contains('xp'))
       .map((e) => e.textContent.replace(/\s+/g, ' ').trim()).join(' ');
     announce(`Camp. Party level ${lvl}, ${state.xp}${next ? ` of ${next}` : ''} XP. ${news}`
-      + (state.endless ? ` Next: floor ${state.endless.floor}.` : this.selected ? ` Next: ${nodeName(this.selected)}.` : ''));
+      + (state.endless ? ` Next: floor ${state.endless.floor}.` : pendingScene(state) ? ` ${SCENES[pendingScene(state)].title}. ${SCENES[pendingScene(state)].text} Choose below.` : this.selected ? ` Next: ${nodeName(this.selected)}.` : ''));
   }
 
   /** Where focus goes when the camp opens or a focused control is gone: the way on, or the pack. */
@@ -417,7 +420,10 @@ export class Camp {
       <span>${next ? `${state.xp} / ${next} XP` : `${state.xp} XP · max level`} · <b class="gold">${state.gold ?? 0} gold</b> · ${esc(difficultyLabel(state.difficulty ?? 'normal', state.tier))}</span>
     </div>`;
     let news = '';
-    if (report?.event) {
+    if (report?.scene) {
+      const s = SCENES[report.scene];
+      news = `<p><b>${esc(s.title)}.</b> ${esc(s.options[report.option].news)}</p>`;
+    } else if (report?.event) {
       news = `<p><b>${esc(nodeName(report.event))}.</b> ${esc(EVENT_NEWS[`${report.event}:${report.option}`])}</p>`;
     } else if (report?.rest) {
       news = `<p><b>${esc(nodeName(report.rest))}.</b> ${esc(NODES[report.rest].intro)} Full HP and every spell slot back.</p>`;
@@ -430,6 +436,7 @@ export class Camp {
         ? 'Long rest: full HP and every spell slot back.'
         : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: three-quarters of everyone’s missing HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
       if (report.banter) parts.push(`<p>${report.banter.map(([n, l]) => `<b>${esc(n)}:</b> “${esc(l)}”`).join('<br>')}</p>`);
+      if (report.tended) parts.push(`<p>Hesk the gravedigger tends your wounds: <b>+${TENDING} HP</b> for every hero.</p>`);
       if (report.blessed) parts.push('<p>The altar’s blessing fades.</p>');
       if (report.pilgrim) parts.push('<p>The pilgrim you tended finds you again: <b class="loot">a potion for every hero</b>.</p>');
       if (report.phylactery === 'spent') parts.push(`<p><b class="relic">${esc(RELICS.phylactery.name)}</b> is spent: it sleeps until the next long rest.</p>`);
@@ -452,7 +459,7 @@ export class Camp {
     const cleared = new Set(state.cleared);
     const walked = new Set();
     state.cleared.forEach((c, i) => { if (i) walked.add(`${state.cleared[i - 1]}>${c}`); });
-    const edges = mapEdges().map(({ from, to }) => {
+    const edges = mapEdges().filter(({ from, to }) => nodeShown(state, from) && nodeShown(state, to)).map(({ from, to }) => {
       const a = pos(from);
       const b = pos(to);
       const done = walked.has(`${from}>${to}`) || walked.has(`${to}>${from}`);
@@ -460,7 +467,7 @@ export class Camp {
       const cls = done ? 'done' : open ? 'open' : '';
       return `<line class="edge ${cls}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
     }).join('');
-    const nodes = Object.entries(NODES).map(([id, n]) => {
+    const nodes = Object.entries(NODES).filter(([id]) => nodeShown(state, id)).map(([id, n]) => {
       const p = pos(id);
       const kind = n.kind === 'rest' || n.kind === 'event' ? n.kind : n.boss ? 'boss' : 'fight';
       const state_ = cleared.has(id) ? 'cleared' : options.includes(id) ? 'available' : 'locked';
@@ -488,6 +495,16 @@ export class Camp {
   }
 
   roomHtml(state) {
+    // A scene after the last room waits for its answer before the way on opens (game/story.js).
+    const scene = pendingScene(state);
+    if (scene) {
+      const s = SCENES[scene];
+      const opts = Object.entries(s.options).map(([opt, o]) => `<button type="button" class="primary event-choice" data-enter="scene:${scene}:${opt}">
+          <b>${esc(o.label)}</b><small>${esc(o.desc)}</small></button>`).join('');
+      return `<h3>${esc(s.title)}</h3>
+        <p class="scene">${esc(s.text)}</p>
+        <div class="event-choices">${opts}</div>`;
+    }
     const id = this.selected;
     if (!id) return '<p class="muted">No way onward.</p>';
     const n = NODES[id];
@@ -603,7 +620,7 @@ export class Camp {
       this.selected = node.dataset.node;
       this.show(this.state);
       const elite = roomElite(this.selected, this.state.tier);
-      announce(`${nodeName(this.selected)} chosen.${elite ? ` Elite here: ${elite.name}.` : ''} Its button is below the map.`);
+      announce(`${nodeName(this.selected)} chosen.${elite ? ` Elite here: ${elite.name}.` : ''} ${pendingScene(this.state) ? 'First choose in the scene below the map.' : 'Its button is below the map.'}`);
       return;
     }
     const b = ev.target.closest('button');

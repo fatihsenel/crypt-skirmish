@@ -19,7 +19,7 @@ player.
 | `visit` | Once a page, when stats are on (counted by the Worker only) | `returning` (true when this browser has saved anything from the game before) |
 | `ease-offered` | The Defeat banner offers a lower difficulty (a third loss in the same room) | `room`, `difficulty` |
 | `ease-taken` | Try again on Normal or Story pressed | `room`, `from`, `to` |
-| `stop` | A choice at a stop | `stop` (pilgrim, altar, reliquary), `choice`, `difficulty` |
+| `stop` | A choice at a stop | `stop` (pilgrim, altar, reliquary, study, or a story scene: gravedigger, journal, hesk, lament, bargain), `choice`, `difficulty` |
 | `daily-start` | Play today's or this week's crypt | `mode` (daily, weekly), `room` |
 | `replay-watched` | Watch replay | `from` (banner, title, link), `room` |
 | `challenge-played` | A `#play=` link opened | `room` |

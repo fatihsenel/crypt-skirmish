@@ -9,6 +9,7 @@ import {
   NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, choosePick, chooseStyle, settlePicks, serialize,
   choices, START_NODE, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem, easeRun,
 } from './game/campaign.js';
+import { pendingScene, sceneProblem, takeScene } from './game/story.js';
 import { Heirlooms } from './ui/heirlooms.js';
 import { applyCommand, monsterTurn, heroFell, replayFight, fightCheck, newSeed } from './game/replay.js';
 import { key } from './game/grid.js';
@@ -416,6 +417,22 @@ function enterRoom(id) {
     newGame();
     return;
   }
+  // A scene between fights (game/story.js): "scene:gravedigger:take".
+  if (id.startsWith('scene:')) {
+    const [, scene, opt] = id.split(':');
+    if (sceneProblem(campaign, scene, opt)) return;
+    const { state, report } = takeScene(campaign, scene, opt);
+    campaign = state;
+    writeSave(campaign);
+    track('stop', { stop: scene, choice: opt, difficulty: campaign.difficulty });
+    if (report.gold) sfx.chest();
+    else if (report.potions) sfx.heal();
+    else sfx.discover();
+    showCamp(report);
+    return;
+  }
+  // The way on stays shut while a scene waits for its answer.
+  if (pendingScene(campaign)) return;
   // A stop with no fight: the choice is made from the camp ("altar:offer").
   if (id.includes(':')) {
     const [node, opt] = id.split(':');

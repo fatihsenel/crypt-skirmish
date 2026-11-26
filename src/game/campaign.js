@@ -10,7 +10,8 @@ import { ITEMS, applyItems, relicFrom, cleanRelics, readsScroll } from './items.
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
 import { ELITE_TRAITS, eliteTrait, RULES } from './elites.js';
-import { goldFor, cleanGold } from './shop.js';
+import { goldFor, cleanGold, readers } from './shop.js';
+import { storyHas, heskTends, cleanStory, TENDING } from './story.js';
 
 export const SAVE_VERSION = 1;
 export const HERO_CODES = ['F', 'W', 'R', 'C'];
@@ -95,12 +96,12 @@ export const NODES = {
     teaser: 'Ghouls: their claws poison. Skeletons besides.',
   },
   vault: {
-    kind: 'fight', level: 'vault', short: 'Vault', col: 5, row: 0, next: ['barrow', 'larder'],
+    kind: 'fight', level: 'vault', short: 'Vault', col: 5, row: 0, next: ['barrow', 'larder', { to: 'study', story: { journal: 'keep' } }],
     teaser: 'Guarded treasure: a magic cloak and weapon. Skip the rest at the well.',
   },
   // A room on two floors: skeletons in the hall above, ghouls in the flooded cistern below.
   cistern: {
-    kind: 'fight', level: 'cistern', short: 'Cistern', col: 5, row: 1, next: ['barrow', 'larder'],
+    kind: 'fight', level: 'cistern', short: 'Cistern', col: 5, row: 1, next: ['barrow', 'larder', { to: 'study', story: { journal: 'keep' } }],
     teaser: 'Two floors: skeletons in the hall above, ghouls in the flooded cistern below, stairs between. A magic weapon and ring, no rest.',
   },
   well: {
@@ -108,6 +109,11 @@ export const NODES = {
     name: 'The Still Well', short: 'Well', verb: 'Rest at the well',
     intro: 'Clean water and a door that bars from the inside. The party takes a long rest.',
     teaser: 'A long rest: full HP and every spell slot back. No XP, no loot.',
+  },
+  // Hidden until Morvath's journal is read (game/story.js): a stop with no fight before the wight.
+  study: {
+    kind: 'event', col: 6, row: 0, next: ['barrow'], story: { journal: 'keep' },
+    name: 'Morvath’s Study', short: 'Study',
   },
   // Optional: a ghast's hoard on the way down, but no rest before the wight.
   larder: {
@@ -209,6 +215,14 @@ export const EVENTS = {
       offer: { label: 'Offer blood', desc: 'Every hero loses a quarter of their HP maximum. The party is blessed for its next fight: +1 to hit and +1 AC.' },
     },
   },
+  study: {
+    intro: 'Behind a false wall, the necromancer’s study: a desk heavy with silver and a case of scrolls, both warded by nothing but dust.',
+    teaser: 'No fight. Morvath’s journal led you here. Take one thing before the dust settles.',
+    options: {
+      scrolls: { label: 'Take the scroll case', desc: 'A Scroll of Fireball and a Scroll of Misty Step, each to a hero who can read it (one no one can read stays behind).' },
+      silver: { label: 'Take the silver', desc: '60 gold.' },
+    },
+  },
   reliquary: {
     intro: 'A saint’s reliquary behind an iron door, its lock thick with rust.',
     teaser: 'No fight. It opens only with the Iron Key from the Sealed Vault.',
@@ -234,8 +248,11 @@ export function eventProblem(state, id, opt) {
   if (!choices(state).includes(id)) return 'Not on the way';
   if (id === 'pilgrim' && opt === 'tend' && !HERO_CODES.some((c) => state.party[c].potions > 0)) return 'No potion to spare';
   if (id === 'reliquary' && !state.pack.includes('ironKey')) return 'Sealed: it needs the Iron Key from the Sealed Vault';
+  if (id === 'study' && opt === 'scrolls' && !STUDY_SCROLLS.some((s) => readers(state, s).length)) return 'No one in the party can read them';
   return null;
 }
+
+const STUDY_SCROLLS = ['scrollFireball', 'scrollMistyStep'];
 
 /** Take option `opt` at event `id`: the party moves there and lives with it. Returns { state, report }. */
 export function takeEvent(prev, id, opt) {
@@ -264,6 +281,16 @@ export function takeEvent(prev, id, opt) {
     state.pack.push('periaptWounds');
     report.loot.push('periaptWounds');
   }
+  if (id === 'study' && opt === 'scrolls') {
+    for (const scroll of STUDY_SCROLLS) {
+      const can = readers(state, scroll);
+      const code = can.reduce((a, b) => (!a || (state.party[b].scrolls?.length ?? 0) < (state.party[a].scrolls?.length ?? 0) ? b : a), null);
+      if (!code) continue;
+      (state.party[code].scrolls ??= []).push(scroll);
+      report.loot.push(scroll);
+    }
+  }
+  if (id === 'study' && opt === 'silver') state.gold = (state.gold ?? 0) + 60;
   state.cleared.push(id);
   state.at = id;
   return { state, report };
@@ -458,7 +485,13 @@ export function choices(state) {
     .filter((e) => !cleared.has(e.to))
     .filter((e) => !e.ifAll || e.ifAll.every((c) => cleared.has(c)))
     .filter((e) => !NODES[e.to].unlessAll?.every((c) => cleared.has(c)))
+    .filter((e) => storyHas(state, e.story))
     .map((e) => e.to);
+}
+
+/** Is room `id` on the map? A hidden one shows once the story opens it (or the party went there). */
+export function nodeShown(state, id) {
+  return !NODES[id].story || storyHas(state, NODES[id].story) || state.cleared.includes(id);
 }
 
 /** Every edge on the map, for drawing it. */
@@ -573,10 +606,18 @@ export function completeFight(prev, id, game) {
   }
   // Morvath's Phylactery saves one hero between long rests: spent when it works.
   if (game.phylacteryUsed) state.phylacterySpent = true;
+  // Hesk the gravedigger (game/story.js), if he follows the party, patches them up too.
+  const tended = heskTends(state) && !longRest && node.next.length > 0;
+  if (tended) {
+    for (const code of HERO_CODES) {
+      const rec = state.party[code];
+      rec.hp = Math.min(restedHero(code, rec).maxHp, rec.hp + TENDING);
+    }
+  }
   const spent = !!state.phylacterySpent;
   if (longRest) restParty(state);
   const phylactery = !spent ? null : longRest ? 'ready' : game.phylacteryUsed ? 'spent' : null;
-  return { state, report: { xp, gold, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery, blessed, pilgrim } };
+  return { state, report: { xp, gold, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery, blessed, pilgrim, tended } };
 }
 
 /** The relics the next fight starts with: the run's, less a Phylactery spent this act. */
@@ -799,6 +840,8 @@ export function parseSave(text) {
     s.relics = cleanRelics(s.relics ?? s.cleared.map((c) => (NODES[c].boss ? relicFrom(NODES[c].level) : null)));
     if (s.phylacterySpent !== true) delete s.phylacterySpent; // kept only while spent
     if (!['owed', 'repaid', 'robbed'].includes(s.pilgrim)) delete s.pilgrim;
+    s.story = cleanStory(s.story); // the choices made between fights (game/story.js)
+    if (!s.story) delete s.story;
     // Losses per room (easeOffer): whole numbers for real rooms only.
     if (s.fails && typeof s.fails === 'object') s.fails = Object.fromEntries(Object.entries(s.fails).filter(([id, n]) => NODES[id] && Number.isInteger(n) && n > 0));
     else delete s.fails;

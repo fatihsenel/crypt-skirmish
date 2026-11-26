@@ -7,6 +7,7 @@ import { levelOf, isFloor, loadBestFloor, restFloor } from './game/endless.js';
 import { relicFrom } from './game/items.js';
 import { NODES, DIFFICULTIES, completeFight, recordDefeat, easeOffer, runSummary, runShareText } from './game/campaign.js';
 import { fightCheck } from './game/replay.js';
+import { storyOutro } from './game/story.js';
 import { fightRecap, winRecap } from './game/recap.js';
 import { recordBlows, loadBestiary, slainTotal, loadElitesSlain } from './game/bestiary.js';
 import { recordRun, saveLastFight } from './game/history.js';
@@ -73,7 +74,7 @@ export function settleFight({ game, nodeId, campaign, record, daily, challenge, 
   // Lost this room again and again in a real run: offer the rest of it one difficulty down.
   const ease = !won && saving && campaign && !daily && !challenge && !deep ? easeOffer(campaign, nodeId) : null;
   const banner = {
-    round: game.round, level: level.name, final, xp: game.xpEarned(), outro: level.outro,
+    round: game.round, level: level.name, final, xp: game.xpEarned(), outro: final && won ? storyOutro(campaign, level.outro) : level.outro,
     longRest: deep ? restFloor(campaign.endless.floor) : !!NODES[nodeId]?.actBreak,
     deep: deep && { floor: campaign.endless.floor, best: loadBestFloor() }, links: !deep,
     summary, awards, relic, jar: !!campaign?.relics?.includes('jar') && !daily && !challenge, daily: dailyResult, challenge: versus, share, replay: !!record, recap: won ? null : fightRecap(game),

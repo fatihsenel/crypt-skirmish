@@ -306,6 +306,18 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
     party fights its next fight blessed, +1 to hit and +1 AC. The Shrine's rest keeps it.
   - The Saint's Reliquary (after the Halls): sealed unless the party carries the Iron Key from
     the Sealed Vault's chest. Inside: a Periapt of Wound Closure.
+  - Morvath's Study (after the Vault or the Cistern): hidden until the party reads Morvath's
+    journal. Take the scroll case (Fireball and Misty Step) or 60 gold.
+- **The story between fights:** after some rooms a scene waits in camp, and the way on opens
+  once you choose. The run remembers each choice, and the last room's ending tells how each
+  thread turned out.
+  - The Gravedigger (after the Crypt): bring Hesk along, and he tends the party for 4 HP more
+    after every room, or send him home for 25 gold. After the Barrow he may stay, or take
+    Varek's crown home and leave a potion for every hero.
+  - Morvath's Journal (after the Sanctum): read on, and the hidden study shows on the map; or
+    burn it for two potions. Read, it speaks again after the Tomb: throw it away, or take its
+    100 gold.
+  - Ysolde's Lament (after the Throne): keep her locket for the end, or sell it for 40 gold.
 - **Defeat:** a lost fight can be retried, or skipped by taking another route. The Defeat
   screen tells how each hero fell, which foe hit hardest and who was still standing, with a tip
   for next time (a trap, unused potions, the healer falling first, a hero cut off alone, spell
@@ -852,6 +864,7 @@ src/
     items.js         magic items and the bosses' relics
     abilities.js     actions and spells
     campaign.js      the dungeon map, XP, the pack, rests, New Game+, save data
+    story.js         the scenes between fights, their choices and the ending they make
     shop.js          gold for each room, and what the pedlar sells and pays
     endless.js       the Endless Crypt: floors made from a seed, the dive's state and its save
     maps.js          the rooms as ASCII maps

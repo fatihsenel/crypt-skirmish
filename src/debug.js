@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { newCampaign, runSummary, runShareText } from './game/campaign.js';
 import { levelById } from './game/maps.js';
+import { storyOutro } from './game/story.js';
 import { partyAt } from './game/daily.js';
 import { tileFromEvent } from './input.js';
 
@@ -24,9 +25,10 @@ export function sampleVictory(search) {
   };
   run.tier = Math.max(0, Math.min(99, Math.floor(Number(new URLSearchParams(search).get('tier')) || 0)));
   if (run.tier >= 2) run.stats.elites = { regenerating: 3, relentless: 4, frenzied: 2, swift: 2, warded: 2, barbed: 1 };
+  run.story = { gravedigger: 'take', journal: 'keep', hesk: 'stay', lament: 'vow', bargain: 'refuse' };
   const summary = runSummary(run);
   const last = levelById('labyrinth');
-  return ['victory', { round: 9, level: last.name, final: true, xp: 0, outro: last.outro, summary, share: runShareText(summary) }];
+  return ['victory', { round: 9, level: last.name, final: true, xp: 0, outro: storyOutro(run, last.outro), summary, share: runShareText(summary) }];
 }
 
 /** Win (`team` 'monsters') or lose ('heroes') on the spot: through Relentless and Death Ward too. */

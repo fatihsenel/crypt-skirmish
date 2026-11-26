@@ -317,6 +317,12 @@ server on 5173.
   draws its options as buttons (`data-enter="altar:offer"`) and `EVENT_NEWS` in `camp.js` says
   what happened. Lasting effects ride with the party (potions, the pack, a `boon` item), so
   fight records need nothing new.
+- **Story scene:** `SCENES` in `game/story.js` (`after` a room, `when` earlier answers, words
+  and options with `desc` and `news`); what it pays goes in `GOLD` or `POTIONS` there, never into
+  a fight. Answers live in the campaign's `story` (checked by `cleanStory` in `parseSave`), a
+  waiting scene blocks the way on (`pendingScene`, `data-enter="scene:id:opt"`), a node's or
+  edge's `story` hides it until those answers are given (`nodeShown`, `choices`), and the last
+  room's ending is `storyOutro`. Every variant needs a branch for no answer (old saves).
 - **Ability increases:** a `PROGRESSION` level with `stats` is an Ability Score Improvement
   the player may swap (`picks` in the party record, `{ 4: 'con' }`; none means the class's own,
   so old records build the same heroes). What follows from an ability (CON's hit points per
