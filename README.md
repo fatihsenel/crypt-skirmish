@@ -471,7 +471,12 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   through water leaves wet footprints, and one that walked through blood red ones; they dry
   over a few rounds. Pools mirror the figures and flames above them (with Glow on), new ground
   comes into sight in a wave out from the hero who sees it, and pebbles, bones and pot shards
-  lying about are kicked aside by passing feet and thrown out by a blast.
+  lying about are kicked aside by passing feet and thrown out by a blast. Runes spin up round
+  a caster, coloured by the spell's school (fire orange, healing gold, warding blue, the dead
+  green). Fire and lightning blacken and crack the walls beside them, and Shatter and
+  Thunderwave crack them; an arrow or javelin that misses flies on and sticks in a wall, a
+  door, a barrel or the floor for the rest of the fight. When a figure takes the stairs, the
+  floor it leaves fades to a cold ghost and the camera tips to follow it.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
@@ -518,7 +523,8 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   a struck figure doesn't freeze for its hit-stop, a wounded one doesn't sway, and banners,
   cobwebs, drips and rats keep still, figures don't look about, the camera neither sweeps to a
   named foe nor closes in on the last blow, the edges' red doesn't beat, new ground fades in
-  all at once and the floor's loose bits stay put.
+  all at once, the floor's loose bits stay put, a caster's runes and a stuck arrow hold still
+  and the camera doesn't tip on the stairs.
 - **Text size** and **colour-blind friendly enemy reach** are in Settings.
 
 ## Sound
@@ -869,6 +875,9 @@ src/
     tracks.js        wet and bloody footprints
     reflect.js       reflections in the water (with Glow)
     clutter.js       pebbles, bones and shards that roll aside
+    glyphs.js        runes round a caster, by school
+    scars.js         soot and cracks on the walls
+    arrows.js        missed arrows stuck where they struck
     lights.js        spell light: a few kept point lights lent to bolts and blasts
     wisps.js         haze at the edge of the explored map and over a lower hall
     outline.js       the outlines on the hovered figure and the foes in reach

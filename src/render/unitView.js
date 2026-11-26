@@ -14,6 +14,7 @@ import { dissolvable, edgeColor } from './dissolve.js';
 import { SpellLight } from './lights.js';
 import { slashFx, dustFx } from './effects.js';
 import { Auras } from './auras.js';
+import { castGlyphs, schoolColor } from './glyphs.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const WHITE = new THREE.Color(0xffffff);
@@ -648,6 +649,7 @@ export class UnitView {
   async cast(target, release) {
     this.cry('cast');
     if (target) await this.turnTowards(target.x, target.z);
+    this.glyphs(this.school);
     if (this.rig) {
       const { hit, done } = this.rig.play(target ? 'spell' : 'cast', { at: 0.4 });
       await hit;
@@ -671,6 +673,12 @@ export class UnitView {
       armL.rotation.x = lerp(-1.25, rest.armL, t);
     });
     this.armsBusy = false;
+  }
+
+  /** Runes spin up round the figure in the colour of `spell`'s school (glyphs.js), if it's seen. */
+  glyphs(spell) {
+    if (!this.group.visible || !this.group.parent) return;
+    castGlyphs(this.group.parent, this.group.position, this.model.height, schoolColor(spell));
   }
 
   /** Vanish, reappear at (x, z). */
@@ -800,6 +808,7 @@ export class UnitView {
   async shoot(target, kind, release, onImpact) {
     this.cry(SPELL_BOLTS.includes(kind) ? 'cast' : 'attack'); // Fire Bolt, Chill Touch: an incantation
     await this.turnTowards(target.x, target.z);
+    if (SPELL_BOLTS.includes(kind)) this.glyphs(kind);
     if (this.rig) {
       const spell = SPELL_BOLTS.includes(kind);
       if (kind === 'fire' || kind === 'eldritch') sfx.cast();
@@ -901,8 +910,12 @@ export class UnitView {
 /** Projectiles thrown by a spell (cast pose and glow rather than a bow or a throw). */
 const SPELL_BOLTS = ['fire', 'necro', 'eldritch'];
 
-/** Projectile flight between two units. kind: 'fire' | 'necro' | 'eldritch' | 'arrow' | 'javelin' | 'web' */
-export async function shootProjectile(scene, from, to, kind) {
+/**
+ * Projectile flight between two units. kind: 'fire' | 'necro' | 'eldritch' | 'arrow' | 'javelin' | 'web'.
+ * `missed(mesh, a, b)`, for an arrow or javelin that missed, takes the shaft over at the end of its
+ * flight (it flies on and sticks: render/arrows.js) instead of it vanishing.
+ */
+export async function shootProjectile(scene, from, to, kind, { missed } = {}) {
   let mesh;
   const bolt = SPELL_BOLTS.includes(kind) || kind === 'web';
   if (kind === 'web') {
@@ -938,6 +951,7 @@ export async function shootProjectile(scene, from, to, kind) {
     );
     tip.position.z = shaftLen / 2 + 0.04;
     mesh.add(shaft, tip);
+    mesh.userData.reach = shaftLen / 2 + 0.08; // from its middle to the tip
   }
   const a = new THREE.Vector3(from.x, 0.8, from.z);
   const b = new THREE.Vector3(to.x, 0.6, to.z);
@@ -952,7 +966,8 @@ export async function shootProjectile(scene, from, to, kind) {
     if (!mesh.position.equals(prev)) mesh.lookAt(mesh.position.clone().add(mesh.position.clone().sub(prev)));
     prev.copy(mesh.position);
   }, linear);
-  scene.remove(mesh);
+  if (missed && !bolt) missed(mesh, a, b);
+  else scene.remove(mesh);
 }
 
 /** Rising text above a unit (damage numbers, "Miss", etc). */

@@ -9,6 +9,8 @@ import { Marks } from './marks.js';
 import { Tracks } from './tracks.js';
 import { WaterMirror } from './reflect.js';
 import { Clutter } from './clutter.js';
+import { Scars } from './scars.js';
+import { Arrows } from './arrows.js';
 import { Wisps } from './wisps.js';
 import { Life } from './life.js';
 import { kitReady, piece } from './dungeonKit.js';
@@ -16,6 +18,8 @@ import { kitReady, piece } from './dungeonKit.js';
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
 const KIT_WALL = 1.0;
 const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const GHOST = new THREE.Color(0.3, 0.36, 0.5); // a floor left by the stairs: dim and cold (focusFloor)
+const GHOST_TINT = new THREE.Color();
 /** A stable pseudo-random number in [0, 1) for a tile, so a map always looks the same. */
 const hash = (x, z, salt = 0) => {
   const n = Math.sin(x * 127.1 + z * 311.7 + salt * 74.7) * 43758.5453;
@@ -485,6 +489,7 @@ export class Board {
       this.group.add(shade);
       this.addToCell(x, z, shade);
     }
+    this.ghost = { which: null, k: 0, target: 0 }; // the floor a figure leaves by the stairs (focusFloor)
     this.flights = new Map(); // key -> { dx, dz, down }: which way each flight of steps runs
     for (const { down, up } of grid.stairways) {
       this.addFlight(down, up, true, grid);
@@ -511,6 +516,8 @@ export class Board {
     this.wisps = new Wisps(this, ledgeAt); // dark smoke at the edge of the unexplored (wisps.js)
     this.marks = new Marks(this, ledgeAt); // soot, charring and remains (marks.js)
     this.tracks = new Tracks(this, ledgeAt); // wet and bloody footprints (tracks.js)
+    this.scars = new Scars(this, ledgeAt); // soot and cracks on the walls (scars.js)
+    this.arrows = new Arrows(this, ledgeAt); // missed shots stuck where they struck (arrows.js)
     this.torches = [];
     const torches = torchSpots(grid);
     this.banners = [];
@@ -892,10 +899,39 @@ export class Board {
     return this.explored.has(key(x, z));
   }
 
+  /**
+   * A room on two floors: while a figure takes the stairs, the floor it leaves (`which`, 'upper'
+   * or 'lower') fades to a cold ghost of itself; null brings it back. Drawn only.
+   */
+  focusFloor(which) {
+    if (!this.grid.lower?.size) return;
+    if (!this.lowerCells) {
+      // The lower hall's tiles and the walls round them.
+      this.lowerCells = new Set(this.grid.lower);
+      for (const k of this.grid.lower) {
+        const [x, z] = k.split(',').map(Number);
+        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+          if (this.grid.isWall(x + dx, z + dz)) this.lowerCells.add(key(x + dx, z + dz));
+        }
+      }
+    }
+    if (which) this.ghost.which = which;
+    this.ghost.target = which ? 1 : 0;
+    this.fogDirty = true;
+  }
+
   tickFog(dt) {
     let moving = false;
     const k = Math.min(1, dt * 5);
-    for (const cell of this.cells.values()) {
+    const g = this.ghost;
+    let ghostly = false;
+    if (g.k !== g.target) {
+      g.k += Math.sign(g.target - g.k) * Math.min(Math.abs(g.target - g.k), dt * 3);
+      moving = true;
+      ghostly = true; // every cell on that floor is coloured afresh
+    }
+    for (const [ck, cell] of this.cells) {
+      if (ghostly) cell.applied = null;
       if (cell.delay > 0) { // waiting for the wave to reach it (setVision)
         cell.delay -= dt;
         moving = true;
@@ -907,7 +943,12 @@ export class Board {
         else moving = true;
       } else if (cell.applied === cell.f) continue;
       cell.applied = cell.f;
-      for (const { m, base } of cell.mats) m.color.copy(base).multiplyScalar(cell.f);
+      const ghost = g.k > 0 && (this.lowerCells.has(ck) === (g.which === 'lower'));
+      if (ghost) GHOST_TINT.setRGB(1, 1, 1).lerp(GHOST, g.k);
+      for (const { m, base } of cell.mats) {
+        m.color.copy(base).multiplyScalar(cell.f);
+        if (ghost) m.color.multiply(GHOST_TINT);
+      }
       for (const o of cell.objects) o.visible = cell.f > 0.005;
     }
     this.fogDirty = moving;
@@ -1072,6 +1113,8 @@ export class Board {
   revealSecret(x, z) {
     const k = key(x, z);
     if (this.doors.has(k)) return;
+    this.scars.clear(x, z);
+    this.arrows.clear(x, z);
     const cell = this.cells.get(k);
     if (cell) {
       for (const o of cell.objects) this.group.remove(o);
@@ -1156,6 +1199,7 @@ export class Board {
     const k = key(x, z);
     const parts = this.propParts?.get(k);
     if (!parts) return;
+    this.arrows?.clear(x, z);
     this.propParts.delete(k);
     const cell = this.cells.get(k);
     for (const p of parts) {

@@ -16,6 +16,15 @@ import { attackMoment, spellMoment, lineFor, downSpeaker, replySpeaker, lastWord
 import { hear } from './game/bestiary.js';
 import { speak, speaking } from './render/speechBubble.js';
 
+/** Where a missed shot from `from` passes its mark `to`: a little to one side of it. */
+function wideOf(from, to) {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const side = (Math.random() < 0.5 ? -1 : 1) * (0.28 + Math.random() * 0.12);
+  return { x: to.x - (dz / len) * side, z: to.z + (dx / len) * side };
+}
+
 /**
  * The controller's view of the fight: `stage`, `hud`, `settings` and `spiritWeapons` (the
  * clerics' weapons by caster id), and as functions `game()`, `board()`, `view(u)`, `addView(u)`,
@@ -35,7 +44,16 @@ export function createAnimations(app) {
   /** Leaves soot, charring or remains on the floor (render/marks.js); drawn only. */
   const mark = (kind, tiles, opts) => {
     app.board()?.marks?.add(kind, tiles, opts);
-    if (kind === 'scorch' || kind === 'char') app.board()?.clutter?.blast(tiles); // a blast throws the floor's bits about
+    if (kind === 'scorch' || kind === 'char') {
+      app.board()?.clutter?.blast(tiles); // a blast throws the floor's bits about
+      app.board()?.scars?.blast(tiles, 'soot', opts?.scale ?? 1); // and blackens the walls beside it
+    }
+  };
+  /** Cracks the walls round a thunderclap, `radius` tiles about `at` (render/scars.js). */
+  const crackWalls = (at, radius) => {
+    const tiles = [];
+    for (let dz = -radius; dz <= radius; dz++) for (let dx = -radius; dx <= radius; dx++) tiles.push({ x: at.x + dx, z: at.z + dz });
+    app.board()?.scars?.blast(tiles, 'crack', 1);
   };
 
   /**
@@ -175,7 +193,10 @@ export function createAnimations(app) {
       && ![...app.views().values()].some((v) => v.unit !== target && v.unit.team === 'monsters' && !v.unit.alive && !v.down && !v.gone)
       ? app.lastBlow(pos) : null;
     if (attack.projectile) {
-      await av.shoot(pos, attack.projectile, () => shootProjectile(stage.scene, attacker, pos, attack.projectile), onImpact);
+      // A miss goes a little wide of its mark, flies on and sticks where it strikes (render/arrows.js).
+      const wide = !r.hit && app.board()?.arrows ? wideOf(attacker, pos) : null;
+      const missed = wide && ((mesh, a, b) => app.board().arrows.fly(stage.scene, mesh, a, b));
+      await av.shoot(pos, attack.projectile, () => shootProjectile(stage.scene, attacker, wide ?? pos, attack.projectile, { missed }), onImpact);
     } else {
       await av.swing(pos, onImpact, { crit: !!r.crit });
     }
@@ -324,6 +345,7 @@ export function createAnimations(app) {
     if (!unseen(target) || !unseen(caster)) {
       floatText(stage.scene, { x: caster.x, z: caster.z - 0.5 }, 'Hellish Rebuke!', 'spell');
       view(caster)?.updateStatus();
+      view(caster).school = 'hellishRebuke';
       await view(caster).cast(target, async () => {
         sfx.fireCone();
         await shootProjectile(stage.scene, caster, target, 'fire');
@@ -445,10 +467,15 @@ export function createAnimations(app) {
           const flight = (at) => app.board().flightAt?.(at.x, at.z);
           const out = flight(step.from), back = flight(step.to);
           sfx.stairway(step.down);
+          // The floor it leaves fades to a ghost, and the camera tips to follow (main.js).
+          const board = app.board();
+          board.focusFloor?.(step.down ? 'upper' : 'lower');
+          app.stairCamera?.(step, unit, 1460);
           await v.takeStairs(step.from, step.to, out, back, (at) => {
             if (inView(at)) burstFx(stage.scene, at, { colors: [0x6b6259, 0x8a8076, 0x4d463f], count: 10, speed: 0.9, size: 0.06, y: 0.08, life: 700 });
             if (at === step.to) sfx.step(unit.code);
           });
+          wait(500).then(() => { if (app.board() === board) board.focusFloor?.(null); });
           keepInView(step.to);
           break;
         }
@@ -874,6 +901,7 @@ export function createAnimations(app) {
         break;
       case 'turnUndead':
         sfx.turnUndead();
+        v.school = 'turnUndead';
         await v.cast(null, () => turnFx(stage.scene, unit, ACTIONS.turnUndead.range));
         await showSaves(r.saves, 'WIS', r.dc);
         for (const s of r.saves) {
@@ -948,6 +976,7 @@ export function createAnimations(app) {
   async function playSpell(r) {
     const { caster, id } = r;
     const cv = view(caster);
+    cv.school = id; // the runes round the caster take its school's colour (glyphs.js)
     if (unseen(caster) && id === 'animateDead') {
       // Raised out of sight: no show, the risen one is simply there when you find it.
       sfx.raise();
@@ -1205,6 +1234,7 @@ export function createAnimations(app) {
           sfx.shatter();
           stage.shake(0.3, 450);
           await turnFx(stage.scene, r.center, r.spell.radius + 0.5, SHATTER_TINT);
+          crackWalls(r.center, r.spell.radius);
         });
         await showSaves(r.saves, 'CON', r.dc);
         await Promise.all(r.saves.map((s) => {
@@ -1218,6 +1248,7 @@ export function createAnimations(app) {
           sfx.shatter();
           stage.shake(0.3, 400);
           await turnFx(stage.scene, caster, 1.5, SHATTER_TINT);
+          crackWalls(caster, 1);
         });
         await showSaves(r.saves, 'CON', r.dc);
         await Promise.all(r.saves.map((s) => {

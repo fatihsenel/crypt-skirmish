@@ -145,6 +145,14 @@ server on 5173.
   `onStep`; a scorch or char mark also `blast`s the clutter. Water reflections
   (`render/reflect.js`, one three `Reflector` over every pool, its fog a vertex attribute) go with
   the Glow setting (`board.setReflections`); they leave the floor's meshes out of the mirror.
+  A caster's runes are `castGlyphs` (`render/glyphs.js`, from `cast` and `shoot` in `unitView.js`;
+  `schoolColor` maps a spell id, so a new spell needs a school in `SPELL_SCHOOL`). A scorch or char
+  mark also scars the walls facing the camera beside it (`board.scars`, `render/scars.js`; Shatter
+  and Thunderwave through `crackWalls` in `animate.js`); a missed arrow or javelin aims wide
+  (`wideOf`) and `shootProjectile`'s `missed` hands it to `board.arrows.fly` (`render/arrows.js`),
+  which sticks it (a closed door's shafts ride its hinge; `removeProp` and `revealSecret` clear them).
+  Taking the stairs, `board.focusFloor` ghosts the floor being left (`lowerCells`, in `tickFog`)
+  and `stairCamera` in `main.js` tips and leans the camera (skipped under `calm()`).
   `setVision`'s `from` (the eyes) delays each newly seen cell (`cell.delay`), so sight sweeps in. The haze at the explored map's edge and
   over a lower hall is `render/wisps.js`. A new fight's room rises into place (`board.rise`,
   skipped on a restored fight and under `calm()`); while it does, `liftAt` carries each tile's

@@ -24,7 +24,7 @@ import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
 import { spiritWeapon, raiseFx } from './render/effects.js';
 import { createOwl } from './render/owl.js';
-import { wait, playback, calm, setMotion, onSystemMotion, keepAwake } from './render/tween.js';
+import { wait, tween, playback, calm, setMotion, onSystemMotion, keepAwake } from './render/tween.js';
 import { Hud } from './ui/hud.js';
 import { Bestiary } from './ui/bestiary.js';
 import { Shop } from './ui/shop.js';
@@ -811,7 +811,7 @@ function clearOwls() {
 const anim = createAnimations({
   stage, hud, settings, spiritWeapons, owls, view, addView, unseen, inView, flushReveals, syncStatus, keepInView,
   game: () => game, board: () => board, selected: () => selected, busy: () => busy, touching: () => controls.touching,
-  lastBlow: (at) => lastBlow(at), views: () => views,
+  lastBlow: (at) => lastBlow(at), stairCamera: (step, unit, ms) => stairCamera(step, unit, ms), views: () => views,
   autoplaying: () => debugAutoplay, replaying: () => !!replay,
 });
 const { play, damageReaction, throwsOwn } = anim;
@@ -1431,6 +1431,54 @@ async function bossSweep(u) {
   await wait(1300);
   if (game !== g || photo.active) return;
   await easeCamera(back, back.zoom, 650);
+}
+
+/**
+ * A figure in sight takes the stairs (`step`, over about `ms`): the camera tips to look down
+ * the stairwell going down (or lower going up) and leans in, and comes back as it arrives; for
+ * a hero it glides along to where they come out. Not under reduced motion, in photo mode or
+ * while the page is hidden. A newer pan takes over from it.
+ */
+async function stairCamera(step, unit, ms) {
+  if (calm() || photo.active || document.hidden) return;
+  const cam = stage.camera;
+  const ticket = ++panTween;
+  const target0 = stage.controls.target.clone();
+  const shift = unit.team === 'heroes' ? shiftTo(step.to.x, step.to.z) ?? new THREE.Vector3() : new THREE.Vector3();
+  const orbit = new THREE.Spherical().setFromVector3(cam.position.clone().sub(target0));
+  const phi0 = orbit.phi;
+  const tilt = step.down ? -0.17 : 0.1; // less phi looks more from above
+  const z0 = cam.zoom;
+  const zoom = Math.min(stage.controls.maxZoom, z0 * 1.12);
+  const at = new THREE.Vector3();
+  let level = false;
+  /** Upright and at its zoom again, round wherever the camera looks now. */
+  const settle = () => {
+    level = true;
+    orbit.phi = phi0;
+    cam.position.copy(stage.controls.target).add(new THREE.Vector3().setFromSpherical(orbit));
+    cam.zoom = z0;
+    cam.updateProjectionMatrix();
+    keepAwake(100);
+  };
+  await tween(ms + 500, (t) => {
+    if (ticket !== panTween) { // a newer pan took over: it keeps its way, but not the tilt
+      if (!level) settle();
+      return;
+    }
+    const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    const bump = Math.sin(Math.PI * Math.min(1, t * 1.05)); // in, and back by the end
+    at.copy(target0).addScaledVector(shift, e);
+    orbit.phi = Math.max(0.05, phi0 + tilt * bump);
+    stage.controls.target.copy(at);
+    cam.position.copy(at).add(new THREE.Vector3().setFromSpherical(orbit));
+    cam.zoom = z0 + (zoom - z0) * bump;
+    cam.updateProjectionMatrix();
+    keepAwake(100);
+  });
+  if (level) return;
+  if (ticket === panTween) stage.controls.target.copy(target0).add(shift);
+  settle();
 }
 
 /**
