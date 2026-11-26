@@ -445,10 +445,15 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   one finger turns, two pan and pinch). Save image keeps the picture (on a phone, the share
   sheet); Blur (or B) softens what's far from the middle of the view, like a miniature;
   Done or Esc puts the camera back.
-- **The look:** torches flicker and sway and throw embers and dust into their light, walls
+- **The look:** a room builds itself as the fight starts, its tiles rising in a wave out from
+  the party. Torches flicker and sway and throw embers and dust into their light, walls
   darken where they meet the floor, a struck figure flashes white and freezes for a blink, and
-  a slain monster burns away (in embers, an undead pale blue, an ooze green), leaving its
-  remains faint on the floor.
+  a slain monster burns away (in embers, an undead pale blue, an ooze green), leaving blood,
+  bone dust or a puddle behind. Fire leaves soot and lightning a charred star on the floor (for
+  the fight only: a restored fight starts clean). Bolts and blasts light the walls and figures
+  around them, a cold haze curls where the explored map meets the dark and lies over a lower
+  hall, water ripples, and chasms drop away into mist with dust falling in. The hovered figure
+  gets a warm outline and each foe in reach a red one.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
@@ -491,6 +496,7 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
 - **Reduced motion** (the Motion setting, or the system's when it's on System): the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place, the dice
   don't wobble, the title's skull holds still, torches burn steady without embers or dust,
+  the haze at the edge of the dark holds still, a room appears at once instead of rising,
   and a struck figure doesn't freeze for its hit-stop.
 - **Text size** and **colour-blind friendly enemy reach** are in Settings.
 
@@ -836,7 +842,12 @@ src/
     settings.js      settings kept in the browser
   render/            three.js only
     stage.js         renderer, camera, lights, screen shake, labels kept apart
-    board.js         dungeon meshes, wall shading, flickering torches, highlights, fog of war, wall fading
+    board.js         dungeon meshes, wall shading, flickering torches, highlights, fog of war, wall
+                     fading, water and chasms, the room rising into place
+    marks.js         soot, scorch and remains left on the floor
+    lights.js        spell light: a few kept point lights lent to bolts and blasts
+    wisps.js         haze at the edge of the explored map and over a lower hall
+    outline.js       the outlines on the hovered figure and the foes in reach
     motes.js         embers rising from fires and dust in their light
     post.js          glow (bloom) and photo mode's blur, loaded only when one is on
     dissolve.js      a slain monster burning away, with an ember, blue or green rim

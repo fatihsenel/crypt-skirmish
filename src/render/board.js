@@ -2,8 +2,10 @@
 
 import * as THREE from 'three';
 import { key } from '../game/grid.js';
-import { tween, easeOut, easeInOut, keepAwake, calm } from './tween.js';
+import { tween, easeOut, easeInOut, linear, keepAwake, calm } from './tween.js';
 import { Motes } from './motes.js';
+import { Marks } from './marks.js';
+import { Wisps } from './wisps.js';
 import { kitReady, piece } from './dungeonKit.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
@@ -22,7 +24,24 @@ const WALL_HEIGHT = 0.55;
 // them are lifted by `liftAt`.
 export const LEDGE = 0.2;
 let ledges = new Set();
-export const liftAt = (x, z) => (ledges.has(key(Math.round(x), Math.round(z))) ? LEDGE : 0);
+// While a room builds itself (Board.rise), each tile's offset below its place: figures and
+// overlays read it through liftAt, so they ride up with their tile.
+const rising = new Map();
+export const liftAt = (x, z) => {
+  const k = key(Math.round(x), Math.round(z));
+  return (ledges.has(k) ? LEDGE : 0) + (rising.get(k) ?? 0);
+};
+/** The ledge's height alone, for what is placed once and registered with its tile (rise moves it). */
+const ledgeAt = (x, z) => (ledges.has(key(Math.round(x), Math.round(z))) ? LEDGE : 0);
+
+// A room building itself: how far below the tiles start, how long each takes to rise, and how
+// much later each tile starts per tile of distance from where the party stands.
+const RISE_DROP = 0.9;
+const RISE_MS = 300;
+const RISE_STEP_MS = 24;
+const RISE_MAX_DELAY = 450;
+/** Ease out with a small overshoot, so a tile settles into place. */
+const settle = (t) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2;
 
 /** A reusable set of flat tile overlays sharing one material. */
 class TileLayer {
@@ -35,6 +54,7 @@ class TileLayer {
   }
 
   set(tiles) {
+    this.last = tiles;
     tiles.forEach((t, i) => {
       let m = this.meshes[i];
       if (!m) {
@@ -129,10 +149,67 @@ function bannerSpots(grid, torches) {
 }
 
 const WATER_GEO = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
+
+/**
+ * Ripples for shallow water: a tileable normal map (sine waves of whole periods, so tile meets
+ * tile), shared by every water tile and scrolled by the board's tick, so the torchlight glints
+ * on moving water.
+ */
+let ripples = null;
+function rippleMap() {
+  if (ripples) return ripples;
+  const N = 128;
+  const h = (x, y) => {
+    const u = (x / N) * Math.PI * 2;
+    const v = (y / N) * Math.PI * 2;
+    return Math.sin(u * 2 + Math.sin(v) * 0.9) * 0.6 + Math.sin(v * 2 + u) * 0.4 + Math.sin((u - v) * 3) * 0.12;
+  };
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const g = c.getContext('2d');
+  const img = g.createImageData(N, N);
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const dx = (h(x + 1, y) - h(x - 1, y)) * 4;
+      const dy = (h(x, y + 1) - h(x, y - 1)) * 4;
+      const len = Math.hypot(dx, dy, 1);
+      const i = (y * N + x) * 4;
+      img.data[i] = ((-dx / len) * 0.5 + 0.5) * 255;
+      img.data[i + 1] = ((-dy / len) * 0.5 + 0.5) * 255;
+      img.data[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      img.data[i + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  ripples = new THREE.CanvasTexture(c);
+  ripples.wrapS = ripples.wrapT = THREE.RepeatWrapping;
+  return ripples;
+}
+let waterMat = null;
+const waterMaterial = () => (waterMat ??= new THREE.MeshStandardMaterial({
+  color: 0x1c4a5e, transparent: true, opacity: 0.78, roughness: 0.12, metalness: 0.2, emissive: 0x08202c,
+  normalMap: rippleMap(), normalScale: new THREE.Vector2(0.35, 0.35),
+}));
 // The lower hall of a room on two floors: a cool shadow over its floor.
 const LOWER_MAT = new THREE.MeshBasicMaterial({ color: 0x061224, transparent: true, opacity: 0.5, depthWrite: false });
-// Open-topped and inside-out: the shaft's walls face into the hole.
-const CHASM_GEO = new THREE.BoxGeometry(1, 2.2, 1);
+// A chasm's sides: a rock face wherever the hole meets solid ground (none between two chasm
+// tiles, so a wide chasm is one pit), fading into black with depth (vertex colours, darkest at
+// the bottom), over a layer of cold mist and a black floor far down.
+const SHAFT_DEPTH = 2.2;
+const SHAFT_GEO = new THREE.PlaneGeometry(1, SHAFT_DEPTH);
+{
+  const pos = SHAFT_GEO.attributes.position;
+  const col = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    // 1 at the rim, 0 at the bottom. Clamped: a negative base would make NaN, which the glow's
+    // blur spreads over the whole screen.
+    const k = Math.max(0, pos.getY(i) / SHAFT_DEPTH + 0.5) ** 1.6;
+    col.set([k, k, k], i * 3);
+  }
+  SHAFT_GEO.setAttribute('color', new THREE.BufferAttribute(col, 3));
+}
+const CHASM_MIST = new THREE.MeshBasicMaterial({ color: 0x3a4862, transparent: true, opacity: 0.4, depthWrite: false });
+const CHASM_FLOOR = new THREE.MeshBasicMaterial({ color: 0x000000 });
 
 /** Cracked floor (rules 6): a dark web of splits over the tile, drawn once and shared. */
 let crackMat = null;
@@ -313,13 +390,14 @@ export class Board {
       this.addToCell(x, z, block);
     }
 
+    this.motes = new Motes(this.group); // embers and dust over the fires, grit into chasms (motes.js)
     this.ao = new Map(); // tile key -> its strips of shade
     for (let z = 0; z < grid.height; z++) for (let x = 0; x < grid.width; x++) this.addAO(x, z);
 
     // Shallow water: a dark, glossy sheet just over the floor.
     for (const k of grid.water) {
       const [x, z] = k.split(',').map(Number);
-      const sheet = new THREE.Mesh(WATER_GEO, mat(0x1c4a5e, { transparent: true, opacity: 0.78, roughness: 0.12, metalness: 0.2, emissive: 0x08202c }));
+      const sheet = new THREE.Mesh(WATER_GEO, waterMaterial());
       sheet.position.set(x, 0.035, z);
       sheet.receiveShadow = true;
       this.group.add(sheet);
@@ -359,7 +437,8 @@ export class Board {
       this.cracks.set(key(c.x, c.z), decal);
     }
 
-    this.motes = new Motes(this.group); // embers and dust over the fires (motes.js)
+    this.wisps = new Wisps(this, ledgeAt); // dark smoke at the edge of the unexplored (wisps.js)
+    this.marks = new Marks(this, ledgeAt); // soot, charring and remains (marks.js)
     this.torches = [];
     const torches = torchSpots(grid);
     for (const spot of torches) this.addTorch(spot);
@@ -402,6 +481,8 @@ export class Board {
       if (this.fireLit) this.fire.material.opacity = 0.8 + Math.sin(t * 6) * 0.1 + Math.sin(t * 15) * 0.06;
       if (this.stairs?.lit) this.stairs.light.intensity = 3 + Math.sin(t * 3) * 0.8;
       this.motes.tick(t, dt);
+      if (ripples && sway) ripples.offset.set(t * 0.025, t * 0.016); // the water's ripples drift
+      this.wisps.tick(t);
     };
     stage.tickers.add(this.tick);
     this.stage = stage;
@@ -445,6 +526,52 @@ export class Board {
     this.spot = new TileLayer(this.group, overlay(0xffc93c, 0.7), 0.98, 0.018);
     // Where a foe out of sight was last heard (main.js): faint rings, over the fog.
     this.heard = new TileLayer(this.group, stripes(0xe4e8ff, 1, 4, 'ripples'), 0.96, 0.0109);
+  }
+
+  /**
+   * The room builds itself: every tile and what stands on it rises into place in a wave out
+   * from `from` (where the party stands). Drawn only; nothing waits for it. Reduced motion
+   * shows the room at once.
+   */
+  rise(from) {
+    rising.clear();
+    if (calm()) return;
+    const tiles = [];
+    const home = new Set(); // an object in two cells rises with the first
+    for (const [k, cell] of this.cells) {
+      const [x, z] = k.split(',').map(Number);
+      const delay = Math.min(RISE_MAX_DELAY, Math.hypot(x - from.x, z - from.z) * RISE_STEP_MS);
+      const objs = [];
+      for (const o of cell.objects) {
+        if (home.has(o)) continue;
+        home.add(o);
+        objs.push({ o, y: o.position.y });
+      }
+      tiles.push({ k, delay, objs });
+      rising.set(k, -RISE_DROP);
+      for (const { o, y } of objs) o.position.y = y - RISE_DROP;
+    }
+    const layers = Object.values(this).filter((v) => v instanceof TileLayer);
+    const total = RISE_MAX_DELAY + RISE_MS;
+    const id = (this.riseId = (this.riseId ?? 0) + 1);
+    keepAwake(total + 100);
+    tween(total, (t) => {
+      if (this.riseId !== id) return;
+      const ms = t * total;
+      for (const { k, delay, objs } of tiles) {
+        const p = Math.min(1, Math.max(0, (ms - delay) / RISE_MS));
+        const off = p >= 1 ? 0 : -RISE_DROP * (1 - settle(p));
+        if (off === 0) rising.delete(k);
+        else rising.set(k, off);
+        for (const { o, y } of objs) o.position.y = y + off;
+      }
+      for (const l of layers) l.set(l.last ?? []); // the highlights ride up with their tiles
+    }, linear).then(() => {
+      if (this.riseId !== id) return;
+      rising.clear();
+      for (const { objs } of tiles) for (const { o, y } of objs) o.position.y = y;
+      for (const l of layers) l.set(l.last ?? []);
+    });
   }
 
   /** The threat colours: red and amber, or purple and yellow for colour-blind players. */
@@ -544,14 +671,28 @@ export class Board {
 
   // --- fog of war & wall fading ----------------------------------------------
   /** Registers objects standing on a tile, giving each mesh its own material. */
-  /** A chasm's shaft at (x, z). */
+  /** A chasm's shaft at (x, z): rock faces toward solid ground, mist, and grit falling in. */
   addShaft(x, z) {
-    const shaft = new THREE.Mesh(CHASM_GEO, mat(0x1e1a17, { roughness: 1, side: THREE.BackSide }));
-    shaft.position.set(x, -1.1, z);
-    shaft.receiveShadow = true;
-    this.group.add(shaft);
-    this.addToCell(x, z, shaft);
-    return shaft;
+    this.holes ??= new Set();
+    this.holes.add(key(x, z));
+    const parts = [];
+    for (const [dx, dz] of DIRS4) {
+      const nk = key(x + dx, z + dz);
+      if (this.grid.chasms.has(nk) || this.holes.has(nk)) continue;
+      const face = new THREE.Mesh(SHAFT_GEO, mat(0x6a5c50, { roughness: 1, vertexColors: true }));
+      face.position.set(x + dx * 0.5, -SHAFT_DEPTH / 2, z + dz * 0.5);
+      face.rotation.y = Math.atan2(-dx, -dz); // facing into the hole
+      face.receiveShadow = true;
+      parts.push(face);
+    }
+    const mist = new THREE.Mesh(WATER_GEO, CHASM_MIST);
+    mist.position.set(x, -0.8, z);
+    const bottom = new THREE.Mesh(WATER_GEO, CHASM_FLOOR);
+    bottom.position.set(x, -SHAFT_DEPTH, z);
+    parts.push(mist, bottom);
+    this.group.add(...parts);
+    const cell = this.addToCell(x, z, ...parts);
+    this.motes.add(new THREE.Vector3(x, -0.02, z), () => cell.f, { embers: 0, dust: 3, spread: 0.4, fall: true }); // grit trickling down
   }
 
   /** Rules 6: the cracked floor at (x, z) gives way: its tile drops out, leaving a shaft. */
@@ -639,6 +780,7 @@ export class Board {
       if (snap) cell.f = cell.target;
     }
     this.fogDirty = true;
+    this.wisps.dirty = true;
     if (snap) this.tickFog(0);
   }
 
@@ -1439,6 +1581,7 @@ export class Board {
 
   /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
   showOverlays(on) {
+    this.overlaysOn = on;
     for (const l of [...this.layers, this.threatMelee, this.threatRanged, this.threatFar, this.spot, this.heard]) l.material.visible = on;
   }
 
@@ -1448,6 +1591,9 @@ export class Board {
       if (o.isMesh) o.material.dispose();
     });
     this.stage.tickers.delete(this.tick);
+    this.riseId = -1;
+    rising.clear();
     this.motes.dispose();
+    this.wisps.dispose();
   }
 }

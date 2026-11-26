@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import { tween, wait, easeOut, linear } from './tween.js';
+import { SpellLight } from './lights.js';
 
 const glow = (color, opacity = 1) =>
   new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });
@@ -22,7 +23,7 @@ export async function lobFx(scene, from, to, { color = 0xff5a6a, light = 0xff809
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshStandardMaterial({ color, roughness: 0.25, transparent: true, opacity: 0.9 }));
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.08, 8), new THREE.MeshStandardMaterial({ color: 0xd8c8a0, roughness: 0.6 }));
   neck.position.y = 0.11;
-  flask.add(body, neck, new THREE.PointLight(light, 1.5, 2, 1.5));
+  flask.add(body, neck, new SpellLight(light, 2.5, 3, 1.5));
   const a = new THREE.Vector3(from.x, 0.95, from.z);
   const b = new THREE.Vector3(to.x, 0.55, to.z);
   const ctrl = a.clone().lerp(b, 0.5).add(new THREE.Vector3(0, 1.2 + a.distanceTo(b) * 0.25, 0));
@@ -41,7 +42,7 @@ export async function missileFx(scene, from, to, i = 0, total = 3) {
   const dart = new THREE.Group();
   const core = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), glow(0xe8d4ff));
   const halo = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), glow(0x9b5cff, 0.45));
-  dart.add(core, halo, new THREE.PointLight(0xa070ff, 3, 3, 1.5));
+  dart.add(core, halo, new SpellLight(0xa070ff, 5, 4.5, 1.4));
   const a = new THREE.Vector3(from.x, 0.95, from.z);
   const b = new THREE.Vector3(to.x, 0.65, to.z);
   // Each dart bends out sideways in its own direction.
@@ -87,7 +88,7 @@ export async function coneFx(scene, origin, tiles, kind = 'fire') {
   const fear = kind === 'fear'; // Fear: the same cone in a dark violet
   const group = new THREE.Group();
   scene.add(group);
-  const light = new THREE.PointLight(fear ? 0x9a5cff : 0xff7a1a, 0, 6, 1.4);
+  const light = new SpellLight(fear ? 0x9a5cff : 0xff7a1a, 0, 6, 1.4);
   const center = tiles.reduce((c, t) => c.add(new THREE.Vector3(t.x, 0, t.z)), new THREE.Vector3())
     .divideScalar(Math.max(1, tiles.length));
   light.position.set(center.x, 0.8, center.z);
@@ -178,7 +179,7 @@ export async function healFx(scene, at) {
     group.add(m);
     return m;
   });
-  const light = new THREE.PointLight(0x6dff8a, 0, 3, 1.5);
+  const light = new SpellLight(0x6dff8a, 0, 3, 1.5);
   light.position.y = 0.6;
   group.add(light);
   await tween(1000, (t) => {
@@ -217,7 +218,7 @@ export async function radiantFx(scene, at) {
   column.position.y = core.position.y = 1.5;
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.45, 32).rotateX(-Math.PI / 2), glow(0xffc040, 0));
   ring.position.y = 0.03;
-  const light = new THREE.PointLight(0xffd070, 0, 4, 1.5);
+  const light = new SpellLight(0xffd070, 0, 4, 1.5);
   light.position.y = 0.8;
   group.add(column, core, ring, light);
   await tween(750, (t) => {
@@ -246,7 +247,7 @@ export async function lightningFx(scene, from, tiles) {
   const group = new THREE.Group();
   scene.add(group);
   const lights = [0.25, 0.6, 0.95].map((f) => {
-    const l = new THREE.PointLight(0x9ccaff, 0, 6, 1.4);
+    const l = new SpellLight(0x9ccaff, 0, 6, 1.4);
     l.position.copy(a).lerp(b, f);
     group.add(l);
     return l;
@@ -307,7 +308,7 @@ export function spiritWeapon(scene, at) {
   halo.position.y = 0.3;
   mace.add(handle, head, halo);
   mace.rotation.z = 0.35;
-  group.add(mace, new THREE.PointLight(0xffd070, 2.5, 3, 1.6));
+  group.add(mace, new SpellLight(0xffd070, 2.5, 3, 1.6));
   group.position.set(at.x, 0.9, at.z);
   scene.add(group);
   const bob = setInterval(() => {
@@ -345,7 +346,7 @@ export async function turnFx(scene, at, radius, tint = [0xffe08a, 0xffd060, 0xff
   ring.position.y = 0.04;
   const wall = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.5, 48, 1, true), glow(tint[1], 0));
   wall.position.y = 0.25;
-  const light = new THREE.PointLight(tint[2], 0, radius + 2, 1.2);
+  const light = new SpellLight(tint[2], 0, radius + 2, 1.2);
   light.position.y = 1;
   group.add(ring, wall, light);
   await tween(1000, (t) => {
@@ -382,7 +383,7 @@ export async function raiseFx(scene, at) {
   });
   const sigil = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 6).rotateX(-Math.PI / 2), glow(0x40ff70, 0));
   sigil.position.y = 0.03;
-  const light = new THREE.PointLight(0x40ff70, 0, 4, 1.5);
+  const light = new SpellLight(0x40ff70, 0, 4, 1.5);
   light.position.y = 0.5;
   group.add(sigil, light);
   await tween(1100, (t) => {
@@ -408,7 +409,7 @@ export async function fireballFx(scene, from, center, tiles, onBoom) {
   bead.add(
     new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), glow(0xfff0b0)),
     new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), glow(0xff7a1a, 0.6)),
-    new THREE.PointLight(0xff8a2a, 4, 4, 1.4),
+    new SpellLight(0xff8a2a, 7, 6, 1.4),
   );
   const a = new THREE.Vector3(from.x, 1, from.z);
   const b = new THREE.Vector3(center.x, 0.5, center.z);
@@ -422,7 +423,7 @@ export async function fireballFx(scene, from, center, tiles, onBoom) {
 
   const group = new THREE.Group();
   scene.add(group);
-  const light = new THREE.PointLight(0xff7a1a, 0, 14, 1.2);
+  const light = new SpellLight(0xff7a1a, 0, 14, 1.2);
   light.position.set(center.x, 1.2, center.z);
   const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), glow(0xffa040, 0.85));
   const core = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), glow(0xfff2c0, 1));
@@ -461,7 +462,7 @@ export async function fireballFx(scene, from, center, tiles, onBoom) {
 export async function iceStormFx(scene, center, tiles, onImpact) {
   const group = new THREE.Group();
   scene.add(group);
-  const light = new THREE.PointLight(0x9fd8ff, 0, 14, 1.2);
+  const light = new SpellLight(0x9fd8ff, 0, 14, 1.2);
   light.position.set(center.x, 2.5, center.z);
   const cloud = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 0.25, 24), glow(0xcfe8ff, 0));
   cloud.position.set(center.x, 3.4, center.z);
@@ -563,7 +564,7 @@ export async function fireBurstFx(scene, at) {
   const group = new THREE.Group();
   group.position.set(at.x, 0.6, at.z);
   scene.add(group);
-  const light = new THREE.PointLight(0xff7a1a, 14, 5, 1.5);
+  const light = new SpellLight(0xff7a1a, 14, 5, 1.5);
   const flash = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), glow(0xffd080, 0.9));
   const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 6, 24).rotateX(Math.PI / 2), glow(0xff6a1a, 0.8));
   group.add(light, flash, ring);
@@ -620,7 +621,7 @@ export async function d20Fx(scene, at, value) {
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(die.geometry),
     new THREE.LineBasicMaterial({ color: nat20 ? 0xfff2c0 : 0xff9090, transparent: true }));
   die.add(edges);
-  const light = new THREE.PointLight(nat20 ? 0xffd36b : 0xff3030, 0, 3, 1.5);
+  const light = new SpellLight(nat20 ? 0xffd36b : 0xff3030, 0, 3, 1.5);
   light.position.y = 1.4;
   group.add(die, light);
 

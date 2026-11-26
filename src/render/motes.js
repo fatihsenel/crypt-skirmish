@@ -53,8 +53,8 @@ export class Motes {
    * A fire at `pos` (a Vector3, read every frame). `level()` is 0..1; `embers` and `dust`
    * are how many of each it keeps.
    */
-  add(pos, level, { embers = 5, dust = 7, spread = 1.1 } = {}) {
-    this.sources.push({ pos, level, embers, dust, spread });
+  add(pos, level, { embers = 5, dust = 7, spread = 1.1, fall = false } = {}) {
+    this.sources.push({ pos, level, embers, dust, spread, fall });
     this.dirty = true;
   }
 
@@ -112,6 +112,14 @@ export class Motes {
     const dc = this.dust.geometry.attributes.color;
     this.d.forEach((m, i) => {
       const { x, y, z } = m.s.pos;
+      if (m.s.fall) {
+        // Grit trickling down into a chasm, fading as it drops out of the light.
+        const k = (t * 0.14 + m.ph / 6.3) % 1;
+        dp.setXYZ(i, x + m.ox, y - k * 1.3, z + m.oz);
+        const a = 0.5 * Math.sin(Math.PI * Math.min(1, k * 4)) * (1 - k) * m.s.level();
+        dc.setXYZ(i, DUST[0] * a, DUST[1] * a, DUST[2] * a);
+        return;
+      }
       const w = t * 0.25 + m.ph;
       dp.setXYZ(i, x + m.ox + Math.sin(w) * 0.12, y + m.oy + Math.sin(w * 1.3) * 0.08, z + m.oz + Math.cos(w * 0.8) * 0.12);
       const a = 0.55 * (0.6 + 0.4 * Math.sin(t * 0.9 + m.ph)) * (1 - m.r / (m.s.spread * 1.1)) * m.s.level();

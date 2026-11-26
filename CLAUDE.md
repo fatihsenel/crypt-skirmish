@@ -136,6 +136,16 @@ server on 5173.
   `GltfRig.freeze`); a slain monster burns away (`burnAway`, `render/dissolve.js` patched into
   its own materials, `edgeColor` picks the rim), so a figure's materials are cloned (`own`)
   before they're changed.
+  An effect's light is a `SpellLight` (`render/lights.js`), never a new `PointLight`: the scene
+  keeps 4 point lights and lends them to the brightest stand-ins, since changing the light count
+  recompiles every lit material. Floor marks (`render/marks.js`: soot, char, remains through
+  `board.marks.add`) are drawn only and gone on reload. The haze at the explored map's edge and
+  over a lower hall is `render/wisps.js`. A new fight's room rises into place (`board.rise`,
+  skipped on a restored fight and under `calm()`); while it does, `liftAt` carries each tile's
+  offset, so figures and overlays ride up with it. Outlines (`render/outline.js`,
+  `UnitView.setOutline`) follow `board.hover` and `board.targets` from a ticker in `main.js`.
+  Clamp any `pow` in vertex or colour maths (`Math.max(0, …)`): one NaN pixel spreads over the
+  whole screen through the glow's bloom.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still
   (the same size) once the skull in `public/models/skull/` loads, and draws only while the title
   is on screen. Without WebGL, with Data Saver or on 2G its still (`boot-logo.jpg`) stays.
@@ -307,7 +317,7 @@ server on 5173.
 - `#watch=…` (from Copy replay link) opens a fight's replay, with Play it yourself on its bar.
 - `#play=…` (from Copy challenge link) opens the same fight to play, from the same dice.
 - `window.__debug` in the console (set up in `debug.js`): `command({type:'move', x, z})`,
-  `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`, `reveal()` (no fog until the next fight),
+  `command({type:'attack', target, attack})`, `autoplay()`, `win()`, `lose()`, `reveal()` (no fog until the next fight), `board()` (the Board, e.g. `board().rise(at)`),
   `level(n)` (or a room id, an Endless floor too: `level('deep:3:4:3')`), `focus(x, z)`, `tileToScreen(x, z)`, `pickAt(x, y)` (the tile a tap there picks), `threats()`, `heard()` (the rings' tiles).
 - Monster turns wait while the page is hidden (`whileAway` in `main.js`): script fights in a
   showing tab or headless Chrome, or they stall.

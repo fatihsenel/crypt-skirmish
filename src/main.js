@@ -699,6 +699,29 @@ function updateVision(force = false) {
   board.setVision(visible, { snap: first });
 }
 
+/**
+ * Every frame: outline the hovered figure (warm) and each foe the action can reach (red), from
+ * the board's hover and target tiles, so taps and the arrow-key cursor get them too. None in
+ * photo mode, on the fallen or on what the heroes can't see.
+ */
+stage.tickers.add(() => {
+  if (!game || !board) return;
+  const on = board.overlaysOn !== false;
+  // The pointed tile itself (an area preview's hover is the whole blast), while one is drawn.
+  const hoverKey = on && hovered && board.hover.last?.length ? key(hovered.x, hovered.z) : null;
+  const targets = new Set(on ? (board.targets.last ?? []).map((t) => key(Math.round(t.x), Math.round(t.z))) : []);
+  for (const v of views.values()) {
+    const u = v.unit;
+    let kind = null;
+    if (u.alive && !v.gone && !v.ghost && v.group.visible && !unseen(u)) {
+      const t = tileOf(v);
+      const k = key(t.x, t.z);
+      kind = k === hoverKey ? 'hover' : targets.has(k) ? 'target' : null;
+    }
+    v.setOutline(kind);
+  }
+});
+
 /** Every frame: hide monsters out of sight, notice new ones. */
 stage.tickers.add(() => {
   if (!game || !board) return;
@@ -902,6 +925,12 @@ function startFight(resume, watch = null) {
     .filter((v) => v.unit.alive && v.group.visible)
     .map((v) => v.group.position);
   updateVision();
+  if (!resume) {
+    // The room builds itself in a wave out from where the party stands (drawn only).
+    const heroes = game.units.filter((u) => u.team === 'heroes');
+    const mid = (k) => heroes.reduce((n, u) => n + u[k], 0) / (heroes.length || 1);
+    board.rise({ x: mid('x'), z: mid('z') });
+  }
   hud.unknown = (u) => u.team === 'monsters' && !seenIds.has(u.id);
   hud.hidden = (u) => unseen(u);
   hud.reset();

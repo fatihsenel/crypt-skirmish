@@ -4,6 +4,7 @@
 
 import { ACTIONS } from './game/abilities.js';
 import { ITEMS } from './game/items.js';
+import { remainsOf } from './render/marks.js';
 import { shootProjectile, floatText } from './render/unitView.js';
 import { rollBadge, attackRoll, saveRoll } from './render/rollBadge.js';
 import { lobFx, missileFx, coneFx, mistFx, shieldFx, healFx, alertFx, radiantFx, turnFx, raiseFx, fireballFx, iceStormFx, hitFx, fireBurstFx, d20Fx, lightningFx, spiritWeapon, burstFx, SHATTER_TINT, ENTANGLE_TINT, STORM_TINT, CAVE_TINT, FOG_TINT, GREASE_TINT } from './render/effects.js';
@@ -31,6 +32,8 @@ export function createAnimations(app) {
   const winced = new WeakSet(); // figures that have said they're badly hurt (once a fight)
   const fled = new WeakSet(); // turned monsters that have cried out as they ran
   const seen = (u) => !unseen(u) && !!view(u)?.group.visible;
+  /** Leaves soot, charring or remains on the floor (render/marks.js); drawn only. */
+  const mark = (kind, tiles, opts) => app.board()?.marks?.add(kind, tiles, opts);
 
   /**
    * `unit` says a line for `moment` in a speech bubble (speech.js), if it's in sight. A named
@@ -100,7 +103,10 @@ export function createAnimations(app) {
     }
     const onImpact = () => {
       if (r.mods?.adv.some((a) => a.startsWith('help from'))) tv.updateStatus(); // the Help is used up
-      if (attack.projectile === 'fire') fireBurstFx(stage.scene, pos);
+      if (attack.projectile === 'fire') {
+        fireBurstFx(stage.scene, pos);
+        mark('scorch', [pos], { scale: 0.6 });
+      }
       if (r.inspired) {
         floatText(stage.scene, { x: attacker.x, z: attacker.z - 0.6 }, `Inspired +${r.inspired.total}`, 'spell');
         view(attacker).updateStatus();
@@ -304,6 +310,7 @@ export function createAnimations(app) {
         sfx.fireCone();
         await shootProjectile(stage.scene, caster, target, 'fire');
         fireBurstFx(stage.scene, target);
+        mark('scorch', [target], { scale: 0.6 });
       });
       await showSaves([{ ...r.save, unit: target }], 'DEX', r.dc);
     }
@@ -386,6 +393,7 @@ export function createAnimations(app) {
     if (!unseen(unit) && (!unit.alive || unit.team === 'heroes')) voices.bark(unit, unit.alive ? 'hurt' : 'die');
     if (unit.alive) return v.flinch();
     sfx.death(unit.code);
+    if (unit.team === 'monsters' && !unseen(unit)) wait(250).then(() => mark(remainsOf(unit), [unit]));
     return v.die();
   }
 
@@ -732,10 +740,12 @@ export function createAnimations(app) {
     if (!r.hit) {
       floatText(stage.scene, r.target, 'Miss', 'miss');
       burstFx(stage.scene, miss, { colors: [0xff7a1a, 0xffc040], count: 10, speed: 0.9, size: 0.05, y: 0.05, life: 500 });
+      mark('scorch', [miss], { scale: 0.6 });
       await wait(300);
       return;
     }
     fireBurstFx(stage.scene, r.target);
+    mark('scorch', [r.target], { scale: 0.7 });
     floatText(stage.scene, r.target, `${r.crit ? 'Crit! ' : ''}−${r.damage}`, 'crit');
     await damageReaction(r.target);
     if (r.target.alive) {
@@ -990,6 +1000,7 @@ export function createAnimations(app) {
         await cv.cast(aim, async () => {
           sfx.fireCone();
           await coneFx(stage.scene, caster, r.tiles);
+          mark('scorch', r.tiles, { chance: 0.75, scale: 0.85 });
         });
         await showSaves(r.saves, 'DEX', r.dc);
         await Promise.all(r.saves.map((s) => {
@@ -1004,6 +1015,7 @@ export function createAnimations(app) {
           sfx.thunder();
           stage.shake(0.25, 400);
           await lightningFx(stage.scene, caster, r.tiles);
+          mark('char', r.tiles, { chance: 0.6, scale: 0.75 });
         });
         await showSaves(r.saves, 'DEX', r.dc);
         await Promise.all(r.saves.map((s) => {
@@ -1041,6 +1053,7 @@ export function createAnimations(app) {
           await fireballFx(stage.scene, caster, r.center, r.tiles, () => {
             sfx.explosion();
             stage.shake(0.45, 650);
+            mark('scorch', r.tiles, { chance: 0.85 });
           });
         });
         await showSaves(r.saves, 'DEX', r.dc);
@@ -1104,6 +1117,7 @@ export function createAnimations(app) {
             }
             await shootProjectile(stage.scene, caster, ray.target, 'fire');
             fireBurstFx(stage.scene, ray.target);
+            mark('scorch', [ray.target], { scale: 0.55 });
             if (ray.hit) {
               sfx.hit(ray.target.code, { crit: ray.crit, fire: true });
               hitFx(stage.scene, ray.target, caster, { crit: ray.crit });
@@ -1209,6 +1223,7 @@ export function createAnimations(app) {
           sfx.thunder();
           stage.shake(0.35, 450);
           radiantFx(stage.scene, r.center);
+          mark('char', [r.center]);
           await turnFx(stage.scene, r.center, r.spell.radius + 0.5, STORM_TINT);
         });
         await showSaves(r.saves, 'DEX', r.dc);

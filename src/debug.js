@@ -57,6 +57,7 @@ export function installDebug(app) {
     /** The tiles where a foe out of sight was last heard (the rings on the board). */
     heard: () => (app.board()?.heard.meshes ?? []).filter((m) => m.visible).map((m) => [m.position.x, m.position.z]),
     views: app.views,
+    board: app.board,
     stage: app.stage,
     sfx: app.sfx,
     /** Give the current hero a command, e.g. __debug.command({ type: 'move', x: 3, z: 4 }). */

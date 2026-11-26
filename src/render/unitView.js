@@ -2,6 +2,7 @@
 // a name/HP label, and animations (idle, walk, melee swing, ranged/cast, death).
 
 import * as THREE from 'three';
+import { addOutline, removeOutline } from './outline.js';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { tween, wait, easeOut, easeInOut, linear, calm } from './tween.js';
 import { buildModel } from './models.js';
@@ -10,6 +11,7 @@ import { sfx } from '../audio/sfx.js';
 import { voices } from '../audio/voices.js';
 import { liftAt } from './board.js';
 import { dissolvable, edgeColor } from './dissolve.js';
+import { SpellLight } from './lights.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const WHITE = new THREE.Color(0xffffff);
@@ -163,7 +165,7 @@ export class UnitView {
     if (!this.fadeList) {
       this.fadeList = [];
       this.group.traverse((o) => {
-        if (o.isMesh) {
+        if (o.isMesh && !o.userData.outline) {
           own(o);
           o.material.transparent = true;
           this.fadeList.push(o);
@@ -180,7 +182,7 @@ export class UnitView {
     if (!this.owned) {
       this.owned = [];
       this.model.root.traverse((o) => {
-        if (o.isMesh && !Array.isArray(o.material)) this.owned.push(own(o));
+        if (o.isMesh && !o.userData.outline && !Array.isArray(o.material)) this.owned.push(own(o));
       });
     }
     return this.owned;
@@ -476,6 +478,14 @@ export class UnitView {
     if (!this.gone) this.setGhost(u.alive && (u.team === 'monsters' ? !!u.hidden : !!u.invisibleFrom));
   }
 
+  /** An outline round the figure: 'hover', 'target' or null (render/outline.js). */
+  setOutline(kind) {
+    if (kind === (this.outline ?? null)) return;
+    if (this.hulls) removeOutline(this.hulls);
+    this.hulls = kind ? addOutline(this.model.root, kind) : null;
+    this.outline = kind;
+  }
+
   /** A hidden monster: a faint shape where the heroes saw it duck down. */
   setGhost(on) {
     if (on === !!this.ghost) return;
@@ -742,7 +752,7 @@ export class UnitView {
     this.stage.tickers.delete(this.tick);
     this.rig?.mixer.stopAllAction();
     // CSS2DObject removes its DOM element only when removed directly.
-    this.group.remove(this.label);
+    this.label.removeFromParent();
   }
 }
 
@@ -772,7 +782,7 @@ export async function shootProjectile(scene, from, to, kind) {
       mesh.add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8),
         new THREE.MeshBasicMaterial({ color: 0x20c050, transparent: true, opacity: 0.35, depthWrite: false })));
     }
-    mesh.add(new THREE.PointLight(color, 4, 4, 1.5));
+    mesh.add(new SpellLight(color, 7, 6, 1.4)); // lights the walls it passes
   } else {
     mesh = new THREE.Group();
     const shaftLen = kind === 'arrow' ? 0.45 : 0.75;

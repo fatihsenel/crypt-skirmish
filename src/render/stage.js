@@ -5,6 +5,7 @@ import { MapControls } from 'three/addons/controls/MapControls.js';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { calm, animating, onAnimate, keepAwake } from './tween.js';
+import { keepSpellLights } from './lights.js';
 
 export function createStage(container, { width, height }) {
   const center = new THREE.Vector3((width - 1) / 2, 0, (height - 1) / 2);
@@ -112,6 +113,7 @@ export function createStage(container, { width, height }) {
   window.addEventListener('resize', fit);
 
   const tickers = new Set();
+  tickers.add(keepSpellLights(scene)); // the lights spells borrow (lights.js)
   const clock = new THREE.Clock();
   // Screen shake: a decaying jitter added to the camera just for the render.
   let shakeAmp = 0;
