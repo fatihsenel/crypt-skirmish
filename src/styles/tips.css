@@ -1,0 +1,53 @@
+/* Tips for new players. */
+/* --- tips for new players: a card just above the action bar (or the bottom, at camp) --- */
+#tip {
+  position: absolute;
+  left: 50%; bottom: var(--above, 140px);
+  transform: translate(-50%, 8px);
+  width: min(440px, calc(100% - 24px));
+  padding: 12px 14px 10px;
+  background: var(--panel);
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.45;
+  z-index: 25;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+}
+#tip.show { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+#tip .tip-text { margin: 0 0 8px; }
+#tip .tip-text b { color: var(--gold); font-weight: 600; }
+#tip .tip-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+#tip button { font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+#tip .tip-off { background: none; border: 1px solid transparent; color: var(--muted); }
+#tip .tip-off:hover { color: var(--ink); }
+#tip .tip-ok { background: var(--gold); border: 1px solid var(--gold); color: #1a140b; font-weight: 600; }
+#app:has(#camp:not([hidden])) #tip { bottom: 16px; }
+/* A phone on its side: little height to spare, so the card goes small into the top-left
+   corner (where the controls panel would be), 8px below the portraits (60px down), wide
+   enough to stay clear of the action bar, and leaves the board in view. */
+@media (max-height: 520px) {
+  #tip {
+    left: 12px; top: 68px; bottom: auto;
+    width: min(380px, 48%);
+    padding: 9px 11px 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    transform: translateY(-6px);
+  }
+  #tip.show { transform: none; }
+  #tip .tip-text { margin-bottom: 6px; }
+  #tip button { padding: 4px 10px; font-size: 12px; }
+  #app:has(#camp:not([hidden])) #tip { top: auto; bottom: 12px; }
+}
+
+/* An upright phone (see #initiative): the controls panel sits below the portraits' row.
+   Last in the file, so it wins over #help's own position. */
+@media (max-width: 600px) and (min-height: 521px) {
+  #help { top: 116px; }
+}

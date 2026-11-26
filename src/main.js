@@ -484,7 +484,7 @@ const $banner = document.getElementById('banner');
 const $actionbar = document.getElementById('actionbar');
 let barRoom = 0; // the tallest action bar since the window last changed size
 let framedFor = '';
-const LOG_WIDTH = 290; // #log's width in style.css
+const LOG_WIDTH = 290; // #log's width in styles/hud.css
 function hudInsets(w, h) {
   if (framedFor !== `${w}x${h}`) {
     framedFor = `${w}x${h}`;

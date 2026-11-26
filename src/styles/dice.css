@@ -1,0 +1,61 @@
+/* The d20 roll badge. */
+/* The d20 roll badge over whoever rolls (src/render/rollBadge.js). */
+.roll-badge { pointer-events: none; z-index: 3; width: 0; height: 0; }
+/* The renderer centres the (empty) badge on the point above the name label; the box hangs
+   up from there, so it never covers the label. */
+.roll-in {
+  position: absolute; left: 0; bottom: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transform-origin: 50% 100%; transform: translateX(-50%) scale(0.4);
+}
+.roll-dice { display: flex; gap: 5px; align-items: center; }
+.roll-die { position: relative; width: 42px; height: 42px; transition: transform 60ms linear; }
+.roll-die svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.roll-die .face { fill: #2b2531; stroke: #d9b45a; stroke-width: 2.5; }
+.roll-die .facet { fill: none; stroke: #d9b45a55; stroke-width: 1.5; }
+.roll-die span {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font: 700 17px/1 var(--display, Georgia, serif); color: #f3ead7; padding-top: 1px;
+}
+.roll-die.dropped { opacity: 0.35; }
+.roll-line {
+  font-size: 11.5px; color: #cfc6b8; white-space: nowrap; min-height: 1em;
+  background: #1d1922ee; border: 1px solid #4a4150; border-radius: 6px; padding: 1px 7px;
+  visibility: hidden;
+}
+.roll-result {
+  font-weight: 700; font-size: 14px; letter-spacing: 0.4px; white-space: nowrap;
+  text-shadow: 0 1px 3px #000c; opacity: 0; transform: translateY(4px);
+  transition: opacity 120ms, transform 120ms;
+}
+.roll-badge.landed .roll-line { visibility: visible; }
+.roll-line:empty { display: none; }
+.roll-badge.below .roll-in { bottom: auto; top: 34px; transform-origin: 50% 0; }
+/* While waiting there's no line or result yet, so the die sits right over the prompt. */
+.roll-badge.waiting .roll-line, .roll-badge.waiting .roll-result { display: none; }
+.roll-prompt { display: none; }
+/* Waiting for the player to throw: a bigger die that pulses, and how to throw it. */
+.roll-badge.waiting .roll-prompt {
+  display: block; font-weight: 700; font-size: 13px; color: var(--gold); white-space: nowrap;
+  background: #1d1922ee; border: 1px solid #8a6a2c; border-radius: 6px; padding: 2px 8px;
+}
+.roll-badge.waiting .roll-die { width: 54px; height: 54px; animation: roll-pulse 0.9s ease-in-out infinite alternate; }
+.roll-badge.waiting .roll-die span { font-size: 21px; }
+.roll-badge.waiting .roll-die .face { stroke: #ffd76a; }
+@keyframes roll-pulse { from { transform: rotate(-8deg) scale(0.96); } to { transform: rotate(8deg) scale(1.06); } }
+[data-motion=reduce] .roll-badge.waiting .roll-die { animation: none; }
+.roll-badge.told .roll-result { opacity: 1; transform: none; }
+.roll-badge.hit .roll-result { color: #f0c674; }
+.roll-badge.crit .face { fill: #5a4318; stroke: #ffd76a; }
+.roll-badge.crit .roll-die span { color: #ffe9a8; }
+.roll-badge.crit .roll-result { color: #ffd76a; font-size: 15px; }
+.roll-badge.miss .face { stroke: #8a7f92; }
+.roll-badge.miss .roll-result { color: #a8a0b1; }
+.roll-badge.fumble .face { fill: #1c191f; stroke: #5d5763; }
+.roll-badge.fumble .roll-die span { color: #8a8290; }
+.roll-badge.fumble .roll-result { color: #a8a0b1; }
+.roll-badge.save .face { stroke: #6fb08b; }
+.roll-badge.save .roll-result { color: #8fd0a8; }
+.roll-badge.fail .roll-result { color: #ff8a7a; }
+.roll-badge .roll-die.dropped .face { fill: #2b2531; stroke: #8a7f92; }
+.nowrap { white-space: nowrap; }

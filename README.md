@@ -20,15 +20,15 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 
 **Contents:** [The party](#the-party) · [Rules](#rules) · [Monsters](#monsters) ·
 [The dungeon](#the-dungeon) · [The campaign](#the-campaign) · [Modes and extras](#modes-and-extras) ·
-[Interface](#interface) · [Sound](#sound) · [Controls](#controls) · [House rules](#house-rules) ·
-[For developers](#for-developers) ·
+[Interface](#interface) · [Accessibility](#accessibility) · [Sound](#sound) ·
+[Controls](#controls) · [House rules](#house-rules) · [For developers](#for-developers) ·
 [Credits](#credits)
 
 ## The party
 
 | Hero | Class | Highlights |
 | --- | --- | --- |
-| Brannoc | Fighter | Second Wind, Extra Attack at level 5, a fighting style |
+| Brannoc | Fighter | A fighting style, Second Wind, Extra Attack at level 5 |
 | | *or* Paladin | A fighting style, Divine Smite, Lay on Hands, Shield of Faith, Aura of Protection |
 | | *or* Barbarian | Rage, Reckless Attack, Danger Sense, a bonus Frenzy attack |
 | Ilsa | Wizard | Magic Missile, Burning Hands, Grease, Fog Cloud, Misty Step, Shield, then Fireball, Lightning Bolt and Counterspell |
@@ -41,385 +41,451 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 | | *or* Bard | Bardic Inspiration, Cutting Words, Vicious Mockery, Shatter, Healing Word, Fear |
 | | *or* Druid | Entangle, Thunderwave, Fog Cloud, Shillelagh, healing, Call Lightning |
 
-- Each hero has three classes to pick from. Pick one and rename the heroes under New campaign
+- **Choosing:** each hero has three classes. Pick one and rename the heroes under New campaign
   on the title screen.
-- The party starts at level 3 and reaches level 8. Each level brings new spells, more attacks
-  or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
-- At levels 4 and 8 (the Fighter at 6 too) each hero raises an ability by 2 in camp. The
-  class's usual pick comes first; Constitution, Dexterity or Wisdom can take its place. Each
-  button says what changes. A pick left open takes the usual one when the next fight starts.
-- Ice Storm leaves its area icy: difficult terrain (each tile costs 10 ft of movement) until
-  the end of the caster's next turn. Specters, wraiths and Ysolde fly over it.
+- **Levels:** the party starts at level 3 and reaches level 8. Each level brings new spells,
+  more attacks or more spell slots, up to 4th-level spells like Ice Storm and Death Ward.
+- **Ability increases:** at levels 4 and 8 (the Fighter at 6 too) each hero raises an ability
+  by 2 in camp. The class's usual pick comes first; Constitution, Dexterity or Wisdom can take
+  its place, and each button says what changes. A pick left open takes the usual one when the
+  next fight starts.
 - **Fighting styles:** the Fighter and the Paladin each pick one in camp, and can change it
-  between rooms. Defense (+1 AC), Dueling (+2 damage with a one-handed melee weapon), Great
-  Weapon Fighting (the longsword in two hands, 1d10, reroll 1s and 2s; a Paladin sets down the
-  shield) or Protection (a reaction: a foe attacking an ally next to you has disadvantage). The
-  Fighter starts with Defense, the Paladin with Dueling.
-- The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
-- The Warlock has two pact slots that come back after every room.
-- The Bard's Bardic Inspiration is a die given to an ally, used by itself on the first attack
-  that misses, or save that fails, by no more than the die. Cutting Words spends a use and the
-  Bard's reaction to take the die off a foe's hit, when it could turn it into a miss.
-- The Barbarian's Rage and Reckless Attack are on the action bar; Frenzy is a bonus attack
-  after the Attack action while raging.
-- The Monk's unarmed strike after the Attack action is free, ki pays for the rest, and an
-  armed Stunning Strike spends its ki on the next melee hit. The Sorcerer's Quickened Spell is
-  armed the same way and gives its points back if it isn't used that turn.
+  between rooms:
+  - Defense: +1 AC (the Fighter starts with it).
+  - Dueling: +2 damage with a one-handed melee weapon (the Paladin starts with it).
+  - Great Weapon Fighting: the longsword in two hands, 1d10, rerolling 1s and 2s; a Paladin
+    sets down the shield.
+  - Protection: a reaction that gives a foe disadvantage on its attack against an ally next to
+    you.
+- **Class notes:**
+  - The Ranger is weaker than the SRD version, so it doesn't outclass the Rogue.
+  - The Warlock has two pact slots that come back after every room.
+  - The Bard's Bardic Inspiration is a die given to an ally. It's used by itself on the first
+    attack that misses, or save that fails, by no more than the die. Cutting Words spends a use
+    and the Bard's reaction to take the die off a foe's hit, when that could turn it into a miss.
+  - The Barbarian's Rage and Reckless Attack are on the action bar; Frenzy is a bonus attack
+    after the Attack action while raging.
+  - The Monk's unarmed strike after the Attack action is free and ki pays for the rest. An
+    armed Stunning Strike spends its ki on the next melee hit.
+  - The Sorcerer's Quickened Spell is armed the same way, and gives its points back if it
+    isn't used that turn.
 
 ## Rules
 
-- **The basics:** initiative, d20 attacks against AC, critical hits, 30 ft of movement, and
-  one action, one bonus action and one reaction a round.
-- **Advantage and disadvantage:** flanking, attacking from hiding or against an unaware foe
+### The basics
+
+- **Turns:** initiative, d20 attacks against AC, critical hits, 30 ft of movement, and one
+  action, one bonus action and one reaction a round.
+- **Advantage and disadvantage:** flanking, attacking from hiding or attacking an unaware foe
   gives advantage. Shooting with an enemy next to you, or at someone Dodging, gives
   disadvantage.
 - **Opportunity attacks** when you leave an enemy's reach. Disengage avoids them.
-- **Actions:** Dash, Dodge, Disengage, Hide, Search, Shove, Push, Grapple, Help, Ready, drinking a
-  potion or giving one to an ally (next to you, or tossed up to 15 ft to one you can see), throwing
-  alchemist's fire, scattering caltrops, throwing your torch into the dark (a bonus action, once a
-  fight; Wizards, Clerics, Sorcerers and Bards can cast **Light** instead), smashing a barrel or
-  crate next to you, barring a door, disarming a trap you've found and freeing a prisoner. Grapple,
-  Disengage, Search, Help, Give potion, Fire, Caltrops, Torch, Light, Smash, Bar door, Disarm, Owl
-  and Free prisoner wait behind **More**
-  on the action bar, so the moves most turns need stay in one row; so does
-  Push, except in a room with a chasm, burning coals or stairs.
-- **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or DEX;
-  win and it's pushed 5 ft straight away from you. Over a chasm's edge it falls and is gone (no
-  save, no body left to raise); onto burning coals it burns; into a stairwell (or off the top
-  stair) it tumbles down to the floor below, takes 1d6 and lands prone. A wall, a door or someone behind it
-  stops the push, and fliers and Tharok don't go over an edge. Choosing a foe marks the tile
-  it would land on.
-- **Grapple:** instead of one attack, Athletics against the foe's STR or DEX. Win and it can't
-  move while you stay next to it; it tries to break free at the start of each of its turns.
-- **Help:** a hero distracts a foe next to them; the next ally to attack it before the
-  helper's next turn has advantage.
-- **Ready:** pick Ready, then the attack to hold until your next turn; it's made with your
-  reaction. A melee weapon strikes the first foe to step into reach, a bow, javelin or Fire
-  Bolt the first to step into view. Good for holding a doorway. A spell cast at one foe
-  (Magic Missile, Sacred Flame, Scorching Ray, Dread, Vicious Mockery) can be readied too: its slot is spent
-  when you ready it, and it goes off at the first foe to step into view.
-- **Conditions:** prone, poisoned, frightened, restrained, rotting (a mummy's fist: no
-  healing takes for two turns), mocked (Vicious Mockery: disadvantage on the next attack) and
-  paralysed (a ghoul's claws: no move, action or reaction, and hits from next to you are
-  critical), each shown as a tag on the figure.
 - **Cover:** barrels, crates, a lowered portcullis and other creatures give +2 AC against
   attacks that pass over or through them (not one right next to the attacker).
-- **Death saves:** a hero at 0 HP is dying and rolls a d20 as each of their turns comes round:
-  10 or more is a success, three successes and they're stable, three failures and they're out
+- **Long range:** bows and javelins shoot up to four times their range, at disadvantage past
+  it.
+- **Conditions:** prone, poisoned, frightened, restrained, rotting (a mummy's fist: no healing
+  takes for two turns), mocked (Vicious Mockery: disadvantage on the next attack) and
+  paralysed (a ghoul's claws: no move, action or reaction, and hits from next to you are
+  critical). Each shows as a tag on the figure.
+- **Death saves:** a hero at 0 HP is dying and rolls a d20 as each of their turns comes round.
+  10 or more is a success: three successes and they're stable, three failures and they're out
   for the fight. A 1 counts twice; a 20 brings them back with 1 HP. Any healing (a spell, Lay
   on Hands, a potion from an ally) gets them back up, prone. The pips on their initiative chip
   count the saves.
-- **Counterspell:** a Wizard, Sorcerer or Warlock of level 5 casts it by itself, like Shield,
-  when a monster within 60 ft they can see casts a spell: their reaction and a 3rd-level slot. It
-  stops a spell of 3rd level or lower; a higher one takes a spellcasting check (DC 10 + its level).
-- **Fog Cloud and Grease:** Fog Cloud (Wizard, Sorcerer, Druid) fills a 10-ft radius with fog
-  while the caster concentrates: no one sees into, out of or through it past 5 ft. Grease
-  (Wizard) slicks a 15-ft square: difficult terrain, and anyone in it or stepping onto it makes a
-  DEX save or falls prone.
-- **Concentration:** Hex, Hunter's Mark, Shield of Faith, Fear and Greater Invisibility last
-  while the caster concentrates. Taking damage calls for a CON save (DC 10, or half the
-  damage); a failure, dropping, being paralysed or casting another of them ends it.
-- **Long range:** bows and javelins shoot up to four times their range, at disadvantage past
-  it. Enemy reach marks the tiles only a long shot reaches with smaller, fainter dots.
-- **Water and braziers:** shallow water costs double to wade through (fliers skip it). A hero
-  next to a lit brazier can tip it over with their action: its coals land on the tiles past
-  it, and whoever stands there makes a DC 12 DEX save against 2d6 fire (half on a success).
-  The coals burn for 3 of the tipper's turns, 1d6 to anyone who steps on them.
-- **Levers and portcullises:** a hero next to a lever pulls it for free (once a turn, like
-  opening a chest), and every portcullis in the room crashes down, or rises again. Down, its
-  bars stop anyone walking through, but not seeing or shooting. The clang wakes the room. The
-  Black Armory has one, between its upper and lower halls.
+- **Concentration:** Hex, Hunter's Mark, Shield of Faith, Fear, Greater Invisibility and Fog
+  Cloud last while the caster concentrates. Taking damage calls for a CON save (DC 10, or half
+  the damage); a failure, dropping, being paralysed or casting another of them ends it.
 - **Stealth:** a hidden hero is only found by a monster whose Perception beats their roll.
   Attacking gives you away.
 - **Undo:** a move can be taken back until the hero does something else, as long as it rolled
   no dice and showed nothing new (no door, trap, monster or unexplored tile).
 
+### Actions
+
+Attack, Dash, Dodge, Disengage, Hide, Search, Shove, Push, Grapple, Help and Ready, and:
+
+- drinking a potion, or giving one to an ally (next to you, or tossed up to 15 ft to one you
+  can see);
+- throwing alchemist's fire and scattering caltrops;
+- throwing your torch into the dark (a bonus action, once a fight; Wizards, Clerics, Sorcerers
+  and Bards can cast **Light** instead);
+- smashing a barrel or crate next to you, barring a door, disarming a trap you've found,
+  freeing a prisoner, and sending the owl.
+
+The moves few turns need wait behind **More** on the action bar, so the common ones fit in
+one row. Push stays out in a room with a chasm, burning coals or stairs.
+
+- **Push:** Shove's other choice. Instead of one attack, Athletics against the foe's STR or
+  DEX; win and it's pushed 5 ft straight away from you. Choosing a foe marks the tile it would
+  land on. A wall, a door or someone behind it stops the push, and fliers and Tharok don't go
+  over an edge. Where it lands:
+  - over a chasm's edge: it falls and is gone (no save, no body left to raise);
+  - onto burning coals: it burns;
+  - into a stairwell (or off the top stair): it tumbles to the floor below, 1d6 and prone;
+  - off a ledge: 1d6 and prone.
+- **Grapple:** instead of one attack, Athletics against the foe's STR or DEX. Win and it can't
+  move while you stay next to it; it tries to break free at the start of each of its turns.
+- **Help:** a hero distracts a foe next to them; the next ally to attack it before the
+  helper's next turn has advantage.
+- **Ready:** pick Ready, then the attack to hold until your next turn; it's made with your
+  reaction. A melee weapon strikes the first foe to step into reach, and a bow, javelin or
+  Fire Bolt the first to step into view. Good for holding a doorway. A spell cast at one foe
+  (Magic Missile, Sacred Flame, Scorching Ray, Dread, Vicious Mockery) can be readied too: its
+  slot is spent when you ready it, and it goes off at the first foe to step into view.
+
+### Spells
+
+- **Counterspell:** a Wizard, Sorcerer or Warlock of level 5 casts it by itself, like Shield,
+  when a monster within 60 ft they can see casts a spell. It costs their reaction and a
+  3rd-level slot, and stops a spell of 3rd level or lower; a higher one takes a spellcasting
+  check (DC 10 + its level).
+- **Fog Cloud** (Wizard, Sorcerer, Druid) fills a 10-ft radius: no one sees into, out of or
+  through it past 5 ft.
+- **Grease** (Wizard) slicks a 15-ft square: difficult terrain, and anyone in it or stepping
+  onto it makes a DEX save or falls prone.
+- **Ice Storm** leaves its area icy: difficult terrain (each tile costs 10 ft) until the end of
+  the caster's next turn. Specters, wraiths and Ysolde fly over it.
+- **Spell scrolls:** some chests hold one, and the pedlar sells one. A scroll casts its spell
+  once, without a slot, and only a hero with that spell on their class's list can read it (it
+  goes to one). It waits on the action bar beside the spells.
+
 ## Monsters
 
-- Goblins, skeletons, an orc, giant rats, ghouls, a ghast, a mimic, giant spiders and
-  specters. An **ochre jelly** waits in the Cistern's flooded hall: a weapon hit splits it in
-  two, each half the size with half its HP, until the pieces are Small or under 10 HP. A
-  **gelatinous cube** lurks in the Sunken Halls, all but invisible until you're next to it: it
+- **Act one and two:** goblins, kobolds, skeletons, zombies, an orc, a hobgoblin, giant rats, a
+  swarm of rats, ghouls, a ghast, a shadow, a mimic and an ochre jelly.
+- **Act three:** giant spiders, specters, a gelatinous cube and a cult fanatic.
+- **Act four:** mummies, wraiths and fallen knights.
+- **Act five:** gargoyles, which stand as statues until you come close and whose claws can
+  throw a hero back, and basilisks, whose bite can turn a hero to stone for a turn.
+
+Some have tricks of their own:
+
+- **Kobolds** guard the Crypt Door's ledge: weak alone, but they attack with advantage beside
+  an ally.
+- **The hobgoblin** (AC 18), a sellsword in the Necromancer's Sanctum, hits 2d6 harder when an
+  ally stands by its target (once a turn).
+- **Zombies** (the Crypt Door, the Sanctum and the Sealed Vault): cut one down and it may get
+  back up on 1 HP (Undead Fortitude), unless the blow was a critical hit or radiant (Divine
+  Smite, Divine Strike, Sacred Flame).
+- **The swarm of rats** (the Flooded Ossuary): weapons deal it half damage (spells don't), it
+  pours through heroes, it can't be grappled, tripped or frightened, and its bites weaken at
+  half HP.
+- **Shadows** (the dark of the Sealed Vault and the Catacombs): hidden while one stands in the
+  dark with no hero beside it. Its touch drains 1d4 Strength (back after the fight); it shrugs
+  off half of any weapon's damage but takes double from radiant.
+- **The ochre jelly** (the Cistern's flooded hall): a weapon hit splits it in two, each half
+  the size with half its HP, until the pieces are Small or under 10 HP.
+- **The gelatinous cube** (the Sunken Halls) is all but invisible until you're next to it. It
   engulfs a hero, who burns in its acid each turn until a STR save gets them out.
-- **Zombies** shamble through the Crypt Door, the Sanctum and the Sealed Vault: cut one
-  down and it may get back up on 1 HP (Undead Fortitude), unless the blow was a critical hit or
-  radiant (Divine Smite, Divine Strike, Sacred Flame). A **swarm of rats** fills the Flooded
-  Ossuary: weapons deal it half damage (spells don't), it pours through heroes, it can't be
-  grappled, tripped or frightened, and its bites weaken at half HP.
-- A **cult fanatic** stands by the stair in the Sunken Halls: as its turn starts it calls up a
-  skeleton beside it (its action), up to two at once, and they fall to dust when it does.
-- A **shadow** waits in the dark of the Sealed Vault and the Catacombs: hidden while it stands
-  in the dark with no hero beside it, its touch drains 1d4 Strength (back after the fight), it
-  shrugs off half of any weapon's damage but takes double from radiant.
-- **Hobgoblins** (AC 18, a sellsword in the Necromancer's Sanctum) hit 2d6 harder when an ally stands by their
-  target (once a turn). **Kobolds** guard the Crypt Door's ledge: weak alone, but they attack
-  with advantage beside an ally.
-- Act four: mummies, wraiths and fallen knights.
-- Act five: gargoyles that stand as statues until you come close and whose claws can throw a
-  hero back, and basilisks whose bite can turn a hero to stone for a turn.
-- **Lair actions:** as each round begins, once they know you're there, Morvath's lair claws at the
-  nearest hero with grasping hands (STR save DC 13 or restrained); every other round a sandstorm
-  blows through Nekhet's tomb (ranged attacks past 5 ft at disadvantage that round) and Tharok's
-  labyrinth shakes (DEX save DC 12 or prone).
-- Bosses: **Grukk** the goblin chief, **Morvath** the necromancer (raises the dead),
-  **Varek** the wight, **Ysolde** the banshee, **Nekhet** the mummy lord (at half HP his
-  dead rise again and his glare frightens heroes near him) and **Tharok** the minotaur, who
-  charges down the labyrinth's corridors and can knock a hero flat and throw them back.
+- **The cult fanatic** (by the stair in the Sunken Halls) calls up a skeleton beside it as its
+  turn starts, up to two at once, and they fall to dust when it does.
+
+**Bosses:** **Grukk** the goblin chief, **Morvath** the necromancer (raises the dead),
+**Varek** the wight, **Ysolde** the banshee, **Nekhet** the mummy lord (at half HP his dead rise
+again and his glare frightens heroes near him) and **Tharok** the minotaur, who charges down
+the labyrinth's corridors and can knock a hero flat and throw them back.
+
+**Lair actions:** as each round begins, once they know you're there:
+
+- Morvath's lair claws at the nearest hero with grasping hands (STR save DC 13 or restrained).
+- Every other round a sandstorm blows through Nekhet's tomb (ranged attacks past 5 ft at
+  disadvantage that round).
+- Every other round Tharok's labyrinth shakes (DEX save DC 12 or prone).
+
+**How they behave:**
+
 - Monsters start unaware. They notice heroes they can see, hear fighting nearby and shout to
   wake their allies. Some sleep, and some patrol.
 - Goblins hide after shooting. Monsters that lose sight of a hidden hero go to where they last
   saw them and search.
-- **Morale:** goblins, hobgoblins, kobolds, the orc and giant rats may break and run when brought under a quarter of
-  their HP, or when Grukk falls (a WIS save, once a fight). Undead never do.
+- **Morale:** goblins, kobolds, hobgoblins, the orc and giant rats may break and run when
+  brought under a quarter of their HP, or when Grukk falls (a WIS save, once a fight). Undead
+  never do.
 
 ## The dungeon
 
-- Doors that block sight, hidden spike traps, chests with potions and magic items, and stairs
-  down.
-- **Chasms** in the fifth act: no one crosses one, not even a flier, but you can see and shoot
-  over it. Push a foe over the edge and it's gone. Gargoyles and Tharok can throw a hero
-  back too: a hero thrown toward the edge gets a DEX save to catch it.
-- **Rooms on two floors:** the Cistern Stair (in act two, beside the Vault and the Well) has a
-  hall above and a flooded hall below, each with its own monsters, and so does the Undercroft
-  (in act five, beside the Den and the Grotto), whose two stairs cross to opposite ends below.
-  Stepping onto a flight of steps takes you to the stair at its other end, 5 ft like any step.
-  The walls hide each floor from the other: from the top or foot of a stair you can look down or
-  up it, but not shoot. A fight is heard on both floors, and monsters use the stairs too, except
-  ghouls and basilisks: they lurk on their own floor, at the foot of the stairs at most, until a
-  hero comes down or they're hurt. Push a foe into a stairwell and it tumbles down.
-- **Cracked floor** in both rooms on two floors: the split tiles over the hall below hold a
-  walker, but a foe pushed (or a hero thrown) onto one crashes through to the floor below, 1d6
-  and prone, and leaves a hole no one can cross.
+- **Doors, traps and chests:** doors block sight, spike traps hide in the floor, and chests
+  hold potions, scrolls and magic items. Walls in front of a figure turn see-through.
+- **Fog of war:** you only see what your heroes see. A foe that moves or strikes out of sight
+  leaves dashed rings where it was last heard, until it's seen, its tile is seen empty, or it
+  dies.
 - **Dark rooms:** the Catacombs' two side rooms are unlit. Your torches show 10 ft around each
   hero; past that a foe is unseen, and attacks at one have disadvantage. Monsters see your
   torches from anywhere. Throw your torch, or cast Light, to light a spot for the rest of the
   fight; a burning foe lights the tiles around it.
+- **High ground:** raised ledges in the Crypt Door, the Goblin Warren and the Gallery. Climbing
+  up costs an extra 5 ft, shooting down at a foe below has advantage, and a foe pushed (or a
+  hero thrown) off the edge takes 1d6 and lands prone.
+- **Shallow water** costs double to wade through (fliers skip it).
+- **Braziers:** a hero next to a lit brazier can tip it over with their action. Its coals land
+  on the tiles past it, and whoever stands there makes a DC 12 DEX save against 2d6 fire (half
+  on a success). The coals burn for 3 of the tipper's turns, 1d6 to anyone who steps on them.
+- **Levers and portcullises:** a hero next to a lever pulls it for free (once a turn, like
+  opening a chest), and every portcullis in the room crashes down, or rises again. Down, its
+  bars stop anyone walking through, but not seeing or shooting, and the clang wakes the room.
+  The Black Armory has one, between its upper and lower halls.
+- **Barrels and crates** give half cover, and a hero can smash one next to them (a barrel takes
+  5, a crate 8; every blow lands). Broken, it's open floor.
 - **Barred doors:** a hero next to a door can shut it and drop its bar (an action). A monster
-  has to break it down, a STR check against DC 15 that takes the rest of its move when it fails,
-  each failure 2 easier. Heroes lift the bar by walking through.
+  has to break it down: a STR check against DC 15 that takes the rest of its move when it
+  fails, each failure 2 easier. Heroes lift the bar by walking through.
 - **Disarming traps:** a hero next to a trap they've found can work at it (an action): a DEX
   check against DC 13 (Wren, the Monk and the Ranger add their proficiency). Succeed and it's
   rigged against the monsters: heroes walk over it, and the next monster to step on it sets it
   off. Fail by 5 or more and it goes off on you.
 - **Secret doors** in the Sealed Vault and the Armory: Search finds one within 10 ft (WIS
-  Perception against DC 15), a hero standing next to one notices it with passive Perception 15,
-  and Wren's Keen Eyes spot one within 10 ft. Found, it's a door like any other.
-- **The alarm gong:** in the Goblin Warren Grukk strikes his gong once he knows you're there,
-  every goblin hears it, and two more come running in from the side room three rounds later.
+  Perception against DC 15), a hero standing next to one notices it with passive Perception
+  15, and Wren's Keen Eyes spot one within 10 ft. Found, it's a door like any other.
+- **Pit traps** in the Flooded Ossuary and the Broken Bridge: rotten planks over a hole. Step
+  on one unawares and a DEX save (DC 12) catches the edge; fail and you fall in for 1d6, prone.
+  In a pit you shoot at disadvantage and are hard to hit from afar. As your turn starts a STR
+  check (DC 10) climbs out with half your movement. An open pit is difficult terrain.
+- **Cracked ceilings** (the dark lines on the floor) in the Spider Nest, the Sunken Halls and
+  the Labyrinth: a charge under one, Shatter or Thunderwave brings it down, 2d6 to everyone
+  within 5 ft (DEX save DC 13 for half, prone on a failure). Its rubble is difficult terrain.
+- **Chasms** in the fifth act: no one crosses one, not even a flier, but you can see and shoot
+  over it. Push a foe over the edge and it's gone. Gargoyles and Tharok can throw a hero back
+  too: a hero thrown toward the edge gets a DEX save to catch it.
+- **Rooms on two floors:** the Cistern Stair (act two) has a hall above and a flooded hall
+  below, each with its own monsters, and so does the Undercroft (act five), whose two stairs
+  cross to opposite ends below.
+  - Stepping onto a flight of steps takes you to the stair at its other end, 5 ft like any
+    step.
+  - The walls hide each floor from the other: from the top or foot of a stair you can look
+    down or up it, but not shoot.
+  - A fight is heard on both floors, and monsters use the stairs too, except ghouls and
+    basilisks: they keep to their own floor, at the foot of the stairs at most, until a hero
+    comes down or they're hurt.
+  - **Cracked floor** over the hall below holds a walker, but a foe pushed (or a hero thrown)
+    onto it crashes through to the floor below, 1d6 and prone, and leaves a hole no one can
+    cross.
+
+**Rooms with a story of their own:**
+
+- **The alarm gong:** in the Goblin Warren Grukk strikes his gong once he knows you're there.
+  Every goblin hears it, and two more come running in from the side room three rounds later.
   A pending wave keeps the fight going after the last monster falls.
-- **Holding out:** the Catacombs are a hold-out. Two more dead climb out of their niches on
-  round 3, and the room is won when round 6 ends, whoever is still standing.
+- **Holding out:** in the Catacombs two more dead climb out of their niches on round 3, and the
+  room is won when round 6 ends, whoever is still standing.
 - **The prisoner:** someone is chained up in the Ghoul Larder. Stand next to them and free them
-  (an action) before round 8 and they press two potions and a ring of protection into your hands;
-  wait too long and the ghouls drag them off.
-- **Barrels and crates** give half cover, and a hero can smash one next to them (a barrel takes 5,
-  a crate 8; every blow lands). Broken, it's open floor: nothing left to hide behind.
-- **Pit traps** in the Flooded Ossuary and the Broken Bridge: rotten planks over a hole. Step on
-  one unawares and a DEX save (DC 12) catches the edge; fail and you fall in for 1d6, prone. In a
-  pit you shoot at disadvantage and are hard to hit from afar; as your turn starts a STR check (DC
-  10) climbs out with half your movement. An open pit is difficult terrain.
-- **Cracked ceilings** (the dark lines on the floor) in the Spider Nest, the Sunken Halls and the
-  Labyrinth: a charge under one, Shatter or Thunderwave brings it down, 2d6 to everyone within 5 ft
-  (DEX save DC 13 for half, prone on a failure). Its rubble is difficult terrain.
-- **High ground:** raised ledges in the Crypt Door, the Goblin Warren and the Gallery. Climbing
-  up costs an extra 5 ft; shooting down from a ledge at a foe below has advantage; a foe pushed
-  (or a hero thrown) off the edge takes 1d6 and lands prone.
-- **Spell scrolls:** some chests hold one, and the pedlar sells one. A scroll casts its spell
-  once, without a slot, and only a hero with that spell on their class's list can read it (it
-  goes to one). It waits on the action bar beside the spells.
-- **Fog of war:** you only see what your heroes see. Monsters out of sight are hidden, but a foe
-  that moves or strikes out of sight leaves dashed rings where it was last heard, until it's
-  seen, its tile is seen empty, or it dies.
-- Walls in front of a figure turn see-through.
+  (an action) before round 8, and they press two potions and a ring of protection into your
+  hands; wait too long and the ghouls drag them off.
 
 ## The campaign
 
 - **Five acts**, each a map with forks: choose which room to clear next, and whether to rest
   or push on for more XP and loot.
-- Between rooms the party takes a short rest, shares XP and hands out magic items at camp.
+- **Camp:** between rooms the party takes a short rest, shares XP and hands out magic items.
 - **Magic items:** Runed Weapons +1 and +2, Rings and Cloaks of Protection, Bracers of Defense
-  (only for a hero in no armor), Gauntlets of Ogre Power, an Amulet of Health and a Periapt of
-  Proof against Poison (and, from the Saint's Reliquary, a Periapt of Wound Closure). Each hero's button in the pack shows what the item would change for
-  them, such as "AC 15 → 17" or "Max HP 35 → 53".
-- **Relics:** each boss leaves one behind. A relic isn't worn: it works for the whole party
-  for the rest of the run, and the camp lists them under Relics.
+  (only for a hero in no armor), Gauntlets of Ogre Power, an Amulet of Health, a Periapt of
+  Proof against Poison and, from the Saint's Reliquary, a Periapt of Wound Closure. Each hero's
+  button in the pack shows what the item would change for them, such as "AC 15 → 17".
+- **Relics:** each boss leaves one behind. A relic isn't worn: it works for the whole party for
+  the rest of the run, and the camp lists them.
   - Morvath's Phylactery: the first hero who would drop to 0 HP stays on 1 HP. Once used, it
-    sleeps until the next long rest (the camp shows it).
+    sleeps until the next long rest.
   - Varek's Barrow Horn: the heroes go first in every fight.
-  - Ysolde's Veil: the party starts every fight hidden, even in plate; each hero stays hidden
+  - Ysolde's Veil: the party starts every fight hidden, even in plate. Each hero stays hidden
     until they attack or cast, get hurt, or a sharp-eyed monster spots them.
   - Nekhet's Embalming Jar: the rest after each room gives back three-quarters of the missing
     HP, not half.
   - Tharok's Red Thread: every hero moves one tile further each turn (New Game+ and the
     Endless Crypt only, since Tharok is the last boss).
-- **Gold and the pedlar:** every room cleared pays gold, more the deeper it is and twice
-  for a boss. A pedlar follows the party down and trades at the rest stops and in camp after
-  each act's boss (Visit the pedlar): potions (30 gold), alchemist's fire (40) and caltrops (15), each to whoever carries fewest, a spell scroll (60 to 180) for a hero who can read it, and two
-  pieces of gear that change from stop to stop, better ones in later acts. He buys spare gear
-  from the pack at half price. Saves from before gold start with none.
+- **Gold and the pedlar:** every room cleared pays gold, more the deeper it is and twice for a
+  boss. A pedlar follows the party down and trades at the rest stops, and in camp after each
+  act's boss (Visit the pedlar). He sells potions (30 gold), alchemist's fire (40) and caltrops
+  (15), each to whoever carries fewest; a spell scroll (60 to 180) for a hero who can read it;
+  and two pieces of gear that change from stop to stop, better in later acts. He buys spare
+  gear from the pack at half price.
 - **Stops with no fight:** three side trips on the map, each one choice and no dice. Visit one
   on the way, or walk past it; the fork after it is still there.
-  - The Wounded Pilgrim (after the Crypt): give up a potion and he finds you after the
-    Sanctum with one for every hero, or take his purse for two potions now.
+  - The Wounded Pilgrim (after the Crypt): give up a potion and he finds you after the Sanctum
+    with one for every hero, or take his purse for two potions now.
   - The Blood Altar (after the Nest): every hero loses a quarter of their HP maximum, and the
     party fights its next fight blessed, +1 to hit and +1 AC. The Shrine's rest keeps it.
   - The Saint's Reliquary (after the Halls): sealed unless the party carries the Iron Key from
     the Sealed Vault's chest. Inside: a Periapt of Wound Closure.
-- A lost fight can be retried or skipped by taking another route. The Defeat screen tells how
-  each hero fell, which foe hit hardest and who was still standing, with a tip for next time
-  (a trap, unused potions, the healer falling first, a knock prone or a web before the last blow,
-  a hero cut off alone, archers, spells, a foe to focus, spell slots left unspent). A won room says who led the way, the closest
-  call, who fell and how many potions were drunk; won or lost, it sums the HP the party dealt
-  and took.
+- **Defeat:** a lost fight can be retried, or skipped by taking another route. The Defeat
+  screen tells how each hero fell, which foe hit hardest and who was still standing, with a tip
+  for next time (a trap, unused potions, the healer falling first, a hero cut off alone, spell
+  slots left unspent, …). A won room says who led the way, the closest call, who fell and how
+  many potions were drunk. Won or lost, it sums the HP the party dealt and took.
+- **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
+  ghoul out of the Barrow. After a third defeat in the same room, the Defeat banner offers Try
+  again one step down (Hard to Normal, Normal to Story) for the rest of the run, and the run's
+  record and achievements count it at that difficulty.
+- **Saving:** the run saves after every room and in the middle of a fight. Continue picks up on
+  the same turn.
+- **Victory:** beating Tharok shows a tally of the run and each hero's stats. Save image
+  downloads it as a picture with the party's gear and the way down (on a phone, the share
+  sheet). A run that ended at an act's boss before the next act existed carries on into it.
+- **New Game+:** after beating Tharok, go back down with the same heroes from the first room,
+  from the end screen or the title (until you start a new campaign). Each hero keeps a magic
+  item of your choice from the run, or nothing, and the relics come along. Every win adds a
+  tier (Hard NG+1, NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and
+  damage.
+- **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
+  its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied,
+  Swift, Warded or Barbed.
+  - The camp map marks each room ahead with a gold pip, and picking it names the trait.
+  - When you first see the elite, a horn sounds, its band flares, a toast and the log name the
+    trait, and on a phone the camera brings it into view.
+  - Aiming at a Barbed elite, the hint says what its barbs would cut you for, in red when that
+    would drop you.
+  - Once you have won a campaign, the bestiary lists what each trait does and how many you've
+    slain. The run summary, its image and Past runs count the elites slain.
+
+## Modes and extras
+
+- **Endless Crypt:** after beating Tharok, the title also offers a dive below the labyrinth
+  with the same heroes, their gear, relics and gold. Each floor is a room made from the dive's
+  seed: six chambers joined by doors and gaps, with barrels, crates, columns, water, traps,
+  chests and more monsters the deeper it goes.
+  - Every third floor ends in a long rest and the pedlar. Monsters get tougher every three
+    floors (as New Game+), elites come from floor 7, and a named foe waits on every fifth.
+  - Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends when the
+    party falls; the title keeps the deepest floor cleared. A floor's fight can be watched
+    again, but has no replay or challenge link.
+  - New monsters and hazards reach the dives started after they were added; a dive already
+    under way keeps its floors. Newer dives meet gargoyles (from floor 4), basilisks (from 5)
+    and Tharok after the mummy lord; about half their floors are cut by a chasm with a
+    one-tile span, and about a quarter have the way down in a sunken chamber, reached only by a
+    stair (a floor's opening line says so). Now and then an ochre jelly (from floor 3) or a
+    gelatinous cube (from floor 5) takes a monster's place, on about a third of floors a zombie
+    replaces a skeleton and a swarm a giant rat, and on some floors from 3 a cult fanatic
+    replaces a skeleton. Kobolds take giant rats' places, hobgoblins the orc's, and from floor
+    3 a shadow a ghoul's, its chamber gone dark.
+- **Daily crypt:** one room a day, the same for everyone. Your best result and win streak are
+  kept. Win it and Copy result puts a short summary on the clipboard (on a phone, the share
+  sheet); a won campaign has the same button. Watch your best replays the day's fastest win
+  from the title, and its Copy link and Copy challenge link share it. Over time it has drawn
+  from more rooms and classes, each from a date on, so past days keep their room:
+  - from 20 November 2026, the Throne, the Halls and the Armory;
+  - from 23 November, the Bard in its party (and the weekly's);
+  - from 30 November, the Barbarian, Sorcerer, Monk and Druid, and the Tomb, the Bridge and the
+    Den (the weekly too);
+  - from 7 December, the rooms on two floors, the Cistern Stair and the Undercroft (the weekly
+    too).
+- **Weekly elite crypt:** one room a week at New Game+ 3, the same for everyone, with that
+  week's elite trait: a way to meet elites without a won campaign. Like the daily it keeps your
+  best result and a streak of weeks won, with Copy result and Watch your best. If an update
+  moves the week to another room, its best starts again there.
 - **Watch replay:** after any fight you played yourself, the end screen can play it again from
   the start, move by move with the same dice. Pause, step to the next turn, speed it up to 4×,
-  or exit back to the end screen (keys: Space, →, + and −, Esc). Copy replay link puts the
-  whole fight in a link (on a phone, the share sheet): whoever opens it watches the same fight,
-  with nothing sent to a server. A link from before a rules change says it can't be shown.
-- **Play it yourself:** a replay opened from a link has a Play it yourself button. You get the
-  same room, party, difficulty and starting dice, and the end screen compares your rounds with
-  the link's. Try again starts from the same dice; Copy replay link sends your fight back.
+  or exit back to the end screen (Space, →, + and −, Esc). Copy replay link puts the whole
+  fight in a link (on a phone, the share sheet): whoever opens it watches the same fight, with
+  nothing sent to a server. A link from before a rules change says it can't be shown.
+- **Play it yourself:** a replay opened from a link has a Play it yourself button: the same
+  room, party, difficulty and starting dice. The end screen compares your rounds with the
+  link's, Try again starts from the same dice, and Copy replay link sends your fight back.
   Nothing is saved and no achievements are unlocked.
 - **Challenge links:** Copy challenge link on the end screen makes a link that opens straight
   into the same fight, without showing yours first. The end screen then compares the rounds,
   and Watch yours and Watch theirs play both fights.
-- **Difficulty:** Story, Normal or Hard. It changes the monsters only; Hard also leaves one
-  ghoul out of the Barrow. After a third defeat in the same room, the Defeat banner offers
-  Try again on Normal (from Hard) or Story (from Normal): the rest of the run goes on one step
-  down, and the run's record and achievements count it at that difficulty.
-- **Saving:** the run saves after every room and in the middle of a fight. Continue picks up
-  on the same turn.
-- Beating Tharok shows a tally of the run and each hero's stats. Save image downloads it as a
-  picture with the party's gear and the way down (on a phone, the share sheet). A run that ended at Ysolde
-  before act four existed carries on into it, and one that ended at Nekhet before act five
-  carries on into that, after a long rest.
-- **New Game+:** after beating Tharok, go back down with the same heroes from the first room.
-  Each one keeps a magic item of your choice from the run. Every win adds a tier (Hard NG+1,
-  NG+2, …): monsters get 10% more hit points per tier, and +1 to hit and damage. The relics
-  come along too. The title
-  screen offers it too, until you start a new campaign. Each hero may also keep nothing.
-- **Endless Crypt:** after beating Tharok, the title also offers a dive below the labyrinth with the
-  same heroes, their gear, relics and gold. Each floor is a room made from the dive's seed: six
-  chambers joined by doors and gaps, with barrels, crates, columns, water, traps, chests and more
-  monsters the deeper it goes. Every third floor ends in a long rest and the pedlar; monsters
-  get tougher every three floors (as New Game+), elites from floor 7, and a named foe waits on
-  every fifth. Dives started since act five also meet gargoyles (from floor 4) and basilisks
-  (from floor 5), and Tharok after the mummy lord, and dives started since then find about half
-  their floors cut by a chasm with a one-tile span, and since the rooms on two floors about a
-  quarter have the way down in a sunken chamber, reached only by a stair; a dive already under
-  way keeps its floors. A floor's opening line says when it has a chasm or a sunken way down.
-  Dives started since the ochre jelly find one now and then from floor 3, in place of a ghoul,
-  skeleton, ghast or specter, and dives started since the gelatinous cube find one now and then
-  from floor 5, in place of a ghoul, ghast or mummy. Dives started since the zombies find one in
-  place of a skeleton, and a swarm in place of a giant rat, on about a third of their floors, and
-  dives started since the cult fanatic find one in place of a skeleton on some floors from 3.
-  Dives started since the hobgoblins meet kobolds in place of giant rats, hobgoblins in place of
-  the orc, and from floor 3 a shadow in place of a ghoul, its chamber gone dark.
-  Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
-  when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
-  watched again, but has no replay or challenge link.
-- **Elites:** from NG+2, the strongest monster in each room is an elite, with a gold band on
-  its base, a gold edge on its portrait and one trait: Regenerating, Relentless, Frenzied, Swift,
-  Warded or Barbed. The trait depends on the room and the tier: the camp map marks each room ahead
-  with a gold pip, and picking it names the trait. When you first see the elite, a horn
-  sounds, its band flares, a toast and the log name the trait, and on a phone the camera brings
-  it into view. Aiming at a Barbed elite, the hint says what its barbs would cut you for, in
-  red when that would drop you. Once you have won a campaign, the bestiary lists what each does and how many
-  you've slain. The run summary, its image and Past runs count the elites slain.
-
-## Modes and extras
-
-- **Daily crypt:** one room a day, the same for everyone. Your best result and win streak
-  are kept. From 20 November 2026 it can also be the Throne, the Halls or the Armory, and
-  from 23 November its party (and the weekly's) can bring the Bard, and from 30 November the
-  Barbarian, Sorcerer, Monk and Druid, and the room (the weekly's too) can be the Tomb, the
-  Bridge or the Den. From 7 December it (and the weekly) can also be a room on two floors: the
-  Cistern Stair or the Undercroft.
-  Win it and Copy result puts a short summary on the clipboard (on a phone, the share sheet).
-  A won campaign has the same button. Watch your best replays the day's fastest win from
-  the title, and its Copy link and Copy challenge link share it.
-- **Weekly elite crypt:** one room a week at New Game+ 3, the same for everyone, with that
-  week's elite trait. It's a way to meet elites without a won campaign. Like the daily it
-  keeps your best result and a streak of weeks won, and has a Copy result and Watch your best.
-  If an update moves the week to another room, its best starts again there.
-- **Achievements:** 39 goals that carry across runs. Open them from the title screen.
+- **Achievements:** 40 goals that carry across runs. Open them from the title screen.
+- **Bestiary:** every monster you've met, with its character card, a line of lore, its last
+  words to you and how many you've slain, and how much damage each kind has dealt your heroes
+  and how many it dropped (the three deadliest at the top). A note and a soft chime say when a
+  new one joins, and a gold dot on its button waits until you look. Open it from the title or
+  camp.
+- **Past runs:** your last 20 runs, from the title screen. Each keeps its last fight to watch
+  again or copy as a link. Your deepest win (such as Hard NG+2) is shown above them.
 - **The title's skull** gapes, chatters and twitches on its own, and the embers in its eyes
   follow the pointer (on a phone, your taps) and flare at the title's buttons. Click or tap it
   (or press K) to play its moves in turn, each with its own sound: gape, chatter, cocked head,
   laugh, lunge and the torch guttering. A faint glow behind it pulses until the first click.
-  It laughs on the won-campaign screen and chatters at you after a defeat, and a still of it
-  shows while the game loads and on the saved run card. With Data Saver on or on a 2G
-  connection the title keeps a still of it.
-- **Bestiary:** every monster you've met, with its character card, a line of lore, its last words to you and how
-  many you've slain. A note and a soft chime say when a new one joins, and a gold dot on its button waits
-  until you look. Open it from the title screen or camp. It also keeps how much damage each
-  kind has dealt your heroes and how many it dropped, with the three deadliest at the top.
-- **Past runs:** your last 20 runs, from the title screen. Each keeps its last fight to watch
-  again or copy as a link. Your deepest win (such as Hard NG+2) is kept and shown above them.
+  It laughs on the won-campaign screen and chatters at you after a defeat. With Data Saver on
+  or on a 2G connection the title keeps a still of it.
 - **Tips for new players:** short hints the first time something matters, such as a brazier
-  to tip, water in sight, foes hunting out of sight (Ready), a hurt ally next to you, a dying or
-  paralysed hero, a spell to concentrate on, a chasm in sight, a foe at its edge to Push, stairs
-  to another floor, or a hero turned to stone. They can be turned off.
+  to tip, foes hunting out of sight (Ready), a hurt ally next to you, a dying hero, a chasm's
+  edge to Push a foe over, or stairs to another floor. They can be turned off.
 - **Offline and on your Home Screen:** once everything has loaded, the foot of the title says
-  "Saved for offline play", and the game then opens without a signal ("No signal: playing the
-  saved copy"). On an iPhone it says how to add it to the Home Screen (Share, then Add to Home
-  Screen); in Chrome or Edge it has an Install button. × hides that tip. When a new version
-  is out, the title offers to reload into it.
-- **Easy on phone batteries:** the board is drawn at full speed only while something moves
-  or you touch the screen; the rest of the time a few frames a second keep the torches
-  flickering, and the shadows are redrawn less often. Phones draw it at 1.5 pixels per point
-  with a smaller shadow map. The title's skull slows down when left alone for 15 seconds.
+  "Saved for offline play", and the game then opens without a signal. On an iPhone it says how
+  to add it to the Home Screen (Share, then Add to Home Screen); in Chrome or Edge it has an
+  Install button. × hides that tip. When a new version is out, the title offers to reload into
+  it.
+- **Easy on phone batteries:** the board is drawn at full speed only while something moves or
+  you touch the screen; the rest of the time a few frames a second keep the torches
+  flickering, and shadows are redrawn less often. Phones draw at 1.5 pixels per point with a
+  smaller shadow map, and the title's skull slows down when left alone for 15 seconds.
 
 ## Interface
 
-- **Dice on the board:** on your heroes' turns you throw the d20 yourself by clicking,
-  tapping or pressing Space. Monsters' rolls and saving throws show too.
-- **Enemy reach** (T): marks the tiles monsters could reach and hit next turn. A red
-  crosshatch means melee, amber dots mean ranged, and fainter dots a long shot at disadvantage.
-  Settings can switch them to purple and yellow for colour-blind players. Hovering a tile to move
-  to warns, even with the zones off, when Tharok could charge you there, a basilisk's bite
-  could reach you, or a gargoyle or Tharok could throw you over a chasm's edge, and a monster's card lists its charge, Reckless and petrifying bite.
+- **Dice on the board:** on your heroes' turns you throw the d20 yourself by clicking, tapping
+  or pressing Space. Monsters' rolls and saving throws show too.
+- **Enemy reach** (T) marks the tiles monsters could reach and hit next turn: a red crosshatch
+  for melee, amber dots for ranged, fainter dots for a long shot at disadvantage. Settings can
+  switch them to purple and yellow for colour-blind players. Even with the zones off, hovering
+  a tile to move to warns when Tharok could charge you there, a basilisk's bite could reach
+  you, or a gargoyle or Tharok could throw you over a chasm's edge.
 - **Odds:** hovering (or first tapping) a foe says the chance to hit, with advantage,
   disadvantage and cover counted, and the damage a hit does. Its HP bar shades what the hit
   would take off: dark for the lowest roll, striped up to the highest, and a ☠ by its name when
   even the lowest roll drops it. Spells with a save say the chance it fails. Reactions like
   Shield or Bardic Inspiration can still change the outcome.
-- **Tooltips:** hover or long-press any attack, spell or tag to see what it does. Small
-  labels (spell slots, potions, Action / Bonus / Reaction, the replay buttons' keys) show a
-  short note on hover, focus or a tap; screen readers read every note with its label.
-- **Turn order:** the round, then portraits along the top, each with its initiative number. Long names
-  shrink to fit, like "G. Spider 2" or "R. Mummy". On an upright phone the whole party fits
+- **Tooltips:** hover or long-press any attack, spell or tag to see what it does. Small labels
+  (spell slots, potions, Action / Bonus / Reaction, the replay buttons' keys) show a short note
+  on hover, focus or a tap.
+- **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a
+  figure) for its HP, AC, speed, attacks with to-hit and damage, conditions and traits, and a
+  monster's charge, Reckless or petrifying bite.
+- **Turn order:** the round, then portraits along the top, each with its initiative number.
+  Long names shrink to fit, like "G. Spider 2". On an upright phone the whole party fits
   across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
+- **Combat log:** scrolled up to read, new lines don't pull it back down; a button counts them
+  and goes back. Each earlier round folds under a heading with who fell and the HP the party
+  dealt and took. Double-click a name (or hold it on a phone) to see only the lines naming that
+  figure; "Only Wren ✕" above the log, or the same name again, shows every line. The end
+  banner's Copy log puts the whole fight's log on the clipboard as plain text.
+- **Copying:** where a browser won't let the game copy, Copy log, Copy result and the link
+  buttons open the text selected in a panel, to copy by hand (or Save as file).
 - **Photo mode** (P, or the camera button): the HUD goes and the monsters wait. Drag to turn
   the view around the hero whose turn it is, right-drag to pan and scroll to zoom (on a phone,
   one finger turns, two pan and pinch). Save image keeps the picture (on a phone, the share
   sheet); Done or Esc puts the camera back.
-- **Character cards:** hover a figure or a portrait (on a phone, tap a portrait or hold a figure) for its HP, AC,
-  speed, attacks with to-hit and damage, conditions and traits.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
   one."), a named foe's first sight of the party ("You trespass in my barrow."), and now and
-  then a monster's attack or spell (one of a pack a round; most of a named foe's), with a
-  minion sometimes answering its boss ("Yes, boss!"). A figure under a quarter of its HP says
-  so once a fight ("Not the face!"), the turned dead cry out as they flee, and a fight ends
-  with a last word: the hero who won it, or the boss gloating over a defeat. Each class and
-  talking monster has its own voice; beasts, skeletons and spirits stay silent. One bubble at
-  a time, and they never hold up a turn. Between rooms two heroes trade a line in camp,
-  teasing whoever dropped, and the bestiary quotes the last thing each monster said.
+  then a monster's attack or spell, with a minion sometimes answering its boss ("Yes, boss!").
+  A figure under a quarter of its HP says so once a fight ("Not the face!"), the turned dead
+  cry out as they flee, and a fight ends with a last word: the hero who won it, or the boss
+  gloating over a defeat. Beasts, skeletons and spirits stay silent. One bubble at a time, and
+  they never hold up a turn. Between rooms two heroes trade a line in camp, teasing whoever
+  dropped, and the bestiary quotes the last thing each monster said.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
   motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log,
   cards and the names and numbers over the figures), speech bubbles, colour-blind friendly
   enemy reach and play stats.
-- **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the loss Worker (a run started or continued,
-  a daily or weekly started, a room won or lost with its rounds, party classes and anyone who fell into a chasm or tumbled down the stairs, a stop's
-  choice, a run abandoned, a campaign won, an easier difficulty offered or taken, a visit and whether its browser played before, a replay watched, something shared, a fight left
-  half-way, with the input it was played by), how smoothly the board draws (a frame-rate band,
-  once a visit), to see where runs end, and a crash by where it happened in the code (never its
-  message), to find what breaks in which browser. A lost run or daily also sends its fight, without the heroes' names, so it can be
-  watched (see Loss replays). No cookies, names or saves, and links' fights stay out of the
-  address it sends. Off with Settings › Share anonymous play stats, or Do Not Track; test links
-  and the dev server send nothing.
+- **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the
+  loss Worker, to see where runs end and what breaks in which browser. They cover runs, rooms
+  and dailies started, won, lost or left (with rounds, classes, falls and the input used),
+  choices at the stops, difficulty changes, replays watched, sharing, a frame-rate band once a
+  visit, and crashes by where they happened in the code (never the message). A lost run or
+  daily also sends its fight, without the heroes' names, so it can be watched (see Loss
+  replays). No cookies, names or saves, and links' fights stay out of the address it sends.
+  Off with Settings › Share anonymous play stats, or Do Not Track; test links and the dev
+  server send nothing. [docs/stats.md](docs/stats.md) lists the events.
+
+## Accessibility
+
+- **Screen readers** hear the combat log as it happens (even with the log panel closed), whose
+  turn it is, and what the keyboard cursor rests on with what Enter would do there. R reads out
+  the board around the hero (a chasm's edge beside it; in a room on two floors, which floor
+  everyone is on and how far each foe is on foot), and the number keys say what they picked.
+  Every small label's note is read with it. At camp they hear how the last room went, which
+  room is next, each room on the map, and the items handed out.
+- **Keyboard only:** the title, camp and New Game+ work from the keyboard: Tab to a room on the
+  map, Enter to choose it, and focus stays where it was when the camp redraws. On the board,
+  the arrow keys move a cursor (see Controls). Tab to the combat log, and the arrow keys step
+  from name to name in it (each read out with its line); Enter looks at that figure, and F
+  shows only the lines naming it.
+- **Gamepads** play the whole game (see Controls).
+- **Reduced motion** (the Motion setting, or the system's when it's on System): the screen
+  doesn't shake, the camera jumps instead of panning, floating numbers fade in place, the dice
+  don't wobble and the title's skull holds still.
+- **Text size** and **colour-blind friendly enemy reach** are in Settings.
 
 ## Sound
 
@@ -428,32 +494,13 @@ Everything is generated in the browser, with no recordings:
 - Music that grows from a quiet drone while exploring to drums and strings in a fight, with
   darker layers in boss rooms.
 - Sound effects and dungeon ambience.
-- Voices: every character shouts, chants and grunts in a made-up language.
+- Voices: every character shouts, chants and grunts in a made-up language, each class and
+  talking monster in its own voice.
 - Sound starts with your first tap or key press, with a low toll. On an iPhone it plays in
   silent mode too, like a video does (iOS 17 and later); the Sound button mutes it.
-- It goes quiet while the game is in the background (another tab or app, a locked screen)
-  and picks up when you come back. The monsters wait for you too: their turn plays out once
-  you're back, so you see what they do.
-- With reduced motion (the Motion setting, or the system's when it's on System), the screen
-  doesn't shake, the camera jumps instead of panning, floating numbers fade in place and the
-  dice don't wobble, and the title's skull holds still.
-- Screen readers hear the combat log as it happens (even with the log panel closed), whose
-  turn it is, and what the keyboard cursor rests on with what Enter would do there. R reads
-  out the board around the hero (and a chasm's edge beside it; in a room on two floors, which
-  floor everyone is on and how far each foe is on foot), and the number keys say what they picked. At camp they hear
-  how the last room went, which room is next, each room on the map, and items handed out.
-- The title, camp and New Game+ work from the keyboard alone: Tab to a room on the map, Enter
-  to choose it, and focus stays where it was when the camp redraws.
-- Tab to the combat log, and the arrow keys step from name to name in it (each is read out
-  with its line); Enter looks at that figure, and F shows only the lines naming it.
-- The end banner's Copy log puts the whole fight's log on the clipboard as plain text (on a
-  phone, the share sheet). Where a browser won't let the game copy, Copy log, Copy result and
-  the link buttons open the text selected in a panel, to copy by hand (or Save as file).
-- Scrolled up in the combat log to read, new lines don't pull it back down; a button counts
-  them and goes back. Each earlier round folds under a heading with who fell and the HP the
-  party dealt and took.
-- Double-click a name in the combat log (or hold it on a phone) to see only the lines naming
-  that figure; "Only Wren ✕" above the log, or the same name again, shows every line.
+- It goes quiet while the game is in the background (another tab or app, a locked screen) and
+  picks up when you come back. The monsters wait for you too: their turn plays out once you're
+  back, so you see what they do.
 
 ## Controls
 
@@ -510,106 +557,20 @@ Everything is generated in the browser, with no recordings:
 
 ## House rules
 
-A few things differ from the SRD to keep the game simple:
+A few things differ from the SRD to keep the game simple.
 
-- Goblin arrows and rat bites poison (DC 10 CON). Ghoul claws paralyse (DC 10 CON). The save to end
-  it comes at the start of each turn rather than the end, so a hero who makes it still acts
-  (10 turns at most); the ghast's claws still only poison.
-- The mimic knocks you prone instead of grappling.
-- Only Grukk's second attack has disadvantage.
-- Sculpt Spells and Sneak Attack 4d6 arrive at level 6. Sculpt spares every ally.
+### Classes and spells
+
 - An Ability Score Improvement is always +2 to one ability (no feats, no +1 and +1).
-- The ghast's stench only lasts until the end of the victim's turn.
-- A giant spider's bite poisons instead of dealing poison damage, and its web wears off on
-  its own.
-- A specter's Life Drain frightens instead of lowering maximum HP. The banshee has no Wail.
-- Mummy rot is a short curse instead of a lasting one: on a failed CON save (DC 12, Nekhet's
-  DC 16) the target can't regain HP for two of its turns. The wraith's Life Drain doesn't lower maximum HP and
-  it raises no specters. Nekhet has no legendary actions or cleric spells. Instead, once a fight at half HP, two
-  skeletons rise for him and heroes within 10 ft make a WIS save or are frightened.
-- Gargoyles have no resistance to plain weapons, and their bite is folded into two claw attacks.
-- The basilisk's Petrifying Gaze rides on its bite instead: a hero it hits makes a CON save
-  (DC 12) or is petrified until the end of their next turn. They can't move, act or react,
-  fail STR and DEX saves, and attacks against them have advantage. No one is turned to stone
-  for good.
-- Tharok is a minotaur built up as a boss: two greataxe swings, Reckless every turn, and a
-  Charge on the first hit after a run of 2 tiles or more (+2d8, and a STR save, DC 14, or
-  prone). Chasms stop fliers too.
-- A Push sends a foe over a chasm's edge with no saving throw; it simply falls. Tharok knows
-  his labyrinth too well to be pushed off.
-- Monsters push back. Once a turn, a gargoyle's claw hit makes the hero save (STR, DC 11) or be
-  thrown 5 ft away, and a hero Tharok's charge knocks down is thrown too. Thrown toward a chasm,
-  the hero makes a DEX save (DC 10): success catches the edge (prone at the lip), failure is a
-  fall. Fights begun before this rule (rules 3 and earlier) play without it.
-- A foe pushed into a stairwell, or off the top stair, tumbles to the stair at the foot (1d6
-  bludgeoning, prone), unless it flies or someone stands there. Ghouls and basilisks keep to
-  their own floor of a two-floor room until a hero sets foot there or they're hurt. Fights begun
-  before these rules (rules 4 and earlier) play without them.
-- A potion can be tossed to an ally up to 15 ft away in sight; it heals where it lands, even a
-  dying ally, with no attack roll.
-- The ochre jelly splits on any melee weapon hit, whatever the damage type, and has no
-  resistances or Pseudopod acid. The Cistern's is a young one: Medium, half the hit points.
-- Alchemist's fire is a ranged attack (DEX and proficiency, 20 ft) that sets the target
-  burning: 1d4 fire at the end of each of its turns, then a DEX save (DC 10) puts it out, with
-  no action spent.
-- Caltrops cover one tile within 10 ft; a creature stepping in makes a DEX save (DC 15) or takes
-  1 piercing and stops there for the turn, with no lasting speed loss. Heroes walk around them.
-- Cracked floor gives way only under a creature pushed or thrown onto it, and only when the
-  tile below is free. Fliers don't fall.
-- Heroes always carry torches (10 ft of light) and monsters have no need of darkvision; there is
-  no dim light. Fights begun before these rules (rules 5 and earlier) play without the toss,
-  the jelly, the supplies, the cracked floor and the dark.
-- A thrown torch lights 10 ft and the Light cantrip 20 ft, both on a tile, not an object held
-  (Light reaches 30 ft rather than touch). There's no dim light, and a hero who throws theirs
-  still sees 10 ft.
-- Morale is a house rule (from the DMG's optional rule): a WIS save (DC 10), and a monster that
-  breaks runs as if turned for two of its turns, whether or not it's hit.
-- A smash always hits a barrel or crate, and its damage is the weapon's, with no damage types.
-- The gelatinous cube's Engulf is an attack (3d6, then DEX save DC 12 or engulfed), not a move
-  into the target's space. The acid is 2d6 (not 6d6), the STR save to get out comes at the start
-  of the engulfed hero's turn without spending an action, and it lets go if it moves away.
-  Transparent: it starts hidden, and only a hero next to it or with passive Perception 15 spots
-  it. Fights begun before these rules (rules 6 and earlier) play without the torches, morale,
-  smashing and the cube.
-- Breaking a barred door is a plain STR check (DC 15, 2 easier after each failure) made by
-  stepping into it, and costs the rest of the monster's move; heroes lift a bar from either side.
-  Disarming is a DEX check with thieves' tools' proficiency for the Rogue's slot, the Monk and the
-  Ranger; a disarmed trap is reset against the monsters rather than taken apart, and fliers pass
-  over it.
-- The zombie's Undead Fortitude and the swarm's resistances work without damage types: a crit,
-  Divine Smite, Divine Strike or Sacred Flame keeps a zombie down, and a swarm takes half from
-  every weapon. A swarm can't end its move in a hero's space. Fights begun before these rules
-  (rules 7 and earlier) play without bars, disarming, zombies and swarms.
-- The owl familiar comes with every Wizard and Warlock (no casting needed) and is no figure in the
-  initiative: once a turn, free, it flies up to 60 ft and takes the Help action against the
-  weakest foe next to it, until its master's next turn. A monster that starts its turn beside it
-  swats at it (its first melee attack against AC 11) and one hit sends it away until the next
-  fight. It sees in the dark, for the fog only. The cult fanatic calls skeletons instead of
-  casting spells, and they give no XP. A gong's wave and a hold-out's dead arrive at the start of
-  a round, at the end of the initiative order. Fights begun before these rules (rules 8 and
-  earlier) play without gongs, prisoners, hold-outs, owls, secret doors and the fanatic.
-- Lair actions come as a round begins, before anyone's turn, rather than on initiative 20, and
-  each lair has one action. Counterspell is automatic, against monsters only, always with a
-  3rd-level slot. Fog Cloud's radius is 10 ft (not 20) and Grease covers a 15-ft square around the
-  spot (not 10 ft). A spell scroll can be read at any level, with no check. A pit is 10 ft deep for
-  1d6, climbing out is a STR check as the turn starts, and a falling ceiling is a house trap.
-  Fights begun before these rules (rules 9 and earlier) play without lairs, scrolls,
-  Counterspell, Fog Cloud, Grease, pits and cracked ceilings.
 - Fighting styles change in camp, between rooms. Protection needs no shield, and Great Weapon
-  Fighting is the Fighter's longsword in two hands (a Paladin drops the shield, 2 AC). The
-  shadow's Strength Drain never takes Strength below 1 and kills no one; it resists only weapon
-  damage that isn't magic, takes double from radiant spells, Divine Smite and Divine Strike, and
-  hides only in the dark. High ground is a house rule: advantage on ranged attacks down from a
-  ledge, a climb costing 5 ft more, a fall from one 1d6 and prone. Fights begun before these
-  rules (rules 10 and earlier) play without styles, ledges, shadows, hobgoblins and kobolds.
-- The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
-- Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
-  hero whose Strength is already 19 or more.
-- Hex has no ability-check part.
+  Fighting is the Fighter's longsword in two hands (a Paladin drops the shield, 2 AC).
+- The Fighter's Improved Critical comes at level 7. Sculpt Spells and Sneak Attack 4d6 arrive
+  at level 6, and Sculpt spares every ally.
+- Hex has no ability-check part. Hellish Rebuke is armed ahead of time and only answers
+  attacks.
 - Every Scorching Ray aims at one foe. Rays left when it falls go to the nearest other foe.
-- Hellish Rebuke is armed ahead of time and only answers attacks.
-- Bardic Inspiration uses come back every fight, and the die is rolled after the attack or save
-  misses (only when it could turn it). Cutting Words only answers attack rolls.
+- Bardic Inspiration uses come back every fight, and the die is rolled after the attack or
+  save misses (only when it could turn it). Cutting Words only answers attack rolls.
 - Fear spares the Bard's allies and doesn't make foes drop anything. Greater Invisibility only
   changes attack rolls.
 - Rage lasts the whole fight and needs no attacks to keep it going. Ki and sorcery points come
@@ -619,31 +580,134 @@ A few things differ from the SRD to keep the game simple:
   Lightning's free bolts need no new slot while its concentration lasts.
 - Step of the Wind gives both Dash and Disengage for its one ki. Deflect Missiles only cuts
   the damage, and the Monk doesn't throw it back.
+- The owl familiar comes with every Wizard and Warlock (no casting needed) and is no figure in
+  the initiative. Once a turn, free, it flies up to 60 ft and takes the Help action against the
+  weakest foe next to it, until its master's next turn. A monster that starts its turn beside
+  it swats at it (its first melee attack against AC 11), and one hit sends it away until the
+  next fight. It sees in the dark, for the fog only.
+- Counterspell is automatic, against monsters only, always with a 3rd-level slot. Fog Cloud's
+  radius is 10 ft (not 20), and Grease covers a 15-ft square around the spot (not 10 ft).
+- A thrown torch lights 10 ft and the Light cantrip 20 ft, both on a tile, not an object held
+  (Light reaches 30 ft rather than touch). A hero who throws theirs still sees 10 ft.
+- A spell scroll can be read at any level, with no check.
+
+### Actions and combat
+
 - Ready has two fixed triggers instead of one you name: a foe stepping into reach (a melee
   attack) or into view (a ranged one, or a spell). A readied spell needs no concentration.
-- Levers and portcullises are not from the SRD: pulling a lever is a free object interaction,
-  it works every portcullis in the room, and it won't drop one on anyone.
-- A grappled monster tries to break free at the start of its turn without spending its
-  action, and a grappler who moves away lets go instead of dragging it. Only heroes grapple.
-- New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the
-  difficulty's), and from the first tier their weapon attack and damage rolls get +1.
-- Elites (NG+2 and deeper) are not from the SRD: the room's monster worth the most XP gets a
-  trait (regains 5 HP a turn; stays on 1 HP once; one more attack; +10 ft speed; +2 AC and
-  no frightened, prone or poisoned; or 3 piercing damage, no roll, to a foe that hits it with
-  a melee weapon).
-- Relics are not from the SRD. The Phylactery works like Death Ward on the first hero to drop,
-  once between long rests. The Veil hides the party at 15 + Stealth bonus, with no roll and
-  no penalty for noisy armor.
+- A grappled monster tries to break free at the start of its turn without spending its action,
+  and a grappler who moves away lets go instead of dragging it. Only heroes grapple.
+- A Push sends a foe over a chasm's edge with no saving throw; it simply falls. Tharok knows his
+  labyrinth too well to be pushed off.
+- A foe pushed into a stairwell, or off the top stair, tumbles to the stair at the foot (1d6
+  bludgeoning, prone), unless it flies or someone stands there.
+- High ground: ranged attacks down from a ledge have advantage, climbing up costs 5 ft more,
+  and a fall from one is 1d6 and prone.
+- A creature gives half cover like a barrel: not one right next to the attacker.
+- Death saves: monsters leave a dying hero alone, and a hero who fails three is out until the
+  fight ends (back afterwards). Monsters die at 0 HP.
+- A potion can be tossed to an ally up to 15 ft away in sight; it heals where it lands, even a
+  dying ally, with no attack roll.
+- Alchemist's fire is a ranged attack (DEX and proficiency, 20 ft) that sets the target
+  burning: 1d4 fire at the end of each of its turns, then a DEX save (DC 10) puts it out, with
+  no action spent.
+- Caltrops cover one tile within 10 ft. A creature stepping in makes a DEX save (DC 15) or
+  takes 1 piercing and stops there for the turn, with no lasting speed loss. Heroes walk around
+  them.
+- Morale (from the DMG's optional rule): a WIS save (DC 10), and a monster that breaks runs as
+  if turned for two of its turns, whether or not it's hit.
+
+### Monsters
+
+- Goblin arrows and rat bites poison (DC 10 CON), and ghoul claws paralyse (DC 10 CON). The
+  save to end it comes at the start of each turn rather than the end, so a hero who makes it
+  still acts (10 turns at most). The ghast's claws only poison, and its stench lasts until the
+  end of the victim's turn.
+- The mimic knocks you prone instead of grappling. Only Grukk's second attack has
+  disadvantage.
+- A giant spider's bite poisons instead of dealing poison damage, and its web wears off on its
+  own.
+- A specter's Life Drain frightens instead of lowering maximum HP. The banshee has no Wail.
+- Mummy rot is a short curse instead of a lasting one: on a failed CON save (DC 12, Nekhet's DC
+  16) the target can't regain HP for two of its turns. The wraith's Life Drain doesn't lower
+  maximum HP, and it raises no specters.
+- Nekhet has no legendary actions or cleric spells. Instead, once a fight at half HP, two
+  skeletons rise for him and heroes within 10 ft make a WIS save or are frightened.
+- Lair actions come as a round begins, before anyone's turn, rather than on initiative 20, and
+  each lair has one action.
+- Gargoyles have no resistance to plain weapons, and their bite is folded into two claw
+  attacks.
+- The basilisk's Petrifying Gaze rides on its bite instead: a hero it hits makes a CON save (DC
+  12) or is petrified until the end of their next turn. They can't move, act or react, fail STR
+  and DEX saves, and attacks against them have advantage. No one is turned to stone for good.
+- Tharok is a minotaur built up as a boss: two greataxe swings, Reckless every turn, and a
+  Charge on the first hit after a run of 2 tiles or more (+2d8, and a STR save, DC 14, or
+  prone). Chasms stop fliers too.
+- Monsters throw heroes back: once a turn a gargoyle's claw hit makes the hero save (STR, DC
+  11) or be thrown 5 ft away, and a hero Tharok's charge knocks down is thrown too. Thrown
+  toward a chasm, the hero makes a DEX save (DC 10): success catches the edge (prone at the
+  lip), failure is a fall.
+- Ghouls and basilisks keep to their own floor of a two-floor room until a hero sets foot there
+  or they're hurt.
+- The ochre jelly splits on any melee weapon hit, whatever the damage type, and has no
+  resistances or Pseudopod acid. The Cistern's is a young one: Medium, half the hit points.
+- The gelatinous cube's Engulf is an attack (3d6, then a DEX save, DC 12, or engulfed), not a
+  move into the target's space. The acid is 2d6 (not 6d6), the STR save to get out comes at the
+  start of the engulfed hero's turn without spending an action, and it lets go if it moves
+  away. It starts hidden, and only a hero next to it or with passive Perception 15 spots it.
+- The zombie's Undead Fortitude and the swarm's resistances work without damage types: a crit,
+  Divine Smite, Divine Strike or Sacred Flame keeps a zombie down, and a swarm takes half from
+  every weapon. A swarm can't end its move in a hero's space.
+- The cult fanatic calls skeletons instead of casting spells, and they give no XP.
+- The shadow's Strength Drain never takes Strength below 1 and kills no one. It resists only
+  weapon damage that isn't magic, takes double from radiant spells, Divine Smite and Divine
+  Strike, and hides only in the dark.
+
+### The dungeon
+
+- Heroes always carry torches (10 ft of light) and monsters have no need of darkvision; there
+  is no dim light.
 - Tipping a brazier is not from the SRD: the spill is a DC 12 DEX save against 2d6 fire, and
   the coals deal 1d6 to whoever enters them (once a turn) until the end of the tipper's third
   turn.
-- The Periapt of Wound Closure doubles all healing its wearer receives (the SRD's doubles
-  Hit Dice and stabilizes; there are no Hit Dice here).
-- Death saves: monsters leave a dying hero alone, and a hero who fails three is out until the
-  fight ends (back afterwards, as before). Monsters die at 0 HP.
-- A creature gives half cover like a barrel: not one right next to the attacker.
-- Fights saved, replayed or linked from before death saves, concentration, ghoul paralysis, long
-  range and creature cover keep the old rules (`RULES` in `combat.js`).
+- Levers and portcullises are not from the SRD: pulling a lever is a free object interaction,
+  it works every portcullis in the room, and it won't drop one on anyone.
+- Cracked floor gives way only under a creature pushed or thrown onto it, and only when the
+  tile below is free. Fliers don't fall.
+- A smash always hits a barrel or crate, and its damage is the weapon's, with no damage types.
+- Breaking a barred door is a plain STR check (DC 15, 2 easier after each failure) made by
+  stepping into it, and costs the rest of the monster's move; heroes lift a bar from either
+  side.
+- Disarming is a DEX check with thieves' tools' proficiency for the Rogue's slot, the Monk and
+  the Ranger. A disarmed trap is reset against the monsters rather than taken apart, and fliers
+  pass over it.
+- A pit is 10 ft deep for 1d6, and climbing out is a STR check as the turn starts. A falling
+  ceiling is a house trap.
+- A gong's wave and a hold-out's dead arrive at the start of a round, at the end of the
+  initiative order.
+
+### Items and the campaign
+
+- A hero can use one runed weapon at a time.
+- Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a hero
+  whose Strength is already 19 or more.
+- The Periapt of Wound Closure doubles all healing its wearer receives (the SRD's doubles Hit
+  Dice and stabilizes; there are no Hit Dice here).
+- Relics are not from the SRD. The Phylactery works like Death Ward on the first hero to drop,
+  once between long rests. The Veil hides the party at 15 + Stealth bonus, with no roll and no
+  penalty for noisy armor.
+- New Game+ is not from the SRD: each tier adds 10% to monster hit points (on top of the
+  difficulty's), and from the first tier their weapon attack and damage rolls get +1.
+- Elites (NG+2 and deeper) are not from the SRD: the room's monster worth the most XP gets a
+  trait (regains 5 HP a turn; stays on 1 HP once; one more attack; +10 ft speed; +2 AC and no
+  frightened, prone or poisoned; or 3 piercing damage, no roll, to a foe that hits it with a
+  melee weapon).
+
+### Older fights
+
+Saves, replays and links carry the rules they were played under (`RULES` in `combat.js`), and
+are rebuilt with them. A fight begun before a rule was added plays without it, so old saves and
+links still replay the same.
 
 ## For developers
 
@@ -651,35 +715,44 @@ A few things differ from the SRD to keep the game simple:
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm test         # rules unit tests (Vitest)
-npm run lint     # ESLint: undefined names and unused code
-npm run sim      # balance check: plays whole campaigns headlessly
+npm run dev          # http://localhost:5173
+npm test             # rules unit tests (Vitest)
+npm run lint         # ESLint: undefined names and unused code
+npm run sim          # balance check: plays whole campaigns headlessly
 npm run touch-check  # headless Chrome on a phone: first tap previews, second acts; the layout fits
-npm run stills   # re-renders the icons, link preview, boot still and README shots of the 3D emblem
-npm run build    # production bundle in dist/
-npm run size-check  # the first screen's download stays within its budget (after a build)
-npm run digest   # the week's play stats and stored losses as a short report (LOSS_READ_KEY set)
-npm run preview  # http://localhost:4173/crypt-skirmish/
+npm run stills       # re-renders the icons, link preview, boot still and README shots of the 3D emblem
+npm run build        # production bundle in dist/
+npm run size-check   # the first screen's download stays within its budget (after a build)
+npm run digest       # the week's play stats and stored losses as a short report (LOSS_READ_KEY set)
+npm run preview      # http://localhost:4173/crypt-skirmish/
 ```
 
-Every push to `main` runs lint and the tests, builds, checks the first screen's size, runs the touch check on three fixed fights against the
-build (and once with each finger lifted late, as a busy phone sees it) and deploys to GitHub Pages (`.github/workflows/pages.yml`). Every Monday `.github/workflows/digest.yml`
-runs the digest with the keys from the repository secrets `LOSS_READ_KEY` and `UMAMI_API_KEY` and keeps the report
-as the run's `digest` artifact, out of the public log. Every day `.github/workflows/crash-check.yml`
-fails, so GitHub emails, if the game crashed for anyone the day before (`scripts/crash-check.mjs`).
+Every push to `main` runs lint and the tests, builds, checks the first screen's size, runs the
+touch check on three fixed fights against the build (and once with each finger lifted late, as
+a busy phone sees it) and deploys to GitHub Pages (`.github/workflows/pages.yml`). Every Monday
+`.github/workflows/digest.yml` runs the digest with the repository secrets `LOSS_READ_KEY` and
+`UMAMI_API_KEY` and keeps the report as the run's `digest` artifact, out of the public log.
+Every day `.github/workflows/crash-check.yml` fails, so GitHub emails, if the game crashed for
+anyone the day before (`scripts/crash-check.mjs`).
 
 **Jump into a room:** `http://localhost:5173/?level=4` (1 Crypt, 2 Warren, 3 Ossuary,
-4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne,
-12 Halls, 13 Armory, 14 Tomb, 15 Bridge, 16 Den, 17 Labyrinth, 18 Cistern, 19 Undercroft). Add `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+, `&paladin`, `&ranger` or `&warlock`, `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`, `thread`), `&seed=7` for the same dice every time.
-This doesn't touch the save.
+4 Sanctum, 5 Catacombs, 6 Vault, 7 Barrow, 8 Larder, 9 Nest, 10 Gallery, 11 Throne, 12 Halls,
+13 Armory, 14 Tomb, 15 Bridge, 16 Den, 17 Labyrinth, 18 Cistern, 19 Undercroft). This doesn't
+touch the save. Add:
 
-**See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a made-up run,
-to try Copy result and Save image (on a phone, the share sheet). Add `&tier=2` for a New Game+
-run with elites slain. Nothing is saved.
+- `&difficulty=hard` or `story`, `&party=5` for another level (3 to 8), `&tier=1` for New Game+
+  (elites from 2), `&seed=7` for the same dice every time;
+- `&paladin`, `&barbarian`, `&warlock`, `&sorcerer`, `&ranger`, `&monk`, `&bard` or `&druid`
+  for another class;
+- `&relics=veil,horn` for boss relics (`phylactery`, `horn`, `veil`, `jar`, `thread`).
 
-**Console:** `__debug.autoplay()` lets the AI play the heroes too. `__debug.win()` and
-`__debug.lose()` end the fight.
+**See the ending:** `http://localhost:5173/?victory` shows the won-campaign screen for a
+made-up run, to try Copy result and Save image. Add `&tier=2` for a New Game+ run with elites
+slain. Nothing is saved.
+
+**Console:** `__debug.autoplay()` lets the AI play the heroes too, `__debug.win()` and
+`__debug.lose()` end the fight, `__debug.reveal()` lifts the fog, and `__debug.level(n)` jumps
+to a room (or an Endless floor, `level('deep:3:4:3')`).
 
 ### Balance
 
@@ -693,7 +766,7 @@ run with elites slain. Nothing is saved.
   shows each floor's win rate and where the dives end.
 - Runs are split over one worker thread per core; `JOBS=1` plays them on one thread (the same
   numbers as before threads, for a given `SEED`).
-- `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `PALADIN=1`, `RANGER=1`, `WARLOCK=1` and `BARD=1` change the run.
+- `SEED=n`, `DIFFICULTY=story|hard`, `TIER=n` (New Game+), `RULES=n` (an older rules version) and a class (`PALADIN=1`, `BARBARIAN=1`, `WARLOCK=1`, `SORCERER=1`, `RANGER=1`, `MONK=1`, `BARD=1`, `DRUID=1`) change the run.
 - `RELICS=horn,veil` gives the party exactly those relics in every fight (`RELICS=` for none);
   without it they're earned from the bosses as in a real run.
 - `EVENTS=1` takes the stops with no fight on the way (tends the pilgrim, bleeds at the altar,
@@ -806,7 +879,8 @@ src/
   stats.js           anonymous play stats (Umami): the setting, the events, the script loaded after the title,
                      and the event counts and lost fights sent to the loss-replay Worker
   tallies.js         the Worker's event counts read into numbers (the digest, ?losses, the crash check)
-  ui/losses.js       the unlisted ?losses page: play stats and players' lost fights to watch
+  ui/losses.js       the unlisted ?losses page: play stats and players' lost fights to watch (with losses.css)
+  style.css          the game's styles: imports styles/*.css in cascade order, one file per part of the screen
   offline.js         registers the offline copy (public/sw.js), hands it the files already loaded, looks for a new deploy
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/

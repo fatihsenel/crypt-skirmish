@@ -1,0 +1,363 @@
+/* The fight's HUD: the panels, the turn order, the combat log and the action bar. */
+/* --- panels ---------------------------------------------------------------- */
+#initiative, #log, #actionbar .bar, #help, #toast, #hint {
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
+
+#initiative {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  max-width: calc(100% - 472px); /* centred, clear of the five icon buttons on the right */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+@media (min-width: 1401px) {
+  #initiative { max-width: calc(100% - 936px); } /* clear of the labelled buttons on the right */
+}
+@media (max-width: 900px) {
+  /* Left-aligned, stopping short of the six icon buttons on the right. */
+  #initiative { max-width: calc(100% - 292px); left: 12px; transform: none; }
+}
+@media (max-width: 600px) and (min-height: 521px) {
+  /* An upright phone: too narrow for both on one line, so the portraits get their own row
+     under the buttons, full width, and the controls panel moves down to match. */
+  #initiative { top: 56px; max-width: calc(100% - 24px); gap: 4px; }
+  /* Four chips across, so the whole party shows; monsters past them scroll. */
+  #initiative .chip { width: calc((100vw - 24px - 14px - 12px - 30px) / 4); column-gap: 4px; padding: 3px 4px 3px 2px; } /* 30px: the round */
+  #initiative .round { min-width: 26px; }
+  #initiative .chip .pic { width: 24px; height: 24px; }
+  #initiative .chip .pic svg { width: 16px; height: 16px; }
+}
+/* The round number, pinned at the start of the turn order while the portraits scroll. */
+#initiative .round {
+  position: sticky; left: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 32px; padding: 0 4px; border-radius: 7px;
+  background: var(--panel); border: 1px solid var(--panel-edge);
+  line-height: 1.05;
+}
+#initiative .round small { font-size: 9px; letter-spacing: 0.04em; color: #a89c84; text-transform: uppercase; }
+#initiative .round b { font-size: 15px; color: var(--gold); }
+/* More portraits or buttons past an edge: that edge fades (hud.js sets the classes). */
+#initiative.more-right, #attacks.more-right, #who.more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent); }
+#initiative.more-left, #attacks.more-left, #who.more-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 28px), transparent); }
+#initiative.more-left.more-right, #attacks.more-left.more-right, #who.more-left.more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent); }
+.chip {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  row-gap: 3px;
+  align-items: center;
+  padding: 3px 6px 3px 3px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  flex: 0 0 auto;
+  width: 102px; /* room for "Skeleton 2" and "R. Mummy" */
+  font-size: 11px;
+}
+.chip .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-self: end; }
+/* The portrait: a class icon or monster silhouette on the unit's own colour. */
+.chip .pic {
+  --c: #6a6470;
+  --icon-hole: color-mix(in srgb, var(--c) 45%, #141018);
+  position: relative;
+  grid-row: span 2;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--icon-hole);
+  color: #f6eedd;
+  border: 1.5px solid color-mix(in srgb, var(--c) 70%, #fff 10%);
+}
+.chip .pic svg { width: 19px; height: 19px; }
+.chip.monsters .pic { color: #f1dcd2; }
+.chip .init {
+  position: absolute; right: -5px; bottom: -4px;
+  min-width: 14px; height: 14px; padding: 0 2px; box-sizing: border-box;
+  border-radius: 7px; background: #120e14; border: 1px solid #3a3440;
+  font: 700 9.5px/12px var(--display); text-align: center;
+  color: var(--muted);
+}
+.chip.heroes .nm { color: var(--hero); }
+.chip.monsters .nm { color: var(--monster); }
+.chip .mini { align-self: start; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+.chip .mini i { display: block; height: 100%; background: var(--hp-high); }
+.chip.current { border-color: var(--gold); background: rgba(217, 180, 90, 0.12); }
+.chip.current .init { color: var(--gold); }
+.chip.dead { opacity: 0.35; }
+.chip.unknown .nm, .chip.unknown .init { color: #8a8494; font-style: italic; }
+.chip.unknown .pic { color: #8a8494; --c: #3a3440; }
+.chip.current .pic { box-shadow: 0 0 0 2px var(--gold); }
+.chip.elite .pic { border: 2px solid #ffd36b; }
+.chip.dead .pic { filter: grayscale(1); }
+.chip.unknown .mini i { background: #4a4552; }
+.chip.dead .nm { text-decoration: line-through; }
+/* A dying hero (death saves): dimmed, not crossed out, with three pips a side. */
+.chip.dying { opacity: 0.7; }
+.chip.dying .nm { text-decoration: none; }
+.chip .pips { display: flex; gap: 2px; justify-content: center; height: 5px; }
+.chip .pips i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+.chip .pips b { width: 3px; }
+.chip .pips i.ok { background: var(--hp-high); }
+.chip .pips i.no { background: #d0463c; }
+.chip .pips.stable i { background: var(--hp-high); }
+
+#log {
+  position: absolute;
+  top: 76px; right: 12px; bottom: 150px;
+  width: 290px;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+#log .log-head { /* the same height, type and line as the Controls panel's header */
+  display: flex;
+  align-items: center;
+  flex: none;
+  min-height: 33px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+#log h2 { flex: 1; margin: 0; font: inherit; }
+/* The header folds the log away like Controls' (hud.js foldLog); on a phone it closes the panel. */
+#log-fold {
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: none; border: 0; border-radius: 10px;
+  font-size: 12px;
+  text-align: left;
+  user-select: none;
+}
+#log-fold:hover .head-title { color: var(--gold); }
+#log-fold:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+#log-fold > kbd { margin-left: auto; }
+#log .head-icon {
+  display: grid; place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font: 700 12px/1 var(--body);
+}
+#log .head-title {
+  font: 600 12px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+#log-close { display: none; margin-right: 8px; padding: 2px 9px; font-size: 13px; line-height: 1.4; }
+@media (min-width: 901px) {
+  #log.folded { bottom: auto; width: auto; }
+  #log.folded .log-head { margin-bottom: 0; border-bottom: 0; }
+  #log.folded #log-list { display: none; }
+}
+#log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 14px 10px;
+  overflow-y: auto;
+  font-size: 12.5px;
+}
+#log-latest {
+  position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+  padding: 4px 12px; border-radius: 999px;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+#log.folded #log-latest, #log.folded #log-only { display: none; }
+/* The log filtered to one figure (hud.js filterLog): the bar says whose; click it for every line. */
+#log-only {
+  align-self: flex-start;
+  flex: none;
+  margin: 0 14px 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+#log-only b { color: var(--gold); font-weight: 600; }
+#log-list li.off { display: none; }
+#log-list li { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+/* Each round: its heading, then its lines; earlier rounds fold under their heading (hud.js). */
+#log-list li.round-block { padding: 0; border-bottom: 0; }
+#log-list .round-block > details > ol { list-style: none; margin: 0; padding: 0; }
+#log-list .round {
+  color: var(--gold);
+  font: 600 12px var(--display);
+  padding: 10px 0 4px 14px;
+  border-bottom: 1px solid var(--panel-edge);
+  list-style: none;
+  cursor: pointer;
+  position: relative;
+}
+#log-list .round::-webkit-details-marker { display: none; }
+#log-list .round::before { content: '▸'; position: absolute; left: 0; color: var(--muted); font: 12px var(--body); transition: transform 0.12s; }
+#log-list details[open] > .round::before { transform: rotate(90deg); }
+#log-list .round:hover::before { color: var(--gold); }
+#log-list .round:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; border-radius: 4px; }
+#log-list .round-note { color: var(--muted); font: 400 11.5px var(--body); }
+/* The last line about the figure under the mouse. */
+#log-list .lit { background: rgba(255, 201, 60, 0.14); box-shadow: inset 2px 0 var(--gold); }
+#log-list li.sys { color: var(--gold); }
+#log-list li.death { color: var(--monster); font-style: italic; }
+#log-list .heroes { color: var(--hero); font-weight: 600; }
+#log-list .monsters { color: var(--monster); font-weight: 600; }
+#log-list .dice { color: var(--muted); font-variant-numeric: tabular-nums; }
+#log-list .hit { color: var(--hit); }
+#log-list .crit { color: var(--crit); }
+#log-list .miss { color: var(--miss); }
+#log-list .spell { color: var(--spell); }
+#log-list .heal { color: var(--heal); }
+#log-list .opp { color: var(--monster); font: 600 11px var(--display); letter-spacing: 0.04em; }
+#log-list .sneak { color: var(--crit); }
+#log-list .level { font: 700 13px var(--display); color: var(--gold); }
+#log-list .adv { color: var(--hp-high); font-size: 11px; }
+#log-list .cover { color: #c9b07a; font-size: 11px; }
+#log-list .dis { color: var(--monster); font-size: 11px; }
+/* Names point at their figures (hud.js onLogName). */
+#log-list [data-unit] { cursor: pointer; }
+#log-list:focus { outline: none; }
+#log-list:focus-visible { box-shadow: inset 0 0 0 2px rgba(255, 201, 60, 0.35); }
+#log-list .kbd-name { outline: 2px solid var(--gold); outline-offset: 1px; border-radius: 3px; }
+@media (hover: hover) { #log-list [data-unit]:hover { text-decoration: underline; text-underline-offset: 2px; } }
+/* A monster's turn: one line that sums it up, opening to show every roll. */
+#log-list li.turn details summary {
+  list-style: none;
+  cursor: pointer;
+  padding-left: 14px;
+  position: relative;
+}
+#log-list li.turn summary::-webkit-details-marker { display: none; }
+#log-list li.turn summary::before {
+  content: '▸';
+  position: absolute; left: 0;
+  color: var(--muted);
+  transition: transform 0.12s;
+}
+#log-list li.turn details[open] summary::before { transform: rotate(90deg); }
+#log-list li.turn summary:hover::before { color: var(--gold); }
+#log-list li.turn summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; border-radius: 4px; }
+#log-list li.turn ol {
+  list-style: none;
+  margin: 4px 0 0 5px;
+  padding: 0 0 0 9px;
+  border-left: 1px solid var(--panel-edge);
+}
+#log-list li.turn li:last-child { border-bottom: 0; }
+#log-new {
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--gold);
+  color: #1a1410;
+  font: 700 10px var(--body);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#actionbar {
+  position: absolute;
+  left: 50%; bottom: 14px;
+  transform: translateX(-50%);
+  width: max-content;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+}
+#actionbar .bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 14px;
+  padding: 8px 12px 10px;
+  max-width: 100%;
+}
+#who {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.who-name { font: 700 16px var(--display); }
+.who-name.heroes { color: var(--hero); }
+.who-name.monsters { color: var(--monster); }
+.who-name small { font: 500 11px var(--body); color: var(--muted); margin-left: 4px; }
+.stats { display: flex; gap: 10px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.stats b { color: var(--ink); }
+.economy { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.pip {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.pip.ready { color: var(--hp-high); }
+.pip.used { color: var(--muted); opacity: 0.55; text-decoration: line-through; }
+.slots { font-size: 11px; color: var(--spell); margin-left: 4px; letter-spacing: 1px; }
+.slots s { text-decoration: none; opacity: 0.4; }
+
+#attacks { min-width: 0; display: flex; gap: 8px 14px; align-items: flex-end; flex-wrap: wrap; }
+#attacks .waiting { color: var(--muted); font-style: italic; padding: 0 8px; }
+
+button {
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--gold); }
+button:disabled { opacity: 0.4; cursor: default; }
+#attacks .group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#attacks .group-label {
+  font: 600 10px var(--display);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding-left: 2px;
+}
+#attacks .buttons { display: flex; gap: 4px; flex-wrap: wrap; }
+button.ability {
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: 5px 9px;
+  font-size: 12.5px;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+button.ability small { color: var(--muted); font-size: 10.5px; }
+/* The number key for a button (see pickByNumber); a finger has no keys. */
+body:not(.touch) button.ability { position: relative; padding-right: 22px; }
+button.ability .key {
+  position: absolute; top: 4px; right: 5px;
+  margin: 0; padding: 1px 3px;
+  font-size: 9px; font-weight: 600; line-height: 1;
+  color: var(--muted); opacity: 0.7;
+}
+body.touch button.ability .key { display: none; }
+button.ability.selected { border-color: var(--gold); background: rgba(217, 180, 90, 0.18); }
+button.ability.spell { border-color: rgba(176, 124, 255, 0.35); }
+button.ability.spell.selected { border-color: var(--spell); background: rgba(176, 124, 255, 0.2); }
+button.ability.bonus { border-style: dashed; }
+button.ability.passive { border-style: dotted; }
+/* More: opens the moves few turns need (Grapple, Help, Give potion, Disengage, Search). */
+button.ability.more { border-color: transparent; background: rgba(255, 255, 255, 0.04); }
+button.ability.more.open { border-color: var(--muted); }
+button.ability.passive.armed:disabled { opacity: 0.75; }
+button.ability.passive.armed small { color: var(--shield); }
+/* Disabled buttons still need hover for their tooltip: let the row see the pointer. */
+button.ability:disabled { pointer-events: none; }

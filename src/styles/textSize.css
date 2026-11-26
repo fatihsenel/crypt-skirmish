@@ -1,0 +1,5 @@
+/* The Text size setting (last, so it scales what came before). */
+/* The Text size setting (data-text on <html>): the panels, log, cards and camp drawn larger.
+   Only outermost boxes, so nothing is scaled twice; tooltip cards divide their place by it. */
+[data-text=large] :is(#log, #actionbar, #help, #initiative, #toast, #settings, #camp > *, #title .card, #banner .card, .tipcard, #tip, #replay-bar) { zoom: 1.15; }
+[data-text=larger] :is(#log, #actionbar, #help, #initiative, #toast, #settings, #camp > *, #title .card, #banner .card, .tipcard, #tip, #replay-bar) { zoom: 1.3; }

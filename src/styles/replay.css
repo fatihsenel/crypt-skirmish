@@ -1,0 +1,43 @@
+/* Watching a fight again, and photo mode. */
+/* watching a finished fight again */
+body.replaying #actionbar, body.replaying #undo { display: none; }
+#replay-bar[hidden] { display: none; }
+
+/* photo mode (photo.js): only the board and the photo bar */
+body.photo #app > :not(#stage, #photo-bar, #announce),
+body.photo #stage .labels { visibility: hidden; }
+body.photo #stage canvas { cursor: grab; }
+body.photo #stage canvas:active { cursor: grabbing; }
+#photo-bar[hidden] { display: none; }
+#photo-bar {
+  position: absolute;
+  left: 50%; bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
+  width: max-content; max-width: calc(100% - 24px); box-sizing: border-box;
+  padding: 8px 12px;
+  background: var(--panel); border: 1px solid var(--gold); border-radius: 12px;
+  z-index: 30;
+}
+.photo-hint { font-size: 14px; color: var(--muted); }
+body.touch .photo-hint.mouse-only, body:not(.touch) .photo-hint.touch-only { display: none; }
+body.touch #photo-bar button { min-height: 44px; }
+/* narrow screens: the hint on its own line, then Done and Save image side by side */
+@media (max-width: 600px) {
+  #photo-bar { width: calc(100% - 24px); padding: 10px 12px; gap: 6px 10px; }
+  #photo-bar .photo-hint { flex: 1 1 100%; text-align: center; }
+  #photo-bar button { flex: 1 1 0; }
+}
+#replay-bar {
+  position: absolute;
+  left: 50%; bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
+  width: max-content; max-width: calc(100% - 24px); box-sizing: border-box;
+  padding: 8px 12px;
+  background: var(--panel); border: 1px solid var(--gold); border-radius: 12px;
+  z-index: 7;
+}
+#replay-label { font: 600 14px var(--display); color: var(--gold); margin-right: 4px; white-space: nowrap; }
+#replay-speed { min-width: 3.2em; font-variant-numeric: tabular-nums; }
+body.touch #replay-bar button { min-height: 44px; }

@@ -1,0 +1,115 @@
+/* The end-of-fight banner, the victory screen's skull and the run summary. */
+#banner {
+  position: absolute;
+  inset: 0;
+  /* Auto margins centre the card but let it scroll from the top when it's taller than the
+     screen (several achievements on a sideways phone). */
+  display: flex;
+  overflow-y: auto;
+  background: rgba(5, 4, 8, 0.6);
+  z-index: 8; /* over the Controls panel and the log on phones */
+  /* The corner buttons stay above the banner (sound and settings still work), so the card starts
+     below them; the fight's own ones (threats, log, photo) step aside while it's up. */
+  padding-top: calc(env(safe-area-inset-top) + 60px);
+}
+body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle, #floor-toggle) { display: none; }
+#banner .card:focus { outline: none; } /* focused for keyboard and screen readers, see hud.banner */
+#banner[hidden] { display: none; }
+#banner .card {
+  margin: auto;
+  text-align: center;
+  padding: 28px 40px;
+  background: rgb(22, 18, 24); /* --panel, solid: the HUD mustn't show through the text */
+  border: 1px solid var(--gold);
+  border-radius: 14px;
+}
+#banner h1 { margin: 0 0 6px; font: 700 40px var(--display); color: var(--gold); }
+/* The won campaign's skull: a still at first, then the 3D emblem (victorySkull in main.js). */
+#banner-emblem { margin: -12px auto -2px; }
+#banner-emblem[hidden] { display: none; }
+/* The still and the 3D canvas that replaces it share one size, so the swap doesn't show. */
+#banner .banner-emblem, #banner .banner-logo { display: block; height: clamp(90px, 15vh, 150px); width: auto; aspect-ratio: 1.15; max-width: 100%; margin: 0 auto; }
+#banner .banner-emblem { -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent); mask-image: radial-gradient(closest-side, #000 72%, transparent); }
+@media (max-height: 520px) { #banner .banner-emblem, #banner .banner-logo { height: 80px; } }
+#banner[data-result='defeat'] h1 { color: var(--monster); }
+#banner p { margin: 0 auto 18px; color: var(--muted); max-width: 420px; }
+#banner p.banner-relic { color: var(--ink); padding: 8px 12px; border: 1px solid var(--panel-edge); border-radius: 8px; }
+#banner p.banner-relic b, b.relic { color: var(--gold); }
+#banner-recap[hidden] { display: none; }
+#banner-recap {
+  margin: -6px auto 18px; padding: 10px 14px; max-width: 420px; text-align: left; font-size: 13px; color: #d8cfc0;
+  border: 1px solid #b0484855; border-radius: 8px; background: #b0484814;
+}
+#banner-recap h2 { margin: 0 0 6px; font: 600 13px var(--display); letter-spacing: 0.06em; color: var(--muted); }
+#banner-recap ol { margin: 0 0 6px; padding-left: 18px; }
+#banner-recap li { margin: 2px 0; }
+#banner-recap p { margin: 2px 0 0; color: #d8cfc0; max-width: none; }
+#banner-recap .recap-tip { margin-top: 8px; padding-top: 6px; border-top: 1px solid #b0484833; }
+#banner-recap .recap-tip b { color: var(--gold); font-weight: 600; }
+#banner-recap.won { border-color: #d9b45a55; background: #d9b45a10; }
+@media (max-height: 520px) {
+  #banner-recap { margin-bottom: 10px; padding: 6px 10px; font-size: 12px; }
+  #banner-recap h2, #banner-recap .recap-worst, #banner-recap .recap-potions, #banner-recap .recap-totals { display: none; }
+  #banner-recap li, #banner-recap p { margin: 1px 0; }
+}
+#banner .banner-buttons { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+/* on a phone: two even columns, an odd last button across both */
+@media (max-width: 560px) {
+  #banner .card { padding-left: 18px; padding-right: 18px; }
+  #banner .banner-buttons > button { flex: 1 1 calc(50% - 5px); min-width: 0; padding-left: 8px; padding-right: 8px; }
+}
+
+/* the run's ending */
+#banner.ending { background: rgba(5, 4, 8, 0.78); overflow-y: auto; padding: 16px; box-sizing: border-box; }
+#banner.ending .card { max-width: 620px; width: 100%; box-sizing: border-box; padding: 28px 28px 24px; box-shadow: 0 16px 60px rgba(0, 0, 0, 0.7); }
+#banner.ending h1 { font-size: 52px; letter-spacing: 0.04em; }
+/* A small screen: the card starts below the Music, Sound and Settings row, as the title's and
+   the camp's do, and on a phone its sides line up with the row's. */
+@media (max-width: 760px), (max-height: 520px) { #banner, #banner.ending { padding-top: 58px; } }
+@media (max-width: 560px) { #banner, #banner.ending { padding-left: 12px; padding-right: 12px; box-sizing: border-box; } }
+#banner.ending #banner-text { margin: 0 auto 18px; color: #d8cfc0; font-style: italic; }
+.run-facts {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1px;
+  margin: 0 0 16px;
+  border: 1px solid var(--panel-edge);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--panel-edge);
+}
+.run-facts div { background: rgba(10, 8, 12, 0.92); padding: 8px 4px; }
+.run-facts dt { font: 600 9.5px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.run-facts dd { margin: 3px 0 0; font-size: 16px; font-weight: 600; color: var(--ink); }
+#banner .run-elites { max-width: none; margin: -4px 0 12px; font-size: 13px; color: var(--muted); text-align: center; }
+#banner .run-elites b { color: #ffc94a; font-weight: 600; }
+.run-heroes { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.run-heroes thead th {
+  font: 600 10px var(--display); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  padding: 0 6px 6px; text-align: right;
+}
+.run-heroes thead th:first-child { text-align: left; }
+.run-heroes tbody tr { border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.run-heroes tbody th { text-align: left; padding: 7px 6px; font-weight: 400; }
+.run-heroes tbody th b { display: block; color: var(--hero); }
+.run-heroes tbody th small { color: var(--muted); font-size: 11px; }
+.run-heroes td { text-align: right; padding: 7px 6px; color: #d8cfc0; }
+.run-heroes td.best { color: var(--gold); font-weight: 700; }
+.run-heroes td.best::before { content: '★ '; font-size: 10px; }
+#banner p.run-honours { margin: 14px auto 18px; font-size: 12.5px; color: #d8cfc0; max-width: none; }
+.run-honours b { color: var(--gold); font-weight: 600; }
+@media (max-width: 560px) {
+  .run-facts { grid-template-columns: repeat(3, 1fr); }
+  #banner.ending .card { padding: 22px 14px 18px; }
+  .run-heroes { font-size: 12px; }
+  .run-heroes thead th, .run-heroes td, .run-heroes tbody th { padding-left: 3px; padding-right: 3px; }
+}
+.passives { display: flex; gap: 5px; }
+.passive-tag {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: help;
+}

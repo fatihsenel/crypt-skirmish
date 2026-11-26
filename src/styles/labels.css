@@ -1,0 +1,102 @@
+/* The labels over the figures: names, HP bars, condition tags. */
+/* --- unit labels ----------------------------------------------------------- */
+.unit-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: calc(11px * var(--t));
+  font-weight: 600;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+.unit-label.heroes .name { color: var(--hero); }
+.unit-label.monsters .name { color: var(--monster); }
+.unit-label.active .name {
+  color: #1a1408;
+  background: var(--gold);
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-shadow: none;
+  box-shadow: 0 0 8px rgba(255, 211, 107, 0.7);
+}
+.unit-label .hpbar {
+  width: calc(44px * var(--t)); height: 5px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+.unit-label .hpbar i { display: block; height: 100%; transition: width 0.3s; }
+/* A hovered attack's damage, shaded off the end of the bar: up to its highest roll, and (darker) its lowest. */
+.unit-label .hpbar s { position: absolute; top: 0; height: 100%; width: 0; text-decoration: none; }
+.unit-label .hpbar s.may { background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 2px, rgba(0, 0, 0, 0.2) 2px 4px); }
+.unit-label .hpbar s.sure { background: rgba(0, 0, 0, 0.7); }
+.unit-label.lethal .name::before { content: '☠ '; color: #ff6b5b; }
+.unit-label .hpbar b { position: absolute; top: 0; left: 0; height: 100%; width: 0; background: rgba(200, 220, 255, 0.75); transition: width 0.3s; }
+.temp-hp { color: #c8dcff; }
+.hpbar i[data-level='high'] { background: var(--hp-high); }
+.hpbar i[data-level='mid'] { background: var(--hp-mid); }
+.hpbar i[data-level='low'] { background: var(--hp-low); }
+/* Wrap after about two tags, extra rows stacking upward, so a busy figure doesn't cover its neighbours. */
+.unit-label .tags { display: flex; flex-wrap: wrap-reverse; justify-content: center; gap: 2px 3px; max-width: calc(136px * var(--t)); }
+.unit-label .tag {
+  font: 600 calc(9.5px * var(--t)) var(--body);
+  font-style: normal;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid currentColor;
+}
+@media (max-height: 520px) {
+  /* A phone on its side zooms the map far out: smaller labels so close figures don't bury each other. */
+  .unit-label { font-size: calc(9px * var(--t)); gap: 1px; }
+  .unit-label .hpbar { width: 32px; height: 4px; }
+  .unit-label .tag { font-size: calc(7.5px * var(--t)); padding: 0 3px; }
+  .unit-label .tags { max-width: 100px; gap: 1px 2px; }
+}
+.tag.dodge { color: var(--hit); }
+.tag.shield { color: var(--shield); }
+.tag.disengage { color: var(--heal); }
+.tag.turned { color: var(--gold); }
+.tag.unaware { color: #a9a3b8; font-style: italic; }
+.tag.asleep { color: #8fa3c8; font-style: italic; }
+.tag.hidden { color: #b9a4e8; }
+.tag.marked { color: #e8c070; }
+.tag.hexed { color: #d070e0; }
+.tag.rebuke { color: #ff7a4a; }
+.tag.ready { color: #ffd27a; }
+.tag.helped { color: #9fd8ff; }
+.tag.grappled { color: #e8a0ff; }
+.tag.ward { color: #f4e3a0; }
+.tag.inspired { color: #8fc0ff; }
+.tag.invisible { color: #cfe4ff; font-style: italic; }
+.tag.focus { color: #c9b6ff; }
+/* conditions: on figure labels, the action bar and in the log */
+.tag.prone, .cond.prone { color: #e0a060; }
+.tag.poisoned, .cond.poisoned { color: #9ad45a; }
+.tag.frightened, .cond.frightened { color: #c79bff; }
+.tag.restrained, .cond.restrained { color: #e8e2d0; }
+.tag.paralyzed, .cond.paralyzed { color: #b7d98a; }
+.tag.stunned, .cond.stunned { color: #ffe27a; }
+.tag.petrified, .cond.petrified { color: #c9c4bb; }
+.tag.burning, .cond.burning { color: #ff9a4a; }
+.tag.raging { color: #ff6a4a; font-weight: 700; }
+.tag.reckless { color: #ffa070; }
+.tag.rotting, .cond.rotting { color: #b8a060; }
+.tag.mocked, .cond.mocked { color: #f08aa0; }
+.passive-tag.cond { border-color: currentColor; }
+.float-text.cond { font-size: calc(15px * var(--t)); color: #d6c27a; }
+.float-text.heal { color: var(--heal); }
+.float-text.spell { color: var(--spell); font-size: calc(16px * var(--t)); }
+.float-text.warn { color: var(--monster); font-size: calc(15px * var(--t)); }
+
+.float-text {
+  font: 700 calc(20px * var(--t)) var(--display);
+  text-shadow: 0 2px 4px #000, 0 0 2px #000;
+  pointer-events: none;
+}
+.float-text.dmg { color: var(--hit); }
+.float-text.crit { color: var(--crit); font-size: calc(24px * var(--t)); }
+.float-text.miss { color: var(--miss); font-size: calc(16px * var(--t)); }

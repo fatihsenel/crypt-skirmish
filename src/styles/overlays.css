@@ -1,0 +1,200 @@
+/* Panels over the screen (the bestiary, past runs, achievements), the Endless floors and loading. */
+/* --- the bestiary: every monster met, with its card and a line of lore ---------------- */
+/* A panel over the screen: the bestiary, past runs, achievements. */
+.overlay {
+  position: absolute; inset: 0; z-index: 25;
+  display: grid; place-items: center; padding: 16px;
+  background: rgba(5, 4, 8, 0.78);
+}
+.overlay[hidden] { display: none; }
+.overlay-card {
+  width: min(980px, 100%); max-height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  padding: 18px 22px 22px; box-sizing: border-box;
+  background: rgb(22, 18, 24); border: 1px solid var(--panel-edge); border-radius: 14px; /* --panel, solid */
+}
+.overlay-card.narrow { width: min(620px, 100%); }
+#copy-box { z-index: 30; } /* over the end banner */
+.copy-box-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+.copy-box-note { margin: 4px 0 10px; font-size: 13px; color: #d8cfc0; }
+#copy-box textarea {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--panel-edge);
+  background: rgba(0, 0, 0, 0.35); color: var(--ink);
+  font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+#bestiary-count { margin: 4px 0 12px; font-size: 13px; }
+#bestiary-deadliest { margin: -6px 0 12px; font-size: 13px; color: #d8cfc0; }
+#bestiary-deadliest[hidden] { display: none; }
+#bestiary-deadliest b { color: var(--monster); font-weight: 600; }
+#bestiary-elites { margin-top: 16px; }
+#bestiary-elites .elite-traits { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: #d8cfc0; line-height: 1.5; }
+#bestiary-elites .elite-traits b { color: #ffc94a; font-weight: 600; }
+.beasts {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;
+}
+.beast { position: relative; display: flex; gap: 10px; align-items: flex-start; }
+.beast .pic {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--c, #3a3440); color: #f1dcd2; box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+}
+.beast .pic svg { width: 24px; height: 24px; }
+.beast.unknown .pic { color: #8a8494; }
+.beast .tipcard {
+  position: static; flex: 1; width: auto; max-width: none; box-shadow: none; pointer-events: auto;
+}
+.beast.unknown .tipcard { opacity: 0.6; }
+.beast .lore { margin-top: 6px; color: #d8cfc0; font-style: italic; }
+.bestiary-open.has-new::after {
+  content: ''; display: inline-block; width: 7px; height: 7px; margin-left: 6px; vertical-align: 2px;
+  border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px var(--gold);
+}
+.beast .new-tag {
+  position: absolute; top: -5px; left: 0;
+  padding: 0 5px; border-radius: 4px; background: var(--gold); color: #1a1410;
+  font: 700 9.5px var(--display, inherit); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.beast .slain { margin-top: 4px; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) {
+  .overlay { padding: 8px; }
+  .overlay-card { padding: 14px 12px 16px; }
+  .camp-head { gap: 8px; }
+  .camp-head h2 { font-size: 20px; }
+  .beasts { grid-template-columns: 1fr; }
+  .beast .pic { width: 32px; height: 32px; }
+  .beast .pic svg { width: 19px; height: 19px; }
+}
+#camp-report p { margin: 8px 0; }
+.camp-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; margin-top: 10px; }
+h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+
+.xp { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 13px; }
+.xpbar { flex: 1; max-width: 260px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.xpbar i { display: block; height: 100%; background: var(--gold); }
+.levelups {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(217, 180, 90, 0.45);
+  border-radius: 8px;
+  background: rgba(217, 180, 90, 0.08);
+}
+.levelups b:first-child { color: var(--gold); font-family: var(--display); }
+.levelups ul { margin: 4px 0 0; padding-left: 18px; }
+
+.camp-left, .camp-right { min-width: 0; } /* let the map scroll instead of widening its column */
+#camp-map { overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
+#camp-map svg { width: 100%; min-width: 820px; height: auto; display: block; } /* about 75% scale at the narrowest */
+/* The Endless Crypt's floors, in place of the map. */
+.deep-track { display: flex; gap: 8px; list-style: none; margin: 14px 0 6px; padding: 0; flex-wrap: wrap; }
+.deep-track li { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.2); background: #1c1720; color: var(--muted); }
+.deep-track li.cleared { border-color: rgba(217, 180, 90, 0.55); background: #2a2318; }
+.deep-track li.here { border-color: var(--gold); color: var(--ink); box-shadow: 0 0 0 3px rgba(217, 180, 90, 0.25); }
+.deep-track li.boss { border-color: var(--monster); }
+.deep-track li.rest { border-style: double; border-width: 4px; }
+.deep-best { margin: 0 0 4px; }
+@media (max-width: 420px) { .deep-track { gap: 6px; } .deep-track li { width: 34px; height: 34px; } }
+#camp-map .edge { stroke: rgba(255, 255, 255, 0.16); stroke-width: 2; stroke-dasharray: 4 5; }
+#camp-map .edge.done { stroke: var(--gold); stroke-dasharray: none; opacity: 0.7; }
+#camp-map .edge.open { stroke: var(--gold); stroke-dasharray: 4 5; opacity: 0.9; }
+#camp-map .node circle { fill: #1c1720; stroke: rgba(255, 255, 255, 0.2); stroke-width: 2; }
+#camp-map .node .glyph path { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#camp-map .node.boss .glyph path { fill: rgba(255, 125, 107, 0.25); stroke: var(--monster); }
+#camp-map .node text { fill: var(--muted); font: 600 11px var(--body); text-anchor: middle; }
+#camp-map .node.cleared circle { fill: #2a2318; stroke: rgba(217, 180, 90, 0.55); }
+#camp-map .node.cleared .glyph path { stroke: rgba(217, 180, 90, 0.6); }
+#camp-map .node .tick { fill: none; stroke: var(--hp-high); stroke-width: 2.5; stroke-linecap: round; }
+#camp-map .node.available { cursor: pointer; }
+#camp-map .node.available circle { stroke: var(--gold); }
+#camp-map .node.available text { fill: var(--ink); }
+#camp-map .node.available .glyph path { stroke: var(--gold); }
+#camp-map .node.selected circle { fill: rgba(217, 180, 90, 0.25); stroke-width: 3; }
+#camp-map .node:focus { outline: none; }
+#camp-map .node:focus-visible circle { stroke: #fff; }
+#camp-map .node.here circle { stroke: var(--hero); }
+#camp-map .node circle.elite-pip { fill: #ffd36b; stroke: #1c1720; stroke-width: 1.5; }
+
+#camp-room { margin-top: 6px; padding: 12px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+#camp-room h3 { margin: 0 0 4px; font: 700 17px var(--display); color: var(--ink); }
+#camp-room p { margin: 4px 0; }
+#camp-room .teaser { color: var(--gold); font-size: 13px; }
+#camp-room .elite-note { font-size: 13px; }
+#camp-room .elite-note b { color: #ffc94a; font-weight: 600; }
+#camp-room button { margin-top: 8px; }
+#camp-room .event-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+#camp-room .event-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; flex: 1 1 200px; text-align: left; }
+#camp-room .event-choice small { font-weight: 400; opacity: 0.85; }
+#camp-map .node.event .glyph path { stroke-width: 2.2; }
+.item-chip.boon { border-color: rgba(255, 125, 107, 0.55); color: #ffb4a8; }
+
+.hero-card { padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
+.hero-top b { color: var(--hero); }
+.hero-top small { color: var(--muted); }
+.hp-line { display: flex; align-items: center; gap: 10px; font-size: 12px; margin-top: 4px; }
+.hp-line .hpbar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.hp-line .hpbar i { display: block; height: 100%; background: var(--hp-high); }
+.hero-meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 3px; }
+.hero-meta .slots { margin: 0; }
+.hero-items { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+.item-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--gold);
+  padding: 1px 2px 1px 8px;
+  border: 1px solid rgba(217, 180, 90, 0.4);
+  border-radius: 10px;
+}
+.item-chip button { padding: 0 6px; border: none; background: none; color: var(--muted); line-height: 1.2; }
+.item-chip button:hover { color: var(--ink); }
+
+.pack-item { padding: 8px 10px; margin-bottom: 6px; border-radius: 8px; border: 1px dashed rgba(217, 180, 90, 0.4); }
+.pack-item small { display: block; color: var(--muted); font-size: 12px; }
+:is(.pack-item, .hero-pick) .give-label { margin-top: 6px; font-size: 12px; color: var(--muted); }
+:is(.pack-item, .hero-pick) .give { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 5px; margin-top: 4px; }
+:is(.pack-item, .hero-pick) .give button { padding: 4px 8px; font-size: 12px; text-align: left; }
+:is(.pack-item, .hero-pick) .give button b { display: block; font-weight: 600; }
+:is(.pack-item, .hero-pick) .give button small { display: block; font-size: 11px; color: var(--muted); line-height: 1.3; }
+.hero-pick { margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(217, 180, 90, 0.35); }
+.hero-pick .give-label { color: var(--gold); }
+.hero-style .give { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hero-style .give button[aria-pressed="true"] { border-color: var(--gold); background: rgba(217, 180, 90, 0.16); }
+.hero-style .give button[aria-pressed="false"] b { font-weight: 500; }
+.hero-pick .give-label span { color: var(--muted); }
+.hero-pick .own { font-size: 10.5px; font-weight: 400; color: var(--muted); border: 1px solid currentColor; border-radius: 6px; padding: 0 4px; margin-left: 3px; }
+
+@media (max-width: 760px), (max-height: 520px) {
+  #camp { padding-top: 58px; } /* clear the sound and settings buttons */
+}
+@media (max-width: 560px) {
+  #camp { padding-left: 12px; padding-right: 12px; } /* edges in line with those buttons */
+}
+@media (max-width: 760px) {
+  .camp-grid { grid-template-columns: 1fr; gap: 8px; }
+  .camp-card { padding: 14px 16px 18px; }
+}
+@media (min-width: 521px) and (max-width: 760px) {
+  #camp-party { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6px; }
+}
+/* The fight HUD steps back while the title or camp is up. */
+#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #floor-toggle),
+#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #floor-toggle) { visibility: hidden; }
+#app:has(#title:not([hidden])) :is(#threats-toggle, #photo-toggle, #floor-toggle),
+#app:has(#camp:not([hidden])) :is(#threats-toggle, #photo-toggle, #floor-toggle) { display: none; } /* no gap in the row */
+
+/* Shown while a fight waits for the character models to finish downloading. */
+#loading {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: rgba(14, 11, 9, 0.85);
+  color: #e8dcc0;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+#loading[hidden] { display: none; }

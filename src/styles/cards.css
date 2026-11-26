@@ -1,0 +1,261 @@
+/* Tooltip cards, the character card, the hint line, the Controls panel and the corner buttons. */
+/* --- the tooltip card over an ability button ------------------------------------- */
+.tipcard {
+  position: absolute;
+  z-index: 26;
+  width: max-content;
+  max-width: min(300px, calc(100% - 16px));
+  padding: 10px 12px;
+  background: rgba(18, 14, 20, 0.97);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  font-size: 12.5px;
+  line-height: 1.45;
+  pointer-events: none;
+}
+.tipcard[hidden] { display: none; }
+.tipcard .tip-head { display: flex; flex-direction: column; gap: 1px; margin-bottom: 6px; }
+.tipcard .tip-head b { font: 600 14px var(--display); color: var(--gold); letter-spacing: 0.02em; }
+.tipcard .tip-head small { color: var(--muted); font-size: 11px; }
+.tipcard .tip-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.tipcard .tip-chips span {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.tipcard p { margin: 0 0 4px; }
+.tipcard p:last-child { margin-bottom: 0; }
+.tipcard .tip-note { color: var(--muted); }
+.tipcard .tip-how { margin-top: 6px; color: var(--muted); font-style: italic; }
+.tipcard .tip-problem { margin-top: 6px; color: var(--monster); }
+/* the character card: a figure's or portrait's stats, attacks and conditions */
+#unit-tip, #map-tip { max-width: min(320px, calc(100% - 16px)); z-index: 27; }
+#hint-tip { max-width: min(260px, calc(100% - 16px)); z-index: 60; font-size: 12.5px; }
+#unit-tip .tip-head b.heroes, .beast .tip-head b.heroes { color: var(--hero); }
+#unit-tip .tip-head b.monsters, .beast .tip-head b.monsters { color: var(--monster); }
+.tipcard .tip-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.tipcard .tip-list li { padding-left: 8px; border-left: 2px solid rgba(255, 255, 255, 0.12); font-variant-numeric: tabular-nums; }
+.tipcard .tip-list b { color: var(--ink); font-weight: 600; }
+.tipcard .tip-conds li { border-left-color: currentColor; }
+.tipcard .tip-conds li:not(.cond) { color: var(--gold); }
+.tipcard .tip-conds li b { color: inherit; }
+.tipcard .tip-conds li span { color: var(--muted); }
+#end-turn { font-weight: 600; }
+.turn-buttons { display: flex; gap: 6px; align-items: end; }
+#undo[hidden] { display: none; }
+kbd {
+  font: 10px var(--body);
+  color: var(--muted);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  padding: 1px 4px;
+  margin-left: 4px;
+}
+
+#hint {
+  padding: 5px 12px;
+  font-size: 12.5px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s, visibility 0.15s;
+}
+#hint.show { opacity: 1; visibility: visible; }
+#hint.warn { color: var(--monster); }
+
+#help {
+  position: absolute;
+  left: 12px; top: 76px; /* below the initiative bar, level with the combat log */
+  width: 272px; /* the key grid's two columns on one line each */
+  font-size: 12px;
+  color: var(--ink);
+}
+#help:not([open]) { width: auto; }
+#help summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+#help summary::-webkit-details-marker { display: none; }
+#help summary:hover .help-title { color: var(--gold); }
+#help summary:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 10px; }
+#help .help-icon {
+  display: grid;
+  place-items: center;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font: 700 11px var(--body);
+}
+#help .help-title {
+  font: 600 12px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+#help summary > kbd { margin-left: auto; }
+#help[open] summary { border-bottom: 1px solid var(--panel-edge); }
+#help .help-body { padding: 10px; }
+#help dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 10px;
+  align-items: center;
+  margin: 0;
+}
+#help dt { display: flex; gap: 3px; justify-self: end; }
+#help dd { margin: 0; color: #d8cfc0; line-height: 1.3; }
+#help kbd {
+  margin: 0;
+  font-size: 10.5px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.22);
+  border-bottom-width: 2px;
+  white-space: nowrap;
+}
+#help h3 {
+  margin: 10px 0 7px; /* each group sits 10px either side of its line */
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-edge);
+  font: 600 10.5px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+#help ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 5px 10px; }
+#help li { display: flex; align-items: center; gap: 6px; color: #d8cfc0; white-space: nowrap; }
+/* Two columns that shrink to the panel; a long label wraps rather than spilling over the edge. */
+#help .help-grid { grid-template-columns: repeat(2, minmax(0, max-content)); column-gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--panel-edge); }
+#help .help-grid li { gap: 3px; white-space: normal; min-width: 0; line-height: 1.25; }
+#help .help-grid li > kbd:last-of-type { margin-right: 3px; } /* a gap before the label */
+#help .sw {
+  flex: none;
+  width: 14px; height: 10px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+#help .sw.reach { background: rgba(74, 163, 255, 0.55); }
+#help .sw.path { background: none; border: 0; display: flex; justify-content: space-around; align-items: center; }
+#help .sw.path::before, #help .sw.path::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #ffd36b; }
+#help .sw.danger { background: none; border: 0; display: flex; justify-content: space-around; align-items: center; }
+#help .sw.danger::before, #help .sw.danger::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #ff3b3b; }
+#help .sw.target { background: rgba(255, 74, 74, 0.55); }
+#help .sw.ally { background: rgba(74, 222, 128, 0.55); }
+#help .sw.heard { width: 10px; margin: 0 2px; background: none; border: 1.5px dashed rgba(214, 220, 255, 0.8); border-radius: 50%; }
+#help .sw.threat {
+  --c: rgba(255, 42, 26, 0.8);
+  background: repeating-linear-gradient(45deg, var(--c) 0 1.5px, transparent 1.5px 5px), repeating-linear-gradient(-45deg, var(--c) 0 1.5px, transparent 1.5px 5px);
+}
+#help .sw.threat-ranged { --c: rgba(255, 179, 71, 0.75); background: radial-gradient(circle, var(--c) 0 1.6px, transparent 2px) 0 0 / 5px 5px; }
+#help .sw.threat-far { --c: rgba(255, 179, 71, 0.45); background: radial-gradient(circle, var(--c) 0 1px, transparent 1.4px) 0 0 / 5px 5px; }
+body.colorblind #help .sw.threat { --c: rgba(204, 121, 167, 0.9); }
+body.colorblind #help .sw.threat-ranged { --c: rgba(240, 228, 66, 0.85); }
+body.colorblind #help .sw.threat-far { --c: rgba(240, 228, 66, 0.6); }
+
+#audio {
+  position: absolute;
+  top: 12px; right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 22; /* above the title and camp screens, so sound and settings work there too */
+}
+#sound, #music, #settings-toggle, #threats-toggle, #photo-toggle, #floor-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-color: var(--panel-edge);
+  font-size: 12px;
+}
+#log-toggle {
+  display: none;
+  position: relative;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--panel);
+  border-color: var(--panel-edge);
+  font-size: 12px;
+}
+#log-toggle.unread::after { /* lines that came in while the panel was closed (hud.js setUnread) */
+  content: attr(data-count);
+  position: absolute;
+  top: 1px; right: 1px; /* inside the button: nothing may spill out of it (touch-check) */
+  min-width: 14px; height: 14px; box-sizing: border-box;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--gold);
+  color: #1a1410;
+  font: 700 9px/14px var(--body);
+  text-align: center;
+}
+/* The corner buttons' tooltip cards (buttonTips.js): on hover after a pause, on focus,
+   or held on touch. They match .tipcard, with an arrow at their button. */
+#audio > button { position: relative; }
+#audio .corner-tip, .head-tip {
+  position: absolute;
+  top: calc(100% + 9px); right: calc(-1 * var(--shift, 0px));
+  display: flex; flex-direction: column; gap: 2px;
+  width: max-content; max-width: 210px;
+  padding: 7px 10px 8px;
+  background: rgba(18, 14, 20, 0.97);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  color: var(--ink);
+  text-align: left; white-space: normal;
+  pointer-events: none;
+  opacity: 0; visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.14s, transform 0.14s, visibility 0s 0.14s;
+  z-index: 1;
+}
+#audio .corner-tip::before, .head-tip::before { /* the arrow */
+  content: '';
+  position: absolute;
+  top: -6px; right: var(--arrow, 14px);
+  width: 9px; height: 9px;
+  background: inherit;
+  border: 1px solid var(--panel-edge);
+  border-right: 0; border-bottom: 0;
+  transform: rotate(45deg);
+}
+#audio .corner-tip .tip-row, .head-tip .tip-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#audio .corner-tip b, .head-tip b { font: 600 13px var(--display); color: var(--gold); letter-spacing: 0.02em; text-transform: none; }
+#audio .corner-tip kbd, :is(#help, #log) .head-tip kbd { margin: 0; font-size: 11px; color: var(--ink); background: rgba(255, 255, 255, 0.06); border-bottom-width: 2px; }
+#audio .corner-tip small, .head-tip small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+/* The Controls and Combat log headers' cards: the same, hanging below the header from its
+   outer edge, with the line for what a click does now. */
+.head-tip { top: calc(100% + 6px); width: 220px; max-width: none; z-index: 6; }
+#help .head-tip { left: 0; right: auto; }
+#help .head-tip::before { left: 14px; right: auto; }
+#log .head-tip { right: 0; }
+#log .head-tip::before { right: 14px; }
+#help:not([open]) .if-open, #help[open] .if-shut, #log:not(.folded) .if-shut, #log.folded .if-open { display: none; }
+@media (hover: hover) {
+  #help summary:hover .head-tip, #log-fold:hover .head-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s 0.5s, transform 0.14s 0.5s, visibility 0s 0.5s; }
+}
+#help summary:focus-visible .head-tip, #log-fold:focus-visible .head-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s, transform 0.14s; }
+[data-motion=reduce] .head-tip { transform: none; }
+body.touch .head-tip { display: none; }
+@media (hover: hover) {
+  #audio > button:hover .corner-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s 0.35s, transform 0.14s 0.35s, visibility 0s 0.35s; }
+}
+#audio > button:focus-visible .corner-tip,
+#audio > button.tip-shown .corner-tip { opacity: 1; visibility: visible; transform: none; transition: opacity 0.14s, transform 0.14s; }
+[data-motion=reduce] #audio .corner-tip { transform: none; }
+#log-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
+#settings-toggle[aria-expanded='true'] { border-color: var(--gold); color: var(--gold); }
+#floor-toggle[hidden] { display: none; } /* rooms on one floor */
+#floor-toggle[aria-pressed='true'] { border-color: var(--gold); color: var(--gold); }
+#threats-toggle[aria-pressed='true'] { border-color: #ff7a4a; color: #ff9a6a; background: rgba(255, 90, 46, 0.14); }

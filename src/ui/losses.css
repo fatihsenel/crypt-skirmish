@@ -1,0 +1,41 @@
+/* --- the unlisted ?losses page (ui/losses.js) ------------------------------------ */
+#losses {
+  position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+  padding: 24px max(16px, calc((100% - 900px) / 2)); box-sizing: border-box;
+  background: var(--bg); color: var(--ink); font: 14px var(--body);
+}
+#losses h1 { font: 700 26px var(--display); color: var(--gold); margin: 0 0 6px; }
+.losses-note, .losses-status { color: var(--muted); margin: 0 0 14px; }
+.losses-key, .losses-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 14px; }
+.losses-key[hidden], .losses-filters[hidden], .losses-table[hidden], .losses-more[hidden] { display: none; }
+#losses label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+#losses input, #losses select {
+  font: inherit; font-size: 14px; color: var(--ink); background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px; padding: 7px 10px;
+}
+.losses-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+.losses-table th { text-align: left; font: 600 11px var(--display); letter-spacing: 0.06em; color: var(--muted); padding: 6px 8px; }
+.losses-table td { padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.losses-table a { color: var(--gold); }
+.losses-watch { color: var(--muted); white-space: nowrap; }
+:is(.losses-summary, .losses-stats) { margin-bottom: 18px; }
+:is(.losses-summary, .losses-stats)[hidden] { display: none; }
+:is(.losses-summary, .losses-stats) h2 { font: 700 16px var(--display); color: var(--gold); margin: 0 0 6px; }
+:is(.losses-summary, .losses-stats) table { width: 100%; border-collapse: collapse; }
+:is(.losses-summary, .losses-stats) thead th { text-align: right; font: 600 11px var(--display); letter-spacing: 0.06em; color: var(--muted); padding: 6px 8px; }
+:is(.losses-summary, .losses-stats) thead th:first-child { text-align: left; }
+:is(.losses-summary, .losses-stats) tbody th { text-align: left; font-weight: 400; padding: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+:is(.losses-summary, .losses-stats) td { text-align: right; padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-variant-numeric: tabular-nums; white-space: nowrap; }
+:is(.losses-summary, .losses-stats) td:last-child { font-weight: 600; }
+:is(.losses-summary, .losses-stats) button {
+  font: inherit; color: var(--gold); background: none; border: 0; padding: 8px; cursor: pointer;
+  text-align: left; text-decoration: underline; text-underline-offset: 3px;
+}
+.losses-stats h2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#losses .losses-stats h2 select { font-size: 13px; font-weight: 400; padding: 4px 6px; }
+.losses-stats p { margin: 0 0 6px; line-height: 1.45; overflow-wrap: anywhere; }
+.losses-stats p b { color: var(--muted); font-weight: 600; margin-right: 4px; }
+.losses-stats table { margin: 4px 0 10px; }
+.losses-legend { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+@media (max-width: 640px) {
+  .losses-table th:nth-child(4), .losses-table td:nth-child(4) { display: none; } /* mode */

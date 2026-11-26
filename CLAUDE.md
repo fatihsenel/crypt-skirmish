@@ -197,7 +197,8 @@ server on 5173.
   centres the view on the current figure and lets the camera turn; Save image renders a frame and
   reads the canvas back. Monster turns wait for it (`whileAway`), and leaving restores the camera
   and frustum exactly.
-- `src/ui/` is plain HTML overlays. Styles are in `src/style.css`, markup in `index.html`.
+- `src/ui/` is plain HTML overlays. Styles are in `src/styles/` (one file per part of the screen, imported in cascade order by
+  `src/style.css`), markup in `index.html`.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
   A short note on a small label is `data-hint="…"`, never `title=`: `ui/hints.js` shows it

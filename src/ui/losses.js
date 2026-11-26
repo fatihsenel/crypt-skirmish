@@ -7,6 +7,7 @@
 // name there filters the list to it. At the top, Play stats reads the Worker's event tallies
 // (/tallies, the same numbers as the weekly digest) for the last 7 or 30 days.
 
+import './losses.css'; // this page's styles, kept off the title's budget
 import { NODES } from '../game/campaign.js';
 import { levelById } from '../game/maps.js';
 import { decodeFight, replayOutcome } from '../game/fightLink.js';
