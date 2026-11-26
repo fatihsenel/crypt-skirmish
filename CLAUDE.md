@@ -152,7 +152,7 @@ server on 5173.
   (`wideOf`) and `shootProjectile`'s `missed` hands it to `board.arrows.fly` (`render/arrows.js`),
   which sticks it (a closed door's shafts ride its hinge; `removeProp` and `revealSecret` clear them).
   Taking the stairs, `board.focusFloor` ghosts the floor being left (`lowerCells`, in `tickFog`)
-  and `stairCamera` in `main.js` tips and leans the camera (skipped under `calm()`).
+  and `stairCamera` in `camera.js` tips and leans the camera (skipped under `calm()`).
   `setVision`'s `from` (the eyes) delays each newly seen cell (`cell.delay`), so sight sweeps in. The haze at the explored map's edge and
   over a lower hall is `render/wisps.js`. A new fight's room rises into place (`board.rise`,
   skipped on a restored fight and under `calm()`); while it does, `liftAt` carries each tile's
@@ -168,9 +168,11 @@ server on 5173.
   that shows needs a kind there); a paralysed or petrified figure's pose holds (`held`, the rig's
   `held`). Idle looks and glances (`idle`, `glance`, called by `lookToward` in `animate.js`) turn
   `lean` about y. An act's light is `render/mood.js` through `stage.setMood` (colours only); a
-  new room needs its act in `ACT` there. A named foe's camera sweep (`bossSweep`), the last
-  blow's slow close-up (`lastBlow`, through `easeCamera`) and `board.lairShake` live in
-  `main.js` and skip under `calm()`. The red edges are `#vignette` (`data-level`).
+  new room needs its act in `ACT` there. The camera's moves live in `src/camera.js`
+  (`createCamera`: framing round the HUD with `hudInsets`, `keepInView` on a phone, a named
+  foe's sweep `bossSweep`, the last blow's slow close-up `lastBlow` through `easeCamera`,
+  `stairCamera`, the Floor peek `peekFloor`; a newer pan takes over through `panTween`), and
+  they skip under `calm()`, as does `board.lairShake` in `main.js`. The red edges are `#vignette` (`data-level`).
   Clamp any `pow` in vertex or colour maths (`Math.max(0, …)`): one NaN pixel spreads over the
   whole screen through the glow's bloom.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still
@@ -221,7 +223,7 @@ server on 5173.
   through `announce()` (`ui/announce.js`), so a new spoken message goes there. 1-9 and 0
   press the action bar's first ten buttons (`pickByNumber` in `hud.js`; moves few turns need
   fold behind its More button, `RARE_ACTIONS` and `more`); R reads `surroundings()`; V (or the Floor button, shown in rooms on two floors) looks along the nearest stair
-  (`otherFloor`, `peekFloor` in `main.js`). A foe that acts out of sight leaves rings where it
+  (`otherFloor`, `peekFloor` in `camera.js`). A foe that acts out of sight leaves rings where it
   was heard (`heard` in `main.js`, `board.heard`), drawn only, never in the rules.
   The log can show one figure's lines (`filterLog`: double-click, F or a long press on a name);
   rounds and turns fold through `fold`, so a filtered log refolds them once it's cleared.

@@ -922,6 +922,7 @@ src/
     appStatus.js     the title's line about offline play, installing and a new version
   boot.js            the entry: the title and the saves, before three.js and main.js load
   main.js            controller: game → animations → HUD
+  camera.js          the camera: framing round the HUD, glides, close-ups, the stairs, the Floor peek
   controls.js        mouse, touch and keyboard: the arrow-key cursor and the shortcut keys
   gamepad.js         gamepads: the keyboard's keys on the board, focus moves in the menus
   preview.js         what a click on the hovered tile would do: the path, the odds, a spell's blast
