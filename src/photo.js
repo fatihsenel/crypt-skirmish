@@ -13,7 +13,7 @@ import { announce } from './ui/announce.js';
  * views() (the unit views), focus() (the tile to turn about, or null), touch() (a finger: the share sheet saves) }.
  */
 export function createPhotoMode(stage, deps) {
-  const { camera, controls, renderer, scene } = stage;
+  const { camera, controls, renderer } = stage;
   const bar = document.getElementById('photo-bar');
   const saveBtn = document.getElementById('photo-save');
   const button = document.getElementById('photo-toggle');
@@ -75,6 +75,7 @@ export function createPhotoMode(stage, deps) {
     marked = [...(deps.views?.().values() ?? [])].filter((v) => v.marker.visible);
     for (const v of marked) v.marker.visible = false;
     document.body.classList.add('photo');
+    stage.setEffects({ blur });
     bar.hidden = false;
     button?.setAttribute('aria-pressed', 'true');
     saveBtn.focus({ preventScroll: true });
@@ -106,6 +107,7 @@ export function createPhotoMode(stage, deps) {
     for (const v of marked) v.marker.visible = v.unit.alive;
     marked = [];
     document.body.classList.remove('photo');
+    stage.setEffects({ blur: false });
     bar.hidden = true;
     button?.setAttribute('aria-pressed', 'false');
     if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
@@ -116,7 +118,7 @@ export function createPhotoMode(stage, deps) {
 
   async function save() {
     // Drawn now and read straight back, before the browser clears the frame.
-    renderer.render(scene, camera);
+    stage.render();
     const blob = await new Promise((resolve) => renderer.domElement.toBlob(resolve, 'image/png'));
     if (!blob) return;
     const label = saveBtn.textContent;
@@ -131,6 +133,16 @@ export function createPhotoMode(stage, deps) {
     }
     setTimeout(() => { saveBtn.textContent = label; }, 2000);
   }
+
+  // Depth of field: the figure in the middle sharp, nearer and farther things soft (render/post.js).
+  let blur = true;
+  const blurBtn = document.getElementById('photo-blur');
+  const setBlur = (on) => {
+    blur = on;
+    blurBtn?.setAttribute('aria-pressed', String(on));
+    if (saved) stage.setEffects({ blur });
+  };
+  blurBtn?.addEventListener('click', () => setBlur(!blur));
 
   saveBtn.addEventListener('click', save);
   document.getElementById('photo-done').addEventListener('click', leave);
@@ -151,6 +163,7 @@ export function createPhotoMode(stage, deps) {
     if (ev.repeat) return;
     if (ev.code === 'Escape' || ev.code === 'KeyP') leave();
     else if (ev.code === 'KeyS') save();
+    else if (ev.code === 'KeyB') setBlur(!blur);
   }, { capture: true });
 
   return mode;

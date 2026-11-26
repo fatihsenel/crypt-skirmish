@@ -3,7 +3,7 @@
 // whether d20 rolls pop up over the board and the player throws their heroes' attack dice,
 // whether the enemy reach uses colours that work with colour blindness, and how much the
 // screen moves (the system's reduced-motion setting, or always calm, or always full), the text
-// size, whether figures shout in speech bubbles, and whether
+// size, whether figures shout in speech bubbles, whether flames and spells glow, and whether
 // the game shares anonymous play stats (src/stats.js).
 
 export const SETTINGS_KEY = 'crypt-skirmish:settings';
@@ -14,10 +14,13 @@ export const SPEEDS = { normal: 1, fast: 1.75, fastest: 3 };
 /** Motion: follow the system's reduced-motion setting, or always reduce it, or never. */
 export const MOTIONS = ['system', 'reduce', 'full'];
 
+/** Glow (bloom over flames and spells): on except on phones, or always, or never. */
+export const GLOWS = ['auto', 'on', 'off'];
+
 /** Text size: how much larger the panels, log and cards are drawn (style.css, data-text). */
 export const TEXT_SIZES = { normal: 1, large: 1.15, larger: 1.3 };
 
-export const DEFAULT_SETTINGS = Object.freeze({ music: 1, effects: 1, voices: 1, speed: 'normal', rolls: true, throwDice: true, colorblind: false, motion: 'system', text: 'normal', stats: true, bubbles: true });
+export const DEFAULT_SETTINGS = Object.freeze({ music: 1, effects: 1, voices: 1, speed: 'normal', rolls: true, throwDice: true, colorblind: false, motion: 'system', text: 'normal', stats: true, bubbles: true, glow: 'auto' });
 
 const level = (v, fallback) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
 
@@ -43,6 +46,7 @@ export function parseSettings(text) {
     text: Object.hasOwn(TEXT_SIZES, raw.text) ? raw.text : d.text,
     stats: typeof raw.stats === 'boolean' ? raw.stats : d.stats,
     bubbles: typeof raw.bubbles === 'boolean' ? raw.bubbles : d.bubbles,
+    glow: GLOWS.includes(raw.glow) ? raw.glow : d.glow,
   };
 }
 

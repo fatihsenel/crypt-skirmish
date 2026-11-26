@@ -11,8 +11,9 @@ export default defineConfig(({ command, isPreview }) => ({
     rolldownOptions: {
       output: {
         // three.js in a chunk of its own: it only changes when the library is upgraded, so
-        // browsers keep it cached across game updates.
-        codeSplitting: { groups: [{ name: 'three', test: /node_modules[\\/]three[\\/]/ }] },
+        // browsers keep it cached across game updates. Its post-processing passes stay with
+        // render/post.js, loaded only when Glow or photo mode's blur is on.
+        codeSplitting: { groups: [{ name: 'three', test: /node_modules[\\/]three[\\/](?!examples[\\/]jsm[\\/](postprocessing|shaders)[\\/])/ }] },
       },
     },
   },

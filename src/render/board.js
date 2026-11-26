@@ -2,7 +2,8 @@
 
 import * as THREE from 'three';
 import { key } from '../game/grid.js';
-import { tween, easeOut, easeInOut, keepAwake } from './tween.js';
+import { tween, easeOut, easeInOut, keepAwake, calm } from './tween.js';
+import { Motes } from './motes.js';
 import { kitReady, piece } from './dungeonKit.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
@@ -54,6 +55,27 @@ class TileLayer {
 }
 
 const LEDGE_GEO = new THREE.BoxGeometry(0.99, LEDGE, 0.99);
+
+// Ambient occlusion, baked: a dark strip on the floor along the foot of each wall and ledge,
+// darkest at the stone. Drawn once with the room, under the highlights; no cost per frame.
+const AO_DEPTH = 0.55; // how far into the tile the shade reaches
+const AO_GEO = new THREE.PlaneGeometry(1, AO_DEPTH).rotateX(-Math.PI / 2);
+let aoMat = null;
+function aoMaterial() {
+  if (aoMat) return aoMat;
+  const c = document.createElement('canvas');
+  c.width = 4;
+  c.height = 64;
+  const g = c.getContext('2d');
+  for (let y = 0; y < 64; y++) {
+    const t = 1 - y / 63; // 1 at the wall (the canvas top), 0 at the far edge
+    g.fillStyle = `rgba(0,0,0,${(0.72 * t ** 1.7).toFixed(3)})`;
+    g.fillRect(0, y, 4, 1);
+  }
+  const map = new THREE.CanvasTexture(c);
+  aoMat = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 });
+  return aoMat;
+}
 const matCache = new Map();
 const mat = (color, opts = {}) => {
   const k = `${color}|${JSON.stringify(opts)}`;
@@ -291,6 +313,9 @@ export class Board {
       this.addToCell(x, z, block);
     }
 
+    this.ao = new Map(); // tile key -> its strips of shade
+    for (let z = 0; z < grid.height; z++) for (let x = 0; x < grid.width; x++) this.addAO(x, z);
+
     // Shallow water: a dark, glossy sheet just over the floor.
     for (const k of grid.water) {
       const [x, z] = k.split(',').map(Number);
@@ -334,6 +359,7 @@ export class Board {
       this.cracks.set(key(c.x, c.z), decal);
     }
 
+    this.motes = new Motes(this.group); // embers and dust over the fires (motes.js)
     this.torches = [];
     const torches = torchSpots(grid);
     for (const spot of torches) this.addTorch(spot);
@@ -356,19 +382,26 @@ export class Board {
       if (this.fogDirty) this.tickFog(dt);
       if (this.fadeSources) this.tickFade(dt);
       if (this.fogDirty || this.fading) keepAwake(100); // fog and walls easing in and out
-      for (const { light, seed, cell } of this.torches) {
-        light.intensity = (5.5 + Math.sin(t * 9 + seed) * 0.6 + Math.sin(t * 23 + seed * 2) * 0.4) * cell.f;
+      // Flames waver and their light flickers and sways; reduced motion keeps them steady.
+      const sway = calm() ? 0 : 1;
+      for (const { light, seed, cell, flame, home } of this.torches) {
+        const a = Math.sin(t * 9 + seed);
+        const b = Math.sin(t * 23 + seed * 2);
+        light.intensity = (5.5 + (a * 0.6 + b * 0.4) * sway) * cell.f;
+        light.position.set(home.x + Math.sin(t * 5.3 + seed) * 0.05 * sway, home.y + b * 0.03 * sway, home.z + Math.cos(t * 4.1 + seed) * 0.05 * sway);
+        flame.scale.set(1 + b * 0.08 * sway, 1.5 + a * 0.22 * sway, 1 + b * 0.08 * sway);
       }
       for (const { light, seed, cell } of this.candles) {
-        light.intensity = (1.1 + Math.sin(t * 11 + seed) * 0.15) * cell.f;
+        light.intensity = (1.1 + Math.sin(t * 11 + seed) * 0.15 * sway) * cell.f;
       }
       for (const b of this.braziers.values()) {
         if (!b.lit) continue;
-        b.light.intensity = (3 + Math.sin(t * 8 + b.seed) * 0.5 + Math.sin(t * 19 + b.seed) * 0.3) * b.cell.f;
+        b.light.intensity = (3 + (Math.sin(t * 8 + b.seed) * 0.5 + Math.sin(t * 19 + b.seed) * 0.3) * sway) * b.cell.f;
         b.coals.material.emissiveIntensity = 1.6 * b.cell.f; // no glow from a room not yet seen
       }
       if (this.fireLit) this.fire.material.opacity = 0.8 + Math.sin(t * 6) * 0.1 + Math.sin(t * 15) * 0.06;
       if (this.stairs?.lit) this.stairs.light.intensity = 3 + Math.sin(t * 3) * 0.8;
+      this.motes.tick(t, dt);
     };
     stage.tickers.add(this.tick);
     this.stage = stage;
@@ -528,6 +561,52 @@ export class Board {
     for (const o of this.cells.get(k)?.objects ?? []) o.visible = false;
     this.addShaft(x, z);
     this.fogDirty = true;
+  }
+
+  /**
+   * The baked shade on floor tile (x, z): a strip along each side that meets a wall (or a
+   * ledge it stands below), starting at the wall's face (the kit's walls are half a tile thick).
+   */
+  addAO(x, z) {
+    const g = this.grid;
+    const k = key(x, z);
+    if (g.isWall(x, z) || g.chasms.has(k) || g.links.has(k) || g.stairs.some((s) => s.x === x && s.z === z)) return;
+    const high = ledges.has(k);
+    const strips = [];
+    for (const [dx, dz] of DIRS4) {
+      const nx = x + dx;
+      const nz = z + dz;
+      if (!g.inBounds(nx, nz)) continue;
+      const wall = g.isWall(nx, nz) && !g.doors.has(key(nx, nz));
+      const ledge = !high && ledges.has(key(nx, nz));
+      if (!wall && !ledge) continue;
+      const face = wall && this.kit ? 0.75 : 0.5; // from this tile's centre
+      const strip = new THREE.Mesh(AO_GEO, aoMaterial());
+      const off = face - AO_DEPTH / 2;
+      strip.position.set(x + dx * off, (high ? LEDGE : 0) + 0.005, z + dz * off);
+      strip.rotation.y = Math.atan2(-dx, -dz); // the dark edge (the plane's far side) toward the wall
+      strip.renderOrder = -1;
+      strips.push(strip);
+    }
+    if (!strips.length) return;
+    this.group.add(...strips);
+    this.addToCell(x, z, ...strips);
+    this.ao.set(k, strips);
+  }
+
+  /** The shade on (x, z) drawn afresh (a wall beside it opened). */
+  redoAO(x, z) {
+    const k = key(x, z);
+    const old = this.ao.get(k);
+    if (old) {
+      const cell = this.cells.get(k);
+      for (const o of old) {
+        this.group.remove(o);
+        if (cell) cell.objects = cell.objects.filter((p) => p !== o);
+      }
+      this.ao.delete(k);
+    }
+    this.addAO(x, z);
   }
 
   addToCell(x, z, ...objects) {
@@ -760,6 +839,7 @@ export class Board {
     }
     const d = this.grid.doors.get(k) ?? { x, z, open: false };
     this.doors.set(k, { ...this.addDoor(d), opened: d.open });
+    for (const [dx, dz] of DIRS4) this.redoAO(x + dx, z + dz);
     this.fogDirty = true;
   }
 
@@ -818,8 +898,9 @@ export class Board {
     const light = new THREE.PointLight(spell ? 0xfff0d0 : 0xffa050, spell ? 2.2 : 1.6, radius + 1.5, 2);
     light.position.set(x, spell ? 0.8 : 0.45, z);
     this.group.add(g, light);
-    this.addToCell(x, z, g);
+    const cell = this.addToCell(x, z, g);
     (this.lamps ??= []).push({ g, light });
+    if (!spell) this.motes.add(new THREE.Vector3(x + 0.2, 0.24, z), () => cell.f, { embers: 3, dust: 3, spread: 0.7 }); // a thrown torch
   }
 
   /** A brazier: an iron bowl of coals on a stem, lit, that a hero can tip over (tipBrazier). */
@@ -847,7 +928,9 @@ export class Board {
     this.group.add(g);
     this.pickables.push(g);
     const cell = this.addToCell(x, z, g);
-    this.braziers.set(key(x, z), { g, light, coals, cell, lit: true, seed: hash(x, z, 9) * 10 });
+    const b = { g, light, coals, cell, lit: true, seed: hash(x, z, 9) * 10 };
+    this.braziers.set(key(x, z), b);
+    this.motes.add(new THREE.Vector3(x, 0.78, z), () => (b.lit ? cell.f : 0), { embers: 8, dust: 6, spread: 0.9 });
   }
 
   /**
@@ -1040,7 +1123,8 @@ export class Board {
     light.position.copy(flame.position).add(new THREE.Vector3(dx * 0.3, 0.2, dz * 0.3));
     this.group.add(holder, flame, light);
     const cell = this.addToCell(x, z, holder, flame);
-    this.torches.push({ light, seed: x * 7.3 + z * 3.1, cell });
+    this.torches.push({ light, seed: x * 7.3 + z * 3.1, cell, flame, home: light.position.clone() });
+    this.motes.add(flame.position, () => cell.f);
   }
 
   /** Stone frame and a wooden door that swings open on its hinge. */
@@ -1364,5 +1448,6 @@ export class Board {
       if (o.isMesh) o.material.dispose();
     });
     this.stage.tickers.delete(this.tick);
+    this.motes.dispose();
   }
 }

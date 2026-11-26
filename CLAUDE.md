@@ -119,11 +119,23 @@ server on 5173.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
   motion (the Motion setting, or the system's on System; `data-motion` on `<html>` for CSS):
-  no shake, no camera pans, no drifting text, and a still title logo.
+  no shake, no camera pans, no drifting text, a still title logo, steady torches without
+  embers or dust (`Motes` in `render/motes.js`) and no hit-stop.
   The 3D view draws every frame only while something moves (`animating()` in `tween.js`:
   tweens, waits, input), else about 15 a second (`stage.js`). Anything else that moves the
   scene for a while (a camera glide, a clip, fog) calls `keepAwake(ms)`, or it will stutter.
   Shadows are redrawn on those frames and every 4th idle one (`shadowMap.autoUpdate` is off).
+  Draw a frame with `stage.render()`, never `renderer.render`: with glow (bloom, the `glow`
+  setting: `auto` is off on a coarse pointer, `applyGlow` in `main.js`) or photo mode's blur on,
+  `stage.setEffects` loads `render/post.js` (its own chunk: `vite.config.js` keeps three's
+  `postprocessing/` and `shaders/` out of the three chunk) and frames go through its composer,
+  which swaps the background for its inverse-ACES colour so it isn't tone-mapped twice. Only
+  light above its threshold glows, so keep plain highlights below white.
+  Walls get a shading strip at their feet (`addAO` in `board.js`; `redoAO` after a secret
+  door opens). A struck figure flashes and its rig freezes (`impact` in `unitView.js`,
+  `GltfRig.freeze`); a slain monster burns away (`burnAway`, `render/dissolve.js` patched into
+  its own materials, `edgeColor` picks the rim), so a figure's materials are cloned (`own`)
+  before they're changed.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still
   (the same size) once the skull in `public/models/skull/` loads, and draws only while the title
   is on screen. Without WebGL, with Data Saver or on 2G its still (`boot-logo.jpg`) stays.
@@ -194,8 +206,9 @@ server on 5173.
   its styles are `speechBubble.css`, loaded with the game to keep them off the title's budget).
   A new talking monster or class needs its lines in `speech.js`.
 - Photo mode (`src/photo.js`, P or the camera button) hides the HUD and the board's highlights,
-  centres the view on the current figure and lets the camera turn; Save image renders a frame and
-  reads the canvas back. Monster turns wait for it (`whileAway`), and leaving restores the camera
+  centres the view on the current figure and lets the camera turn; Blur (B) is a depth of field
+  focused on the camera's target (`stage.setEffects({ blur })`); Save image renders a frame
+  through `stage.render()` and reads the canvas back. Monster turns wait for it (`whileAway`), and leaving restores the camera
   and frustum exactly.
 - `src/ui/` is plain HTML overlays. Styles are in `src/styles/` (one file per part of the screen, imported in cascade order by
   `src/style.css`), markup in `index.html`.

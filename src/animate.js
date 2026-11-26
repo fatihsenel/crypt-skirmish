@@ -119,6 +119,7 @@ export function createAnimations(app) {
       } else if (r.hit) {
         sfx.hit(target.code, { crit: r.crit, fire: attack.projectile === 'fire' });
         hitFx(stage.scene, { ...pos, undead: target.undead }, attacker, { crit: r.crit });
+        tv?.impact(r.crit, av);
         if (r.crit) stage.shake(0.3, 420);
         if (r.uncanny) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, 'Uncanny Dodge ½', 'spell');
         if (r.resisted) floatText(stage.scene, { x: pos.x, z: pos.z - 0.6 }, r.target.swarm ? 'Swarm ½' : 'Rage ½', 'spell');

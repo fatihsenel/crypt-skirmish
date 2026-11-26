@@ -10,7 +10,13 @@ describe('settings', () => {
 
   it('keeps valid values and clamps levels to 0..1', () => {
     const s = parseSettings(JSON.stringify({ music: 0.3, effects: 2, voices: -1, speed: 'fastest' }));
-    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true, colorblind: false, motion: 'system', text: 'normal', stats: true, bubbles: true });
+    expect(s).toEqual({ music: 0.3, effects: 1, voices: 0, speed: 'fastest', rolls: true, throwDice: true, colorblind: false, motion: 'system', text: 'normal', stats: true, bubbles: true, glow: 'auto' });
+  });
+
+  it('keeps a known glow, else auto', () => {
+    expect(parseSettings(JSON.stringify({ glow: 'off' })).glow).toBe('off');
+    expect(parseSettings(JSON.stringify({ glow: 'on' })).glow).toBe('on');
+    expect(parseSettings(JSON.stringify({ glow: 'max' })).glow).toBe('auto');
   });
 
   it('drops an unknown speed and non-numeric levels', () => {

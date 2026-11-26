@@ -245,6 +245,13 @@
           <label><input type="radio" name="motion" value="full" /><span>Full</span></label>
         </div>
         <p class="settings-note">Reduced: no screen shake or camera sweeps, and numbers fade in place.</p>
+        <h3 id="glow-head">Glow</h3>
+        <div class="speed" role="radiogroup" aria-labelledby="glow-head">
+          <label><input type="radio" name="glow" value="auto" /><span>Auto</span></label>
+          <label><input type="radio" name="glow" value="on" /><span>On</span></label>
+          <label><input type="radio" name="glow" value="off" /><span>Off</span></label>
+        </div>
+        <p class="settings-note">Flames, coals and spells shine. Auto: on, except on phones, where Off spares the battery.</p>
         <h3 id="text-head">Text size</h3>
         <div class="speed" role="radiogroup" aria-labelledby="text-head">
           <label><input type="radio" name="text" value="normal" /><span>Normal</span></label>
@@ -267,6 +274,7 @@
       <div id="photo-bar" hidden role="group" aria-label="Photo mode">
         <span class="photo-hint mouse-only">Drag to turn · right-drag to pan · scroll to zoom</span>
         <span class="photo-hint touch-only">One finger turns · two pan and pinch</span>
+        <button id="photo-blur" type="button" aria-pressed="true" data-hint="Key: B">Blur</button>
         <button id="photo-done" type="button">Done</button>
         <button id="photo-save" type="button" class="primary">Save image</button>
       </div>

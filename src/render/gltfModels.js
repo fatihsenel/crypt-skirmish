@@ -211,6 +211,7 @@ export class GltfRig {
     this.base = null;     // current looping action
     this.oneShot = null;  // current one-shot action, if any
     this.holdLast = false; // a death pose stays put
+    this.frozenUntil = 0;
   }
 
   has(kind) {
@@ -233,7 +234,14 @@ export class GltfRig {
         this.base = want;
       }
     }
+    if (performance.now() < this.frozenUntil) return; // a hit-stop
     this.mixer.update(dt * playback.rate); // sped up with monster turns
+  }
+
+  /** Hold the pose for `ms` (a hit-stop as a blow lands). */
+  freeze(ms) {
+    this.frozenUntil = performance.now() + ms / playback.rate;
+    keepAwake(ms + 100);
   }
 
   /**

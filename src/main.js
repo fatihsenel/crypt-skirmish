@@ -564,10 +564,16 @@ function applyMotion() {
 }
 applyMotion();
 onSystemMotion(applyMotion);
+/** The Glow setting: bloom (render/post.js), on Auto everywhere but phones. */
+const applyGlow = () => stage.setEffects({
+  glow: settings.glow === 'on' || (settings.glow === 'auto' && !matchMedia('(pointer: coarse)').matches),
+});
+applyGlow();
 new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
   if (key === 'motion') return applyMotion();
+  if (key === 'glow') return applyGlow();
   if (key === 'text') {
     document.documentElement.dataset.text = value;
     framedFor = ''; // the action bar's height changed: measure it afresh, smaller too

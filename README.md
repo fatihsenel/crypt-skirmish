@@ -443,7 +443,12 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
 - **Photo mode** (P, or the camera button): the HUD goes and the monsters wait. Drag to turn
   the view around the hero whose turn it is, right-drag to pan and scroll to zoom (on a phone,
   one finger turns, two pan and pinch). Save image keeps the picture (on a phone, the share
-  sheet); Done or Esc puts the camera back.
+  sheet); Blur (or B) softens what's far from the middle of the view, like a miniature;
+  Done or Esc puts the camera back.
+- **The look:** torches flicker and sway and throw embers and dust into their light, walls
+  darken where they meet the floor, a struck figure flashes white and freezes for a blink, and
+  a slain monster burns away (in embers, an undead pale blue, an ooze green), leaving its
+  remains faint on the floor.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
@@ -455,7 +460,8 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   they never hold up a turn. Between rooms two heroes trade a line in camp, teasing whoever
   dropped, and the bestiary quotes the last thing each monster said.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
-  motion (System, Reduced or Full), text size (Normal, Large or Larger, for the panels, log,
+  motion (System, Reduced or Full), glow (Auto, On or Off: flames, coals and spells shine;
+  Auto leaves it off on phones), text size (Normal, Large or Larger, for the panels, log,
   cards and the names and numbers over the figures), speech bubbles, colour-blind friendly
   enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the
@@ -484,7 +490,8 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
 - **Gamepads** play the whole game (see Controls).
 - **Reduced motion** (the Motion setting, or the system's when it's on System): the screen
   doesn't shake, the camera jumps instead of panning, floating numbers fade in place, the dice
-  don't wobble and the title's skull holds still.
+  don't wobble, the title's skull holds still, torches burn steady without embers or dust,
+  and a struck figure doesn't freeze for its hit-stop.
 - **Text size** and **colour-blind friendly enemy reach** are in Settings.
 
 ## Sound
@@ -522,7 +529,7 @@ Everything is generated in the browser, with no recordings:
 | Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
 | T | Show or hide enemy reach |
-| P | Photo mode: drag turns, right-drag pans, S saves the image, P or Esc leaves |
+| P | Photo mode: drag turns, right-drag pans, B blurs the distance, S saves the image, P or Esc leaves |
 | M / N | Sound / music on or off |
 | H or ? | Show or hide the controls panel (or click its header) |
 | L | Fold or open the combat log (or click its header); remembered, and a folded log counts new lines |
@@ -829,12 +836,15 @@ src/
     settings.js      settings kept in the browser
   render/            three.js only
     stage.js         renderer, camera, lights, screen shake, labels kept apart
-    board.js         dungeon meshes, highlights, fog of war, wall fading
+    board.js         dungeon meshes, wall shading, flickering torches, highlights, fog of war, wall fading
+    motes.js         embers rising from fires and dust in their light
+    post.js          glow (bloom) and photo mode's blur, loaded only when one is on
+    dissolve.js      a slain monster burning away, with an ember, blue or green rim
     dungeonKit.js    loads the dungeon tiles
     gltfModels.js    loads the character models and plays their animations
     modelSpecs.js    which model and clips each unit uses
     models.js        procedural figures (the mimic and fallbacks)
-    unitView.js      a unit's base, label and animations
+    unitView.js      a unit's base, label and animations, the hit flash and hit-stop
     speechBubble.js  the speech bubble over a figure's label: typed, held, faded
     owl.js           the Wizard's and Warlock's owl familiar
     effects.js       spell effects, hit particles

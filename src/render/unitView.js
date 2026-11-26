@@ -9,8 +9,23 @@ import { buildGltfModel } from './gltfModels.js';
 import { sfx } from '../audio/sfx.js';
 import { voices } from '../audio/voices.js';
 import { liftAt } from './board.js';
+import { dissolvable, edgeColor } from './dissolve.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
+const WHITE = new THREE.Color(0xffffff);
+// A slain monster's body: this much burned away (dissolve.js), and this opaque. A fallen
+// hero only fades (they can get up again), to HERO_BODY.
+const BODY_GONE = 0.45;
+const BODY = 0.6;
+const HERO_BODY = 0.4;
+/** Gives a mesh a material of its own, once. */
+const own = (o) => {
+  if (!o.userData.ownMat) {
+    o.material = o.material.clone();
+    o.userData.ownMat = true;
+  }
+  return o;
+};
 const easeIn = (t) => t * t * t;
 
 function buildBase(unit) {
@@ -131,7 +146,9 @@ export class UnitView {
     this.label.visible = false;
     if (this.rig) this.rig.pose('dead');
     else this.deadPose(1);
-    this.fadeMeshes(0.4);
+    if (this.unit.team === 'heroes') return this.fadeMeshes(HERO_BODY);
+    this.setDissolve(BODY_GONE, 0);
+    this.fadeMeshes(BODY);
   }
 
   deadPose(t) {
@@ -147,7 +164,7 @@ export class UnitView {
       this.fadeList = [];
       this.group.traverse((o) => {
         if (o.isMesh) {
-          o.material = o.material.clone();
+          own(o);
           o.material.transparent = true;
           this.fadeList.push(o);
         }
@@ -158,11 +175,77 @@ export class UnitView {
     for (const [o, lit] of this.fadeLights ?? []) o.intensity = opacity >= 1 ? lit : 0; // back on once whole (off the stairs)
   }
 
+  /** The figure's meshes, each with a material of its own (a flash or a dissolve touches only this figure). */
+  ownMeshes() {
+    if (!this.owned) {
+      this.owned = [];
+      this.model.root.traverse((o) => {
+        if (o.isMesh && !Array.isArray(o.material)) this.owned.push(own(o));
+      });
+    }
+    return this.owned;
+  }
+
+  /**
+   * Struck: the figure flashes white for a moment and both figures' clips pause briefly (a
+   * hit-stop). Dim and short, so a flurry of hits doesn't strobe; fainter and with no pause
+   * under reduced motion.
+   */
+  impact(crit, attacker) {
+    const still = calm();
+    const peak = still ? 0.15 : crit ? 0.45 : 0.32;
+    const lit = this.ownMeshes().map((o) => o.material).filter((m) => m.emissive);
+    for (const m of lit) m.userData.glow ??= { c: m.emissive.clone(), i: m.emissiveIntensity };
+    const id = (this.flashId = (this.flashId ?? 0) + 1);
+    tween(170, (t) => {
+      if (id !== this.flashId) return; // a newer hit took over
+      for (const m of lit) {
+        const { c, i } = m.userData.glow;
+        if (t >= 1) {
+          m.emissive.copy(c);
+          m.emissiveIntensity = i;
+        } else {
+          m.emissive.copy(c).lerp(WHITE, peak * (1 - t));
+          m.emissiveIntensity = Math.max(i, 1);
+        }
+      }
+    }, linear);
+    if (still) return;
+    const ms = crit ? 90 : 60;
+    this.rig?.freeze(ms);
+    attacker?.rig?.freeze(ms);
+  }
+
+  /** How far the figure has burned away (0 whole, 1 gone) and how bright the burning rim is. */
+  setDissolve(amount, glow = 1) {
+    const color = edgeColor(this.unit);
+    for (const o of this.ownMeshes()) {
+      const u = dissolvable(o.material, color);
+      u.amount.value = amount;
+      u.glow.value = glow;
+      o.userData.castShadow ??= o.castShadow;
+      o.castShadow = amount > 0 ? false : o.userData.castShadow; // holes would still cast a whole shadow
+    }
+    this.dissolved = amount;
+  }
+
+  /** A slain monster burns partly away, its rim glowing, then cooling. */
+  async burnAway() {
+    await tween(900, (t) => {
+      this.setDissolve(BODY_GONE * t);
+      this.fadeMeshes(1 - t * (1 - BODY));
+    }, linear);
+    await tween(450, (t) => this.setDissolve(BODY_GONE, 1 - t), linear);
+  }
+
   /** A body sinks away (a corpse that was raised as something else). */
   async vanish() {
     const start = this.fadeList?.[0]?.material.opacity ?? 1;
-    await tween(600, (t) => {
-      this.fadeMeshes(start * (1 - t));
+    const from = this.dissolved ?? 0;
+    const burns = this.unit.team !== 'heroes';
+    await tween(burns ? 800 : 600, (t) => {
+      if (burns) this.setDissolve(from + (1 - from) * t);
+      this.fadeMeshes(start * (1 - (burns ? t * t : t)));
       this.group.position.y = -0.15 * t;
     });
     this.gone = true;
@@ -630,21 +713,21 @@ export class UnitView {
     this.prone = false;
     this.tilt.rotation.set(0, 0, 0);
     this.tilt.position.y = 0;
-    if (this.rig) {
-      await this.rig.play('die', { hold: true }).done;
-      await tween(700, (t) => this.fadeMeshes(1 - t * 0.6));
-      return;
+    if (this.rig) await this.rig.play('die', { hold: true }).done;
+    else {
+      await tween(550, (t) => this.deadPose(t), easeIn);
+      // little bounce on impact
+      await tween(160, (t) => this.deadPose(1 - Math.sin(t * Math.PI) * 0.05));
     }
-    await tween(550, (t) => this.deadPose(t), easeIn);
-    // little bounce on impact
-    await tween(160, (t) => this.deadPose(1 - Math.sin(t * Math.PI) * 0.05));
-    await tween(700, (t) => this.fadeMeshes(1 - t * 0.6));
+    if (this.unit.team !== 'heroes') return this.burnAway();
+    await tween(700, (t) => this.fadeMeshes(1 - t * (1 - HERO_BODY)));
   }
 
   /** A dying hero healed (or rallying on a 20) gets back up. */
   async getUp() {
     if (!this.down) return;
     this.down = false;
+    if (this.dissolved) this.setDissolve(0);
     this.fadeMeshes(1);
     this.label.visible = true;
     if (this.rig) {

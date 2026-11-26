@@ -58,6 +58,29 @@ export function createStage(container, { width, height }) {
   sun.shadow.bias = -0.0005;
   scene.add(sun, sun.target);
 
+  // Post-processing (post.js), loaded the first time Glow or photo mode's blur asks for it.
+  // With neither on, frames are drawn as plainly as before.
+  let post = null;
+  let loading = null;
+  const effects = { glow: false, blur: false };
+  const setEffects = async (want) => {
+    Object.assign(effects, want);
+    if ((effects.glow || effects.blur) && !post) {
+      loading ??= import('./post.js').then(({ createPost }) => {
+        post = createPost(renderer, scene, camera);
+        post.setSize(container.clientWidth, container.clientHeight);
+      }).catch((e) => console.warn('Post-processing not loaded', e));
+      await loading;
+    }
+    post?.set(effects);
+    keepAwake(300);
+  };
+  /** Draws the scene once (also photo mode's Save image), with the effects that are on. */
+  const render = () => {
+    if (post && (effects.glow || effects.blur)) post.render(controls.target);
+    else renderer.render(scene, camera);
+  };
+
   // Room the HUD takes at the edges, in CSS px; replaced through setInsets.
   let insets = (w) => ({ top: 60, bottom: 120, right: w > 900 ? 310 : 0 });
   const fit = () => {
@@ -81,6 +104,7 @@ export function createStage(container, { width, height }) {
     camera.bottom = -view / 2 - shiftY;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
+    post?.setSize(w, h);
     labels.setSize(w, h);
     keepAwake(300); // a resized canvas is blank until it's drawn again
   };
@@ -117,7 +141,7 @@ export function createStage(container, { width, height }) {
       jitter.set(Math.sin(t * 91) * a, Math.sin(t * 73 + 1) * a * 0.6, Math.sin(t * 67 + 2) * a);
       camera.position.add(jitter);
     }
-    renderer.render(scene, camera);
+    render();
     labels.render(scene, camera);
     declutter(labels.domElement);
     if (left > 0) camera.position.sub(jitter);
@@ -168,7 +192,7 @@ export function createStage(container, { width, height }) {
     fit();
   };
 
-  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, dom: renderer.domElement };
+  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, render, setEffects, dom: renderer.domElement };
 }
 
 /**
