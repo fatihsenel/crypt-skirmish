@@ -28,8 +28,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 
 | Hero | Class | Highlights |
 | --- | --- | --- |
-| Brannoc | Fighter | Second Wind, Extra Attack at level 5 |
-| | *or* Paladin | Divine Smite, Lay on Hands, Shield of Faith, Aura of Protection |
+| Brannoc | Fighter | Second Wind, Extra Attack at level 5, a fighting style |
+| | *or* Paladin | A fighting style, Divine Smite, Lay on Hands, Shield of Faith, Aura of Protection |
 | | *or* Barbarian | Rage, Reckless Attack, Danger Sense, a bonus Frenzy attack |
 | Ilsa | Wizard | Magic Missile, Burning Hands, Grease, Fog Cloud, Misty Step, Shield, then Fireball, Lightning Bolt and Counterspell |
 | | *or* Warlock | Eldritch Blast, Hex, Scorching Ray, Hellish Rebuke, temp HP on kills, Counterspell at 5 |
@@ -50,6 +50,11 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   button says what changes. A pick left open takes the usual one when the next fight starts.
 - Ice Storm leaves its area icy: difficult terrain (each tile costs 10 ft of movement) until
   the end of the caster's next turn. Specters, wraiths and Ysolde fly over it.
+- **Fighting styles:** the Fighter and the Paladin each pick one in camp, and can change it
+  between rooms. Defense (+1 AC), Dueling (+2 damage with a one-handed melee weapon), Great
+  Weapon Fighting (the longsword in two hands, 1d10, reroll 1s and 2s; a Paladin sets down the
+  shield) or Protection (a reaction: a foe attacking an ally next to you has disadvantage). The
+  Fighter starts with Defense, the Paladin with Dueling.
 - The Ranger is weaker than the SRD version so it doesn't outclass the Rogue.
 - The Warlock has two pact slots that come back after every room.
 - The Bard's Bardic Inspiration is a die given to an ally, used by itself on the first attack
@@ -143,6 +148,12 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   grappled, tripped or frightened, and its bites weaken at half HP.
 - A **cult fanatic** stands by the stair in the Sunken Halls: as its turn starts it calls up a
   skeleton beside it (its action), up to two at once, and they fall to dust when it does.
+- A **shadow** waits in the dark of the Sealed Vault and the Catacombs: hidden while it stands
+  in the dark with no hero beside it, its touch drains 1d4 Strength (back after the fight), it
+  shrugs off half of any weapon's damage but takes double from radiant.
+- **Hobgoblins** (AC 18, a sellsword in the Necromancer's Sanctum) hit 2d6 harder when an ally stands by their
+  target (once a turn). **Kobolds** guard the Crypt Door's ledge: weak alone, but they attack
+  with advantage beside an ally.
 - Act four: mummies, wraiths and fallen knights.
 - Act five: gargoyles that stand as statues until you come close and whose claws can throw a
   hero back, and basilisks whose bite can turn a hero to stone for a turn.
@@ -158,7 +169,7 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   wake their allies. Some sleep, and some patrol.
 - Goblins hide after shooting. Monsters that lose sight of a hidden hero go to where they last
   saw them and search.
-- **Morale:** goblins, the orc and giant rats may break and run when brought under a quarter of
+- **Morale:** goblins, hobgoblins, kobolds, the orc and giant rats may break and run when brought under a quarter of
   their HP, or when Grukk falls (a WIS save, once a fight). Undead never do.
 
 ## The dungeon
@@ -210,6 +221,9 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
 - **Cracked ceilings** (the dark lines on the floor) in the Spider Nest, the Sunken Halls and the
   Labyrinth: a charge under one, Shatter or Thunderwave brings it down, 2d6 to everyone within 5 ft
   (DEX save DC 13 for half, prone on a failure). Its rubble is difficult terrain.
+- **High ground:** raised ledges in the Crypt Door, the Goblin Warren and the Gallery. Climbing
+  up costs an extra 5 ft; shooting down from a ledge at a foe below has advantage; a foe pushed
+  (or a hero thrown) off the edge takes 1d6 and lands prone.
 - **Spell scrolls:** some chests hold one, and the pedlar sells one. A scroll casts its spell
   once, without a slot, and only a hero with that spell on their class's list can read it (it
   goes to one). It waits on the action bar beside the spells.
@@ -299,6 +313,8 @@ It runs on desktop and on phones, and once it has loaded it plays offline too.
   from floor 5, in place of a ghoul, ghast or mummy. Dives started since the zombies find one in
   place of a skeleton, and a swarm in place of a giant rat, on about a third of their floors, and
   dives started since the cult fanatic find one in place of a skeleton on some floors from 3.
+  Dives started since the hobgoblins meet kobolds in place of giant rats, hobgoblins in place of
+  the orc, and from floor 3 a shadow in place of a ghoul, its chamber gone dark.
   Floors pay gold (40, plus 15 a floor). The dive is saved between floors and ends
   when the party falls; the title keeps the deepest floor cleared. A floor's fight can be
   watched again, but has no replay or challenge link.
@@ -579,6 +595,13 @@ A few things differ from the SRD to keep the game simple:
   1d6, climbing out is a STR check as the turn starts, and a falling ceiling is a house trap.
   Fights begun before these rules (rules 9 and earlier) play without lairs, scrolls,
   Counterspell, Fog Cloud, Grease, pits and cracked ceilings.
+- Fighting styles change in camp, between rooms. Protection needs no shield, and Great Weapon
+  Fighting is the Fighter's longsword in two hands (a Paladin drops the shield, 2 AC). The
+  shadow's Strength Drain never takes Strength below 1 and kills no one; it resists only weapon
+  damage that isn't magic, takes double from radiant spells, Divine Smite and Divine Strike, and
+  hides only in the dark. High ground is a house rule: advantage on ranged attacks down from a
+  ledge, a climb costing 5 ft more, a fall from one 1d6 and prone. Fights begun before these
+  rules (rules 10 and earlier) play without styles, ledges, shadows, hobgoblins and kobolds.
 - The Fighter's Improved Critical comes at level 7. A hero can use one runed weapon at a time.
 - Gauntlets of Ogre Power also add +1 damage with Strength weapons, so they still help a
   hero whose Strength is already 19 or more.

@@ -17,6 +17,8 @@
 // party is here; `wave` comes in `after` rounds later), `captive` {x, z, until, loot} (freed
 // before round `until` + 1, or lost), `hold` {rounds, waves} (won at the end of round `rounds`;
 // `waves` by round), `secrets` [[x, z]] (walls that are secret doors) and `added9` spawns.
+// Rules 11: `high` [[x0, z0, x1, z1]] raised ledges, `dark11` more dark areas, `added11` spawns
+// (H hobgoblin, Y kobold, p shadow).
 // `asleep` lists monsters asleep at the start, by tile ('x,z'); `patrols` maps a monster's
 // tile to the waypoints it walks between while it hasn't noticed the party.
 // The campaign map that links these levels lives in campaign.js.
@@ -44,6 +46,8 @@ export const LEVELS = [
     asleep: ['14,8', '14,9', '11,10'], // the rat nest
     patrols: { '13,5': [[13, 1], [9, 2]], '11,8': [[7, 7]] },
     added8: [['d', 3, 9]], // rules 8: a zombie shuffling by the chest
+    high: [[12, 1, 14, 2]], // rules 11: a ledge in the east hall's far corner
+    added11: [['Y', 13, 1], ['Y', 14, 2]], // rules 11: kobolds with slings up on it
   },
   {
     id: 'warren',
@@ -69,6 +73,7 @@ export const LEVELS = [
     // Rules 9: Grukk's war gong. Once he knows you're here he strikes it, and two rounds later
     // three more goblins pour out of the burrows in the north room.
     gong: { x: 12, z: 5, by: '11,6', after: 3, wave: [['g', 14, 1], ['g', 14, 3]] },
+    high: [[13, 7, 14, 9]], // rules 11: a ledge by the way down, the archer's perch
   },
   {
     id: 'ossuary',
@@ -116,6 +121,7 @@ export const LEVELS = [
     loot: [['potion']],
     patrols: { '12,2': [[8, 3]] },
     added8: [['d', 11, 6]], // rules 8: one of the necromancer's zombies
+    added11: [['H', 12, 9]], // rules 11: a hobgoblin sellsword hired to guard the way down
   },
   // --- act two: below the sanctum ---------------------------------------------
   {
@@ -142,6 +148,7 @@ export const LEVELS = [
     patrols: { '9,1': [[13, 1], [13, 4]] },
     // Rules 9: hold the catacombs until the end of round 7 while the dead climb out of their niches.
     hold: { rounds: 6, waves: { 3: [['s', 1, 9], ['s', 13, 6]] } },
+    added11: [['p', 13, 8]], // rules 11: a shadow in the unlit east room
   },
   {
     id: 'vault',
@@ -167,6 +174,8 @@ export const LEVELS = [
     patrols: { '9,8': [[13, 9], [7, 9]] },
     added8: [['d', 3, 9]], // rules 8: a zombie in the lower hall
     secrets: [[13, 6]], // rules 9: a secret door from the vault's upper room to the lower hall
+    dark11: [[1, 6, 4, 10]], // rules 11: the side room's torches are out
+    added11: [['p', 4, 10]], // rules 11: a shadow by its chest
   },
   {
     id: 'barrow',
@@ -267,6 +276,7 @@ LEVELS.push(
     loot: [['cloakProtection', 'potion'], ['weaponPlus1', 'potion']],
     patrols: { '9,1': [[14, 1], [14, 4]] },
     loot10: [['cloakProtection', 'potion', 'scrollCureWounds'], ['weaponPlus1', 'potion']],
+    high: [[7, 1, 14, 1]], // rules 11: the gallery itself, a raised walk along the north wall
   },
   {
     id: 'throne',

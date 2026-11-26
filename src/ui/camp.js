@@ -6,9 +6,9 @@ import { canTrade } from '../game/shop.js';
 import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
-  cleanName, roomElite, EVENTS, eventProblem, openPicks, pickOptions,
+  cleanName, roomElite, EVENTS, eventProblem, openPicks, pickOptions, heroStyle,
 } from '../game/campaign.js';
-import { TEMPLATES, CLASS_CHOICES, ABILITY_NAMES } from '../game/units.js';
+import { TEMPLATES, CLASS_CHOICES, ABILITY_NAMES, FIGHTING_STYLES } from '../game/units.js';
 import { ITEMS, RELICS } from '../game/items.js';
 import { MAX_LEVEL } from '../game/units.js';
 import { levelById } from '../game/maps.js';
@@ -66,7 +66,7 @@ const CLASS_BLURB = {
 /** A selector for a camp control that a redraw replaces, to focus its new copy (null: leave focus). */
 function focusKey(el) {
   if (!el?.closest?.('#camp')) return null;
-  for (const a of ['data-node', 'data-enter', 'data-equip', 'data-unequip', 'data-pick']) {
+  for (const a of ['data-node', 'data-enter', 'data-equip', 'data-unequip', 'data-pick', 'data-style']) {
     if (el.hasAttribute(a)) return `#camp [${a}="${el.getAttribute(a)}"]`;
   }
   return el.id ? `#${el.id}` : null;
@@ -76,8 +76,8 @@ function focusKey(el) {
 const nameLabel = (cls) => `${TEMPLATES[cls].cls}’s name (${TEMPLATES[cls].name} if left blank)`;
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -555,9 +555,20 @@ export class Camp {
         <div class="hp-line"><span class="hpbar"><i style="width:${pct}%"></i></span><span>${u.hp}/${u.maxHp} HP</span><span>AC ${u.ac + u.acBonus}</span></div>
         <div class="hero-meta">${slots}<span data-hint="Potions of healing">Potions ${u.potions}</span>${u.flasks > 0 ? `<span data-hint="Flasks of alchemist’s fire">Fire ${u.flasks}</span>` : ''}${u.caltrops > 0 ? `<span data-hint="Bags of caltrops">Caltrops ${u.caltrops}</span>` : ''}${u.scrolls?.length ? `<span data-hint="${esc(u.scrolls.map((x) => ITEMS[x].name).join(', '))}">Scrolls ${u.scrolls.length}</span>` : ''}</div>
         ${items ? `<div class="hero-items">${items}</div>` : ''}
+        ${this.styleHtml(state, code, u)}
         ${this.pickHtml(state, code, u)}
       </div>`;
     }).join('');
+  }
+
+  /** A Fighter's or Paladin's fighting style: one button per style, the one taken pressed. */
+  styleHtml(state, code, u) {
+    const now = heroStyle(state, code);
+    if (!now) return '';
+    const buttons = Object.entries(FIGHTING_STYLES).map(([id, st]) =>
+      `<button type="button" data-style="${code}:${id}" aria-pressed="${id === now}" data-hint="${esc(st.desc)}"><b>${esc(st.name)}</b><small>${esc(st.short)}${id === 'greatWeapon' && u.code === 'P' ? ' · −2 AC' : ''}</small></button>`).join('');
+    return `<div class="hero-pick hero-style"><div class="give-label">Fighting style <span data-hint="Change it here between fights.">(between fights)</span></div>
+      <div class="give" role="group" aria-label="${esc(u.name)}: fighting style">${buttons}</div></div>`;
   }
 
   /** An Ability Score Improvement waiting on hero `code`: one button per ability worth raising, the class's own first. */
@@ -610,6 +621,11 @@ export class Camp {
       const to = pickOptions(this.state, code, Number(level)).find((o) => o.stat === stat)?.value;
       this.h.onPick(code, Number(level), stat);
       announce(`${name} raises ${ABILITY_NAMES[stat]} to ${to}.`);
+    } else if (b.dataset.style) {
+      const [code, style] = b.dataset.style.split(':');
+      if (b.getAttribute('aria-pressed') === 'true') return;
+      this.h.onStyle(code, style);
+      announce(`${heroUnit(code, this.state.party[code]).name} fights with ${FIGHTING_STYLES[style].name}.`);
     } else if (b.dataset.unequip) {
       const [code, i] = b.dataset.unequip.split(':');
       const what = `${ITEMS[this.state.party[code].items[i]].name} back in the pack.`;

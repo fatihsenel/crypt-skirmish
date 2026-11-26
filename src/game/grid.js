@@ -40,6 +40,7 @@ export class Grid {
     this.width = rows[0].length;
     this.walls = [];
     this.spawns = [];
+    this.high = new Set(); // rules 11: raised tiles (set by the Game from level.high)
     this.corpses = [];
     this.doors = new Map();  // key -> {x, z, open}
     this.traps = new Map();  // key -> {x, z, revealed, sprung}
@@ -170,7 +171,7 @@ export class Grid {
         if (cur.dist !== d) continue; // reached more cheaply since it was queued
         for (const [nx, nz] of this.neighbors(x, z)) {
           const k = key(nx, nz);
-          const dist = d + cost(nx, nz);
+          const dist = d + cost(nx, nz, x, z);
           if (dist > maxSteps || (out.has(k) && out.get(k).dist <= dist) || !canPass(nx, nz)) continue;
           out.set(k, { x: nx, z: nz, dist, prev: key(x, z) });
           (buckets[dist] ??= []).push([nx, nz]);

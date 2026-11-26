@@ -119,6 +119,24 @@ describe('fights recorded under rules 9', () => {
   }
 });
 
+// Whole fights recorded under rules 10 by scripts/v10-fixtures.mjs: the rooms rules 11 gives high
+// ground and new monsters, a Paladin and a Fighter (fighting styles), and Endless floors.
+const TEN = JSON.parse(readFileSync(new URL('./fixtures/v10-fights.json', import.meta.url), 'utf8'));
+
+describe('fights recorded under rules 10', () => {
+  for (const f of TEN) {
+    it(`replay ${f.room} (seed ${f.seed}) unchanged`, () => {
+      const party = dailyCampaign({ level: f.level, classes: f.classes }).party;
+      const g = new Game(levelOf(f.room), { party, difficulty: DIFFICULTIES.normal, rng: seeded(f.seed), rules: 10 });
+      const r = replayFight(g, f.log);
+      expect(r.ok).toBe(true);
+      expect(g.over).toBe(f.over);
+      expect(fightCheck(g)).toBe(f.check);
+      expect(g.rng()).toBe(f.next);
+    });
+  }
+});
+
 describe('the rules a fight began under', () => {
   it('ride with a saved record and a link', async () => {
     const { watchable } = await import('../src/game/history.js');

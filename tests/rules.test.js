@@ -2141,7 +2141,7 @@ describe('model loading per room', () => {
   it('every room asks for the figure of every unit that can appear in it', () => {
     for (const party of [null, newCampaign('normal', {}, { F: 'P', R: 'A' }).party]) {
       for (const level of LEVELS) {
-        const files = new Set(filesForRoom(level.rows, party));
+        const files = new Set(filesForRoom(level.rows, party, level));
         const game = new Game(level, { party });
         for (const u of game.units) {
           const spec = SPECS[u.code];

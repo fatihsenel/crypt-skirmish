@@ -551,6 +551,10 @@ export class Hud {
       + (r.colossus ? ` incl. <b class="sneak">Colossus Slayer +${r.colossus.total}</b> ${dice(r.colossus)}` : '')
       + (r.strike ? ` incl. <b class="spell">Divine Strike +${r.strike.total} radiant</b> ${dice(r.strike)}` : '')
       + (r.charge ? ` incl. <b class="crit">Charge +${r.charge.total}</b> ${dice(r.charge)}` : '')
+      + (r.martial ? ` incl. <b class="crit">Martial Advantage +${r.martial.total}</b> ${dice(r.martial)}` : '')
+      + (r.damageRoll?.rerolled ? ` <b class="spell">Great Weapon Fighting</b> rerolls ${r.damageRoll.rerolled === 1 ? 'a low die' : `${r.damageRoll.rerolled} low dice`}.` : '')
+      + (r.shade?.halved ? ' Plain steel passes half through it: half damage.' : '')
+      + (r.shade?.burned ? ' <b class="spell">The radiance burns it twice over.</b>' : '')
       + (r.uncanny ? ` <b class="spell">Uncanny Dodge</b> halves it.` : '')
       + (r.resisted ? (r.target.swarm ? ' The swarm scatters: half damage.' : ` <b class="spell">Rage</b> halves it.`) : '')
       + (r.deflect ? ` <b class="spell">Deflect Missiles</b> takes off ${r.deflect.total} ${dice(r.deflect)}.` : '');
@@ -634,6 +638,7 @@ export class Hud {
         : r.push?.fall ? '<b class="crit">Pushed over the edge!</b>'
         : r.push?.crash ? '<b class="crit">Pushed through the cracked floor!</b>'
         : r.push?.stair ? '<b class="crit">Pushed down the stairs!</b>'
+        : r.push?.drop ? '<b class="crit">Pushed off the ledge!</b>'
         : r.push ? '<b>Pushed back 5 ft.</b>'
         : '<b class="cond prone">Knocked prone!</b>'));
   }
@@ -1021,8 +1026,26 @@ export class Hud {
       (r.success ? ': picks a way through.' : ', takes <b class="hit">1 piercing</b> and stops there.'));
   }
 
+  /** Rules 11: Protection turns an attack; a shadow's touch drains; radiant burns a shadow; it hides again. */
+  logGuard(r) {
+    this.log(`${who(r.guard)} steps in: <b class="spell">Protection</b> puts ${who(r.attacker)}’s attack on ${who(r.target)} at disadvantage.`);
+  }
+
+  logDrain(r) {
+    const d = r.drain;
+    this.log(`${who(r.target)} feels the strength drain away: <b class="cond">STR ${d.from} → ${d.to}</b> ${dice(d.roll)} until the fight ends.`);
+  }
+
+  logVulnerable({ unit, extra }) {
+    this.log(`The radiance sears ${who(unit)}: <b class="crit">double damage</b> (+${extra}).`);
+  }
+
+  logShadowHide({ unit }) {
+    this.log(`${who(unit)} melts back into the dark.`, 'sys');
+  }
+
   logTumble(r) {
-    this.log(`${who(r.unit)} ${r.through ? 'crashes through the floor to the hall below' : 'tumbles down the stairs'} and takes <b class="hit">${r.damage} bludgeoning</b> ${dice(r.roll)}${r.lands ? ', landing prone' : ''}.`);
+    this.log(`${who(r.unit)} ${r.ledge ? 'falls off the ledge' : r.through ? 'crashes through the floor to the hall below' : 'tumbles down the stairs'} and takes <b class="hit">${r.damage} bludgeoning</b> ${dice(r.roll)}${r.lands ? ', landing prone' : ''}.`);
   }
 
   logTrapFound({ unit }) {

@@ -269,8 +269,13 @@ export function createAnimations(app) {
       await tumbleDown(target, t.push);
       return;
     }
-    floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, 'Thrown back!', 'cond');
+    floatText(stage.scene, { x: target.x, z: target.z - 0.5 }, t.push.drop ? 'Off the ledge!' : 'Thrown back!', t.push.drop ? 'crit' : 'cond');
     await v.shoved(t.push.to.x, t.push.to.z);
+    if (t.push.drop && t.push.tumble) { // rules 11: thrown off the ledge
+      sfx.fall();
+      floatText(stage.scene, t.push.to, `−${t.push.tumble.damage}`, 'crit');
+      await damageReaction(target);
+    }
     v.updateStatus();
     if (t.push.burn) {
       sfx.fireImpact();
@@ -660,8 +665,14 @@ export function createAnimations(app) {
       floatText(stage.scene, target, push.crash ? 'Through the floor!' : 'Down the stairs!', 'crit');
       await tumbleDown(target, push);
     } else {
-      floatText(stage.scene, target, 'Pushed!', 'cond');
+      floatText(stage.scene, target, push.drop ? 'Off the ledge!' : 'Pushed!', push.drop ? 'crit' : 'cond');
       await v.shoved(push.to.x, push.to.z);
+      if (push.drop && push.tumble) { // rules 11: a fall from the ledge
+        sfx.fall();
+        stage.shake(0.04, 180);
+        floatText(stage.scene, push.to, `−${push.tumble.damage}`, 'crit');
+        await damageReaction(target);
+      }
       if (push.burn) {
         sfx.fireImpact();
         floatText(stage.scene, target, `Burns −${push.burn.damage}`, 'crit');

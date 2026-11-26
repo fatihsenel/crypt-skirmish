@@ -22,10 +22,11 @@ describe('shallow water', () => {
     expect(g.moveCost({ flies: true })).toBe(null);
   });
 
-  it('leaves rooms without water or ice on the plain paths', () => {
+  it('leaves rooms without water, ice or (rules 11) ledges on the plain paths', () => {
     for (const level of LEVELS) {
       const g = new Game(level, { senses: false, rng: () => 0.5 });
-      expect(g.moveCost() === null).toBe(!new Grid(level.rows).water.size);
+      expect(g.moveCost() === null).toBe(!new Grid(level.rows).water.size && !level.high);
+      expect(new Game(level, { senses: false, rng: () => 0.5, rules: 10 }).moveCost() === null).toBe(!new Grid(level.rows).water.size);
     }
   });
 });

@@ -102,7 +102,19 @@ server on 5173.
   `clearShot`; kept out of `Grid`) and Grease (`grease`, a `slip` move step); rubble, grease and
   open pits are difficult through `roughTiles`. Rooms add rules-10 chest loot through
   `level.loot10` (and spawns through `level.added10`), and rules-9 fights are replayed by
-  `tests/fixtures/v9-fights.json` (`scripts/v9-fixtures.mjs`).
+  `tests/fixtures/v9-fights.json` (`scripts/v9-fixtures.mjs`). Rules 11: fighting styles
+  (`FIGHTING_STYLES`, `STYLE_CLASSES`, `applyStyle` in `units.js`; a party record's `style`,
+  `chooseStyle` and `heroStyle` in `campaign.js`, `rec.style` in links; Protection is
+  `protector`, Great Weapon Fighting a damage roll's `rerolled`), high ground (`level.high`
+  rects, `this.high` and `grid.high`: a climb in `moveCost`, which now gets the tile it's
+  entered from, `high ground` advantage in `attackMods`, a push's `drop` and a `ledge` tumble;
+  drawn by `liftAt` and `LEDGE` in `render/board.js`, figures lifted by `raise` in
+  `unitView.js`), the shadow (`p`: `shadowy`, `shadowStealth`, an attack's `drain`, `shade`
+  half weapon damage, radiant `vulnerable`), the hobgoblin (`H`: `martial`, once a turn
+  through `martialUsed`) and the kobold (`Y`, pack tactics); rooms add rules-11 spawns through
+  `level.added11` and dark through `level.dark11` (`filesForRoom` takes the level, so every
+  `added*` spawn's figure loads), and rules-10 fights are replayed by
+  `tests/fixtures/v10-fights.json` (`scripts/v10-fixtures.mjs`).
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
@@ -239,7 +251,8 @@ server on 5173.
   chamber below a stair (`sinkEnd`, its own dice too; a one-tile wall is enough there); generation 5
   turns a monster into an ochre jelly now and then (`oozeIn`, its own dice), generation 6 into a
   gelatinous cube (`cubeIn`), generation 7 a skeleton into a zombie and a rat into a swarm
-  (`restlessIn`), and generation 8 a skeleton into a cult fanatic (`cultIn`); changing `makeFloor`, `POOL` or `floorBudget` itself
+  (`restlessIn`), generation 8 a skeleton into a cult fanatic (`cultIn`), and generation 9 rats into kobolds,
+  the orc into a hobgoblin and a ghoul into a shadow in a dark chamber (`rankIn`); changing `makeFloor`, `POOL` or `floorBudget` itself
   changes every floor, and a saved mid-floor fight falls back to camp.
   `npm run sim -- 100 endless` checks its balance.
 - **Gold and the pedlar:** `game/shop.js` (`goldFor` in `completeFight`, `canTrade`, `stock`,

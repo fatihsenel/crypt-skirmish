@@ -524,6 +524,52 @@ export const TEMPLATES = {
       { name: 'Thrown Dagger', stat: 'dex', damage: '1d4', reach: 4, projectile: 'javelin' },
     ],
   },
+  // Rules 11. SRD shadow (`shadowy`): on a dark tile no torch reaches it is hidden (Shadow
+  // Stealth), and it slips back into hiding as its turn ends there; its touch drains 1d4 STR for
+  // the fight (`drain`; never below 1, a house rule), it takes half damage from weapons that
+  // aren't magic (`mundaneResist`; its other resistances are left out) and double from radiant.
+  p: {
+    name: 'Shadow', cls: 'Shadow', team: 'monsters', color: 0x1c1a26,
+    hp: 16, ac: 12, speed: 8, prof: 2, xp: 100, cr: 0.5,
+    ai: 'brute',
+    undead: true,
+    shadowy: true,
+    mundaneResist: true,
+    vulnerable: 'radiant',
+    stealth: 'expert', // SRD Stealth +4 (+6 in dim light)
+    passives: ['shadowStealth', 'strengthDrain'],
+    immune: ['frightened', 'paralyzed', 'petrified', 'poisoned', 'prone', 'restrained'],
+    stats: { str: 6, dex: 14, con: 13, int: 6, wis: 10, cha: 8 },
+    attacks: [{ name: 'Strength Drain', stat: 'dex', damage: '2d6', reach: 1, drain: { stat: 'str', dice: '1d4' } }],
+  },
+  // Rules 11. SRD hobgoblin: Martial Advantage, +2d6 once a turn when an ally of its stands next
+  // to the target (`martial`).
+  H: {
+    name: 'Hobgoblin', cls: 'Hobgoblin', team: 'monsters', color: 0xa8502a,
+    hp: 11, ac: 18, speed: 6, prof: 2, xp: 100, cr: 0.5,
+    morale: true,
+    martial: '2d6',
+    passives: ['martialAdvantage'],
+    ai: 'brute',
+    stats: { str: 13, dex: 12, con: 12, int: 10, wis: 10, cha: 9 },
+    attacks: [
+      { name: 'Longsword', stat: 'str', damage: '1d8', reach: 1 },
+      { name: 'Longbow', stat: 'dex', damage: '1d8', reach: 16, projectile: 'arrow' },
+    ],
+  },
+  // Rules 11. SRD kobold: Pack Tactics. (Its Sunlight Sensitivity never comes up down here.)
+  Y: {
+    name: 'Kobold', cls: 'Kobold', team: 'monsters', color: 0x9a6a3a,
+    hp: 5, ac: 12, speed: 6, prof: 2, xp: 25, cr: 0.125,
+    morale: true,
+    passives: ['packTactics'],
+    ai: 'skirmisher',
+    stats: { str: 7, dex: 15, con: 9, int: 8, wis: 7, cha: 8 },
+    attacks: [
+      { name: 'Dagger', stat: 'dex', damage: '1d4', reach: 1 },
+      { name: 'Sling', stat: 'dex', damage: '1d4', reach: 6, projectile: 'javelin' },
+    ],
+  },
 };
 
 let nextId = 1;
@@ -798,3 +844,35 @@ export const CLASS_CHOICES = { F: ['F', 'P', 'Z'], W: ['W', 'K', 'S'], R: ['R', 
 
 /** The class (template code) a party record plays in a slot. */
 export const classOf = (slot, rec) => (CLASS_CHOICES[slot]?.includes(rec?.cls) ? rec.cls : slot);
+
+/**
+ * Rules 11: the fighting styles a Fighter or a Paladin may take at camp (the party record's
+ * `style`); none chosen means the class's own (STYLE_CLASSES). Each is a passive of the same id.
+ */
+export const FIGHTING_STYLES = {
+  defense: { name: 'Defense', short: '+1 AC', desc: '+1 AC.' },
+  dueling: { name: 'Dueling', short: '+2 melee damage', desc: '+2 damage with a melee weapon.' },
+  greatWeapon: { name: 'Great Weapon', short: 'Longsword 1d10, reroll 1–2', desc: 'Great Weapon Fighting: the longsword in both hands, 1d10, rerolling 1s and 2s once. A Paladin sets the shield aside (−2 AC).' },
+  protection: { name: 'Protection', short: 'Guard a friend beside you', desc: 'Protection: your reaction gives a foe disadvantage on an attack against an ally next to you.' },
+};
+/** The classes that take a fighting style, and the one each takes unless the player picks. */
+export const STYLE_CLASSES = { F: 'defense', P: 'dueling' };
+
+/** The fighting style class `code` fights with given a record's `style` (null: none for this class). */
+export const styleOf = (code, style) => (STYLE_CLASSES[code] ? (Object.hasOwn(FIGHTING_STYLES, style) ? style : STYLE_CLASSES[code]) : null);
+
+/** Give a Fighter or Paladin unit its fighting style (after its level and items). */
+export function applyStyle(unit, style) {
+  const s = styleOf(unit.code, style);
+  if (!s) return unit;
+  unit.passives = unit.passives.filter((p) => !Object.hasOwn(FIGHTING_STYLES, p));
+  unit.passives.push(s);
+  unit.style = s;
+  if (s === 'defense') unit.acBonus = (unit.acBonus ?? 0) + 1;
+  if (s === 'greatWeapon') {
+    const sword = unit.attacks.find((a) => a.name === 'Longsword');
+    if (sword) Object.assign(sword, { damage: '1d10', twoHanded: true });
+    if (unit.code === 'P') unit.ac -= 2; // the shield goes on the back
+  }
+  return unit;
+}

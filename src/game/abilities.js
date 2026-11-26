@@ -121,7 +121,7 @@ export const PASSIVES = {
   sculptSpells: 'Sculpt Spells: your Fireball, Lightning Bolt, Ice Storm and Burning Hands leave the party unharmed.',
   blessedHealer: 'Blessed Healer: healing someone else with a spell slot heals you too (2 + the slot level).',
   divineSmite: 'Divine Smite: arm it, and your next melee weapon hit spends a spell slot for 2d8 radiant (+1d8 per slot level above 1st, +1d8 against undead).',
-  dueling: 'Dueling: +2 damage with melee weapon attacks.',
+  dueling: 'Dueling (fighting style): +2 damage with melee weapon attacks.',
   auraOfProtection: 'Aura of Protection: you and allies within 10 ft add your CHA modifier to saving throws.',
   archery: 'Archery: +1 to hit with ranged weapon attacks.',
   colossusSlayer: 'Colossus Slayer: once per turn, a weapon hit on a foe that is already hurt deals an extra 1d8.',
@@ -144,6 +144,12 @@ export const PASSIVES = {
   darkCalling: 'Dark Calling: as its turn starts, it spends its action calling up a skeleton beside it, while it has fewer than two. They fall to dust when it dies, and are worth no XP.',
   trapSense: 'Keen Eyes: spots traps and secret doors within 10 ft.',
   skulker: 'Skulker: monsters that have not noticed the party only spot you within 15 ft.',
+  defense: 'Defense (fighting style): +1 AC.',
+  greatWeapon: 'Great Weapon Fighting (fighting style): the longsword in both hands, 1d10; damage dice that roll a 1 or 2 are rolled again once.',
+  protection: 'Protection (fighting style): when a foe you can see attacks an ally next to you, your reaction gives the attack disadvantage (used automatically).',
+  shadowStealth: 'Shadow Stealth: hidden while it stands in the dark, out of the torchlight, and it slips back into hiding as its turn ends there. Plain weapons deal it half damage; radiant deals double.',
+  strengthDrain: 'Strength Drain: its touch takes 1d4 from the target’s STR until the fight ends (never below 1).',
+  martialAdvantage: 'Martial Advantage: once a turn, +2d6 damage when an ally of its stands next to the target.',
 };
 
 /**

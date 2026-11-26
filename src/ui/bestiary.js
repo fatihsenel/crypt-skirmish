@@ -39,6 +39,9 @@ export const LORE = {
   d: 'A body that forgot how to lie down. Cut it down and it gets up again, unless the blow is clean or holy.',
   c: 'Not one rat but a hundred, pouring over and under everything. Swords find little to cut.',
   f: 'A zealot in red who mutters, and the bones answer. Two skeletons at a time climb up at its call; cut it down and they fall apart.',
+  p: 'A patch of dark that moves against the torchlight. Its touch leaves your sword arm weak, and plain steel passes half through it.',
+  H: 'A disciplined soldier in red-lacquered mail. Alone it is careful; beside a friend it cuts you to pieces.',
+  Y: 'Small, yapping and brave only in a crowd. Where one kobold is, the rest are close, slings ready.',
   v: 'The beast Nekhet walled into the labyrinth’s heart. A thousand years of pacing have not calmed him.',
 };
 

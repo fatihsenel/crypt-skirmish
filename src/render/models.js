@@ -868,6 +868,7 @@ const BUILDERS = {
   a: skeleton, z: giantRat, v: fighter, // act five
   j: jelly, i: cube,
   d: skeleton, c: swarm, // rules 8: zombies fall back to the skeleton miniature
+  p: skeleton, H: fighter, Y: goblin, // rules 11
 };
 
 export function buildModel(unit) {

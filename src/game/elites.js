@@ -16,10 +16,11 @@ import { hash } from './dice.js';
  * zombies (Undead Fortitude) and swarms of rats. 9: alarm gongs and the monsters they call,
  * rooms to hold and prisoners to free, the owl familiar, secret doors and the cult fanatic who
  * calls up skeletons. 10: bosses' lair actions, spell scrolls, Counterspell, pit traps, cracked
- * ceilings that cave in, Fog Cloud and Grease. A saved fight, replay or
+ * ceilings that cave in, Fog Cloud and Grease. 11: fighting styles for the Fighter and
+ * the Paladin, high ground (ledges), and the shadow, the hobgoblin and the kobold. A saved fight, replay or
  * link carries the number it began under (none means 1), so it plays back by its own rules.
  */
-export const RULES = 10;
+export const RULES = 11;
 
 /**
  * New Game+ 2 and deeper: each room's strongest monster is an elite with one of these traits

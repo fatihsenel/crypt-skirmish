@@ -151,6 +151,20 @@ const MONSTERS = {
     reply: ['YES, BOSS!', 'CRUSH THEM!', 'HRAH!'],
     gloat: ['WEAK ALL!', 'ORC WIN!', 'HAH! HAH!'],
   },
+  H: { // the hobgoblin: drilled, contemptuous (rules 11)
+    attack: ['Close the line!', 'Hold formation!', 'Flank it!', 'Steel ready!', 'Strike together!'],
+    kill: ['One down. Next.', 'Discipline wins.', 'As drilled.'],
+    hurt: ['Fall back and reform!', 'A scratch. Hold!', 'To me! Close up!'],
+    reply: ['As you command!', 'Forming up!', 'Yes, warlord!'],
+    gloat: ['Order beats numbers.', 'The line held.', 'Strip the dead.'],
+  },
+  Y: { // kobolds: yappy, brave in a crowd (rules 11)
+    attack: ['Yip! Yip! Get it!', 'All together! All together!', 'Sling it! Sling it!', 'Big one! Big one!', 'For the clutch!'],
+    kill: ['We did it! We did it!', 'Kobolds strong!', 'Yip yip yip!'],
+    hurt: ['Run! Run!', 'Not fair! Not fair!', 'Help! Help!'],
+    reply: ['Yip! Yes!', 'We go! We go!', 'Yes, big boss!'],
+    gloat: ['Kobolds win!', 'All the shinies are ours!', 'Yip yip hooray!'],
+  },
   b: { // Grukk, the goblin boss
     attack: ['Grukk smash you!', 'Bow to Grukk!', 'You in Grukk’s house!', 'Grukk is king here!', 'Stop wriggling!'],
     kill: ['Grukk wins again!', 'Who next for Grukk?', 'Ha! Too small!'],

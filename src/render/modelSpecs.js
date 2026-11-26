@@ -128,6 +128,26 @@ export const SPECS = {
     show: ['Knife', 'Knife_Offhand'],
     clips: { melee: 'Dualwield_Melee_Attack_Stab', javelin: 'Throw', cast: 'Spellcast_Raise' },
   },
+  // Rules 11: the shadow, Quaternius's ghost gone nearly black and thin as smoke; the
+  // hobgoblin, KayKit's knight lacquered rust-red; the kobold, the goblin's hooded rogue, smaller
+  // and scaled brown, with a knife and a sling.
+  p: {
+    file: 'monsters/Ghost', height: 1.15, tint: 0x2a2438, ghost: 0.62,
+    clips: { ...QUATERNIUS, idle: 'Flying_Idle', walk: 'Fast_Flying', melee: 'Punch', arrow: 'Punch', javelin: 'Punch', hit: 'HitReact', die: 'Death', dead: 'Death' },
+  },
+  H: {
+    file: 'Knight', height: 1.22,
+    show: ['1H_Sword', 'Round_Shield'],
+    tint: 0xd06a48,
+    clips: { melee: '1H_Melee_Attack_Slice_Diagonal' },
+  },
+  Y: {
+    file: 'Rogue_Hooded', height: 0.85, tint: 0xe0c4a8,
+    recolor: { hue: 26, sat: 0.9, light: 0.8 },
+    show: ['Knife'],
+    ears: { mesh: 'Rogue_Head_Hooded', color: 0x9a6a3a },
+    clips: { melee: '1H_Melee_Attack_Stab', javelin: 'Throw' },
+  },
   // The ghast: a bigger, darker ghoul.
   h: {
     file: 'Skeleton_Minion', height: 1.38, tint: 0x6f8060,
@@ -238,9 +258,11 @@ const specFor = (code) => SPECS[code];
  * waits only for these; the rest keep loading behind it.
  * `rows` is the level's map, `party` the campaign's party records (or null).
  */
-export function filesForRoom(rows, party) {
+export function filesForRoom(rows, party, level = null) {
   const files = new Set();
-  for (const ch of rows.join('')) {
+  // Spawns a later rules version adds (`added7` … `added11`) need their figures too.
+  const added = level ? Object.keys(level).filter((k) => /^added\d*$/.test(k)).flatMap((k) => level[k].map((s) => s[0])) : [];
+  for (const ch of rows.join('') + added.join('')) {
     if (!/[a-zA-Z]/.test(ch)) continue;
     const code = classOf(ch, party?.[ch]);
     const spec = specFor(code);

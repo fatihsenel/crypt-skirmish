@@ -4,7 +4,7 @@
 
 import { rollDice, rollExpr, parseDice, abilityMod } from './dice.js';
 import { Grid, key, gridDistance, pathFrom } from './grid.js';
-import { createUnit, applyLevel, classOf, TEMPLATES } from './units.js';
+import { createUnit, applyLevel, applyStyle, classOf, TEMPLATES } from './units.js';
 import { applyItems, ITEMS, readsScroll } from './items.js';
 import { ACTIONS, STANDARD_ACTIONS, SPELLS } from './abilities.js';
 import { Spellcasting, NOISE, dexSaveDamage } from './spells.js';
@@ -51,6 +51,8 @@ export const COUNTER_RANGE = 12;
 /** Rules 7: a gelatinous cube's acid at the start of an engulfed creature's turn, and the STR save out. */
 export const ENGULF_DAMAGE = '2d6'; export const ENGULF_DC = 12;
 /** Rules 7: the passive Perception that spots a transparent monster more than 5 ft away. */
+// Rules 11: a shadow hidden in the dark is found against SHADOW_DC.
+export const SHADOW_DC = 14;
 export const TRANSPARENT_DC = 15; // rules 6: a potion tossed to an ally, in tiles (15 ft)
 export const FLASK_RANGE = 4; // rules 6: alchemist's fire thrown at a foe, in tiles (20 ft)
 export const FLASK_DAMAGE = '1d4'; // and the fire it lights, at the end of each of its turns
@@ -214,13 +216,24 @@ export class Game extends Spellcasting {
       for (const [x, z] of level.ceilings ?? []) this.ceilings.set(key(x, z), { x, z, fallen: false });
       [...this.grid.chests.values()].forEach((c, i) => { if (level.loot10?.[i] && !c.mimic) c.loot = [...level.loot10[i]]; });
     }
+    // Rules 11: the room's later monsters and its high ground (ledges, [x0, z0, x1, z1] each):
+    // climbing up costs a tile more, a shot from up there at a foe below has advantage, and a
+    // push off the edge is a fall (see pushTo).
+    this.high = new Set();
+    if (this.rules >= 11) {
+      if (level.added11) this.grid.spawns.push(...level.added11.map(([code, x, z]) => ({ code, x, z })));
+      for (const [x0, z0, x1, z1] of level.high ?? []) {
+        for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (!this.grid.isSolid(x, z)) this.high.add(key(x, z));
+      }
+    }
+    this.grid.high = this.high; // the board raises these tiles
     // Rules 6: cracked floor gives way over the lower hall, `below` [dx, dz] from it (level.below).
     // Older fights walk it as plain floor.
     this.below = level.below ?? null;
     // Rules 6: a room's dark areas ([x0, z0, x1, z1] each), lit only by the heroes' torches.
     this.dark = new Set();
     if (this.rules >= 6) {
-      for (const [x0, z0, x1, z1] of level.dark ?? []) {
+      for (const [x0, z0, x1, z1] of [...level.dark ?? [], ...(this.rules >= 11 ? level.dark11 ?? [] : [])]) {
         for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.dark.add(key(x, z));
       }
     }
@@ -273,6 +286,8 @@ export class Game extends Spellcasting {
         u.hp = Math.min(u.hp, u.maxHp); // an Amulet of Health handed back at camp
       }
     }
+    // Rules 11: a Fighter's or Paladin's fighting style (the party record's, else the class's own).
+    if (this.rules >= 11) for (const u of this.units) if (u.team === 'heroes' && !u.corpse) applyStyle(u, party?.[u.slot]?.style);
     // Rules 9: whoever stands by the gong rings it once it knows the party is here, and a
     // Wizard or Warlock comes in with an owl familiar beside them.
     if (this.gong) {
@@ -297,6 +312,7 @@ export class Game extends Spellcasting {
         const at = key(u.x, u.z);
         if (level.asleep?.includes(at)) u.asleep = true;
         if (u.transparent && this.rules >= 7) u.hidden = TRANSPARENT_DC;
+        if (u.shadowy && this.rules >= 11 && this.dark.has(at)) u.hidden = SHADOW_DC; // Shadow Stealth
         const beat = level.patrols?.[at];
         if (beat && !u.asleep) u.patrol = { route: [{ x: u.x, z: u.z }, ...beat.map(([x, z]) => ({ x, z }))], next: 1 };
       }
@@ -838,6 +854,7 @@ export class Game extends Spellcasting {
       sneakUsed: false,
       colossusUsed: false,
       strikeUsed: false,
+      martialUsed: false,
       interacted: false,
       readied: false,
       readiedAttack: null,
@@ -919,6 +936,7 @@ export class Game extends Spellcasting {
     if (!u.turned) u.routed = false;
     this.burnOn(u);
     if (this.over) return;
+    if (this.rules >= 11) this.shadowStealth(u);
     this.tickConditions(u);
     this.thawIce(u);
     this.coolCoals(u);
@@ -937,6 +955,14 @@ export class Game extends Spellcasting {
       if (this.current.dying && !this.current.dying.stable) this.deathSave(this.current);
     } while (!this.current.alive);
     this.beginTurn();
+  }
+
+  /** Rules 11: a shadow ending its turn in the dark, no foe next to it, slips out of sight. */
+  shadowStealth(u) {
+    if (!u.shadowy || !u.alive || u.hidden || !this.dim(u.x, u.z)) return;
+    if (this.enemiesOf(u).some((h) => h.alive && gridDistance(h, u) <= 1)) return;
+    u.hidden = SHADOW_DC;
+    this.emit('shadowHide', { unit: u });
   }
 
   /**
@@ -1052,6 +1078,12 @@ export class Game extends Spellcasting {
 
   // --- damage & healing -----------------------------------------------------
   applyDamage(target, amount, source) {
+    // Rules 11: radiant spells burn a shadow twice over (a weapon's radiant is doubled in attack).
+    if (this.rules >= 11 && target.vulnerable === 'radiant' && amount > 0 && !this.blow
+      && Object.values(SPELLS).some((sp) => sp.radiant && sp.name === this.cause)) {
+      this.emit('vulnerable', { unit: target, extra: amount });
+      amount *= 2;
+    }
     this.alert(target, 'hurt');
     if (target.lurks && amount > 0) target.stirred = true;
     const before = target.hp;
@@ -1338,11 +1370,13 @@ export class Game extends Spellcasting {
   moveCost(unit = null) {
     const water = this.grid.water;
     const rough = this.rules >= 10 ? this.roughTiles() : null;
-    if ((!this.ice?.length && !water.size && !rough?.size) || unit?.flies) return null;
+    const high = this.high?.size ? this.high : null; // rules 11: climbing onto a ledge costs a tile more
+    if ((!this.ice?.length && !water.size && !rough?.size && !high) || unit?.flies) return null;
     const icy = this.icyTiles();
-    return (x, z) => {
+    return (x, z, fx, fz) => {
       const k = key(x, z);
-      return icy.has(k) || water.has(k) || rough?.has(k) ? 2 : 1;
+      const climb = high?.has(k) && fx !== undefined && !high.has(key(fx, fz)) ? 1 : 0;
+      return (icy.has(k) || water.has(k) || rough?.has(k) ? 2 : 1) + climb;
     };
   }
 
@@ -1991,8 +2025,20 @@ export class Game extends Spellcasting {
     if (this.has(attacker, 'pit') && !this.has(target, 'pit')) dis.push('in a pit');
     if (this.has(target, 'pit') && gridDistance(attacker, target) > 1) dis.push('target in a pit');
     if (this.sandstorm && this.sandstorm === this.round && attack.reach > 1 && gridDistance(attacker, target) > 1) dis.push('sandstorm');
+    if (this.high?.size && attack.reach > 1 && gridDistance(attacker, target) > 1
+      && this.high.has(key(attacker.x, attacker.z)) && !this.high.has(key(target.x, target.z))) adv.push('high ground');
     const mode = adv.length && !dis.length ? 'adv' : dis.length && !adv.length ? 'dis' : 'normal';
     return { adv, dis, mode };
+  }
+
+  /**
+   * Rules 11: the ally of `target` whose Protection (a fighting style) can take its reaction to
+   * put `attacker`'s attack at disadvantage: next to the target, up and able, and seeing the attacker.
+   */
+  protector(attacker, target) {
+    return this.alliesOf(target).find((h) => h.passives.includes('protection') && !h.reactionUsed && h.hp > 0
+      && gridDistance(h, target) <= 1 && !['paralyzed', 'stunned', 'petrified', 'engulfed', 'pit'].some((c) => this.has(h, c))
+      && this.inSight(h, attacker)) ?? null;
   }
 
   rollD20(mode) {
@@ -2154,6 +2200,13 @@ export class Game extends Spellcasting {
     if (problem) return { ok: false, reason: problem };
 
     const mods = this.attackMods(attacker, target, attack, { opportunity, ambush });
+    // Rules 11: Protection, an ally's reaction, puts the attack at disadvantage.
+    const guard = this.rules >= 11 && !mods.dis.length ? this.protector(attacker, target) : null;
+    if (guard) {
+      guard.reactionUsed = true;
+      mods.dis.push(`${guard.name}’s Protection`);
+      mods.mode = mods.adv.length ? 'normal' : 'dis';
+    }
     this.useHelp(attacker, target);
     this.reveal(attacker, 'attack');
     let bonus = null; // a bonus-action strike: 'flurry' | 'martial' | 'frenzy'
@@ -2223,10 +2276,21 @@ export class Game extends Spellcasting {
     let colossus = null;
     let strike = null;
     let charge = null;
+    let martial = null;
     if (hit && attack.damage) { // a web hits for no damage: only its rider matters
       // A swarm's bites thin out once it's down to half its HP (SRD swarm of rats).
       const weak = attack.weak && this.rules >= 8 && attacker.hp <= attacker.maxHp / 2;
       damageRoll = rollExpr(weak ? attack.weak : attack.damage, { crit, rng: this.rng });
+      // Rules 11: Great Weapon Fighting rerolls a melee weapon's 1s and 2s once.
+      if (this.rules >= 11 && isMelee(attack) && attacker.passives.includes('greatWeapon')) {
+        const { sides } = parseDice(attack.damage);
+        const low = damageRoll.rolls.filter((r) => r <= 2).length;
+        if (low) {
+          damageRoll.rerolled = low;
+          damageRoll.rolls = damageRoll.rolls.map((r) => (r <= 2 ? rollDice(1, sides, this.rng).total : r));
+          damageRoll.total = damageRoll.rolls.reduce((a, b) => a + b, 0) + damageRoll.bonus;
+        }
+      }
       damage = Math.max(1, damageRoll.total + this.damageBonus(attacker, attack));
       if (this.canSneak(attacker, target, mods)) {
         attacker.sneakUsed = true;
@@ -2257,6 +2321,12 @@ export class Game extends Spellcasting {
         charge = rollExpr(attack.charge.damage, { crit, rng: this.rng });
         damage += charge.total;
       }
+      // Rules 11: Martial Advantage (a hobgoblin): +2d6 once a turn with an ally of its next to the target.
+      if (attacker.martial && this.rules >= 11 && !attacker.martialUsed && this.allyNextTo(attacker, target)) {
+        attacker.martialUsed = true;
+        martial = rollExpr(attacker.martial, { crit, rng: this.rng });
+        damage += martial.total;
+      }
     }
 
     // Rage: half damage from weapon attacks.
@@ -2264,6 +2334,17 @@ export class Game extends Spellcasting {
     if (hit && damage && (target.raging || (target.swarm && this.rules >= 8)) && isWeapon(attack)) { // a swarm shrugs off blades too
       resisted = true;
       damage = Math.floor(damage / 2);
+    }
+    // Rules 11: a shadow takes half damage from weapons that aren't magic, and double radiant.
+    let shade = null;
+    if (this.rules >= 11 && hit && damage && (target.mundaneResist || target.vulnerable === 'radiant')) {
+      const radiant = (smite?.total ?? 0) + (strike?.total ?? 0);
+      const halved = !!target.mundaneResist && isWeapon(attack) && !(attacker.weaponBonus > 0) && !attack.weapon;
+      const burned = target.vulnerable === 'radiant' && radiant > 0;
+      if (halved || burned) {
+        damage = (halved ? Math.floor((damage - radiant) / 2) : damage - radiant) + radiant * (burned ? 2 : 1);
+        shade = { halved, burned };
+      }
     }
     // Deflect Missiles: a monk's reaction takes 1d10 + DEX + level off a ranged weapon hit.
     let deflect = null;
@@ -2285,6 +2366,7 @@ export class Game extends Spellcasting {
       d20, rolls, mods, toHit, total, ac: this.acOf(target) + cover, cover,
       hit, crit, fumble, shielded, inspired, cutting, damage, damageRoll, sneak, smite, mark, colossus, strike, uncanny, rider: null, rebuke: null, barbs: null,
       bonus, resisted, deflect, stun: null, topple: null, charge, knock: null, thrown: null,
+      ...(guard && { guard }), ...(martial && { martial }), ...(shade && { shade }),
     };
     this.emit('attack', result);
     if (shielded) {
@@ -2300,6 +2382,15 @@ export class Game extends Spellcasting {
       if (this.rules >= 6 && damage && target.splits && target.alive && attack.reach === 1 && isWeapon(attack)) result.split = this.split(target);
       result.rider = this.applyRider(attacker, target, attack.rider);
       if (result.rider) this.emit('rider', result);
+      // Rules 11: a shadow's touch drains Strength for the rest of the fight (never below 1).
+      if (attack.drain && this.rules >= 11 && target.alive && target.stats?.[attack.drain.stat] > 1) {
+        const { stat } = attack.drain;
+        const roll = rollExpr(attack.drain.dice, { rng: this.rng });
+        const from = target.stats[stat];
+        target.stats[stat] = Math.max(1, from - roll.total);
+        result.drain = { stat, roll, from, to: target.stats[stat] };
+        this.emit('drain', result);
+      }
       // A charge's gore knocks the target down unless it makes a STR save.
       if (charge && target.alive && !this.has(target, 'prone')) {
         result.knock = this.monkSave(target, 'str', attack.charge.dc, 'prone');
@@ -3162,6 +3253,10 @@ export class Game extends Spellcasting {
     if (crash) return crash;
     if (fall && target.flies) return { why: `${target.name} would only fly` };
     if (fall && target.surefooted) return { why: `${target.name} won’t be pushed off the edge` };
+    // Rules 11: off a ledge, a fall to the floor below it.
+    if (this.rules >= 11 && !fall && !target.flies && this.high.has(key(target.x, target.z)) && !this.high.has(key(x, z))) {
+      return { x, z, fall: false, drop: true };
+    }
     return { x, z, fall };
   }
 
@@ -3229,7 +3324,7 @@ export class Game extends Spellcasting {
     const resist = { d20: b, bonus: resistBonus, total: b + resistBonus };
     const result = { ok: true, kind: 'shove', attacker, target, roll, resist, success: roll.total > resist.total };
     const to = push && result.success ? this.pushTo(attacker, target) : null;
-    if (to) result.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }), ...(to.crash && { crash: true }) };
+    if (to) result.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }), ...(to.crash && { crash: true }), ...(to.drop && { drop: true }) };
     this.emit('shove', result);
     this.alert(target, 'hurt');
     if (to) this.pushed(target, attacker, to, result.push);
@@ -3246,6 +3341,7 @@ export class Game extends Spellcasting {
     if (target.grappling && gridDistance(target, target.grappling) > 1) this.letGo(target, 'pushed');
     if (target.grappledBy && !this.held(target)) this.letGo(target.grappledBy, 'pushed');
     if (to.fall) this.fall(target, by);
+    else if (to.drop) out.tumble = this.tumble(target, by, 'ledge');
     else if (to.tumble) {
       if (to.crash) this.breakCrack(to.tumble);
       out.tumble = this.tumble(target, by, !!to.crash);
@@ -3254,11 +3350,12 @@ export class Game extends Spellcasting {
   }
 
   /** Rules 5: down a flight of stone steps (rules 6: or through cracked floor): 1d6 bludgeoning, and prone at the bottom. */
-  tumble(target, by, through = false) {
+  tumble(target, by, through = false) { // through: true (cracked floor) or 'ledge' (rules 11)
     const roll = rollExpr(TUMBLE_DAMAGE, { rng: this.rng });
-    this.cause = through ? 'a fall through the floor' : 'a fall down the stairs';
+    const ledge = through === 'ledge';
+    this.cause = ledge ? 'a fall from a ledge' : through ? 'a fall through the floor' : 'a fall down the stairs';
     this.via = 'fall';
-    const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0), ...(through && { through: true }) };
+    const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0), ...(through === true && { through: true }), ...(ledge && { ledge: true }) };
     target.tumbled = (target.tumbled ?? 0) + 1; // for play stats; no dice
     this.emit('tumble', result);
     this.applyDamage(target, roll.total, by);
@@ -3296,7 +3393,7 @@ export class Game extends Spellcasting {
         return out;
       }
     }
-    out.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }), ...(to.crash && { crash: true }) };
+    out.push = { from: { x: target.x, z: target.z }, to: { x: to.x, z: to.z }, fall: to.fall, burn: null, ...(to.tumble && { stair: to.tumble }), ...(to.crash && { crash: true }), ...(to.drop && { drop: true }) };
     this.pushed(target, attacker, to, out.push);
     return out;
   }

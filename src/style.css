@@ -1432,6 +1432,9 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
 :is(.pack-item, .hero-pick) .give button small { display: block; font-size: 11px; color: var(--muted); line-height: 1.3; }
 .hero-pick { margin-top: 6px; padding-top: 4px; border-top: 1px dashed rgba(217, 180, 90, 0.35); }
 .hero-pick .give-label { color: var(--gold); }
+.hero-style .give { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hero-style .give button[aria-pressed="true"] { border-color: var(--gold); background: rgba(217, 180, 90, 0.16); }
+.hero-style .give button[aria-pressed="false"] b { font-weight: 500; }
 .hero-pick .give-label span { color: var(--muted); }
 .hero-pick .own { font-size: 10.5px; font-weight: 400; color: var(--muted); border: 1px solid currentColor; border-radius: 6px; padding: 0 4px; margin-left: 3px; }
 

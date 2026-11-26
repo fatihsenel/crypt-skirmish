@@ -8,6 +8,7 @@ import { buildModel } from './models.js';
 import { buildGltfModel } from './gltfModels.js';
 import { sfx } from '../audio/sfx.js';
 import { voices } from '../audio/voices.js';
+import { liftAt } from './board.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeIn = (t) => t * t * t;
@@ -67,9 +68,13 @@ export class UnitView {
     this.group.userData.unitId = unit.id;
     this.group.position.set(unit.x, 0, unit.z);
 
+    // `raise` lifts the figure onto a ledge (rules 11); `group` itself drops it into pits and chasms.
+    this.raise = new THREE.Group();
+    this.raise.position.y = liftAt(unit.x, unit.z);
+    this.group.add(this.raise);
     this.base = buildBase(unit);
     this.marker = buildMarker();
-    this.group.add(this.base, this.marker);
+    this.raise.add(this.base, this.marker);
 
     // `figure` turns to face targets; `model.root` sits on top of the base.
     this.figure = new THREE.Group();
@@ -82,7 +87,7 @@ export class UnitView {
     this.tilt.add(this.model.root);
     this.figure.add(this.tilt);
     this.prone = false;
-    this.group.add(this.figure);
+    this.raise.add(this.figure);
     this.figure.rotation.y = unit.team === 'heroes' ? Math.PI / 4 : -Math.PI * 0.75;
 
     // animation state
@@ -99,7 +104,7 @@ export class UnitView {
     el.querySelector('.name').textContent = unit.name;
     this.label = new CSS2DObject(el);
     this.label.position.y = this.model.height + 0.2;
-    this.group.add(this.label);
+    this.raise.add(this.label);
     this.updateHp();
     if (unit.corpse) this.layDead();
   }
@@ -263,6 +268,11 @@ export class UnitView {
 
   // --- per-frame animation ----------------------------------------------------
   animate(t, dt) {
+    const lift = liftAt(this.group.position.x, this.group.position.z);
+    if (this.raise.position.y !== lift) {
+      const y = this.raise.position.y + (lift - this.raise.position.y) * Math.min(1, dt * 16);
+      this.raise.position.y = Math.abs(lift - y) < 0.004 ? lift : y;
+    }
     if (this.marker.visible) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 4);
       this.marker.userData.halo.scale.setScalar(1 + pulse * 0.12);

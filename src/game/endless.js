@@ -35,8 +35,10 @@ const BOSS_XP = { b: 200, n: 450, w: 700, q: 1100, l: 3000, v: 3900 };
  * (rules 7) does the same with a gelatinous cube from floor 5 (`cubeIn`), and generation 7
  * (rules 8) now and then makes a skeleton a zombie and a giant rat a swarm of rats (`restlessIn`);
  * generation 8 (rules 9) a skeleton, from floor 3, a cult fanatic who calls up more (`cultIn`).
+ * Generation 9 (rules 11) now and then makes a giant rat a kobold, an orc a hobgoblin and, from
+ * floor 3, a ghoul a shadow, whose chamber goes dark (`rankIn`).
  */
-export const GEN = 8;
+export const GEN = 9;
 const POOL_TWO = [['a', 450, 4], ['z', 700, 5]];
 const BOSSES_TWO = [...BOSSES, 'v'];
 
@@ -208,6 +210,7 @@ export function makeFloor(seed, floor, gen = 1) {
   if (gen >= 6) cubeIn(grid, seed, floor);
   if (gen >= 7) restlessIn(grid, seed, floor);
   if (gen >= 8) cultIn(grid, seed, floor);
+  const dark = gen >= 9 ? rankIn(grid, seed, floor, cells) : [];
 
   // Chests (potions, and gear now and then) and a few hidden traps away from the start.
   const loot = [];
@@ -232,6 +235,7 @@ export function makeFloor(seed, floor, gen = 1) {
     rows: grid.map((row) => row.join('')),
     loot,
     asleep,
+    ...(dark.length && { dark }),
   };
 }
 
@@ -287,6 +291,28 @@ function cultIn(grid, seed, floor) {
   if (!spots.length) return;
   const [x, z] = spots[Math.floor(crng() * spots.length)];
   grid[z][x] = 'f';
+}
+
+/**
+ * Generation 9: about one floor in three each, a giant rat is a kobold and an orc a hobgoblin,
+ * and from floor 3 a ghoul is a shadow, its chamber unlit. Its own dice, so a floor without any
+ * is its generation 8 floor. Returns the dark chambers ([x0, z0, x1, z1] each).
+ */
+function rankIn(grid, seed, floor, cells) {
+  const rrng = seeded(hash(`endless ${seed} ${floor} ranks`));
+  const dark = [];
+  for (const [from, to, first] of [['r', 'Y', 1], ['o', 'H', 1], ['u', 'p', 3]]) {
+    if (rrng() >= 0.35 || floor < first) continue;
+    const spots = [];
+    grid.forEach((row, z) => row.forEach((ch, x) => { if (ch === from) spots.push([x, z]); }));
+    if (!spots.length) continue;
+    const [x, z] = spots[Math.floor(rrng() * spots.length)];
+    grid[z][x] = to;
+    if (to !== 'p') continue;
+    const c = cells.find((cell) => x >= cell.x0 && x <= cell.x1 && z >= cell.z0 && z <= cell.z1);
+    if (c) dark.push([c.x0, c.z0, c.x1, c.z1]);
+  }
+  return dark;
 }
 
 /**

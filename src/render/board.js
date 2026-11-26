@@ -17,6 +17,12 @@ const hash = (x, z, salt = 0) => {
 // Low walls keep figures behind them visible from the isometric angle.
 const WALL_HEIGHT = 0.55;
 
+// Rules 11: raised ledges (`grid.high`) stand this much over the floor; overlays and figures on
+// them are lifted by `liftAt`.
+export const LEDGE = 0.2;
+let ledges = new Set();
+export const liftAt = (x, z) => (ledges.has(key(Math.round(x), Math.round(z))) ? LEDGE : 0);
+
 /** A reusable set of flat tile overlays sharing one material. */
 class TileLayer {
   constructor(parent, material, size = 0.9, y = 0.012) {
@@ -36,7 +42,7 @@ class TileLayer {
         this.parent.add(m);
         this.meshes.push(m);
       }
-      m.position.set(t.x, this.y, t.z);
+      m.position.set(t.x, this.y + liftAt(t.x, t.z), t.z);
       m.visible = true;
     });
     for (let i = tiles.length; i < this.meshes.length; i++) this.meshes[i].visible = false;
@@ -47,6 +53,7 @@ class TileLayer {
   }
 }
 
+const LEDGE_GEO = new THREE.BoxGeometry(0.99, LEDGE, 0.99);
 const matCache = new Map();
 const mat = (color, opts = {}) => {
   const k = `${color}|${JSON.stringify(opts)}`;
@@ -271,6 +278,17 @@ export class Board {
           this.addToCell(x, z, tile);
         }
       }
+    }
+
+    // Rules 11: a raised ledge, a block of dressed stone over the floor.
+    ledges = new Set(grid.high ?? []);
+    for (const k of ledges) {
+      const [x, z] = k.split(',').map(Number);
+      const block = new THREE.Mesh(LEDGE_GEO, mat(0x5e554c, { roughness: 0.92 }));
+      block.position.set(x, LEDGE / 2, z);
+      block.castShadow = block.receiveShadow = true;
+      this.group.add(block);
+      this.addToCell(x, z, block);
     }
 
     // Shallow water: a dark, glossy sheet just over the floor.

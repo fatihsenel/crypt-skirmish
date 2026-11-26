@@ -7,7 +7,7 @@ import { Game, ELITE_TRAITS, RULES } from './game/combat.js';
 import { LEVELS } from './game/maps.js';
 import { Grid } from './game/grid.js';
 import {
-  NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, choosePick, settlePicks, serialize,
+  NODES, DIFFICULTIES, newCampaign, completeFight, takeRest, equip, unequip, choosePick, chooseStyle, settlePicks, serialize,
   choices, START_NODE, runDifficulty, newGamePlus, fightRelics, takeEvent, eventProblem, easeRun,
 } from './game/campaign.js';
 import { Heirlooms } from './ui/heirlooms.js';
@@ -125,7 +125,7 @@ let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, 
 const $loading = document.getElementById('loading');
 let undoState = null; // { undo, unit }: the last move, while it can still be taken back (see undoMove)
 let fightTicket = 0; // the latest fight asked for while its figures were loading
-const roomFiles = (id, party) => filesForRoom(levelOf(id).rows, party);
+const roomFiles = (id, party) => filesForRoom(levelOf(id).rows, party, levelOf(id));
 
 /** Save the campaign together with the fight in progress. */
 function saveFight() {
@@ -196,6 +196,12 @@ Object.assign(later, {
   onPick: (code, level, stat) => {
     sfx.levelUp();
     campaign = choosePick(campaign, code, level, stat);
+    writeSave(campaign);
+    camp.show(campaign);
+  },
+  onStyle: (code, style) => {
+    sfx.ui();
+    campaign = chooseStyle(campaign, code, style);
     writeSave(campaign);
     camp.show(campaign);
   },
@@ -921,8 +927,13 @@ function startFight(resume, watch = null) {
   game.on('attack', (r) => {
     // The player is about to throw this one: the log waits until the die lands.
     if (throwsOwn(r)) hud.holdLog();
+    if (r.guard) hud.logGuard(r); // rules 11: Protection
     hud.logAttack(r);
   });
+  // Rules 11: a shadow's touch, radiant on a shadow, and a shadow slipping back into the dark.
+  game.on('drain', (r) => hud.logDrain(r));
+  game.on('vulnerable', (r) => { if (!unseen(r.unit)) hud.logVulnerable(r); });
+  game.on('shadowHide', (r) => { if (!unseen(r.unit)) hud.logShadowHide(r); });
   game.on('spell', (r) => {
     if (unseen(r.caster)) hud.log('You hear chanting somewhere in the dark…', 'sys');
     else hud.logSpell(r);
@@ -1012,7 +1023,7 @@ function startFight(resume, watch = null) {
   game.on('rider', (r) => { if (!unseen(r.target)) hud.logRider(r); });
   game.on('technique', (r) => { if (!unseen(r.target)) hud.logTechnique(r); });
   game.on('shove', (r) => hud.logShove(r));
-  game.on('tumble', (r) => { if (unseen(r.unit)) hud.log(r.through ? 'Stone gives way somewhere in the dark.' : 'Something tumbles down the stairs in the dark.', 'sys'); else hud.logTumble(r); });
+  game.on('tumble', (r) => { if (unseen(r.unit)) hud.log(r.through ? 'Stone gives way somewhere in the dark.' : r.ledge ? 'Something falls in the dark.' : 'Something tumbles down the stairs in the dark.', 'sys'); else hud.logTumble(r); });
   game.on('throw', (r) => hud.logThrow(r));
   game.on('help', (r) => hud.logHelp(r));
   game.on('feed', (r) => hud.logFeed(r));

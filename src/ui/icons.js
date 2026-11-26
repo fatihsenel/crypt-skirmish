@@ -146,6 +146,16 @@ const ICONS = {
   f: svg(`<path stroke="none" d="M12 2 5.5 13.5c-.8 1.4-1 3-.5 4.5L6 21h12l1-3c.5-1.5.3-3.1-.5-4.5z"/>
     <path stroke="none" fill="var(--icon-hole)" d="M12 9.5c-2 0-3.3 1.6-3.3 3.6 0 1.2.5 2.2 1.2 2.9h4.2c.7-.7 1.2-1.7 1.2-2.9 0-2-1.3-3.6-3.3-3.6z"/>
     <circle cx="10.7" cy="13" r=".7" stroke="none"/><circle cx="13.3" cy="13" r=".7" stroke="none"/>`),
+  // rules 11: the shadow, a wisp with two pale eyes
+  p: svg(`<path stroke="none" d="M12 2.5c-4 0-6.5 3.2-6.5 7.2v6.8c0 1.5.7 3 1.8 4l1.3-2 1.4 2.5 2-2.5 2 2.5 1.4-2.5 1.3 2c1.1-1 1.8-2.5 1.8-4V9.7c0-4-2.5-7.2-6.5-7.2z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M8.6 9.5c.9-.4 2-.2 2.4.6-.9.6-2 .4-2.4-.6zm6.8 0c-.9-.4-2-.2-2.4.6.9.6 2 .4 2.4-.6z"/>`),
+  // the hobgoblin: a crested helm over a grim face
+  H: svg(`<path stroke="none" d="M12 1.5l1.6 3h-3.2z"/>
+    <path stroke="none" d="M12 4.5c-4.1 0-7 3-7 7v3.2l2 1.3V21h10v-5l2-1.3v-3.2c0-4-2.9-7-7-7z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M6.8 10.5h10.4v1.6H6.8zM11.2 12.1h1.6V17h-1.6z"/>`),
+  // the kobold: a small horned, snouted head
+  Y: svg(`<path stroke="none" d="M7 2.5l2.3 4.2L12 6l2.7.7L17 2.5l.3 5.6c1.4 1.3 2.2 3 2.2 4.9 0 1.2-.3 2.3-.9 3.3l1.9 3.2-4.2-.7c-1.3 1-2.8 1.7-4.3 1.7s-3-.7-4.3-1.7l-4.2.7 1.9-3.2c-.6-1-.9-2.1-.9-3.3 0-1.9.8-3.6 2.2-4.9z"/>
+    <path fill="var(--icon-hole)" stroke="none" d="M8.4 11.4l2.4.8-.4 1.1zm7.2 0-2.4.8.4 1.1zM10.4 16.6h3.2l-.6.9h-2z"/>`),
   // the gelatinous cube: a see-through block with a skull caught inside
   i: svg(`<path fill="none" stroke-width="1.6" stroke-linejoin="round" d="M4 8.5L12 5l8 3.5v9L12 21l-8-3.5z"/>
     <path fill="none" stroke-width="1.1" opacity=".6" d="M4 8.5l8 3.5 8-3.5M12 12v9"/>

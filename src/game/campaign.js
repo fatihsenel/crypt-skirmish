@@ -4,6 +4,7 @@
 
 import {
   TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf, asiLevels, asiDefault, cleanPick, ABILITY_NAMES,
+  applyStyle, styleOf, STYLE_CLASSES, FIGHTING_STYLES,
 } from './units.js';
 import { ITEMS, applyItems, relicFrom, cleanRelics, readsScroll } from './items.js';
 import { abilityMod } from './dice.js';
@@ -283,6 +284,7 @@ export function heroUnit(code, rec) {
   u.slot = code;
   applyLevel(u, rec.level, rec.picks);
   applyItems(u, rec.items);
+  applyStyle(u, rec.style); // rules 11: a Fighter's or Paladin's fighting style
   for (const f of ['hp', 'alive', 'slots', 'potions', 'layOnHands', 'flasks', 'caltrops', 'scrolls']) if (rec[f] !== undefined) u[f] = structuredClone(rec[f]);
   u.hp = Math.min(u.hp, u.maxHp);
   if (rec.name) u.name = rec.name;
@@ -671,6 +673,25 @@ export function unequip(prev, code, i) {
   return state;
 }
 
+/** Keep a party record's fighting style only for a class that takes one, and one that exists. */
+export function cleanStyle(code, r) {
+  if (r.style !== undefined && (!STYLE_CLASSES[classOf(code, r)] || !Object.hasOwn(FIGHTING_STYLES, r.style))) delete r.style;
+  return r;
+}
+
+/** Rules 11: the fighting style hero `code` fights with (null: their class takes none). */
+export const heroStyle = (state, code) => styleOf(classOf(code, state.party[code]), state.party[code].style);
+
+/** Hero `code` (a Fighter or a Paladin) takes up fighting style `style`, at camp, between fights. */
+export function chooseStyle(prev, code, style) {
+  const rec = prev.party[code];
+  if (!rec || !STYLE_CLASSES[classOf(code, rec)] || !Object.hasOwn(FIGHTING_STYLES, style) || heroStyle(prev, code) === style) return prev;
+  const state = clone(prev);
+  state.party[code].style = style;
+  keepWounds(prev, state, code);
+  return state;
+}
+
 /** Keep a party record's ability picks only where they're real: an increase level of its class, an ability. */
 export function cleanPicks(code, r) {
   const levels = asiLevels(classOf(code, r));
@@ -788,6 +809,7 @@ export function parseSave(text) {
       if (r.name !== undefined && (typeof r.name !== 'string' || !r.name || cleanName(r.name) !== r.name)) delete r.name;
       if (r.cls !== undefined && (r.cls === code || !CLASS_CHOICES[code].includes(r.cls))) delete r.cls;
       cleanPicks(code, r);
+      cleanStyle(code, r);
       const rested = restedHero(code, r);
       // A save from before a class lost hit points (the Ranger's 28 → 24) keeps no extra HP.
       r.hp = Math.min(r.hp, rested.maxHp);
