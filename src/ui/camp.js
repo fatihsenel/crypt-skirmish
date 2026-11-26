@@ -79,8 +79,8 @@ function focusKey(el) {
 const nameLabel = (cls) => `${TEMPLATES[cls].cls}’s name (${TEMPLATES[cls].name} if left blank)`;
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle, onCoop }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle, onCoop };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -106,6 +106,7 @@ export class Camp {
       if (b?.id === 'title-continue') this.h.onContinue();
       if (b?.id === 'title-ngplus') this.h.onNewGamePlus(b);
       if (b?.id === 'title-endless') this.h.onEndless();
+      if (b?.id === 'title-coop') this.h.onCoop(b);
       if (b?.id === 'title-daily-play') this.h.onDaily();
       if (b?.id === 'title-weekly-play') this.h.onWeekly();
       if (b?.dataset.best) {

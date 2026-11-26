@@ -22,5 +22,20 @@ name = "EVENTS"
 namespace_id = "1002"
 simple = { limit = 30, period = 60 }
 
+# Co-op rooms (src/room.js): one Durable Object per room code, on SQLite storage.
+[[durable_objects.bindings]]
+name = "COOP"
+class_name = "CoopRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CoopRoom"]
+
+# Joining a co-op room: at most 20 sockets a minute from one address (reconnects included).
+[[ratelimits]]
+name = "ROOMS"
+namespace_id = "1003"
+simple = { limit = 20, period = 60 }
+
 [triggers]
 crons = ["17 3 * * *"]

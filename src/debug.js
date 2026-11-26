@@ -69,6 +69,11 @@ export function installDebug(app) {
     /** Jump into a room with a fresh party (no save), e.g. __debug.level(4). */
     level: app.level,
     campaign: app.campaign,
+    /** The co-op fight ({ link, log, at, … }) and whether input is locked, for scripted co-op tests. */
+    coop: app.coop,
+    lobby: app.lobby,
+    busy: app.busy,
+    fightCheck: app.fightCheck,
     win: () => felled(app, 'monsters'),
     /** Lift the fog of war until the next fight (for screenshots). */
     reveal: app.reveal,

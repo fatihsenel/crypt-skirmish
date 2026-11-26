@@ -57,6 +57,8 @@ import { track, setStats, runEvent, abandonEvent, continueEvent, leftEvent, take
 import { replayRate as barRate, replayGate as barGate, replayLabel as barLabel, replayPlay as barPlay, replaySpeed } from './ui/replayBar.js';
 import { dayKey, dailyPlan, dailyCampaign, partyAt, loadDaily } from './game/daily.js';
 import { weekKey, weeklyPlan, weeklyCampaign } from './game/weekly.js';
+import { CoopLobby, fightFrom } from './ui/coop.js';
+import { HERO_SLOTS } from './coop.js';
 
 // All levels share one size, so the stage is set up once.
 const stage = createStage(document.getElementById('stage'), {
@@ -117,6 +119,13 @@ let testSeed = new URLSearchParams(location.search).has('level') && new URLSearc
   ? Number(new URLSearchParams(location.search).get('seed')) >>> 0 : null;
 /** A linked fight being played yourself ({ rec, theirs }: the link's record and how it went), else null. */
 let challenge = null;
+/**
+ * A co-op fight (Play together, ui/coop.js), else null: { link, game, fight, log, at, turn,
+ * remote, gone }. `log` is the commands applied here, `at` the next place in the relay's log,
+ * `turn` the hero turn being timed ({ unit, since }), `remote` the hero whose commands are being
+ * played from the relay, `gone` when each player who dropped out went.
+ */
+let coop = null;
 /** What this fight's attacks did, for achievements: the biggest hit and sneak attacks landed. */
 let feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false, edge: false, caught: false };
 
@@ -146,6 +155,7 @@ const hud = new Hud({
       return backToTitle();
     }
     sfx.ui();
+    if (coop) return coop.link.host && coop.link.send({ t: 'start', fight: fightFrom(coop.link.room?.draft) }); // Play again
     if (daily || challenge) newGame(); // the daily or the linked fight again, from the same seed
     else if (game?.over === 'victory') startCampaign(); // after the final room
     else newGame(); // retry this room with the party as it entered
@@ -163,6 +173,7 @@ const hud = new Hud({
   },
   onNext: () => leaveRoom(),
   onMap: () => {
+    if (coop) return coop.link.host ? coop.link.send({ t: 'lobby' }) : lobby.leave(); // the lobby, or out of the room
     if (daily || challenge || (campaign?.endless && game?.over === 'defeat')) return backToTitle(); // a dive ends where it falls
     sfx.ui();
     showCamp(null);
@@ -211,6 +222,7 @@ Object.assign(later, {
     shop.open(opener);
   },
   onEndless: () => startEndless(),
+  onCoop: (button) => lobby.show(button),
   onEndDive: () => endDive(),
   onNewCampaign: (difficulty, names, classes) => startCampaign(difficulty, names, classes),
   onDaily: () => startDaily(),
@@ -376,6 +388,10 @@ function startChallenge(rec, theirs) {
 /** From a daily crypt back to the title screen, with the empty dungeon behind it. */
 function backToTitle() {
   sfx.ui();
+  if (coop) { // out of the room too
+    coop = null;
+    lobby.leave(true);
+  }
   ++fightTicket;
   for (const id of [...spiritWeapons.keys()]) clearSpiritWeapon(id);
   clearOwls();
@@ -804,7 +820,8 @@ const anim = createAnimations({
   stage, hud, settings, spiritWeapons, owls, view, addView, unseen, inView, flushReveals, syncStatus, keepInView,
   game: () => game, board: () => board, selected: () => selected, busy: () => busy, touching: () => controls.touching,
   lastBlow: (at) => lastBlow(at), stairCamera: (step, unit, ms) => stairCamera(step, unit, ms), views: () => views,
-  autoplaying: () => debugAutoplay, replaying: () => !!replay,
+  // A friend's hero in co-op is played like a replay: no throwing their dice for them.
+  autoplaying: () => debugAutoplay, replaying: () => !!replay || (!!coop && !!game?.current && !coopMine(game.current)),
 });
 const { play, damageReaction, throwsOwn } = anim;
 
@@ -850,7 +867,7 @@ function startFight(resume, watch = null) {
   const level = levelOf(nodeId);
   // A daily always starts from the day's seed, so every try (and everyone) faces the same dice.
   // A linked fight played yourself starts from the link's seed: the same dice it had.
-  const seed = watch?.seed ?? resume?.seed ?? daily?.seed ?? challenge?.rec.seed ?? testSeed ?? newSeed();
+  const seed = watch?.seed ?? resume?.seed ?? daily?.seed ?? challenge?.rec.seed ?? coop?.fight.seed ?? testSeed ?? newSeed();
   testSeed = null; // ?level=N&seed=S fixes the first fight's dice only
   const party = watch?.party ?? campaign.party;
   const difficulty = watch?.difficulty ?? campaign.difficulty;
@@ -858,11 +875,11 @@ function startFight(resume, watch = null) {
   // A saved fight keeps the relics it began with (none for one saved before relics).
   const relics = (watch ? watch.relics : resume ? resume.relics : fightRelics(campaign)) ?? [];
   // A saved fight, replay or played link keeps the rules it began under (none: the first).
-  const from = watch ?? resume ?? challenge?.rec;
+  const from = watch ?? resume ?? challenge?.rec ?? coop?.fight;
   const rules = from ? from.rules ?? 1 : RULES;
   const ru = rules > 1 ? { rules } : {};
   game = new Game(level, { party, difficulty: runDifficulty(difficulty, tier), rng: seeded(seed), relics, rules });
-  fight = daily || challenge || watch ? null : { node: nodeId, seed, ...ru, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
+  fight = daily || challenge || watch || coop ? null : { node: nodeId, seed, ...ru, log: [], check: null, explored: [], seen: [], ...(relics.length && { relics: [...relics] }) };
   if (!watch) record = { node: nodeId, seed, ...ru, party: structuredClone(party), difficulty, ...(tier && { tier }), ...(relics.length && { relics: [...relics] }), log: resume ? [...resume.log] : [] };
   feats = { maxHit: 0, sneaks: 0, stayDown: false, held: false, coals: false, pinned: false, teamwork: false, edge: false };
   if (!watch) takeInput(); // the fight's presses count from here (play stats)
@@ -895,6 +912,12 @@ function startFight(resume, watch = null) {
     }
   });
   if (resume && !replaySaved(resume)) {
+    if (coop) { // can't happen unless the relay's log is broken: out of the room
+      game = null;
+      hud.toast('The shared fight couldn’t be rebuilt, so you left the room.');
+      lobby.leave();
+      return;
+    }
     game = null;
     record = null;
     views = new Map();
@@ -1259,9 +1282,11 @@ function startFight(resume, watch = null) {
 function replaySaved(saved) {
   try {
     const r = replayFight(game, saved.log);
-    if (!r.ok || r.check !== saved.check) return false;
-    fight.log = [...saved.log];
-    fight.check = saved.check;
+    if (!r.ok || (!saved.coop && r.check !== saved.check)) return false; // a co-op log has no check
+    if (fight) {
+      fight.log = [...saved.log];
+      fight.check = saved.check;
+    }
     return true;
   } catch (err) {
     console.warn('Saved fight did not replay:', err);
@@ -1285,7 +1310,7 @@ function restoreBoard(saved) {
 }
 
 function isHeroTurn() {
-  return game && !replay && !game.over && !camp.open && game.current?.team === 'heroes';
+  return game && !replay && !game.over && !camp.open && game.current?.team === 'heroes' && (!coop || coopMine(game.current));
 }
 
 /** The dungeon without anyone in it, behind the title screen. */
@@ -1387,6 +1412,16 @@ async function onTurnStart(unit) {
     return;
   }
   if (unit.team === 'heroes') hud.beginTurn(unit, () => false, true); // open while they act
+  if (coop && unit.team === 'heroes') {
+    await null; // the command that ended the last turn has its place in the log now (command)
+    if (game?.current !== unit) return;
+    coop.turn = { unit, since: Date.now() };
+    // A friend's hero, or commands for ours already in (sent for it while this device lagged).
+    const remote = !coopMine(unit) || coop.link.log.length > coop.at;
+    const loop = remote ? coopRemoteTurn(unit) : null; // marks the turn as played from the relay
+    coopTick(); // so its own check doesn't start a second loop
+    if (loop && !await loop) return;
+  }
   if (unit.team === 'heroes') {
     sfx.turn();
     voices.bark(unit, 'turn'); // now and then
@@ -1465,7 +1500,10 @@ async function checkGameOver() {
   const g = game;
   if (anim.lastWords(game.over)) await wait(1400); // the last word, before the banner
   if (game !== g) return true;
-  const end = settleFight({ game, nodeId, campaign, record, daily, challenge, saving, feats, store: { writeSave, clearSave, setWonRun, clearEndless } });
+  // A co-op fight leaves nothing behind on this device but the bestiary's blows.
+  const none = () => {};
+  const store = coop ? { writeSave: none, clearSave: none, setWonRun: none, clearEndless: none } : { writeSave, clearSave, setWonRun, clearEndless };
+  const end = settleFight({ game, nodeId, campaign, record, daily, challenge, saving, feats, store });
   campaign = end.campaign;
   hud.renderActionBar(game, { selected: null, busy: false });
   if (game.over === 'victory') {
@@ -1480,6 +1518,7 @@ async function checkGameOver() {
     bannerSkull('chatter');
   }
   hud.banner(game.over, end.banner);
+  if (coop) coopBanner();
   if (end.banner.ease) track('ease-offered', { room: nodeId, difficulty: campaign.difficulty });
   return true;
 }
@@ -1723,6 +1762,221 @@ async function replayHeroTurn(unit) {
   }
 }
 
+// --- co-op online (Play together): each device plays the fight from the relay's order ------
+// Our own heroes' commands apply here at once and go to the relay with their place in the log
+// (`command`); a friend's are played from the relay as they come (`coopRemoteTurn`), like a
+// replay. If the relay refuses one of ours (someone was quicker, a takeover), this device
+// rebuilds the fight from the relay's log. See src/coop.js and worker/src/room.js.
+const TURN_MS = 90_000; // a hero's turn, then it ends on its own
+const TAKEOVER_MS = 15_000; // a player gone this long: the host plays their heroes
+const GRACE_MS = 45_000; // past the turn's time: a friend ends it for a player whose device stalled
+// (wide, as each device starts the clock when it gets there: monster turns play at each one's speed)
+
+const lobby = new CoopLobby({
+  onFight: (link, room) => startCoop(link, room),
+  onLobby: () => {
+    coop = null; // keep the room: back to its lobby, the title behind it
+    backToTitle();
+  },
+  onRoom: (link, room) => coopRoom(link, room),
+  onLeave: () => { if (coop) backToTitle(); },
+  onStatus: () => coopTick(),
+  onStale: (link, msg) => coopStale(msg),
+});
+lobby.bar.addEventListener('click', () => lobby.show(lobby.bar));
+
+/** Is hero `u` played on this device (its seat is ours and the room is reachable)? */
+function coopMine(u) {
+  return coop.link.status === 'open' && coop.link.seat(u.slot) === coop.link.you;
+}
+
+/** The host started a fight (or one was running when we joined): everyone plays it from its seed. */
+function startCoop(link, room) {
+  const f = room.fight;
+  if ((f.rules ?? 1) > RULES || !levelOf(f.node)) {
+    hud.toast('The host has a newer version of the game: reload this page to play with them.');
+    lobby.show(null);
+    return;
+  }
+  if (replay) endReplay();
+  sfx.ui();
+  camp.hide();
+  $banner.hidden = true;
+  saving = false;
+  daily = null;
+  challenge = null;
+  campaign = partyAt(newCampaign(f.difficulty, {}, f.classes ?? {}), f.level);
+  nodeId = f.node;
+  coop = { link, game: room.game, fight: f, log: [], checks: [], at: 0, turn: null, remote: null, gone: new Map(), sent: 0, forced: -1 };
+  coopRoom(link, room);
+  newGame(link.log.length ? coopResume() : null);
+}
+
+/** The fight as the relay has it, to replay: the seed and every command so far. */
+function coopResume() {
+  const log = [...coop.link.log];
+  coop.log = [...log];
+  coop.checks = [];
+  coop.at = log.length;
+  coop.remote = null;
+  return { seed: coop.fight.seed, rules: coop.fight.rules ?? 1, log, coop: true, explored: board && game ? [...board.explored] : [], seen: [] };
+}
+
+/** Out of step with the relay: start the fight again from its log (drawn as a restored fight). */
+function coopRebuild() {
+  if (!coop) return;
+  coop.rebuilds = (coop.rebuilds ?? 0) + 1;
+  hud.toast('A friend’s move came first: the fight catches up.');
+  newGame(coopResume());
+  coop.link.send({ t: 'ready' }); // the relay takes our commands again
+}
+
+/** Have we applied anything the relay doesn't have (in that place)? */
+function coopAhead() {
+  const theirs = coop.link.log;
+  return coop.log.length > theirs.length || coop.log.some((c, i) => JSON.stringify(c) !== JSON.stringify(theirs[i]));
+}
+
+/** The relay refused a command of ours. */
+function coopStale(msg) {
+  if (!coop || msg.g !== coop.game) return;
+  if (coop.link.log.length < msg.at) return coop.link.resync(); // missed some: a fresh sync
+  if (coopAhead()) coopRebuild();
+  else coop.link.send({ t: 'ready' }); // a forced end that lost a race: nothing to undo here
+}
+
+/** The room changed: who's here (for takeovers), and after a reconnect, whether we're in step. */
+function coopRoom(link, room) {
+  if (!coop || room.game !== coop.game) return;
+  const now = Date.now();
+  for (const p of room.players) {
+    if (p.on) coop.gone.delete(p.id);
+    else if (!coop.gone.has(p.id)) coop.gone.set(p.id, now);
+  }
+  if (room.t === 'sync' && game && coopAhead()) coopRebuild();
+  coopTick();
+}
+
+/**
+ * A hero's turn played from the relay: a friend's, or commands for ours that came in before this
+ * device got here. True if the turn is ours to play now (the commands ran out, or it was handed
+ * to us), false once it's over.
+ */
+async function coopRemoteTurn(unit) {
+  const g = game;
+  const c = coop;
+  if (c.remote === unit) return false; // already being played
+  c.remote = unit;
+  busy = true;
+  refresh();
+  try {
+    while (game === g && coop === c && game.current === unit && !game.over) {
+      const cmd = await c.link.next(c.game, c.at, () => coopMine(unit) && c.link.log.length <= c.at);
+      if (game !== g || coop !== c || game.current !== unit) return false;
+      if (!cmd) {
+        if (!coopMine(unit)) return false; // the room was left or the fight ended
+        busy = false;
+        refresh();
+        return true;
+      }
+      c.log.push(cmd);
+      c.at++;
+      record?.log.push(cmd);
+      if (cmd.type === 'end') busy = false; // the next turn starts inside applyCommand
+      const r = applyCommand(game, cmd);
+      if (!r?.ok) {
+        coopRebuild();
+        return false;
+      }
+      c.checks[c.at - 1] = fightCheck(game);
+      if (cmd.type === 'end') return false;
+      hud.turnNote(stepNote(cmd));
+      try {
+        await play(unit, cmd.type, r);
+      } catch (err) {
+        if (game === g) console.error(err);
+      }
+      hud.releaseLog();
+      if (game !== g) return false;
+      syncStatus();
+      if (await checkGameOver()) return false;
+      if (!unit.alive) {
+        await wait(500);
+        if (game !== g) return false;
+        busy = false;
+        heroFell(game, unit);
+        return false;
+      }
+      refresh();
+    }
+    return false;
+  } finally {
+    if (c.remote === unit) c.remote = null;
+  }
+}
+
+/** Once a second in co-op: the line over the fight, the turn timer, the host's takeovers. */
+function coopTick() {
+  if (!coop) return lobby.status(null);
+  const { link } = coop;
+  const now = Date.now();
+  // The host plays the heroes of anyone gone a while (they're handed back from the lobby).
+  if (link.host && link.status === 'open' && now - coop.sent > 3000) {
+    const seats = {};
+    for (const s of HERO_SLOTS) {
+      const who = link.seat(s);
+      if (who !== link.you && !link.isOn(who) && now - (coop.gone.get(who) ?? now) > TAKEOVER_MS) seats[s] = link.you;
+    }
+    if (Object.keys(seats).length) {
+      coop.sent = now;
+      link.send({ t: 'seats', seats });
+      hud.toast('A player dropped out: you play their heroes until they’re back.');
+    }
+  }
+  const u = game?.current;
+  // A hero's turn that went elsewhere (handed away, or played for us while we were gone): play
+  // it from the relay. And one handed to us mid-turn is ours once the relay's commands run out.
+  if (u?.team === 'heroes' && link.status === 'open' && !game.over && !replay && !coop.remote && !busy
+    && (!coopMine(u) || link.log.length > coop.at)) coopRemoteTurn(u);
+  let text;
+  if (link.status !== 'open') text = 'Connection lost: trying again…';
+  else if (!game || game.over) text = `Room ${link.code}`;
+  else if (u?.team !== 'heroes') text = 'The monsters’ turn';
+  else {
+    const who = link.seat(u.slot);
+    const since = coop.turn?.unit === u ? coop.turn.since : now;
+    const left = Math.max(0, TURN_MS - (now - since));
+    const secs = Math.ceil(left / 1000);
+    const clock = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`;
+    const mine = who === link.you;
+    text = `${u.name}: ${mine ? 'your turn' : `${link.playerName(who)}’s turn${link.isOn(who) ? '' : ' (away)'}`} · ${clock}`;
+    if (mine && !left && isHeroTurn() && !busy) {
+      hud.toast(`Time’s up: ${u.name}’s turn ends.`);
+      endHeroTurn();
+    } else if (!mine && now - since > TURN_MS + GRACE_MS && coop.remote === u
+      && link.log.length === coop.at && coop.forced !== coop.at) {
+      // Their device stalled (or they walked off mid-throw): any friend ends the turn for them.
+      // The relay takes the first; the others are refused and carry on (coopStale).
+      coop.forced = coop.at;
+      link.command({ type: 'end' }, coop.at);
+    }
+  }
+  lobby.status(text);
+}
+setInterval(coopTick, 1000);
+
+/** The end banner in co-op: the host plays again or goes back to the lobby; the others can leave. */
+function coopBanner() {
+  const host = coop.link.host;
+  for (const id of ['next', 'ease', 'watch', 'ngplus']) document.getElementById(id).hidden = true;
+  const again = document.getElementById('restart');
+  again.hidden = !host;
+  again.textContent = 'Play again';
+  const out = document.getElementById('to-map');
+  out.hidden = false;
+  out.textContent = host ? 'Back to the lobby' : 'Leave the room';
+}
+
 function endHeroTurn() {
   if (!isHeroTurn() || busy) return;
   command({ type: 'end' });
@@ -1765,7 +2019,7 @@ async function heroCommand(cmd) {
     return r;
   }
   // A move that rolled nothing and showed nothing new can be taken back (the view settles first).
-  if (r.undo) {
+  if (r.undo && !coop) { // not in co-op: the friends have seen it
     await new Promise(requestAnimationFrame);
     if (game !== g) return r;
     if (board.explored.size === known.explored && seenIds.size === known.seen && game.current === u) setUndo({ undo: r.undo, unit: u });
@@ -1814,6 +2068,11 @@ function command(cmd) {
   setUndo(null); // anything else the hero does settles the move before it
   const r = applyCommand(game, cmd);
   if (r.ok) record?.log.push(cmd);
+  if (r.ok && coop) { // to the relay, for its place in the shared log
+    coop.log.push(cmd);
+    coop.checks[coop.at] = fightCheck(game); // where it left the fight, to compare devices (tests)
+    coop.link.command(cmd, coop.at++);
+  }
   if (r.ok && fight) {
     fight.log.push(cmd);
     fight.check = fightCheck(game);
@@ -1947,6 +2206,11 @@ if (levelParam >= 1 && levelParam <= LEVELS.length) {
   } else {
     const save = loadSave(); // the title is up already (boot.js)
     links.open(location.hash); // a #watch= replay or #play= challenge
+    const room = location.hash.match(/^#coop=([A-Za-z0-9]{6})$/)?.[1]; // an invite to a co-op room
+    if (room) {
+      history.replaceState(null, '', location.pathname + location.search);
+      lobby.show(null, room.toUpperCase());
+    }
     // While the title is up, once its skull is in (at most 6 s: on mobile data the two would
     // share the line and the skull would come last): the figures for the room the player is
     // most likely to enter next (the saved fight, the rooms open from the saved camp, or the
@@ -1970,6 +2234,10 @@ installDebug({
   stage,
   sfx,
   campaign: () => campaign,
+  coop: () => coop,
+  lobby: () => lobby,
+  busy: () => busy,
+  fightCheck: () => game && fightCheck(game),
   command: (cmd) => heroCommand(cmd),
   reveal() {
     revealed = true;

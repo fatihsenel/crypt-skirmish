@@ -1,0 +1,112 @@
+/* Play together (ui/coop.js), loaded with it: the lobby and the line over a co-op fight. */
+#coop .camp-head { margin-bottom: 16px; }
+#coop .coop-lead { margin: 0 0 14px; color: var(--muted); }
+#coop .coop-field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); min-width: 0; }
+#coop input { font: inherit; font-size: 16px; color: var(--ink); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--panel-edge); border-radius: 8px; padding: 8px 10px; box-sizing: border-box; min-width: 0; }
+#coop input:focus-visible, #coop select:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+#coop .coop-name input { width: min(100%, 260px); }
+#coop .coop-why { color: var(--hit); margin: 10px 0 0; }
+
+/* The way in: two doors side by side (stacked on a phone). */
+#coop .coop-doors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+#coop .coop-door { display: flex; flex-direction: column; padding: 12px 14px 14px; border: 1px solid var(--panel-edge); border-radius: 10px; background: rgba(255, 255, 255, 0.02); }
+#coop .coop-door .sub { margin-top: 0; }
+#coop .coop-door p { margin: 0 0 12px; font-size: 13px; flex: 1; }
+#coop .coop-door > button { align-self: flex-start; }
+#coop .coop-join-row { display: flex; gap: 8px; }
+#coop #coop-code { width: 10ch; flex: 1; text-transform: uppercase; letter-spacing: 0.14em; font-variant-numeric: tabular-nums; }
+
+/* The room: its code, who's here, the fight and who plays whom. */
+#coop .coop-code-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 10px 14px; border: 1px solid var(--panel-edge); border-radius: 10px; background: rgba(217, 180, 90, 0.06); }
+#coop .coop-label { display: block; font-size: 12px; color: var(--muted); }
+#coop .coop-code-big { display: block; font-size: 26px; line-height: 1.15; letter-spacing: 0.18em; color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+#coop .sub { display: flex; align-items: baseline; gap: 8px; margin-top: 16px; }
+#coop .coop-count { font: 12px system-ui, sans-serif; letter-spacing: 0; text-transform: none; color: var(--muted); opacity: 0.8; }
+#coop .coop-players { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+#coop .coop-players li { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px 4px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.05); font-weight: 600; }
+#coop .coop-players .dot { width: 8px; height: 8px; border-radius: 50%; background: #6fbf73; box-shadow: 0 0 0 2px rgba(111, 191, 115, 0.2); }
+#coop .coop-players li.away { opacity: 0.55; }
+#coop .coop-players li.away .dot { background: #8a8494; box-shadow: none; }
+#coop .tag { font-size: 12px; font-weight: 400; color: var(--muted); }
+#coop .coop-fight { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.45fr); gap: 10px; }
+/* Our own arrow: the browser's sits tight on the edge and runs over long names. */
+#coop select {
+  appearance: none; -webkit-appearance: none;
+  font: inherit; font-size: 15px; color: var(--ink);
+  background: rgba(0, 0, 0, 0.35) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1.5 1.5 6 6l4.5-4.5' fill='none' stroke='%23d9b45a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 11px center / 12px 8px;
+  border: 1px solid var(--panel-edge); border-radius: 8px; padding: 7px 32px 7px 10px;
+  width: 100%; min-width: 0; box-sizing: border-box;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+}
+#coop select:hover { border-color: color-mix(in srgb, var(--gold) 55%, var(--panel-edge)); }
+#coop option { background: rgb(26, 21, 28); color: var(--ink); }
+#coop .coop-value { font-size: 15px; color: var(--ink); padding: 7px 0; }
+#coop .coop-heroes-head { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr); gap: 10px; padding: 0 8px; }
+#coop .coop-heroes-head span:first-child { grid-column: span 2; }
+#coop .coop-heroes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#coop .coop-heroes li { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); }
+#coop .coop-heroes li.mine { background: rgba(217, 180, 90, 0.08); box-shadow: inset 3px 0 0 var(--gold); }
+#coop .coop-heroes .pic {
+  --icon-hole: color-mix(in srgb, var(--c) 45%, #141018);
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--icon-hole); color: #f6eedd; border: 1.5px solid color-mix(in srgb, var(--c) 70%, #fff 10%);
+}
+#coop .coop-heroes .pic svg { width: 20px; height: 20px; }
+#coop .coop-who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+#coop .coop-who b { flex: none; width: 4.6em; overflow: hidden; text-overflow: ellipsis; }
+#coop .coop-who select, #coop .coop-who .coop-value { flex: 1; min-width: 0; }
+#coop .coop-who .coop-value { color: var(--muted); }
+#coop .coop-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 18px; }
+#coop .coop-leave {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 14px; font-size: 14px; color: var(--muted);
+  background: transparent; border: 1px solid var(--panel-edge); border-radius: 8px;
+}
+#coop .coop-leave::before {
+  content: ''; width: 14px; height: 14px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2.5H3.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1H6M10.5 11 13.5 8l-3-3M13.5 8H6'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2.5H3.5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1H6M10.5 11 13.5 8l-3-3M13.5 8H6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+#coop .coop-leave:hover, #coop .coop-leave:focus-visible { color: var(--hp-low); border-color: color-mix(in srgb, var(--hp-low) 60%, transparent); background: color-mix(in srgb, var(--hp-low) 10%, transparent); }
+#coop .coop-foot .primary { min-width: 12em; padding-block: 10px; }
+#coop .coop-wait { margin: 0; color: var(--muted); font-style: italic; text-align: right; }
+@media (max-width: 600px) {
+  #coop .coop-doors { grid-template-columns: 1fr; }
+  #coop .coop-door > button { align-self: stretch; }
+  #coop .coop-code-big { font-size: 22px; }
+  #coop .coop-fight { grid-template-columns: minmax(0, 1fr) minmax(0, 7.5em); gap: 8px; }
+  /* One line a hero: the portrait says who, the selects say what and by whom. */
+  #coop .coop-heroes li, #coop .coop-heroes-head { grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  #coop .coop-heroes li { padding: 5px 6px; }
+  #coop .coop-heroes-head { padding: 0 6px; }
+  #coop .coop-heroes .pic { width: 30px; height: 30px; }
+  #coop .coop-heroes .pic svg { width: 17px; height: 17px; }
+  #coop .coop-who b { display: none; }
+  #coop .coop-foot { flex-direction: column-reverse; align-items: stretch; }
+  #coop .coop-wait { text-align: center; }
+  #coop .coop-leave { justify-content: center; }
+}
+
+#coop-bar {
+  position: absolute;
+  top: 60px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 5px 12px;
+  font-size: 13px;
+  color: var(--gold);
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 999px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#coop-bar[hidden] { display: none; }
+/* On a phone, to the right: the Controls toggle sits on the left under the turn order. */
+@media (max-width: 600px) {
+  #coop-bar { left: auto; right: 12px; transform: none; max-width: calc(100% - 160px); overflow: hidden; text-overflow: ellipsis; }
+}
+/* A note shown during a co-op fight goes under the turn line, not over it. */
+body:has(#coop-bar:not([hidden])) #toast { top: var(--coop-under, 104px); }

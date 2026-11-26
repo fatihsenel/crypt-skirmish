@@ -17,6 +17,8 @@ npm run touch-check    # phone taps and layout in headless Chrome (dev server on
                        # SEED=3 LATE=700 (a late lift must still be a tap) and
                        # SEED=3 SIDEWAYS=1 (the phone on its side, 812×375)
 npm run stills         # re-render the 3D emblem's stills and README shots, after changing it
+npm run coop-relay     # the co-op relay on ws://localhost:8788: the dev server's Play together
+                       # connects to it (the built game to the Worker's Durable Object)
 npm run build          # production bundle (base path /crypt-skirmish/ in vite.config.js)
 npm run size-check     # after a build: the title's code and the skull, gzipped, within budget;
                        # the deploy runs it
@@ -216,6 +218,23 @@ server on 5173.
   Uploads are limited per address (`UPLOADS` in `wrangler.toml`), unpacked to check they're a lost
   fight in the room they name (`checkCode`), and capped at `DAILY_CAP` a day.
   The Worker's tests (`tests/worker.test.js`) use a fake D1.
+- Co-op (Play together): `src/coop.js` (`CoopLink`: the socket to a room, its `log` in the
+  relay's order, `next(game, at, stop)`), `ui/coop.js` (`CoopLobby`, `fightFrom`: a fight is
+  `{ node, level, difficulty, classes, seed, rules }`) and the relay, `worker/src/room.js`
+  (`RoomCore`: players, host, `seats` by hero code, the log; a command's `at` must be the log's
+  length, else `stale`, and that player is refused until it sends `ready`; `CoopRoom` is the
+  Durable Object, `scripts/coop-relay.mjs` the same core on this machine). In `main.js`, `coop`
+  holds the fight: our heroes' commands apply at once and go out from `command` (`coop.at`), a
+  friend's are played by `coopRemoteTurn` like a replay, `coopStale` and a reconnect's sync
+  rebuild the fight from the relay's log (`coopRebuild`, a `resume` with `coop: true` that
+  `replaySaved` doesn't check), and `coopTick` runs the turn line, the 90 s turn timer (a friend's
+  device ends a turn 45 s past it, in case that device stalled) and the host's takeover of a
+  player gone 15 s. `isHeroTurn` is false for a hero that isn't ours; undo
+  is off; nothing is saved (`fight` is null, `settleFight` gets a store that does nothing).
+  The relay never runs rules, so a rules change needs nothing there: a fight carries `rules`,
+  and a host on newer rules than a guest is refused on the guest's side. Test it with several
+  headless Chromes (each its own player: the id is per tab, in sessionStorage) against
+  `npm run coop-relay`.
 - Input lives in `src/controls.js`: mouse, touch and the arrow-key cursor (`stepTile` in
   `input.js`), which reuses the hover tile. Enter picks a tile and Enter again acts, like a
   second tap (`enterStep`). A move click on a party member picks the free tile behind it

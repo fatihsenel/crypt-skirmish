@@ -368,6 +368,19 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
     replaces a skeleton and a swarm a giant rat, and on some floors from 3 a cult fanatic
     replaces a skeleton. Kobolds take giant rats' places, hobgoblins the orc's, and from floor
     3 a shadow a ghoul's, its chamber gone dark.
+- **Play together:** two to four players, each on their own device, share one fight. Play
+  together on the title makes a room with a six-letter code; Copy invite link (or the code)
+  brings the others in. The host picks the room (the daily's list, at its party level), the
+  difficulty and the classes, and hands each hero to a player; then everyone starts at once.
+  - Each player moves their own heroes; a friend's turn plays out on your screen as they act.
+    The line over the board says whose turn it is and how long is left: a hero's turn ends on
+    its own after 90 seconds (if that player's device has stalled, a friend's ends it a little
+    later). Press it to open the room (who plays which hero, or leave).
+  - A player who drops out for 15 seconds hands their heroes to the host, who can give them
+    back from the room. A dropped connection comes back on its own, and someone joining
+    mid-fight catches up from the start.
+  - At the end the host plays again (fresh dice) or takes everyone back to the room. Nothing
+    is saved and no achievements are unlocked. There is no taking a move back.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak are
   kept. Win it and Copy result puts a short summary on the clipboard (on a phone, the share
   sheet); a won campaign has the same button. Watch your best replays the day's fastest win
@@ -777,6 +790,7 @@ npm run build        # production bundle in dist/
 npm run size-check   # the first screen's download stays within its budget (after a build)
 npm run digest       # the week's play stats and stored losses as a short report (LOSS_READ_KEY set)
 npm run preview      # http://localhost:4173/crypt-skirmish/
+npm run coop-relay   # the co-op relay on ws://localhost:8788, for Play together on the dev server
 ```
 
 Every push to `main` runs lint and the tests, builds, checks the first screen's size, runs the
@@ -852,6 +866,17 @@ one address and 20,000 a day, kept 400 days), which `npm run digest` reads with 
 (`/tallies`). From `worker/`:
 `npx wrangler deploy` deploys it, `npx wrangler secret put READ_KEY` sets the key, and
 `npx wrangler d1 execute crypt-skirmish-losses --remote --file=schema.sql` makes the tables.
+
+### Co-op relay
+
+Play together's rooms live in the same Worker: one Durable Object per room code
+(`worker/src/room.js`, `/coop/<CODE>`, a WebSocket from the game's page only, about 20 rooms a
+minute from one address). It never runs the game: a fight is its seed plus the heroes'
+commands, so the relay only puts the commands in one order and every device plays them. A
+command names its place in the log, and one meant for a place already taken is refused; that
+device rebuilds the fight from the log. A room nobody has touched for 12 hours is forgotten.
+On the dev server the game talks to `npm run coop-relay` instead, the same room code on this
+machine.
 
 ### Layout
 
@@ -943,6 +968,8 @@ src/
   animate.js         plays back resolved attacks, moves, chests, actions and spells
   speech.js          the speech bubbles' lines and when each figure speaks
   links.js           copying and opening #watch= and #play= links
+  coop.js            Play together: the connection to a room on the relay, its log of commands
+  ui/coop.js         Play together's lobby: the room, the players, the fight and who plays which hero
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
   photo.js           photo mode: no HUD, a free camera, Save image
   input.js           picking a tile, the long press, what a click does, the cursor's step and words
@@ -964,8 +991,9 @@ scripts/
   size-check.mjs     gzipped size of the title's code and of the skull against a budget
   digest.mjs         the weekly digest: the Worker's event tallies and stored losses (npm run digest)
   crash-check.mjs    the daily crash check: yesterday's crashes from the tallies (GitHub Actions)
+  coop-relay.mjs     the co-op relay on this machine, for the dev server (npm run coop-relay)
 public/sw.js         the offline copy: pages from the network first, everything else saved
-worker/              the loss-replay Cloudflare Worker (src/index.js), its table (schema.sql) and wrangler.toml
+worker/              the Cloudflare Worker: loss replays and tallies (src/index.js, schema.sql), co-op rooms (src/room.js), wrangler.toml
 docs/stats.md        the play stats' events, and reading them in Umami
 ```
 

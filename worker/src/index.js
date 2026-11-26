@@ -12,6 +12,8 @@
 //                to the day's tallies (day, event, property, value → count). Nothing per player.
 // GET  /tallies  with the key: the tallies of the last `days` (7), summed: { tallies: [{ event,
 //                prop, value, n }] }; prop '' is the event's own count. scripts/digest.mjs reads it.
+// GET  /coop/<CODE>  from the game only: a websocket into that co-op room (room.js, a Durable
+//                Object a room), at most 20 a minute from one address (ROOMS).
 // Every day at 03:17 UTC, records older than 60 days and tallies older than 400 are deleted.
 //
 // Against junk: uploads come from the game's page only (Origin), at most 3 a minute from one
@@ -19,6 +21,9 @@
 // room it claims, and no more than DAILY_CAP are stored in a day. Events: from the game's page, at
 // most 30 a minute from one address (EVENTS), known events and plain values only, EVENT_CAP a day.
 
+import { CoopRoom, CODE } from './room.js';
+
+export { CoopRoom }; // the co-op rooms' Durable Object class
 export const GAME = 'https://fatihsenel.github.io';
 /** Pages that may read the list (with the key): the game and its dev server. */
 const READERS = [GAME, 'http://localhost:5173'];
@@ -170,6 +175,17 @@ export default {
     const origin = request.headers.get('Origin') ?? '';
     const headers = cors(origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
+
+    // A co-op room (room.js): a websocket to the room's Durable Object.
+    const room = url.pathname.match(/^\/coop\/([A-Z0-9]+)$/);
+    if (room) {
+      if (origin !== GAME) return json({ error: 'origin' }, 403, headers);
+      if (!CODE.test(room[1])) return json({ error: 'code' }, 400, headers);
+      if (request.headers.get('Upgrade') !== 'websocket') return json({ error: 'websocket only' }, 426, headers);
+      const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+      if (env.ROOMS && !(await env.ROOMS.limit({ key: ip })).success) return json({ error: 'slow down' }, 429, headers);
+      return env.COOP.get(env.COOP.idFromName(room[1])).fetch(request);
+    }
 
     if (url.pathname === '/event' && request.method === 'POST') {
       if (origin !== GAME) return json({ error: 'origin' }, 403, headers);

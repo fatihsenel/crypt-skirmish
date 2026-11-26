@@ -14,7 +14,8 @@
     "models": "node scripts/compress-models.js",
     "lint": "eslint .",
     "size-check": "node scripts/size-check.mjs",
-    "digest": "node scripts/digest.mjs"
+    "digest": "node scripts/digest.mjs",
+    "coop-relay": "node scripts/coop-relay.mjs"
   },
   "dependencies": {
     "three": "^0.187.0"
