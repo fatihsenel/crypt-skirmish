@@ -33,7 +33,10 @@ export function createAnimations(app) {
   const fled = new WeakSet(); // turned monsters that have cried out as they ran
   const seen = (u) => !unseen(u) && !!view(u)?.group.visible;
   /** Leaves soot, charring or remains on the floor (render/marks.js); drawn only. */
-  const mark = (kind, tiles, opts) => app.board()?.marks?.add(kind, tiles, opts);
+  const mark = (kind, tiles, opts) => {
+    app.board()?.marks?.add(kind, tiles, opts);
+    if (kind === 'scorch' || kind === 'char') app.board()?.clutter?.blast(tiles); // a blast throws the floor's bits about
+  };
 
   /**
    * `unit` says a line for `moment` in a speech bubble (speech.js), if it's in sight. A named
@@ -52,6 +55,14 @@ export function createAnimations(app) {
       if (minion) setTimeout(() => { if (app.game() === fight && minion.alive && !speaking()) quip(minion, 'reply'); }, shown + 150);
     }
     return true;
+  }
+
+  /** Figures near a blow or a blast (not those in it) turn to look for a moment. */
+  function lookToward(at, skip = [], reach = 3.5) {
+    for (const u of app.game()?.units ?? []) {
+      if (!u.alive || skip.includes(u) || Math.hypot(u.x - at.x, u.z - at.z) > reach) continue;
+      view(u)?.glance(at.x, at.z);
+    }
   }
 
   /** Blessed Healer: the cleric's own small heal, shown just above them. */
@@ -102,6 +113,7 @@ export function createAnimations(app) {
       }
     }
     const onImpact = () => {
+      lookToward(pos, [attacker, target]);
       if (r.mods?.adv.some((a) => a.startsWith('help from'))) tv.updateStatus(); // the Help is used up
       if (attack.projectile === 'fire') {
         fireBurstFx(stage.scene, pos);
@@ -158,12 +170,18 @@ export function createAnimations(app) {
         floatText(stage.scene, pos, 'Miss', 'miss');
       }
     };
+    // The blow that wins the fight: slow, and close up (main.js, lastBlow).
+    const ending = landed && !target.alive && target.team === 'monsters' && fight.over === 'victory' && !unseen(target)
+      && ![...app.views().values()].some((v) => v.unit !== target && v.unit.team === 'monsters' && !v.unit.alive && !v.down && !v.gone)
+      ? app.lastBlow(pos) : null;
     if (attack.projectile) {
       await av.shoot(pos, attack.projectile, () => shootProjectile(stage.scene, attacker, pos, attack.projectile), onImpact);
     } else {
       await av.swing(pos, onImpact, { crit: !!r.crit });
     }
+    await ending?.landed();
     await reaction;
+    await ending?.back();
     if (r.split) await playSplit(target, r.split);
     if (r.thrown) await playThrown(r);
     if (r.rebuke) await playRebuke(r.rebuke);
@@ -413,7 +431,7 @@ export function createAnimations(app) {
               path = path.slice(from);
             }
           }
-          await view(unit).moveAlong(path);
+          await view(unit).moveAlong(path, (a, b) => app.board()?.tread?.(unit, a, b));
           break;
         }
         case 'stairs': { // to the room's other floor; out of sight, a monster just arrives
@@ -960,6 +978,7 @@ export function createAnimations(app) {
     if (r.scroll && !unseen(caster)) floatText(stage.scene, { x: caster.x, z: caster.z - 0.6 }, 'Scroll', 'spell');
     // A monster's area spell: its rune circle flares where it will land first.
     if (caster.team === 'monsters' && r.center && r.spell?.radius && !unseen(caster)) await app.board().flashRunes(r.center, r.spell.radius, id);
+    if (r.center) lookToward(r.center, [caster], 5);
     const said = spellMoment({ caster, id, healed });
     if (said) quip(caster, said.moment, said.friend?.name);
     switch (id) {

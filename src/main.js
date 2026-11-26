@@ -17,6 +17,7 @@ import { signed, seeded } from './game/dice.js';
 import { SPELLS, ACTIONS } from './game/abilities.js';
 import { createStage } from './render/stage.js';
 import { Board } from './render/board.js';
+import { moodFor } from './render/mood.js';
 import { UnitView, floatText } from './render/unitView.js';
 import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
@@ -36,7 +37,7 @@ import { loadSettings, saveSettings, SPEEDS } from './game/settings.js';
 import { SettingsPanel } from './ui/settings.js';
 import { voices } from './audio/voices.js';
 import { hush } from './render/speechBubble.js';
-import { banter } from './speech.js';
+import { banter, SPEECH } from './speech.js';
 import { tips } from './ui/tips.js';
 import { recordRun, loadHistory, clearLastFight } from './game/history.js';
 import { createLinks } from './links.js';
@@ -565,10 +566,13 @@ function applyMotion() {
 applyMotion();
 onSystemMotion(applyMotion);
 /** The Glow setting: bloom (render/post.js), on Auto everywhere but phones. */
-const applyGlow = () => stage.setEffects({
-  glow: settings.glow === 'on' || (settings.glow === 'auto' && !matchMedia('(pointer: coarse)').matches),
-});
-applyGlow();
+const glowOn = () => settings.glow === 'on' || (settings.glow === 'auto' && !matchMedia('(pointer: coarse)').matches);
+/** And reflections in the water (render/reflect.js), which go with it. */
+const applyGlow = () => {
+  board?.setReflections(glowOn());
+  return stage.setEffects({ glow: glowOn() });
+};
+stage.setEffects({ glow: glowOn() }); // (the board, made later, takes its reflections from glowOn)
 new SettingsPanel(settings, (key, value) => {
   settings[key] = value;
   saveSettings(settings);
@@ -696,7 +700,7 @@ function updateVision(force = false) {
     }
   }
   if (owlEyes.length) for (const k of grid.visibleFrom(owlEyes, blocks)) visible.add(k);
-  board.setVision(visible, { snap: first });
+  board.setVision(visible, { snap: first, from: [...eyes, ...owlEyes] });
 }
 
 /**
@@ -722,6 +726,23 @@ stage.tickers.add(() => {
   }
 });
 
+/**
+ * The edges of the screen darken while a hero is near death: a little below a quarter of their
+ * hit points, more while one lies dying. Gone once the fight is over.
+ */
+const vignette = document.getElementById('vignette');
+stage.tickers.add(() => {
+  let level = 0;
+  if (game && !game.over && !camp.open) {
+    for (const u of game.units) {
+      if (u.team !== 'heroes') continue;
+      if (u.dying && !u.dying.stable) level = 2;
+      else if (u.alive && u.hp > 0 && u.hp < u.maxHp / 4) level = Math.max(level, 1);
+    }
+  }
+  if (vignette.dataset.level !== String(level)) vignette.dataset.level = level;
+});
+
 /** Every frame: hide monsters out of sight, notice new ones. */
 stage.tickers.add(() => {
   if (!game || !board) return;
@@ -745,6 +766,7 @@ stage.tickers.add(() => {
       spotted = true;
       if (u.elite) elite = u;
       anim.intro(u); // a named foe says who it is
+      if (SPEECH.NAMED.has(u.code) && u.alive) bossSweep(u); // and the camera turns to it
     }
   }
   if (spotted) hud.renderInitiative(game);
@@ -789,6 +811,7 @@ function clearOwls() {
 const anim = createAnimations({
   stage, hud, settings, spiritWeapons, owls, view, addView, unseen, inView, flushReveals, syncStatus, keepInView,
   game: () => game, board: () => board, selected: () => selected, busy: () => busy, touching: () => controls.touching,
+  lastBlow: (at) => lastBlow(at), views: () => views,
   autoplaying: () => debugAutoplay, replaying: () => !!replay,
 });
 const { play, damageReaction, throwsOwn } = anim;
@@ -891,6 +914,8 @@ function startFight(resume, watch = null) {
     return;
   }
   board = new Board(game.grid, stage);
+  board.setReflections(glowOn()); // the water's reflections go with the Glow setting
+  stage.setMood(moodFor(nodeId ?? level.id)); // each act's light (render/mood.js)
   floorButton.hidden = !game.grid.links.size; // rooms on two floors only
   heard.clear();
   setPeek(null);
@@ -962,6 +987,7 @@ function startFight(resume, watch = null) {
     const elite = game.units.find((u) => u.elite && u.alive);
     if (elite && unseen(elite)) hud.log('Something strong lurks here: an <b>elite</b>.', 'sys');
   });
+  game.on('round', () => board?.tracks?.age()); // footprints dry
   game.on('round', ({ round }) => hud.log(game.hold ? `Round ${round} of ${game.hold.rounds}` : `Round ${round}`, 'round'));
   game.on('turnStart', ({ unit }) => onTurnStart(unit));
   game.on('turnEnd', () => hud.endTurn()); // before the next round's heading
@@ -1182,6 +1208,8 @@ function startFight(resume, watch = null) {
   game.on('lair', (r) => {
     hud.logLair(r);
     const at = r.unit;
+    board.lairShake(); // the torches gutter and dust comes down
+    if (r.kind !== 'quake') stage.shake(0.12, 500);
     if (r.kind === 'hands') {
       sfx.necro();
       for (const s of r.saves) {
@@ -1345,6 +1373,88 @@ function glide(shift) {
   requestAnimationFrame(step);
 }
 
+/** Where the camera is now, to come back to after a close-up. */
+function cameraShot() {
+  return { target: stage.controls.target.clone(), pos: stage.camera.position.clone(), zoom: stage.camera.zoom };
+}
+
+/**
+ * Ease the camera over `ms` to `to`: a tile ({ x, z }, centred in the free area) at `zoom`,
+ * or a shot from cameraShot(). A newer pan (glide, keepInView) takes over from it. Resolves
+ * when it's there or was taken over.
+ */
+function easeCamera(to, zoom, ms) {
+  const cam = stage.camera;
+  const ticket = ++panTween;
+  const z0 = cam.zoom;
+  let shift;
+  if (to.target) {
+    shift = to.target.clone().sub(stage.controls.target);
+    zoom = to.zoom;
+  } else {
+    cam.zoom = zoom; // where the tile must go depends on the zoom (the HUD's insets)
+    cam.updateProjectionMatrix();
+    shift = shiftTo(to.x, to.z) ?? new THREE.Vector3();
+    cam.zoom = z0;
+    cam.updateProjectionMatrix();
+  }
+  const start = performance.now();
+  let done = 0;
+  return new Promise((resolve) => {
+    const step = (now) => {
+      if (ticket !== panTween) return resolve();
+      const t = Math.min(1, (now - start) / ms);
+      const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+      const d = shift.clone().multiplyScalar(e - done);
+      done = e;
+      stage.controls.target.add(d);
+      cam.position.add(d);
+      cam.zoom = z0 + (zoom - z0) * e;
+      cam.updateProjectionMatrix();
+      keepAwake(100);
+      if (t < 1) requestAnimationFrame(step);
+      else resolve();
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/**
+ * A named foe first seen: the camera sweeps in on it while it speaks, holds, and goes back.
+ * Not under reduced motion, in photo mode or while the page is hidden.
+ */
+async function bossSweep(u) {
+  if (calm() || photo.active || document.hidden) return;
+  const back = cameraShot();
+  const g = game;
+  await easeCamera(u, Math.min(stage.controls.maxZoom, Math.max(back.zoom * 1.4, 1.5)), 700);
+  await wait(1300);
+  if (game !== g || photo.active) return;
+  await easeCamera(back, back.zoom, 650);
+}
+
+/**
+ * The fight's last blow: the camera closes in on the foe and the blow plays slowly. Returns
+ * its two ends (`landed`: the speed back, `back`: the camera back), or null when it doesn't
+ * happen.
+ */
+function lastBlow(at) {
+  if (calm() || photo.active || document.hidden) return null;
+  const back = cameraShot();
+  const rate = playback.rate;
+  playback.rate = rate * 0.4;
+  easeCamera(at, Math.min(stage.controls.maxZoom, Math.max(back.zoom * 1.6, 1.8)), 450);
+  return {
+    /** After the blow lands: a beat more, slowly, then the speed comes back. */
+    landed: async () => {
+      await wait(300);
+      playback.rate = rate;
+    },
+    /** Once the foe is down: the camera goes back. */
+    back: () => easeCamera(back, back.zoom, 600),
+  };
+}
+
 /**
  * V (or a press of the right stick), in a room on two floors: the camera glides to the far end
  * of the stair nearest the hero whose turn it is, to look down (or up) it; V again glides back
@@ -1418,6 +1528,7 @@ function isHeroTurn() {
 /** The dungeon without anyone in it, behind the title screen. */
 function showBackdrop() {
   board = new Board(new Grid(LEVELS[0].rows), stage);
+  stage.setMood(moodFor(LEVELS[0].id));
   board.setThreatColors(settings.colorblind);
   stage.scene.add(board.group);
 }

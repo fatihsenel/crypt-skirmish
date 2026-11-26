@@ -1,7 +1,8 @@
 // Small signs of life in a room, drawn only (the rules never see them): banners and cobwebs
-// that stir when someone passes, water dripping from the ceiling into pools, and now and then a
-// rat scurrying along a wall in the part of the map out of sight. Reduced motion keeps all of
-// it still: no drips, no rats, no swaying.
+// that stir when someone passes, water dripping from the ceiling into pools, now and then a
+// rat scurrying along a wall in the part of the map out of sight, and dusty shafts of light
+// falling through cracks in the ceiling (never in a dark room). Reduced motion keeps all of it
+// still: no drips, no rats, no swaying, no dust in the beams.
 
 import * as THREE from 'three';
 import { key } from '../game/grid.js';
@@ -44,6 +45,46 @@ function web() {
   return webMap;
 }
 
+let beamMap = null;
+/** A beam's fall-off: faint at the ceiling, fullest just over the floor, gone at it. */
+function beam() {
+  if (beamMap) return beamMap;
+  const c = document.createElement('canvas');
+  c.width = 4;
+  c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 128); // top of the canvas is the beam's top (v = 1)
+  grad.addColorStop(0, 'rgba(255,255,255,0)');
+  grad.addColorStop(0.45, 'rgba(255,255,255,0.45)');
+  grad.addColorStop(0.9, 'rgba(255,255,255,1)');
+  grad.addColorStop(1, 'rgba(255,255,255,0.2)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 4, 128);
+  beamMap = new THREE.CanvasTexture(c);
+  return beamMap;
+}
+
+let poolMap = null;
+/** The patch of light a beam leaves on the floor. */
+function pool() {
+  if (poolMap) return poolMap;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,255,255,0.9)');
+  grad.addColorStop(0.55, 'rgba(255,255,255,0.45)');
+  grad.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  poolMap = new THREE.CanvasTexture(c);
+  return poolMap;
+}
+
+// Where the beams come from: up and over, the way the room's main light falls (stage.js).
+const SKY = new THREE.Vector3(-0.55, 3.4, 0.8);
+const BEAM_COLOR = 0xffe2b4;
+
 /** A small rat: a body, a head and a tail, dark and drawn without light. */
 function ratMesh() {
   const mat = new THREE.MeshBasicMaterial({ color: 0x0c0908, transparent: true, opacity: 0 });
@@ -74,6 +115,60 @@ export class Life {
     this.last = new WeakMap(); // figure position -> where it was last frame
     this.addWebs();
     this.water = [...board.grid.water ?? []].map((k) => k.split(',').map(Number));
+    this.shafts = null; // added on the first tick, once the room's dark areas are known
+  }
+
+  /**
+   * Light shafts: about one for every 45 open floor tiles, at most three, over tiles clear of
+   * walls, water, chasms and stairs, and never in or beside the dark.
+   */
+  addShafts() {
+    const { grid, group, dark } = this.board;
+    this.shafts = [];
+    const near = (x, z, test) => {
+      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if (test(x + dx, z + dz)) return true;
+      return false;
+    };
+    const blocked = (x, z) => {
+      const k = key(x, z);
+      return grid.isWall(x, z) || grid.water?.has(k) || grid.chasms?.has(k) || grid.links?.has(k) || grid.lower?.has(k) || grid.high?.has(k);
+    };
+    const dim = (x, z) => dark?.has(key(x, z));
+    const open = [];
+    for (let z = 1; z < grid.height - 1; z++) {
+      for (let x = 1; x < grid.width - 1; x++) {
+        if (!near(x, z, blocked) && !near(x, z, dim)) open.push([x, z]);
+      }
+    }
+    const want = Math.min(3, Math.round(open.length / 45));
+    const picked = [];
+    for (let tries = 0; picked.length < want && tries < 60; tries++) {
+      const [x, z] = open[Math.floor(Math.random() * open.length)];
+      if (picked.some(([px, pz]) => Math.hypot(px - x, pz - z) < 5)) continue;
+      picked.push([x, z]);
+    }
+    for (const [x, z] of picked) {
+      const floor = new THREE.Vector3(x, 0.02, z);
+      const top = floor.clone().add(SKY);
+      const len = top.distanceTo(floor);
+      const shaft = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.46, len, 20, 1, true),
+        new THREE.MeshBasicMaterial({ map: beam(), color: BEAM_COLOR, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }),
+      );
+      shaft.position.copy(floor).lerp(top, 0.5);
+      shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), SKY.clone().normalize());
+      shaft.renderOrder = 2;
+      const patch = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.15, 0.95).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ map: pool(), color: BEAM_COLOR, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending }),
+      );
+      patch.position.set(x, this.liftAt(x, z) + 0.012, z);
+      patch.renderOrder = 1;
+      group.add(shaft, patch);
+      const cell = this.board.addToCell(x, z, shaft, patch);
+      this.board.motes?.add(new THREE.Vector3(x - 0.08, 0.95, z + 0.12), () => cell.f * 0.7, { embers: 0, dust: 9, spread: 0.32 });
+      this.shafts.push({ shaft, patch, ph: Math.random() * 6.3 });
+    }
   }
 
   /** Cobwebs high in a few corners facing the camera (walls on the -x and -z sides). */
@@ -130,6 +225,13 @@ export class Life {
   }
 
   tick(t, dt) {
+    if (!this.shafts) this.addShafts();
+    for (const s of this.shafts) {
+      // A cloud passing far above: the beam brightens and fades a little, slowly.
+      const b = calm() ? 1 : 0.85 + 0.15 * Math.sin(t * 0.4 + s.ph);
+      s.shaft.material.opacity = 0.16 * b;
+      s.patch.material.opacity = 0.22 * b;
+    }
     if (calm()) {
       for (const b of this.board.banners) b.pivot.rotation.x = 0;
       for (const w of this.webs) w.pivot.rotation.set(0, 0, 0);
@@ -256,6 +358,7 @@ export class Life {
   }
 
   dispose() {
+    for (const s of this.shafts ?? []) for (const m of [s.shaft, s.patch]) m.geometry.dispose();
     for (const d of this.drops) for (const m of [d.bead, d.ring]) { m.geometry.dispose(); m.material.dispose(); }
     this.drops = [];
   }

@@ -6,6 +6,9 @@ import { tween, wait, easeOut, easeInOut, linear, keepAwake, calm } from './twee
 import { dustFx, glintFx } from './effects.js';
 import { Motes } from './motes.js';
 import { Marks } from './marks.js';
+import { Tracks } from './tracks.js';
+import { WaterMirror } from './reflect.js';
+import { Clutter } from './clutter.js';
 import { Wisps } from './wisps.js';
 import { Life } from './life.js';
 import { kitReady, piece } from './dungeonKit.js';
@@ -457,6 +460,7 @@ export class Board {
       this.addToCell(x, z, block);
     }
 
+    this.torchDim = 1; // the torches gutter for a moment as the lair shakes (lairShake)
     this.motes = new Motes(this.group); // embers and dust over the fires, grit into chasms (motes.js)
     this.ao = new Map(); // tile key -> its strips of shade
     for (let z = 0; z < grid.height; z++) for (let x = 0; x < grid.width; x++) this.addAO(x, z);
@@ -506,6 +510,7 @@ export class Board {
 
     this.wisps = new Wisps(this, ledgeAt); // dark smoke at the edge of the unexplored (wisps.js)
     this.marks = new Marks(this, ledgeAt); // soot, charring and remains (marks.js)
+    this.tracks = new Tracks(this, ledgeAt); // wet and bloody footprints (tracks.js)
     this.torches = [];
     const torches = torchSpots(grid);
     this.banners = [];
@@ -523,6 +528,7 @@ export class Board {
     this.chests = new Map();
     for (const c of grid.chests.values()) this.chests.set(key(c.x, c.z), this.addChest(c));
     this.life = new Life(this, ledgeAt); // banners and cobwebs stirring, drips, a rat (life.js)
+    this.clutter = new Clutter(this, liftAt); // pebbles, bones and shards, kicked and blown aside (clutter.js)
     this.traps = new Map();
     for (const s of grid.stairs) this.stairs = this.addStairs(s);
 
@@ -543,22 +549,24 @@ export class Board {
       for (const { light, seed, cell, flame, home } of this.torches) {
         const a = Math.sin(t * 9 + seed);
         const b = Math.sin(t * 23 + seed * 2);
-        light.intensity = (5.5 + (a * 0.6 + b * 0.4) * sway) * cell.f;
+        light.intensity = (5.5 + (a * 0.6 + b * 0.4) * sway) * cell.f * this.torchDim;
         light.position.set(home.x + Math.sin(t * 5.3 + seed) * 0.05 * sway, home.y + b * 0.03 * sway, home.z + Math.cos(t * 4.1 + seed) * 0.05 * sway);
         flame.scale.set(1 + b * 0.08 * sway, 1.5 + a * 0.22 * sway, 1 + b * 0.08 * sway);
       }
       for (const { light, seed, cell } of this.candles) {
-        light.intensity = (1.1 + Math.sin(t * 11 + seed) * 0.15 * sway) * cell.f;
+        light.intensity = (1.1 + Math.sin(t * 11 + seed) * 0.15 * sway) * cell.f * this.torchDim;
       }
       for (const b of this.braziers.values()) {
         if (!b.lit) continue;
-        b.light.intensity = (3 + (Math.sin(t * 8 + b.seed) * 0.5 + Math.sin(t * 19 + b.seed) * 0.3) * sway) * b.cell.f;
+        b.light.intensity = (3 + (Math.sin(t * 8 + b.seed) * 0.5 + Math.sin(t * 19 + b.seed) * 0.3) * sway) * b.cell.f * this.torchDim;
         b.coals.material.emissiveIntensity = 1.6 * b.cell.f; // no glow from a room not yet seen
       }
       if (this.fireLit) this.fire.material.opacity = 0.8 + Math.sin(t * 6) * 0.1 + Math.sin(t * 15) * 0.06;
       if (this.stairs?.lit) this.stairs.light.intensity = 3 + Math.sin(t * 3) * 0.8;
       this.motes.tick(t, dt);
       if (ripples && sway) ripples.offset.set(t * 0.025, t * 0.016); // the water's ripples drift
+      this.mirror?.tick(t, (x, z) => this.cells.get(key(x, z))?.f ?? 0);
+      this.clutter?.tick(dt);
       this.wisps.tick(t);
       this.life?.tick(t, dt);
       if (this.runes.visible) {
@@ -856,10 +864,18 @@ export class Board {
    * What the heroes can see right now (a Set of tile keys). Tiles seen before stay
    * dimly drawn; tiles never seen stay black. `snap` skips the fade (new level).
    */
-  setVision(visible, { snap = false } = {}) {
+  setVision(visible, { snap = false, from = [] } = {}) {
     for (const k of visible) this.explored.add(k);
+    const sweep = !snap && from.length && !calm();
     for (const [k, cell] of this.cells) {
-      cell.target = visible.has(k) ? (this.dark?.has(k) ? DARK_SEEN : 1) : this.explored.has(k) ? REMEMBERED : 0;
+      const target = visible.has(k) ? (this.dark?.has(k) ? DARK_SEEN : 1) : this.explored.has(k) ? REMEMBERED : 0;
+      // What comes into sight fills in as a wave out from the eyes that saw it.
+      if (sweep && target > cell.target) {
+        const [x, z] = k.split(',').map(Number);
+        const d = Math.min(...from.map((e) => Math.hypot(e.x - x, e.z - z)));
+        cell.delay = Math.min(1, Math.max(0, d - 1) * 0.08);
+      } else if (target <= cell.target) cell.delay = 0;
+      cell.target = target;
       if (snap) cell.f = cell.target;
     }
     this.fogDirty = true;
@@ -880,6 +896,11 @@ export class Board {
     let moving = false;
     const k = Math.min(1, dt * 5);
     for (const cell of this.cells.values()) {
+      if (cell.delay > 0) { // waiting for the wave to reach it (setVision)
+        cell.delay -= dt;
+        moving = true;
+        continue;
+      }
       if (cell.f !== cell.target) {
         cell.f += (cell.target - cell.f) * k;
         if (Math.abs(cell.target - cell.f) < 0.01) cell.f = cell.target;
@@ -1545,6 +1566,46 @@ export class Board {
     this.pickables = this.pickables.filter((p) => p !== c.g);
   }
 
+  /**
+   * A lair action shakes the room: the torches gutter and dust sifts down from the ceiling over
+   * what the party can see, raising puffs where it lands. Reduced motion: only the guttering.
+   */
+  async lairShake(ms = 1500) {
+    tween(ms, (t) => { this.torchDim = 1 - 0.55 * Math.sin(Math.PI * t) * (0.8 + 0.2 * Math.sin(t * 40)); }, linear)
+      .then(() => { this.torchDim = 1; });
+    if (calm()) return;
+    const seen = [];
+    for (const [k, cell] of this.cells) {
+      const [x, z] = k.split(',').map(Number);
+      if (cell.f > 0.6 && !this.grid.isWall(x, z) && !this.grid.chasms?.has(k)) seen.push([x, z]);
+    }
+    if (!seen.length) return;
+    const spots = Array.from({ length: Math.min(14, seen.length) }, () => seen[Math.floor(Math.random() * seen.length)]);
+    const n = spots.length * 6;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    const grit = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xb8aa96, size: 3, sizeAttenuation: false, transparent: true, opacity: 0.85, depthWrite: false }));
+    grit.frustumCulled = false;
+    this.group.add(grit);
+    const motes = Array.from({ length: n }, (_, i) => {
+      const [x, z] = spots[Math.floor(i / 6)];
+      return { x: x + (Math.random() - 0.5) * 0.7, z: z + (Math.random() - 0.5) * 0.7, floor: liftAt(x, z), at: Math.random() * 0.35, v: 0.8 + Math.random() * 0.5 };
+    });
+    spots.slice(0, 5).forEach(([x, z], i) => wait(500 + i * 90).then(() => dustFx(this.stage.scene, { x, z }, { count: 6, size: 0.4, y: liftAt(x, z) })));
+    const pos = geo.attributes.position;
+    await tween(ms, (t) => {
+      motes.forEach((m, i) => {
+        const k = Math.max(0, Math.min(1, (t - m.at) / (0.6 * m.v)));
+        pos.setXYZ(i, m.x, 2.6 - (2.6 - m.floor) * k * k, m.z);
+      });
+      pos.needsUpdate = true;
+      grit.material.opacity = 0.85 * Math.min(1, (1 - t) * 4);
+    }, linear);
+    this.group.remove(grit);
+    geo.dispose();
+    grit.material.dispose();
+  }
+
   async openChest(x, z, { gold = false } = {}) {
     const c = this.chests.get(key(x, z));
     if (!c) return;
@@ -1756,6 +1817,28 @@ export class Board {
   }
 
   /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
+  /** Reflections in the water on or off (reflect.js; with the Glow setting). */
+  setReflections(on) {
+    if (!on || !this.grid.water?.size) {
+      this.mirror?.dispose();
+      this.mirror = null;
+      return;
+    }
+    if (this.mirror) return;
+    const tiles = [...this.grid.water].map((k) => k.split(',').map(Number));
+    const floor = [];
+    const at = new THREE.Vector3();
+    this.group.updateWorldMatrix(true, true);
+    this.group.traverse((o) => { if (o.isMesh && o.getWorldPosition(at).y < 0.03) floor.push(o); });
+    this.mirror = new WaterMirror(this.group, tiles, rippleMap(), this.stage.renderer, floor);
+  }
+
+  /** `unit` steps from tile `a` to `b`: it may leave footprints and kick what lies there. */
+  tread(unit, a, b) {
+    this.tracks.step(unit, a, b);
+    if (!unit.flies) this.clutter?.kick(a, b);
+  }
+
   showOverlays(on) {
     this.overlaysOn = on;
     if (!on) this.runes.visible = false;
@@ -1770,6 +1853,8 @@ export class Board {
     this.stage.tickers.delete(this.tick);
     this.riseId = -1;
     this.life?.dispose();
+    this.tracks.dispose();
+    this.mirror?.dispose();
     rising.clear();
     this.motes.dispose();
     this.wisps.dispose();

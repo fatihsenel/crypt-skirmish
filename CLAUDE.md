@@ -139,7 +139,13 @@ server on 5173.
   An effect's light is a `SpellLight` (`render/lights.js`), never a new `PointLight`: the scene
   keeps 4 point lights and lends them to the brightest stand-ins, since changing the light count
   recompiles every lit material. Floor marks (`render/marks.js`: soot, char, remains through
-  `board.marks.add`) are drawn only and gone on reload. The haze at the explored map's edge and
+  `board.marks.add`) are drawn only and gone on reload; so are footprints (`render/tracks.js`,
+  aged by the `round` event) and the floor's loose bits (`render/clutter.js`, one instanced
+  mesh a kind, fogged per piece), both fed each step through `board.tread` from `moveAlong`'s
+  `onStep`; a scorch or char mark also `blast`s the clutter. Water reflections
+  (`render/reflect.js`, one three `Reflector` over every pool, its fog a vertex attribute) go with
+  the Glow setting (`board.setReflections`); they leave the floor's meshes out of the mirror.
+  `setVision`'s `from` (the eyes) delays each newly seen cell (`cell.delay`), so sight sweeps in. The haze at the explored map's edge and
   over a lower hall is `render/wisps.js`. A new fight's room rises into place (`board.rise`,
   skipped on a restored fight and under `calm()`); while it does, `liftAt` carries each tile's
   offset, so figures and overlays ride up with it. Outlines (`render/outline.js`,
@@ -150,6 +156,13 @@ server on 5173.
   hero gets a torch at the fight's start (`carryTorch`): those lights are made once a fight,
   never added later. Banners, cobwebs, drips and the rat out of sight are `render/life.js`,
   drawn only. A smashed prop goes through `board.smashProp` (debris), not `removeProp` alone.
+  Conditions drawn on a figure are `render/auras.js`, set from `updateStatus` (a new condition
+  that shows needs a kind there); a paralysed or petrified figure's pose holds (`held`, the rig's
+  `held`). Idle looks and glances (`idle`, `glance`, called by `lookToward` in `animate.js`) turn
+  `lean` about y. An act's light is `render/mood.js` through `stage.setMood` (colours only); a
+  new room needs its act in `ACT` there. A named foe's camera sweep (`bossSweep`), the last
+  blow's slow close-up (`lastBlow`, through `easeCamera`) and `board.lairShake` live in
+  `main.js` and skip under `calm()`. The red edges are `#vignette` (`data-level`).
   Clamp any `pow` in vertex or colour maths (`Math.max(0, …)`): one NaN pixel spreads over the
   whole screen through the glow's bloom.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still

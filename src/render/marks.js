@@ -140,6 +140,7 @@ export class Marks {
       mesh.rotation.y = Math.random() * Math.PI * 2;
       mesh.position.set(x + (Math.random() - 0.5) * 0.15, this.liftAt(x, z) + 0.0085, z + (Math.random() - 0.5) * 0.15);
       mesh.renderOrder = -1;
+      mesh.userData.kind = kind; // footprints read it (tracks.js)
       this.board.group.add(mesh);
       this.board.addToCell(x, z, mesh);
       this.byTile.set(key(x, z), mesh);

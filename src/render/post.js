@@ -48,7 +48,8 @@ export function createPost(renderer, scene, camera) {
   composer.addPass(new OutputPass());
 
   const plain = scene.background;
-  const toned = plain?.isColor ? untoned(plain) : plain;
+  let toned = plain?.isColor ? untoned(plain) : plain;
+  let tonedFor = plain?.isColor ? plain.getHex() : null; // a room's mood can change the colour
   const toTarget = new THREE.Vector3();
   const look = new THREE.Vector3();
   return {
@@ -70,6 +71,10 @@ export function createPost(renderer, scene, camera) {
         bokeh.uniforms.aspect.value = (camera.right - camera.left) / (camera.top - camera.bottom);
         bokeh.uniforms.nearClip.value = camera.near;
         bokeh.uniforms.farClip.value = camera.far;
+      }
+      if (plain?.isColor && plain.getHex() !== tonedFor) {
+        toned = untoned(plain);
+        tonedFor = plain.getHex();
       }
       scene.background = toned;
       composer.render();

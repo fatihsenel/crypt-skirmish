@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { addOutline, removeOutline } from './outline.js';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { tween, wait, easeOut, easeInOut, linear, calm } from './tween.js';
+import { tween, wait, easeOut, easeInOut, linear, calm, keepAwake } from './tween.js';
 import { buildModel } from './models.js';
 import { buildGltfModel } from './gltfModels.js';
 import { sfx } from '../audio/sfx.js';
@@ -13,6 +13,7 @@ import { liftAt } from './board.js';
 import { dissolvable, edgeColor } from './dissolve.js';
 import { SpellLight } from './lights.js';
 import { slashFx, dustFx } from './effects.js';
+import { Auras } from './auras.js';
 
 const lerp = (a, b, t) => a + (b - a) * t;
 const WHITE = new THREE.Color(0xffffff);
@@ -104,12 +105,17 @@ export class UnitView {
     this.tilt = new THREE.Group();
     this.tilt.add(this.model.root);
     // `lean` stoops a badly hurt figure (below half HP) and sways it (below a quarter).
+    // It also turns the figure's gaze a little (idle glances, a look toward a nearby blow).
     this.lean = new THREE.Group();
+    this.lean.rotation.order = 'YXZ';
     this.lean.add(this.tilt);
     this.figure.add(this.lean);
     this.hurt = 0; // 0 unhurt, 1 below half, 2 below a quarter (from the bar as drawn)
     this.hurtGlow = null;
     this.prone = false;
+    this.auras = new Auras(this.raise, this.model.height); // conditions drawn on the figure
+    this.held = false; // paralysed or turned to stone: the pose holds
+    this.gaze = { yaw: 0, roll: 0, until: 0, next: 3 + Math.random() * 6 };
     this.raise.add(this.figure);
     this.figure.rotation.y = unit.team === 'heroes' ? Math.PI / 4 : -Math.PI * 0.75;
 
@@ -134,6 +140,7 @@ export class UnitView {
 
   /** Corpses placed on the map start out lying on the floor, with no base or label. */
   layDead() {
+    this.down = true;
     this.base.visible = false;
     this.label.visible = false;
     this.figure.rotation.y = this.unit.variant * 1.7;
@@ -376,6 +383,7 @@ export class UnitView {
 
   // --- per-frame animation ----------------------------------------------------
   animate(t, dt) {
+    this.t = t;
     const lift = liftAt(this.group.position.x, this.group.position.z);
     if (this.raise.position.y !== lift) {
       const y = this.raise.position.y + (lift - this.raise.position.y) * Math.min(1, dt * 16);
@@ -388,12 +396,13 @@ export class UnitView {
     }
     this.animateHurt(t, dt);
     if (this.torch) this.animateTorch(t, dt);
+    if (this.auras.busy) this.auras.tick(t, dt, this.group.visible && !this.ghost && !this.gone);
     if (this.rig) {
       // A badly hurt figure's walk drags.
       this.rig.update(this.walking && this.hurt ? dt * (this.hurt === 2 ? 0.7 : 0.82) : dt, this.walking);
       return;
     }
-    if (!this.unit.alive) return;
+    if (!this.unit.alive || this.held) return;
     const m = this.model;
     const k = 1 - Math.exp(-dt * 14); // smoothing toward target pose
     if (this.walking) this.phase += dt * 13;
@@ -426,8 +435,10 @@ export class UnitView {
     const k = 1 - Math.exp(-dt * 6);
     const stoop = level ? (level === 2 ? 0.3 : 0.18) : 0;
     const sway = level === 2 && !still ? Math.sin((t + this.seed) * 2.1) * 0.07 : 0;
+    const { yaw, roll } = this.idle(t, dt, down || still);
     this.lean.rotation.x += (stoop - this.lean.rotation.x) * k;
-    this.lean.rotation.z += (sway - this.lean.rotation.z) * k;
+    this.lean.rotation.z += (sway + roll - this.lean.rotation.z) * k;
+    this.lean.rotation.y += (yaw - this.lean.rotation.y) * (1 - Math.exp(-dt * 5));
     if (level === 2 && !this.hurtGlow) {
       this.hurtGlow = new THREE.Mesh(
         new THREE.RingGeometry(0.4, 0.66, 40).rotateX(-Math.PI / 2),
@@ -443,6 +454,46 @@ export class UnitView {
       m.opacity += (want - m.opacity) * k;
       this.hurtGlow.visible = m.opacity > 0.005;
     }
+  }
+
+  /**
+   * A figure waiting its turn now and then looks aside or shifts its weight; a glance (a blow
+   * landing nearby) turns it toward the noise for a moment. Nothing while it moves, acts, lies
+   * down or is held, nor under reduced motion. Returns the yaw and roll to ease toward.
+   */
+  idle(t, dt, off) {
+    const g = this.gaze;
+    if (off || this.held || this.walking || this.armsBusy || this.marker.visible || !this.unit.alive) {
+      g.until = 0;
+      return { yaw: 0, roll: 0 };
+    }
+    if (t < g.until) return g;
+    g.yaw = g.roll = 0;
+    g.next -= dt;
+    if (g.next <= 0) {
+      g.next = 4 + Math.random() * 7;
+      if (Math.random() < 0.6) g.yaw = (Math.random() < 0.5 ? -1 : 1) * (0.35 + Math.random() * 0.25);
+      else g.roll = (Math.random() < 0.5 ? -1 : 1) * 0.05;
+      g.until = t + 1 + Math.random() * 0.8;
+    }
+    return g;
+  }
+
+  /** Look toward (x, z) for a moment: a blow or a blast nearby. */
+  glance(x, z) {
+    const t = this.t ?? 0;
+    if (calm() || this.held || this.walking || this.armsBusy || !this.unit.alive || this.prone) return;
+    const dx = x - this.group.position.x;
+    const dz = z - this.group.position.z;
+    if (!dx && !dz) return;
+    let d = Math.atan2(dx, dz) - this.figure.rotation.y;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    this.gaze.yaw = Math.max(-0.7, Math.min(0.7, d));
+    this.gaze.roll = 0;
+    this.gaze.until = t + 1.1;
+    this.gaze.next = 3 + Math.random() * 4;
+    keepAwake(400);
   }
 
   /**
@@ -553,6 +604,13 @@ export class UnitView {
     this.label.element.querySelector('.tags').innerHTML =
       tags.map(([cls, text]) => `<i class="tag ${cls}">${text}</i>`).join('');
     this.setProne(!!u.conditions?.prone && u.alive);
+    const c = u.alive ? u.conditions ?? {} : {};
+    this.auras.set({
+      poisoned: c.poisoned || c.rotting, burning: c.burning, frozen: c.paralyzed || c.petrified,
+      stunned: c.stunned, focus: u.alive && u.concentrating, shield: u.alive && u.shielded,
+    });
+    this.held = !!(c.paralyzed || c.petrified);
+    if (this.rig) this.rig.held = this.held;
     if (!this.gone) this.setGhost(u.alive && (u.team === 'monsters' ? !!u.hidden : !!u.invisibleFrom));
   }
 
@@ -648,13 +706,15 @@ export class UnitView {
   }
 
   // --- actions --------------------------------------------------------------
-  async moveAlong(path) {
+  /** Walks the path; `onStep(from, to)` hears each step as it begins (footprints, clutter). */
+  async moveAlong(path, onStep) {
     this.walking = true;
     for (let i = 1; i < path.length; i++) {
       const from = this.group.position.clone();
       const to = new THREE.Vector3(path[i].x, 0, path[i].z);
       this.faceTowards(to.x, to.z);
       sfx.step(this.unit.code);
+      onStep?.(path[i - 1], path[i]);
       const ms = from.distanceTo(to) > 1.1 ? 270 : 210; // diagonals take a bit longer
       await tween(ms, (t) => this.group.position.lerpVectors(from, to, t), linear);
     }
@@ -832,6 +892,7 @@ export class UnitView {
   dispose() {
     this.stage.tickers.delete(this.tick);
     this.rig?.mixer.stopAllAction();
+    this.auras.dispose();
     // CSS2DObject removes its DOM element only when removed directly.
     this.label.removeFromParent();
   }

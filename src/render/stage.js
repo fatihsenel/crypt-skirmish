@@ -49,7 +49,8 @@ export function createStage(container, { width, height }) {
   controls.update();
 
   // Lights
-  scene.add(new THREE.HemisphereLight(0x9fb4ff, 0x2a1d12, 1.1));
+  const hemi = new THREE.HemisphereLight(0x9fb4ff, 0x2a1d12, 1.1);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffe0b5, 2.2);
   sun.position.copy(center).add(new THREE.Vector3(-6, 16, 9));
   sun.target.position.copy(center);
@@ -114,6 +115,23 @@ export function createStage(container, { width, height }) {
 
   const tickers = new Set();
   tickers.add(keepSpellLights(scene)); // the lights spells borrow (lights.js)
+
+  // A room's mood (render/mood.js): the sky and ground light, the main light's colour and the
+  // background, eased over a second when it changes. Colours only: no material recompiles.
+  const mood = { from: null, to: null, t: 1 };
+  const parts = () => [hemi.color, hemi.groundColor, sun.color, scene.background];
+  const setMood = (m, { snap = false } = {}) => {
+    mood.from = parts().map((c) => c.clone());
+    mood.to = [m.sky, m.ground, m.sun, m.bg].map((c) => new THREE.Color(c));
+    mood.t = snap ? 1 : 0;
+    if (snap) parts().forEach((c, i) => c.copy(mood.to[i]));
+    keepAwake(1200);
+  };
+  tickers.add((t, dt) => {
+    if (mood.t >= 1) return;
+    mood.t = Math.min(1, mood.t + dt);
+    parts().forEach((c, i) => c.copy(mood.from[i]).lerp(mood.to[i], mood.t));
+  });
   const clock = new THREE.Clock();
   // Screen shake: a decaying jitter added to the camera just for the render.
   let shakeAmp = 0;
@@ -194,7 +212,7 @@ export function createStage(container, { width, height }) {
     fit();
   };
 
-  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, render, setEffects, dom: renderer.domElement };
+  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, render, setEffects, setMood, dom: renderer.domElement };
 }
 
 /**

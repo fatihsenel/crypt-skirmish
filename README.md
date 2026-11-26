@@ -460,7 +460,18 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   room each hero carries a torch that lights what's around them. Banners and cobwebs stir as
   someone passes, water drips into pools, and now and then a rat runs along a wall out of
   sight. Doors swing open in a puff of dust, a chest with gold glints, and a smashed barrel or
-  crate leaves its pieces behind.
+  crate leaves its pieces behind. Conditions show on the figure: bubbles off a poisoned one,
+  flames on a burning one, frost on a paralysed one (its pose held), stars round a stunned
+  one's head, a ring at a concentrating caster's feet and a shimmer when Shield goes up. Shafts
+  of dusty light fall through the ceiling, figures waiting their turn look about and turn toward
+  a blow nearby, and each act has its own light (cold blue, grave-green, violet, amber, ember;
+  the Endless Crypt takes them in turn). A named foe gets a camera sweep when first seen, a lair
+  action makes the torches gutter and dust fall, and the blow that wins a fight plays slowly,
+  close up. The screen's edges darken red while a hero is near death. A figure that waded
+  through water leaves wet footprints, and one that walked through blood red ones; they dry
+  over a few rounds. Pools mirror the figures and flames above them (with Glow on), new ground
+  comes into sight in a wave out from the hero who sees it, and pebbles, bones and pot shards
+  lying about are kicked aside by passing feet and thrown out by a blast.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
@@ -472,8 +483,8 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   they never hold up a turn. Between rooms two heroes trade a line in camp, teasing whoever
   dropped, and the bestiary quotes the last thing each monster said.
 - **Settings:** volume for music, effects and voices, monster turn speed, the dice options,
-  motion (System, Reduced or Full), glow (Auto, On or Off: flames, coals and spells shine;
-  Auto leaves it off on phones), text size (Normal, Large or Larger, for the panels, log,
+  motion (System, Reduced or Full), glow (Auto, On or Off: flames, coals and spells shine
+  and pools reflect; Auto leaves it off on phones), text size (Normal, Large or Larger, for the panels, log,
   cards and the names and numbers over the figures), speech bubbles, colour-blind friendly
   enemy reach and play stats.
 - **Play stats:** the deployed game sends anonymous events to Umami, and a count of each to the
@@ -505,7 +516,9 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   don't wobble, the title's skull holds still, torches burn steady without embers or dust,
   the haze at the edge of the dark holds still, a room appears at once instead of rising,
   a struck figure doesn't freeze for its hit-stop, a wounded one doesn't sway, and banners,
-  cobwebs, drips and rats keep still.
+  cobwebs, drips and rats keep still, figures don't look about, the camera neither sweeps to a
+  named foe nor closes in on the last blow, the edges' red doesn't beat, new ground fades in
+  all at once and the floor's loose bits stay put.
 - **Text size** and **colour-blind friendly enemy reach** are in Settings.
 
 ## Sound
@@ -853,10 +866,15 @@ src/
     board.js         dungeon meshes, wall shading, flickering torches, highlights, fog of war, wall
                      fading, water and chasms, the room rising into place
     marks.js         soot, scorch and remains left on the floor
+    tracks.js        wet and bloody footprints
+    reflect.js       reflections in the water (with Glow)
+    clutter.js       pebbles, bones and shards that roll aside
     lights.js        spell light: a few kept point lights lent to bolts and blasts
     wisps.js         haze at the edge of the explored map and over a lower hall
     outline.js       the outlines on the hovered figure and the foes in reach
-    life.js          banners and cobwebs stirring, drips into pools, a rat out of sight
+    life.js          banners and cobwebs stirring, drips into pools, a rat out of sight, light shafts
+    auras.js         conditions drawn on a figure (bubbles, flames, frost, stars, rings, Shield)
+    mood.js          each act's light colours
     motes.js         embers rising from fires and dust in their light
     post.js          glow (bloom) and photo mode's blur, loaded only when one is on
     dissolve.js      a slain monster burning away, with an ember, blue or green rim

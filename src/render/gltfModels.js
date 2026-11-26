@@ -234,6 +234,7 @@ export class GltfRig {
         this.base = want;
       }
     }
+    if (this.held) return; // paralysed or stone: the pose stays
     if (performance.now() < this.frozenUntil) return; // a hit-stop
     this.mixer.update(dt * playback.rate); // sped up with monster turns
   }
