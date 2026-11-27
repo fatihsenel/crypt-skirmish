@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import worker from '../worker/src/index.js';
-import { RoomCore, CoopRoom, MAX_PLAYERS, overRate, deliver, cleanPlayerName, CODE } from '../worker/src/room.js';
+import { RoomCore, CoopRoom, MAX_PLAYERS, MAX_LOG, CHUNK, IDLE_MS, RUN_IDLE_MS, overRate, deliver, cleanPlayerName, CODE } from '../worker/src/room.js';
 
 const A = 'aaaaaaaa';
 const B = 'bbbbbbbb';
@@ -89,6 +89,68 @@ describe('a co-op room', () => {
     expect(back.players.map((p) => p.on)).toEqual([false, true]);
   });
 
+  it('a run: votes, a decided step spends them, and a long log', () => {
+    const r = new RoomCore();
+    r.hello(A, 'Ana');
+    r.hello(B, 'Bo');
+    r.message(A, { t: 'start', fight });
+    r.message(A, { t: 'vote', key: 'enter:crypt' });
+    expect(r.votes).toEqual({}); // one fight: nothing to vote on
+    expect(r.idleMs).toBe(IDLE_MS);
+    r.message(A, { t: 'start', fight: { run: true, difficulty: 'normal', seed: 9 } });
+    expect(r.idleMs).toBe(RUN_IDLE_MS);
+    r.message(A, { t: 'vote', key: 'enter:crypt' });
+    r.message(B, { t: 'vote', key: 'enter:crypt' });
+    r.message(B, { t: 'vote', key: 'x'.repeat(81) });
+    expect(r.votes).toEqual({ [A]: 'enter:crypt', [B]: 'enter:crypt' });
+    r.message(B, { t: 'vote', key: null });
+    expect(r.votes).toEqual({ [A]: 'enter:crypt' });
+    // A player's own step leaves the votes; the decided one spends them.
+    r.message(B, { t: 'cmd', g: 2, at: 0, cmd: { type: 'camp', act: ['style', 'F', 'protection'] } });
+    expect(r.votes).toEqual({ [A]: 'enter:crypt' });
+    const d = r.message(A, { t: 'cmd', g: 2, at: 1, cmd: { type: 'camp', act: ['enter', 'crypt'], decided: true } });
+    expect(r.votes).toEqual({});
+    expect(msgs(d, B).map((m) => m.t)).toEqual(['cmd', 'room']);
+    // A run's log goes on past one fight's limit.
+    for (let i = r.log.length; i <= MAX_LOG; i++) r.message(A, { t: 'cmd', g: 2, at: i, cmd: { type: 'end' } });
+    expect(r.log.length).toBe(MAX_LOG + 1);
+  });
+
+  it('someone back under the same name takes their old place, heroes and vote', () => {
+    const r = new RoomCore();
+    r.hello(A, 'Ana');
+    r.hello(B, 'Bo');
+    r.message(A, { t: 'seats', seats: { F: B, W: B } });
+    r.message(A, { t: 'start', fight: { run: true, seed: 1 } });
+    r.message(B, { t: 'vote', key: 'next' });
+    r.leave(B);
+    r.hello(C, 'bo'); // another tab, another day
+    expect(r.players.map((p) => p.id)).toEqual([A, C]);
+    expect(r.seats).toMatchObject({ F: C, W: C, R: A });
+    expect(r.votes).toEqual({ [C]: 'next' });
+    // Not while the first is still here: then it's someone else.
+    r.hello('dddddddd', 'Bo');
+    expect(r.players.length).toBe(3);
+  });
+
+  it('heroes the host took over from someone gone are theirs again when they’re back', () => {
+    const r = new RoomCore();
+    r.hello(A, 'Ana');
+    r.hello(B, 'Bo');
+    r.message(A, { t: 'seats', seats: { F: B, W: B } });
+    r.leave(B);
+    r.message(A, { t: 'seats', seats: { F: A, W: A } }); // the takeover
+    expect(r.seats).toMatchObject({ F: A, W: A });
+    r.hello(C, 'Bo'); // back, in another tab
+    expect(r.seats).toMatchObject({ F: C, W: C });
+    expect(r.lent).toEqual({});
+    // Handed to someone here on purpose: not lent.
+    r.message(A, { t: 'seats', seats: { F: A } });
+    r.leave(C);
+    r.hello(C, 'Bo');
+    expect(r.seats.F).toBe(A);
+  });
+
   it('names, codes, rates and delivery', () => {
     expect(cleanPlayerName('  <Zoë>  the   Bold!!  ')).toBe('Zoë the Bold');
     expect(CODE.test('ABCDEF')).toBe(true);
@@ -129,7 +191,14 @@ describe('the Worker’s co-op route', () => {
     const sockets = [];
     const ctx = {
       blockConcurrencyWhile: (f) => f(),
-      storage: { get: async (k) => store.get(k), put: async (k, v) => store.set(k, v), setAlarm: async () => {}, deleteAll: async () => store.clear() },
+      storage: {
+        get: async (k) => store.get(k),
+        put: async (k, v) => (typeof k === 'string' ? store.set(k, v) : Object.entries(k).forEach(([a, b]) => store.set(a, structuredClone(b)))),
+        list: async ({ prefix }) => new Map([...store].filter(([k]) => k.startsWith(prefix))),
+        delete: async (ks) => ks.forEach((k) => store.delete(k)),
+        setAlarm: async () => {},
+        deleteAll: async () => store.clear(),
+      },
       getWebSockets: () => sockets.filter((s) => !s.closed),
     };
     const sock = () => {
@@ -159,5 +228,30 @@ describe('the Worker’s co-op route', () => {
     await room.webSocketMessage(c, 'x'.repeat(5000));
     expect(c.closed).toBe(true);
     expect(store.get('room').players.some((p) => p.id === C)).toBe(false);
+    // A run's log is kept in chunks, and comes back whole after a wake.
+    await room.webSocketMessage(a2, JSON.stringify({ t: 'start', fight: { run: true, seed: 3 } }));
+    const g = room.core.game;
+    for (let i = 0; i < CHUNK + 5; i++) {
+      room.core.message(A, { t: 'cmd', g, at: i, cmd: { type: 'end', i } });
+      await room.save(); // as each message does
+    }
+    await room.webSocketMessage(a2, JSON.stringify({ t: 'cmd', g, at: CHUNK + 5, cmd: { type: 'end' } }));
+    expect(store.get('room').log).toBeUndefined();
+    expect(store.get('log:0').length).toBe(CHUNK);
+    expect(store.get('log:1').length).toBe(6);
+    const woke = new CoopRoom({ ...ctx, getWebSockets: () => [] });
+    await new Promise((r) => setTimeout(r));
+    expect(woke.core.log.length).toBe(CHUNK + 6);
+    expect(woke.core.log[7].cmd.i).toBe(7);
+    // Back to the lobby: the old chunks go.
+    await room.webSocketMessage(a2, JSON.stringify({ t: 'lobby' }));
+    expect([...store.keys()].filter((k) => k.startsWith('log:'))).toEqual([]);
+    // A room kept before the chunks (its log inline) writes them all on its next save.
+    store.clear();
+    store.set('room', { ...room.core.snapshot(), log: Array.from({ length: CHUNK + 2 }, (_, i) => ({ cmd: { type: 'end', i }, by: A })) });
+    const old = new CoopRoom({ ...ctx, getWebSockets: () => [] });
+    await new Promise((r) => setTimeout(r));
+    await old.save();
+    expect([store.get('log:0').length, store.get('log:1').length, store.get('room').log]).toEqual([CHUNK, 2, undefined]);
   });
 });

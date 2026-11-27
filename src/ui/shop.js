@@ -47,6 +47,12 @@ export class Shop {
     this.panel.open(opener);
   }
 
+  get isOpen() { return !this.el.hidden; }
+
+  close() {
+    if (this.isOpen) this.panel.close();
+  }
+
   draw() {
     const state = this.get();
     this.el.querySelector('.shop-gold').innerHTML = `The party has <b class="gold">${state.gold ?? 0} gold</b>.`;
@@ -67,16 +73,19 @@ export class Shop {
     const state = this.get();
     let next;
     let said;
+    let act;
     if (b.dataset.buy) {
       const id = b.dataset.buy;
       next = buy(state, id);
+      act = ['buy', id];
       said = `Bought ${ITEMS[id].name} for ${PRICES[id]} gold.`;
     } else {
       const id = state.pack[Number(b.dataset.sell)];
       next = sell(state, Number(b.dataset.sell));
+      act = ['sell', Number(b.dataset.sell)];
       said = `Sold ${ITEMS[id].name} for ${sellPrice(id)} gold.`;
     }
-    this.set(next);
+    if (this.set(next, act) === false) return; // a run together: it lands when the relay hands it back
     this.draw();
     announce(`${said} ${next.gold} gold left.`);
     // The pressed button may be gone: keep focus in the panel.

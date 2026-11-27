@@ -368,19 +368,26 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
     replaces a skeleton and a swarm a giant rat, and on some floors from 3 a cult fanatic
     replaces a skeleton. Kobolds take giant rats' places, hobgoblins the orc's, and from floor
     3 a shadow a ghoul's, its chamber gone dark.
-- **Play together:** two to four players, each on their own device, share one fight. Play
-  together on the title makes a room with a six-letter code; Copy invite link (or the code)
-  brings the others in. The host picks the room (the daily's list, at its party level), the
-  difficulty and the classes, and hands each hero to a player; then everyone starts at once.
+- **Play together:** two to four players, each on their own device, share one fight or a
+  whole run. Play together on the title makes a room with a six-letter code; Copy invite link
+  (or the code) brings the others in. The host picks One fight (a room from the daily's list,
+  at its party level) or A whole run, the difficulty and the classes, and hands each hero to a
+  player; then everyone starts at once.
   - Each player moves their own heroes; a friend's turn plays out on your screen as they act.
     The line over the board says whose turn it is and how long is left: a hero's turn ends on
     its own after 90 seconds (if that player's device has stalled, a friend's ends it a little
     later). Press it to open the room (who plays which hero, or leave).
-  - A player who drops out for 15 seconds hands their heroes to the host, who can give them
-    back from the room. A dropped connection comes back on its own, and someone joining
+  - A player who drops out for 15 seconds hands their heroes to the host until they're back. A dropped connection comes back on its own, and someone joining
     mid-fight catches up from the start.
-  - At the end the host plays again (fresh dice) or takes everyone back to the room. Nothing
-    is saved and no achievements are unlocked. There is no taking a move back.
+  - At the end of one fight the host plays again (fresh dice) or takes everyone back to the
+    room. Nothing is saved and no achievements are unlocked. There is no taking a move back.
+  - A whole run goes from the crypt's gate to the end with the camp between fights. Where to
+    go, story scenes and stops, and what follows a fight (Continue, Try again, an easier
+    difficulty, back to camp) are put to a vote: a badge on the button says how many chose it.
+    Most of the players here decide; once everyone has voted, the most votes win, a tie going
+    the host's way. Each player hands out gear, picks and styles for their own heroes; anyone
+    may trade with the pedlar from the shared gold. The relay keeps the run for a month: Play
+    together's Back to the run, under the same name, takes up your old place and heroes.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak are
   kept. Win it and Copy result puts a short summary on the clipboard (on a phone, the share
   sheet); a won campaign has the same button. Watch your best replays the day's fastest win
@@ -874,7 +881,9 @@ Play together's rooms live in the same Worker: one Durable Object per room code
 minute from one address). It never runs the game: a fight is its seed plus the heroes'
 commands, so the relay only puts the commands in one order and every device plays them. A
 command names its place in the log, and one meant for a place already taken is refused; that
-device rebuilds the fight from the log. A room nobody has touched for 12 hours is forgotten.
+device rebuilds the fight from the log. A whole run keeps camp steps in the same log, and its
+votes beside it; its log is stored in chunks of 250. A room nobody has touched for 12 hours
+is forgotten, one holding a run after 30 days.
 On the dev server the game talks to `npm run coop-relay` instead, the same room code on this
 machine.
 
@@ -969,7 +978,8 @@ src/
   speech.js          the speech bubbles' lines and when each figure speaks
   links.js           copying and opening #watch= and #play= links
   coop.js            Play together: the connection to a room on the relay, its log of commands
-  ui/coop.js         Play together's lobby: the room, the players, the fight and who plays which hero
+  ui/coop.js         Play together's lobby: the room, the players, the fight or run and who plays which hero
+  game/coopRun.js    Play together's whole run: camp steps and fights from one log, rebuilt on joining
   threats.js         threat zones: the T toggle and a monster's reach from its portrait
   photo.js           photo mode: no HUD, a free camera, Save image
   input.js           picking a tile, the long press, what a click does, the cursor's step and words

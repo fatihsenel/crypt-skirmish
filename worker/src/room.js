@@ -12,8 +12,11 @@
 
 export const MAX_PLAYERS = 4;
 export const MAX_LOG = 4000; // commands in one fight
+export const MAX_RUN_LOG = 40_000; // in a whole run (its fights and the camp between them)
 export const MAX_MESSAGE = 4096; // characters
 export const IDLE_MS = 12 * 3600_000; // a room left this long is forgotten
+export const RUN_IDLE_MS = 30 * 24 * 3600_000; // one holding a run: a month, to come back to it
+export const CHUNK = 250; // log entries kept under one storage key (a value holds 128 KiB)
 const HEROES = ['F', 'W', 'R', 'C'];
 const ID = /^[a-z0-9]{8,24}$/;
 export const CODE = /^[A-HJ-NP-Z2-9]{6}$/; // no I, O, 0 or 1: easy to read out
@@ -44,26 +47,54 @@ export class RoomCore {
     this.game = s.game ?? 0; // which fight this is: a new start or a return to the lobby bumps it
     this.log = Array.isArray(s.log) ? s.log : []; // [{ cmd, by }]
     this.touched = s.touched ?? 0;
+    // Each player's vote on the next step of a run (a camp's way on, a scene, Next after a fight):
+    // player id -> a short key. The host's device sends the step once enough agree; a decided
+    // step clears them.
+    this.votes = s.votes && typeof s.votes === 'object' ? s.votes : {};
+    // Heroes the host took over from a player who dropped out: hero code -> that player, given
+    // back when they return (under their id, or their name from another tab).
+    this.lent = s.lent && typeof s.lent === 'object' ? s.lent : {};
     // Players refused a command: everything they send is refused until they've rebuilt the
     // fight from the log and say they're ready (their next commands were meant for a fight
     // that went another way). Not kept: a wake from storage starts clean, as reconnects resync.
     this.blocked = new Set();
   }
 
-  snapshot() {
-    const { players, host, seats, draft, fight, game, log, touched } = this;
-    return { players: players.map(({ id, name }) => ({ id, name })), host, seats, draft, fight, game, log, touched };
+  /** The room to keep, without its log (`withLog`: with it). */
+  snapshot(withLog = true) {
+    const { players, host, seats, draft, fight, game, log, touched, votes, lent } = this;
+    return { players: players.map(({ id, name }) => ({ id, name })), host, seats, draft, fight, game, ...(withLog && { log }), touched, votes, lent };
   }
 
   /** The room as every player sees it (without the log). */
   view() {
     return {
       t: 'room', host: this.host, players: this.players.map(({ id, name, on }) => ({ id, name, on })),
-      seats: this.seats, draft: this.draft, fight: this.fight, game: this.game, len: this.log.length,
+      seats: this.seats, draft: this.draft, fight: this.fight, game: this.game, len: this.log.length, votes: this.votes,
     };
   }
 
   player(id) { return this.players.find((p) => p.id === id); }
+
+  /** How long the room is kept with nobody in it. */
+  get idleMs() { return this.fight?.run ? RUN_IDLE_MS : IDLE_MS; }
+
+  /** Player `old` comes back as `id` (a new tab, another day): their place, heroes and votes. */
+  rename(old, id) {
+    const p = this.player(old);
+    p.id = id;
+    for (const h of HEROES) {
+      if (this.seats[h] === old) this.seats[h] = id;
+      if (this.lent[h] === old) this.lent[h] = id;
+    }
+    if (this.host === old) this.host = id;
+    if (old in this.votes) {
+      this.votes[id] = this.votes[old];
+      delete this.votes[old];
+    }
+    this.blocked.delete(old);
+    return p;
+  }
 
   /** The host is the first player still here when the old one goes. */
   promote() {
@@ -81,6 +112,9 @@ export class RoomCore {
   hello(id, name, now = Date.now()) {
     if (typeof id !== 'string' || !ID.test(id)) return { error: 'id' };
     let p = this.player(id);
+    // Someone away with the same name: the same person back (their id is kept per tab).
+    const back = !p && cleanPlayerName(name) && this.players.find((q) => !q.on && q.name.toLowerCase() === cleanPlayerName(name).toLowerCase());
+    if (back) p = this.rename(back.id, id);
     if (!p) {
       if (this.players.length >= MAX_PLAYERS) {
         // Full: a player who left and holds no hero gives up their place.
@@ -93,6 +127,11 @@ export class RoomCore {
     }
     p.name = cleanPlayerName(name) || p.name || `Player ${this.players.indexOf(p) + 1}`;
     p.on = true;
+    for (const h of HEROES) { // their heroes, if the host was keeping them
+      if (this.lent[h] !== id) continue;
+      this.seats[h] = id;
+      delete this.lent[h];
+    }
     this.blocked.delete(id); // a new socket gets the whole log
     if (!this.host) this.host = id;
     this.promote();
@@ -140,7 +179,15 @@ export class RoomCore {
       }
       case 'seats': { // the host hands out the heroes (or takes over a gone player's)
         if (!host || !msg.seats || typeof msg.seats !== 'object') return { out: [] };
-        for (const h of HEROES) if (this.player(msg.seats[h])) this.seats[h] = msg.seats[h];
+        for (const h of HEROES) {
+          const to = msg.seats[h];
+          if (!this.player(to) || to === this.seats[h]) continue;
+          const was = this.player(this.seats[h]);
+          // Taken from someone away: theirs again when they're back. Handed out on purpose: not.
+          if (was && !was.on && to === this.host) this.lent[h] = this.lent[h] ?? was.id;
+          else delete this.lent[h];
+          this.seats[h] = to;
+        }
         return all();
       }
       case 'start': { // the host starts a fight (or the next): everyone starts it from the same seed
@@ -149,6 +196,7 @@ export class RoomCore {
         if (!fight) return { out: [] };
         this.fight = fight;
         this.log = [];
+        this.votes = {};
         this.game++;
         this.blocked.clear();
         return all();
@@ -157,22 +205,37 @@ export class RoomCore {
         if (!host) return { out: [] };
         this.fight = null;
         this.log = [];
+        this.votes = {};
         this.game++;
         this.blocked.clear();
+        return all();
+      }
+      case 'vote': { // a player's vote on the run's next step (null takes it back)
+        if (!this.fight?.run) return { out: [] };
+        if (msg.key === null) delete this.votes[id];
+        else if (typeof msg.key === 'string' && msg.key.length <= 80) this.votes[id] = msg.key;
+        else return { out: [] };
         return all();
       }
       case 'ready': // rebuilt after a refused command
         this.blocked.delete(id);
         return { out: [] };
       case 'cmd': {
-        const fits = !this.blocked.has(id) && this.fight && msg.g === this.game && msg.at === this.log.length && this.log.length < MAX_LOG
+        const fits = !this.blocked.has(id) && this.fight && msg.g === this.game && msg.at === this.log.length
+          && this.log.length < (this.fight.run ? MAX_RUN_LOG : MAX_LOG)
           && msg.cmd && typeof msg.cmd === 'object' && typeof msg.cmd.type === 'string' && JSON.stringify(msg.cmd).length <= 400;
         if (!fits) {
           if (this.fight && msg.g === this.game) this.blocked.add(id);
           return { out: [{ to: id, msg: { t: 'stale', g: this.game, at: this.log.length } }] };
         }
         this.log.push({ cmd: msg.cmd, by: id });
-        return { out: [{ to: '*', msg: { t: 'cmd', g: this.game, at: this.log.length - 1, cmd: msg.cmd, by: id } }] };
+        const out = [{ to: '*', msg: { t: 'cmd', g: this.game, at: this.log.length - 1, cmd: msg.cmd, by: id } }];
+        // A step everyone agreed on (a run's camp): the votes for it are spent.
+        if (msg.cmd.decided && Object.keys(this.votes).length) {
+          this.votes = {};
+          out.push({ to: '*', msg: this.view() });
+        }
+        return { out };
       }
       default:
         return { out: [] };
@@ -205,7 +268,14 @@ export class CoopRoom {
   constructor(ctx) {
     this.ctx = ctx;
     ctx.blockConcurrencyWhile(async () => {
-      this.core = new RoomCore(await ctx.storage.get('room'));
+      const saved = await ctx.storage.get('room');
+      this.whole = !!saved?.log; // kept before the log was chunked: write every chunk next time
+      // The log is kept in chunks beside the room (a run's is long).
+      const chunks = [...(await ctx.storage.list({ prefix: 'log:' })).entries()]
+        .map(([k, v]) => [Number(k.slice(4)), v]).sort((a, b) => a[0] - b[0]);
+      this.chunks = chunks.length;
+      if (saved && !saved.log) saved.log = chunks.flatMap(([, v]) => v);
+      this.core = new RoomCore(saved);
       this.core.online(this.socks().map(([, id]) => id));
     });
   }
@@ -242,8 +312,22 @@ export class CoopRoom {
     } else res = this.core.message(att.id, msg);
     ws.serializeAttachment(att);
     deliver(res.out, this.socks());
-    await this.ctx.storage.put('room', this.core.snapshot());
-    await this.ctx.storage.setAlarm(Date.now() + IDLE_MS);
+    await this.save();
+    await this.ctx.storage.setAlarm(Date.now() + this.core.idleMs);
+  }
+
+  /** Keep the room: its state, the log's last chunk (an entry lands there), none past it. */
+  async save() {
+    const { log } = this.core;
+    const n = Math.ceil(log.length / CHUNK);
+    const puts = { room: this.core.snapshot(false) };
+    for (let k = this.whole ? 0 : Math.max(0, n - 1); k < n; k++) puts[`log:${k}`] = log.slice(k * CHUNK, (k + 1) * CHUNK);
+    this.whole = false;
+    await this.ctx.storage.put(puts);
+    const gone = [];
+    for (let k = n; k < (this.chunks ?? 0); k++) gone.push(`log:${k}`);
+    if (gone.length) await this.ctx.storage.delete(gone);
+    this.chunks = n;
   }
 
   async webSocketClose(ws) { await this.gone(ws); }
@@ -255,13 +339,14 @@ export class CoopRoom {
     ws.serializeAttachment({ id: null });
     if (!id || this.socks().some(([other, oid]) => other !== ws && oid === id)) return;
     deliver(this.core.leave(id).out, this.socks());
-    await this.ctx.storage.put('room', this.core.snapshot());
+    await this.ctx.storage.put('room', this.core.snapshot(false));
   }
 
   /** Nobody has touched the room for IDLE_MS: forget it. */
   async alarm() {
-    if (this.socks().length) return this.ctx.storage.setAlarm(Date.now() + IDLE_MS);
+    if (this.socks().length) return this.ctx.storage.setAlarm(Date.now() + this.core.idleMs);
     await this.ctx.storage.deleteAll();
     this.core = new RoomCore();
+    this.chunks = 0;
   }
 }

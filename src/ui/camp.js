@@ -390,6 +390,7 @@ export class Camp {
     // The pedlar trades at the rest stops and after each act's boss.
     $('#camp-trade').hidden = !canTrade(state);
     const returned = had?.includes('data-unequip') && document.querySelector('#camp-pack .pack-item:last-child [data-equip]:not([disabled])');
+    this.h.onShown?.(); // Play together marks the votes
     if (had) (document.querySelector(had) ?? (returned || this.firstControl()))?.focus();
   }
 

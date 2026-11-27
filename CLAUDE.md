@@ -231,6 +231,15 @@ server on 5173.
   device ends a turn 45 s past it, in case that device stalled) and the host's takeover of a
   player gone 15 s. `isHeroTurn` is false for a hero that isn't ours; undo
   is off; nothing is saved (`fight` is null, `settleFight` gets a store that does nothing).
+  A whole run together (`fight.run`) is `game/coopRun.js`: one log for the run, the heroes'
+  commands and camp steps (`{ type: 'camp', act }`), `CoopRun.step` applying the camp's rules
+  and `rebuildRun` building a run from its log (on joining or out of step: `coopLoadRun`); a
+  step that no longer fits is skipped on every device. Camp steps apply when the relay echoes
+  them (`coopPull`); ways on, scenes, events and the banner's buttons are votes (the relay's
+  `votes`, `coopVote`), settled by the host's device (`coopDecide`, a `decided` step); gear,
+  picks, styles and trades are a player's own (`coopOwn`). The relay keeps a run 30 days
+  (`RUN_IDLE_MS`), its log in `log:<k>` chunks, gives heroes it `lent` the host back on return,
+  and `hello` under an away player's name takes their place (`rename`).
   The relay never runs rules, so a rules change needs nothing there: a fight carries `rules`,
   and a host on newer rules than a guest is refused on the guest's side. Test it with several
   headless Chromes (each its own player: the id is per tab, in sessionStorage) against

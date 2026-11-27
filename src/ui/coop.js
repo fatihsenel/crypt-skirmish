@@ -7,7 +7,7 @@ import { Overlay } from './overlay.js';
 import { announce } from './announce.js';
 import { copyText } from './copyBox.js';
 import { unitIcon } from './icons.js';
-import { CoopLink, HERO_SLOTS, newRoomCode, cleanCode } from '../coop.js';
+import { CoopLink, HERO_SLOTS, newRoomCode, cleanCode, LOST_TEXT } from '../coop.js';
 import { NODES, nodeName, DIFFICULTIES } from '../game/campaign.js';
 import { CLASS_CHOICES, TEMPLATES } from '../game/units.js';
 import { DAILY_ROOMS_TWO_FLOORS } from '../game/daily.js';
@@ -17,15 +17,21 @@ import './coop.css';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const NAME_KEY = 'crypt-skirmish:coop-name';
+const RUN_KEY = 'crypt-skirmish:coop-run'; // the room of the last run together, to come back to
 /** The rooms a co-op fight can be, each with the party level it's fought at (the daily's list). */
 export const COOP_ROOMS = DAILY_ROOMS_TWO_FLOORS.filter(([node]) => NODES[node]);
-const DEFAULT_DRAFT = { node: 'warren', difficulty: 'normal', classes: {} };
+const DEFAULT_DRAFT = { mode: 'fight', node: 'warren', difficulty: 'normal', classes: {} };
 
-/** The fight a draft starts: its room, party level, difficulty, classes, fresh dice and these rules. */
+/**
+ * The fight a draft starts: its room, party level, difficulty, classes, fresh dice and these
+ * rules; or a whole run (`run`), from the crypt's gate, its fights' dice drawn from `seed`.
+ */
 export function fightFrom(draft, seed = newSeed()) {
-  const [node, level] = COOP_ROOMS.find(([n]) => n === draft?.node) ?? COOP_ROOMS.find(([n]) => n === DEFAULT_DRAFT.node);
   const classes = Object.fromEntries(HERO_SLOTS.filter((s) => CLASS_CHOICES[s].includes(draft?.classes?.[s]) && draft.classes[s] !== s).map((s) => [s, draft.classes[s]]));
-  return { node, level, difficulty: DIFFICULTIES[draft?.difficulty] ? draft.difficulty : 'normal', classes, seed, rules: RULES };
+  const difficulty = DIFFICULTIES[draft?.difficulty] ? draft.difficulty : 'normal';
+  if (draft?.mode === 'run') return { run: true, difficulty, classes, seed, rules: RULES };
+  const [node, level] = COOP_ROOMS.find(([n]) => n === draft?.node) ?? COOP_ROOMS.find(([n]) => n === DEFAULT_DRAFT.node);
+  return { node, level, difficulty, classes, seed, rules: RULES };
 }
 
 export class CoopLobby {
@@ -88,6 +94,18 @@ export class CoopLobby {
     try { return localStorage.getItem(NAME_KEY) ?? ''; } catch { return ''; }
   }
 
+  /** The room of a run together to come back to (null: none). */
+  remember(code) {
+    try {
+      if (code) localStorage.setItem(RUN_KEY, code);
+      else localStorage.removeItem(RUN_KEY);
+    } catch { /* not kept */ }
+  }
+
+  savedRun() {
+    try { return cleanCode(localStorage.getItem(RUN_KEY)); } catch { return null; }
+  }
+
   join(code, name) {
     try { localStorage.setItem(NAME_KEY, name); } catch { /* not kept */ }
     this.leave(true);
@@ -136,6 +154,7 @@ export class CoopLobby {
       this.hide();
       this.cb.onFight(link, room);
     } else if (!room.fight && before?.fight) {
+      if (before.fight.run && this.savedRun() === link.code) this.remember(null); // the run is over
       this.fighting = false;
       this.cb.onLobby(link);
       this.show(null);
@@ -148,14 +167,17 @@ export class CoopLobby {
     const body = this.el.querySelector('.coop-body');
     const link = this.link;
     if (!link || link.status === 'refused') {
-      body.innerHTML = `<p class="coop-lead">Two to four players, each on their own device, in one fight. The host hands out the heroes.</p>
+      const back = !this.pending && this.savedRun();
+      body.innerHTML = `<p class="coop-lead">Two to four players, each on their own device, in one fight or a whole run. The host hands out the heroes.</p>
         <label class="coop-field coop-name">Your name <input id="coop-name" maxlength="14" autocomplete="nickname" value="${esc(this.savedName())}" placeholder="Your name"></label>
         ${this.why ? `<p class="coop-why" role="alert">${esc(this.why)}</p>` : ''}
+        ${back ? `<div class="coop-back"><p>Your run together is kept in room <b>${esc(back)}</b> for a month. Come back under the same name to take up your heroes.</p>
+          <button id="coop-rejoin" type="button" class="primary" data-code="${esc(back)}">Back to the run</button></div>` : ''}
         <div class="coop-doors">
           <div class="coop-door">
             <h3 class="sub">New room</h3>
             <p class="muted">Make one, then share its code with friends.</p>
-            <button id="coop-make" type="button" class="primary">Make a room</button>
+            <button id="coop-make" type="button"${back ? '' : ' class="primary"'}>Make a room</button>
           </div>
           <div class="coop-door">
             <h3 class="sub">Have a code?</h3>
@@ -169,7 +191,7 @@ export class CoopLobby {
       return;
     }
     const room = link.room;
-    const status = { connecting: 'Connecting…', lost: 'Connection lost: trying again…', open: '' }[link.status] ?? '';
+    const status = { connecting: 'Connecting…', lost: LOST_TEXT, open: '' }[link.status] ?? '';
     if (!room) {
       body.innerHTML = `<div class="coop-code-card"><div><span class="coop-label">Room code</span><span class="coop-code-big">${esc(link.code)}</span></div></div>
         <p class="muted coop-wait">${esc(status || 'Connecting…')}</p>
@@ -186,6 +208,8 @@ export class CoopLobby {
       ? `<select id="${id}" aria-label="${esc(label)}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`
       : `<span class="coop-value">${esc(opts.find(([v]) => v === value)?.[1] ?? '')}</span>`);
     const rooms = COOP_ROOMS.map(([n, l]) => [n, `${nodeName(n)} · level ${l}`]);
+    const modes = [['fight', 'One fight'], ['run', 'A whole run']];
+    const run = draft.mode === 'run';
     const diffs = Object.entries(DIFFICULTIES).map(([k, d]) => [k, d.name]);
     const people = room.players.map((p) => [p.id, p.name]);
     const heroes = HERO_SLOTS.map((s) => {
@@ -204,16 +228,18 @@ export class CoopLobby {
       ${status ? `<p class="coop-why" role="status">${esc(status)}</p>` : ''}
       <h3 class="sub">Players <span class="coop-count">${room.players.length} of 4</span></h3>
       <ul class="coop-players">${players}</ul>
-      <h3 class="sub">The fight</h3>
+      <h3 class="sub">What to play</h3>
       <div class="coop-fight">
-        <label class="coop-field">Room ${choice('coop-room', rooms, draft.node, 'Room')}</label>
+        <label class="coop-field coop-mode">Play ${choice('coop-mode', modes, run ? 'run' : 'fight', 'Play')}</label>
         <label class="coop-field">Difficulty ${choice('coop-diff', diffs, draft.difficulty, 'Difficulty')}</label>
+        ${run ? '<p class="muted coop-run-note">From the crypt’s gate to the end, camp between fights. Where to go and story choices are put to a vote; each player sees to their own heroes’ gear. The room is kept a month.</p>'
+    : `<label class="coop-field coop-room">Room ${choice('coop-room', rooms, draft.node, 'Room')}</label>`}
       </div>
       <h3 class="sub coop-heroes-head"><span>Heroes</span><span>Played by</span></h3>
       <ul class="coop-heroes">${heroes}</ul>
       <div class="coop-foot">
         <button type="button" class="coop-leave" data-coop="leave">Leave room</button>
-        ${host ? `<button id="coop-start" type="button" class="primary">${this.fighting ? 'Start a new fight' : 'Start the fight'}</button>` : `<p class="coop-wait">Waiting for ${esc(link.playerName(room.host))} to start the fight…</p>`}
+        ${host ? `<button id="coop-start" type="button" class="primary">${run ? (this.fighting ? 'Start a new run' : 'Start the run') : this.fighting ? 'Start a new fight' : 'Start the fight'}</button>` : `<p class="coop-wait">Waiting for ${esc(link.playerName(room.host))} to start${run ? ' the run' : ' the fight'}…</p>`}
       </div>`;
   }
 
@@ -225,7 +251,8 @@ export class CoopLobby {
   readDraft() {
     const v = (id) => this.el.querySelector(`#${id}`)?.value;
     const classes = Object.fromEntries(HERO_SLOTS.map((s) => [s, v(`coop-class-${s}`)]).filter(([s, c]) => c && c !== s));
-    return { node: v('coop-room'), difficulty: v('coop-diff'), classes };
+    const draft = { ...DEFAULT_DRAFT, ...(this.link?.room?.draft ?? {}) }; // a run keeps the room picked before
+    return { mode: v('coop-mode') ?? draft.mode, node: v('coop-room') ?? draft.node, difficulty: v('coop-diff'), classes };
   }
 
   onChange(ev) {
@@ -234,7 +261,7 @@ export class CoopLobby {
     const id = ev.target.id;
     if (id.startsWith('coop-seat-')) {
       link.send({ t: 'seats', seats: { [id.slice(-1)]: ev.target.value } });
-    } else if (id === 'coop-room' || id === 'coop-diff' || id.startsWith('coop-class-')) {
+    } else if (id === 'coop-room' || id === 'coop-diff' || id === 'coop-mode' || id.startsWith('coop-class-')) {
       link.send({ t: 'draft', draft: this.readDraft() });
     }
   }
@@ -244,21 +271,29 @@ export class CoopLobby {
     if (!b) return;
     if (b.id === 'coop-make') this.join(newRoomCode(), this.el.querySelector('#coop-name').value.trim());
     else if (b.id === 'coop-join') this.joinTyped();
+    else if (b.id === 'coop-rejoin') this.join(b.dataset.code, this.el.querySelector('#coop-name').value.trim());
     else if (b.id === 'coop-copy') copyText(this.inviteLink(), { button: b, label: 'Copy invite link', what: 'invite link' });
     else if (b.dataset.coop === 'leave') {
       this.leave();
       this.draw();
       this.el.querySelector('#coop-make')?.focus();
     } else if (b.id === 'coop-start' && this.link?.host) {
+      if (this.link.room?.fight?.run && !b.dataset.sure) { // a month's run, gone in a click: ask twice
+        b.dataset.sure = '1';
+        b.textContent = 'Press again: the run so far is lost';
+        return;
+      }
       this.link.send({ t: 'start', fight: fightFrom(this.readDraft()) });
     }
   }
 
   /** The line over the fight: whose turn, how long is left, the connection. */
-  status(text) {
+  status(text, corner = false) {
     this.bar.hidden = !text;
     if (this.bar.textContent !== (text ?? '')) this.bar.textContent = text ?? '';
-    if (!text) return;
+    // Out of a fight (the camp, the end banner): in the top corner, clear of the panels.
+    this.bar.classList.toggle('corner', !!text && corner);
+    if (!text || corner) return;
     // Under the initiative strip, wherever the layout (phone, text size) puts its foot.
     const foot = Math.round(document.getElementById('initiative')?.getBoundingClientRect().bottom || 54);
     this.bar.style.top = `${foot + 6}px`;

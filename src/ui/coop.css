@@ -29,6 +29,20 @@
 #coop .coop-players li.away .dot { background: #8a8494; box-shadow: none; }
 #coop .tag { font-size: 12px; font-weight: 400; color: var(--muted); }
 #coop .coop-fight { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.45fr); gap: 10px; }
+#coop .coop-fight .coop-room, #coop .coop-run-note { grid-column: 1 / -1; }
+#coop .coop-run-note { margin: 0; font-size: 13px; }
+#coop .coop-back { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--gold); border-radius: 10px; background: rgba(217, 180, 90, 0.07); }
+#coop .coop-back p { margin: 0; flex: 1; font-size: 13px; }
+#coop .coop-back b { color: var(--gold); letter-spacing: 0.08em; }
+
+/* A run together: who voted for a way on, a scene's answer or the banner's next step. */
+[data-votes] { position: relative; }
+[data-votes]::after {
+  content: attr(data-votes); position: absolute; top: -9px; right: -7px; padding: 1px 7px; border-radius: 9px;
+  font: 600 11px/16px var(--body); letter-spacing: 0; text-transform: none; white-space: nowrap; pointer-events: none;
+  color: #1a1408; background: var(--gold); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.voted { outline: 2px solid var(--gold); outline-offset: 2px; }
 /* Our own arrow: the browser's sits tight on the edge and runs over long names. */
 #coop select {
   appearance: none; -webkit-appearance: none;
@@ -73,6 +87,7 @@
 @media (max-width: 600px) {
   #coop .coop-doors { grid-template-columns: 1fr; }
   #coop .coop-door > button { align-self: stretch; }
+  #coop .coop-back { flex-direction: column; align-items: stretch; }
   #coop .coop-code-big { font-size: 22px; }
   #coop .coop-fight { grid-template-columns: minmax(0, 1fr) minmax(0, 7.5em); gap: 8px; }
   /* One line a hero: the portrait says who, the selects say what and by whom. */
@@ -104,6 +119,7 @@
   white-space: nowrap;
 }
 #coop-bar[hidden] { display: none; }
+#coop-bar.corner { top: 14px !important; left: 14px; right: auto; transform: none; max-width: calc(100% - 200px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* On a phone, to the right: the Controls toggle sits on the left under the turn order. */
 @media (max-width: 600px) {
   #coop-bar { left: auto; right: 12px; transform: none; max-width: calc(100% - 160px); overflow: hidden; text-overflow: ellipsis; }

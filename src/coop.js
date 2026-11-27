@@ -35,6 +35,9 @@ export function playerId(store = globalThis.sessionStorage) {
   return id;
 }
 
+/** What to say while the link is down: on the dev server, most likely no local relay is running. */
+export const LOST_TEXT = import.meta.env?.DEV ? 'No relay: run npm run coop-relay (trying again…)' : 'Connection lost: trying again…';
+
 export const HERO_SLOTS = ['F', 'W', 'R', 'C'];
 
 export class CoopLink {
