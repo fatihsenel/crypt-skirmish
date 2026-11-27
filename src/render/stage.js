@@ -16,7 +16,7 @@ export function createStage(container, { width, height }) {
   const coarse = matchMedia('(pointer: coarse)').matches;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // three dropped PCFSoftShadowMap; soft through the sun's radius
   renderer.shadowMap.autoUpdate = false; // redrawn while something moves, see draw()
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   container.appendChild(renderer.domElement);
@@ -58,6 +58,7 @@ export function createStage(container, { width, height }) {
   sun.shadow.mapSize.setScalar(coarse ? 1024 : 2048); // a third cheaper per frame on a phone
   Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 50 });
   sun.shadow.bias = -0.0005;
+  sun.shadow.radius = coarse ? 2 : 3.5; // softer edges, blurred over a few texels of the map
   scene.add(sun, sun.target);
 
   // Post-processing (post.js), loaded the first time Glow or photo mode's blur asks for it.
@@ -70,12 +71,22 @@ export function createStage(container, { width, height }) {
     if ((effects.glow || effects.blur) && !post) {
       loading ??= import('./post.js').then(({ createPost }) => {
         post = createPost(renderer, scene, camera);
+        post.setGrade(grade, { snap: true });
         post.setSize(container.clientWidth, container.clientHeight);
       }).catch((e) => console.warn('Post-processing not loaded', e));
       await loading;
     }
     post?.set(effects);
     keepAwake(300);
+  };
+  /**
+   * A shockwave ('ring') or a heat shimmer ('heat') bending the picture round a point on the
+   * board (`at`: {x, z}, and y if not about chest height); only with Glow on and full motion, else nothing.
+   */
+  const warp = (at, kind, opts) => {
+    if (!post || !effects.glow || calm()) return;
+    post.warp(at, kind, opts);
+    keepAwake((opts?.ms ?? 700) + 100);
   };
   /** Draws the scene once (also photo mode's Save image), with the effects that are on. */
   const render = () => {
@@ -120,7 +131,10 @@ export function createStage(container, { width, height }) {
   // background, eased over a second when it changes. Colours only: no material recompiles.
   const mood = { from: null, to: null, t: 1 };
   const parts = () => [hemi.color, hemi.groundColor, sun.color, scene.background];
+  let grade; // the act's colour grade, for post.js (it may load later)
   const setMood = (m, { snap = false } = {}) => {
+    grade = m.grade;
+    post?.setGrade(grade, { snap });
     mood.from = parts().map((c) => c.clone());
     mood.to = [m.sky, m.ground, m.sun, m.bg].map((c) => new THREE.Color(c));
     mood.t = snap ? 1 : 0;
@@ -212,7 +226,7 @@ export function createStage(container, { width, height }) {
     fit();
   };
 
-  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, render, setEffects, setMood, dom: renderer.domElement };
+  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, render, setEffects, setMood, warp, dom: renderer.domElement };
 }
 
 /**

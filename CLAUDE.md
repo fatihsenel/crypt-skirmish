@@ -187,6 +187,26 @@ server on 5173.
   foe's sweep `bossSweep`, the last blow's slow close-up `lastBlow` through `easeCamera`,
   `stairCamera`, the Floor peek `peekFloor`; a newer pan takes over through `panTween`), and
   they skip under `calm()`, as does `board.lairShake` in `main.js`. The red edges are `#vignette` (`data-level`).
+  Raised ground is `stoneBlock` with `stoneSide`/`stoneTop` (`render/stone.js`, canvas textures
+  made once). Mist in chasms and over the lower hall and, with Glow, the torches' and braziers'
+  light shafts are `render/haze.js` (`board.haze`; `setReflections` toggles the shafts).
+  `render/floors.js` (`board.floors`) draws damp stone by water, frost from `setIce`
+  (`setFrost`) and glowing seams from `setFire` (`setSeams`); blood marks dry through
+  `marks.age()` on the `round` event, updating the fog's `base` colour, not the material's.
+  A figure going up or down a step or a ladder in `moveAlong` sets `climbing` (so `animate`
+  doesn't ease its lift) and hops or climbs (`climbLadder`), then `settle`s; `impact` also
+  knocks the figure back from its attacker. With Glow, `post.js` adds GTAO (`aoPass`, off on a
+  coarse pointer; transparent no-depth meshes are left out of its depth pass) and the act's
+  grade (`mood.js` `grade`, `stage.setMood` → `post.setGrade`). Shadows are `PCFShadowMap`
+  with `sun.shadow.radius` (three r187 dropped `PCFSoftShadowMap`).
+  A wall in the way fades by `ditherable` (`render/dither.js`, a `uFade` that discards pixels in
+  a Bayer pattern), never by `transparent`. Figures get `rimLight` and `contactShadow`
+  (`render/rim.js`); these, `dither` and `dissolve` patch `onBeforeCompile`, so each chains the
+  one before it and adds to `customProgramCacheKey`. Water's depth and alpha ride its vertex
+  colours (`waterSheet`, RGBA) and dry edges get a shore strip (`this.shores`). With Glow,
+  `post.js` blurs the screen's top and bottom (`TILT`, off while photo mode's Blur is on) and
+  warps it for a moment (`stage.warp(at, 'ring' | 'heat', { radius, ms })`, at most `WARPS`
+  at once, skipped under `calm()`); a spell's warp goes in its case in `animate.js`.
   Clamp any `pow` in vertex or colour maths (`Math.max(0, …)`): one NaN pixel spreads over the
   whole screen through the glow's bloom.
 - The title's 3D emblem (`render/titleLogo.js`, its own renderer and chunk) replaces its still

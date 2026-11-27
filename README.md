@@ -512,7 +512,19 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   green). Fire and lightning blacken and crack the walls beside them, and Shatter and
   Thunderwave crack them; an arrow or javelin that misses flies on and sticks in a wall, a
   door, a barrel or the floor for the rest of the fight. When a figure takes the stairs, the
-  floor it leaves fades to a cold ghost and the camera tips to follow it.
+  floor it leaves fades to a cold ghost and the camera tips to follow it. Raised ground is cut
+  stone, damp and mossy at its foot and worn pale at the lip; mist drifts down the chasms and
+  over a lower hall. Stone beside water is dark and wet, Ice Storm's frost creeps out round its
+  ground and melts back, spilled coals glow through the cracks between flags, and blood soaks
+  in and dries brown over a few rounds. Figures hop up a step, climb ladders rung by rung and
+  stagger back from a blow. Each figure has a thin rim of light (cool for heroes, warm for
+  foes) and a soft shadow at its feet; a wall in the way fades out in a fine screen-door
+  pattern rather than turning to glass. Pools darken toward their middle, show the floor
+  through their shallows and lap at a pale shore. With Glow on, torches and braziers throw soft
+  shafts of light, corners and feet get a soft ambient shade (not on phones), each act has its
+  own colour grade, the board's near and far edges soften like a model under a lens, a
+  Fireball or Shatter sends a ripple through the air and fire makes it shimmer, and sparks
+  bounce off the floor.
 - **Speech bubbles:** at the big moments a figure shouts a line over its head, typed out and
   gone in under two seconds: a hero's first blow of a fight, a critical hit, a kill, a friend
   falling ("Hold on, Maela!"), a big spell, healing a friend, getting back up ("I owe you
@@ -922,8 +934,13 @@ src/
   render/            three.js only
     stage.js         renderer, camera, lights, screen shake, labels kept apart
     board.js         dungeon meshes, wall shading, flickering torches, highlights, fog of war, wall
-                     fading, water and chasms, the room rising into place
-    marks.js         soot, scorch and remains left on the floor
+                     fading, water (deeper in the middle, a shore) and chasms, the room rising
+    stone.js         cut stone for raised ground: block courses, worn flags, a damp foot
+    haze.js          mist in chasms and the lower hall; torch and brazier light shafts (with Glow)
+    floors.js        damp stone by water, frost round Ice Storm, glowing seams under coals
+    dither.js        walls fading out of the way in a screen-door pattern
+    rim.js           each figure's rim of light and the soft shadow at its feet
+    marks.js         soot, scorch and remains left on the floor; blood drying over the rounds
     tracks.js        wet and bloody footprints
     reflect.js       reflections in the water (with Glow)
     clutter.js       pebbles, bones and shards that roll aside
@@ -935,9 +952,11 @@ src/
     outline.js       the outlines on the hovered figure and the foes in reach
     life.js          banners and cobwebs stirring, drips into pools, a rat out of sight, light shafts
     auras.js         conditions drawn on a figure (bubbles, flames, frost, stars, rings, Shield)
-    mood.js          each act's light colours
+    mood.js          each act's light colours and colour grade
     motes.js         embers rising from fires and dust in their light
-    post.js          glow (bloom) and photo mode's blur, loaded only when one is on
+    post.js          glow (bloom), ambient occlusion, the act's colour grade, the lens blur at
+                     the edges and spell ripples (with Glow), and photo mode's blur, loaded only
+                     when one is on
     dissolve.js      a slain monster burning away, with an ember, blue or green rim
     dungeonKit.js    loads the dungeon tiles
     gltfModels.js    loads the character models and plays their animations

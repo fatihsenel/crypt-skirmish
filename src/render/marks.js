@@ -149,6 +149,23 @@ export class Marks {
     this.board.fogDirty = true; // the new marks take their tile's fog
   }
 
+  /** A round passes: blood soaks in and dries, darker, browner and duller over four rounds. */
+  age() {
+    for (const [k, mesh] of this.byTile) {
+      if (mesh.userData.kind !== 'blood') continue;
+      const a = Math.min(1, (mesh.userData.age = (mesh.userData.age ?? 0) + 1) / 4);
+      const m = mesh.material;
+      m.roughness = 0.25 + a * 0.65;
+      m.opacity = KINDS.blood.alpha * (1 - a * 0.22);
+      const entry = this.board.cells.get(k)?.mats.find((e) => e.m === m);
+      if (entry) entry.base.setRGB(1 - a * 0.42, 1 - a * 0.55, 1 - a * 0.5); // the fog tints from this
+      else m.color.setRGB(1 - a * 0.42, 1 - a * 0.55, 1 - a * 0.5);
+      const cell = this.board.cells.get(k);
+      if (cell) cell.applied = null;
+    }
+    this.board.fogDirty = true;
+  }
+
   remove(k) {
     const mesh = this.byTile.get(k);
     if (!mesh) return;

@@ -41,7 +41,9 @@ export function dissolvable(material, color) {
   if (u) return u;
   u = { amount: { value: 0 }, glow: { value: 1 }, edge: { value: new THREE.Color(color) } };
   uniforms.set(material, u);
-  material.onBeforeCompile = (shader) => {
+  const before = material.onBeforeCompile; // a rim light (rim.js) chains on
+  material.onBeforeCompile = (shader, renderer) => {
+    before?.call(material, shader, renderer);
     shader.uniforms.uDissolve = u.amount;
     shader.uniforms.uDissolveGlow = u.glow;
     shader.uniforms.uDissolveEdge = u.edge;
@@ -59,7 +61,8 @@ export function dissolvable(material, color) {
       : frag.replace('#include <opaque_fragment>', 'outgoingLight += uDissolveEdge * dRim * 2.0;\n#include <opaque_fragment>');
     shader.fragmentShader = frag;
   };
-  material.customProgramCacheKey = () => 'dissolve';
+  const key = material.customProgramCacheKey?.bind(material);
+  material.customProgramCacheKey = () => `${key ? key() : ''}|dissolve`;
   material.needsUpdate = true;
   return u;
 }

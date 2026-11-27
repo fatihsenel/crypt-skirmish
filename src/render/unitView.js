@@ -11,6 +11,7 @@ import { sfx } from '../audio/sfx.js';
 import { voices } from '../audio/voices.js';
 import { liftAt } from './board.js';
 import { dissolvable, edgeColor } from './dissolve.js';
+import { rimLight, contactShadow } from './rim.js';
 import { SpellLight } from './lights.js';
 import { slashFx, dustFx } from './effects.js';
 import { Auras } from './auras.js';
@@ -118,6 +119,8 @@ export class UnitView {
     this.held = false; // paralysed or turned to stone: the pose holds
     this.gaze = { yaw: 0, roll: 0, until: 0, next: 3 + Math.random() * 6 };
     this.raise.add(this.figure);
+    this.raise.add(contactShadow());
+    for (const o of this.ownMeshes()) rimLight(o.material, unit.team);
     this.figure.rotation.y = unit.team === 'heroes' ? Math.PI / 4 : -Math.PI * 0.75;
 
     // animation state
@@ -230,6 +233,17 @@ export class UnitView {
     const ms = crit ? 90 : 60;
     this.rig?.freeze(ms);
     attacker?.rig?.freeze(ms);
+    // A stagger: knocked a little back from the blow, then finding its feet again.
+    const from = attacker?.group.position ?? null;
+    const dir = from ? this.group.position.clone().sub(from).setY(0) : null;
+    if (!dir || dir.lengthSq() < 1e-4) return;
+    dir.normalize().multiplyScalar(crit ? 0.17 : 0.1);
+    const fig = this.figure;
+    tween(340, (t) => {
+      const k = Math.sin(Math.min(1, t * 2.2) * Math.PI * 0.5) * (1 - t) ** 1.5; // out fast, back slow
+      fig.position.x = dir.x * k;
+      fig.position.z = dir.z * k;
+    }, linear);
   }
 
   /** How far the figure has burned away (0 whole, 1 gone) and how bright the burning rim is. */
@@ -386,7 +400,7 @@ export class UnitView {
   animate(t, dt) {
     this.t = t;
     const lift = liftAt(this.group.position.x, this.group.position.z);
-    if (this.raise.position.y !== lift) {
+    if (!this.climbing && this.raise.position.y !== lift) {
       const y = this.raise.position.y + (lift - this.raise.position.y) * Math.min(1, dt * 16);
       this.raise.position.y = Math.abs(lift - y) < 0.004 ? lift : y;
     }
@@ -724,9 +738,57 @@ export class UnitView {
       sfx.step(this.unit.code);
       onStep?.(path[i - 1], path[i]);
       const ms = from.distanceTo(to) > 1.1 ? 270 : 210; // diagonals take a bit longer
-      await tween(ms, (t) => this.group.position.lerpVectors(from, to, t), linear);
+      const y0 = this.raise.position.y;
+      const y1 = liftAt(to.x, to.z);
+      const rise = y1 - liftAt(from.x, from.z);
+      if (Math.abs(rise) < 0.01 || calm()) {
+        await tween(ms, (t) => this.group.position.lerpVectors(from, to, t), linear);
+        continue;
+      }
+      this.climbing = true;
+      if (Math.abs(rise) > 0.45) await this.climbLadder(from, to, y0, y1);
+      else {
+        // A step up or down: a small hop onto it, then the feet settle.
+        await tween(ms + 40, (t) => {
+          this.group.position.lerpVectors(from, to, t);
+          this.raise.position.y = lerp(y0, y1, t * t * (3 - 2 * t)) + Math.sin(t * Math.PI) * 0.09;
+        }, linear);
+        this.settle();
+      }
+      this.raise.position.y = y1;
+      this.climbing = false;
     }
     this.walking = false;
+  }
+
+  /** Up or down a ladder: facing it, hand over hand in rungs, slower than a walk. */
+  async climbLadder(from, to, y0, y1) {
+    const up = y1 > y0;
+    const foot = up ? from : to; // the ladder leans on the higher tile's face
+    const top = up ? to : from;
+    this.faceTowards(top.x, top.z);
+    const atFoot = new THREE.Vector3().lerpVectors(foot, top, 0.32);
+    const atTop = new THREE.Vector3().lerpVectors(foot, top, 0.62);
+    const [a, b] = up ? [atFoot, atTop] : [atTop, atFoot];
+    const rungs = Math.max(2, Math.round(Math.abs(y1 - y0) / 0.15));
+    const lean = this.lean;
+    await tween(140, (t) => this.group.position.lerpVectors(from, a, t), linear);
+    await tween(rungs * 150, (t) => {
+      const r = t * rungs;
+      const pull = (r % 1) ** 0.6; // each rung a pull, then a pause
+      const p = (Math.floor(r) + pull) / rungs;
+      this.raise.position.y = lerp(y0, y1, p);
+      this.group.position.lerpVectors(a, b, p);
+      lean.rotation.z = Math.sin(r * Math.PI) * 0.08; // shifting from hand to hand
+    }, linear);
+    await tween(160, (t) => this.group.position.lerpVectors(b, to, t), linear);
+    this.settle();
+  }
+
+  /** Feet settling on new ground: a quick dip and back. */
+  settle() {
+    const fig = this.figure;
+    tween(160, (t) => { fig.position.y = 0.075 - Math.sin(t * Math.PI) * 0.03; }, linear);
   }
 
   /**

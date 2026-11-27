@@ -1014,7 +1014,7 @@ function startFight(resume, watch = null) {
     const elite = game.units.find((u) => u.elite && u.alive);
     if (elite && unseen(elite)) hud.log('Something strong lurks here: an <b>elite</b>.', 'sys');
   });
-  game.on('round', () => board?.tracks?.age()); // footprints dry
+  game.on('round', () => { board?.tracks?.age(); board?.marks?.age(); }); // footprints and blood dry
   game.on('round', ({ round }) => hud.log(game.hold ? `Round ${round} of ${game.hold.rounds}` : `Round ${round}`, 'round'));
   game.on('turnStart', ({ unit }) => onTurnStart(unit));
   game.on('turnEnd', () => hud.endTurn()); // before the next round's heading

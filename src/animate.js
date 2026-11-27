@@ -1049,6 +1049,7 @@ export function createAnimations(app) {
         const aim = { x: caster.x + r.dir.x, z: caster.z + r.dir.z };
         await cv.cast(aim, async () => {
           sfx.fireCone();
+          stage.warp?.(aim, 'heat', { radius: 1.8, ms: 1300 });
           await coneFx(stage.scene, caster, r.tiles);
           mark('scorch', r.tiles, { chance: 0.75, scale: 0.85 });
         });
@@ -1103,6 +1104,8 @@ export function createAnimations(app) {
           await fireballFx(stage.scene, caster, r.center, r.tiles, () => {
             sfx.explosion();
             stage.shake(0.45, 650);
+            stage.warp?.(r.center, 'ring', { radius: 3, ms: 650 }); // the blast bends the air (post.js)
+            stage.warp?.(r.center, 'heat', { radius: 2.2, ms: 1600 });
             mark('scorch', r.tiles, { chance: 0.85 });
           });
         });
@@ -1233,6 +1236,7 @@ export function createAnimations(app) {
         await cv.cast(r.center, async () => {
           sfx.shatter();
           stage.shake(0.3, 450);
+          stage.warp?.(r.center, 'ring', { radius: r.spell.radius + 1, ms: 550 });
           await turnFx(stage.scene, r.center, r.spell.radius + 0.5, SHATTER_TINT);
           crackWalls(r.center, r.spell.radius);
         });
@@ -1247,6 +1251,7 @@ export function createAnimations(app) {
         await cv.cast(null, async () => {
           sfx.shatter();
           stage.shake(0.3, 400);
+          stage.warp?.(caster, 'ring', { radius: 2.5, ms: 550 });
           await turnFx(stage.scene, caster, 1.5, SHATTER_TINT);
           crackWalls(caster, 1);
         });

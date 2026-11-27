@@ -3,12 +3,13 @@
 // act keeps the look the game always had. An Endless Crypt floor takes the moods in turn, five
 // floors each.
 
+// `grade`: the finished image's tint, saturation and contrast for the act (post.js, with Glow on).
 const MOODS = [
-  { sky: 0x9fb4ff, ground: 0x2a1d12, sun: 0xffe0b5, bg: 0x0d0b10 }, // I: the crypt, cold blue
-  { sky: 0x98cca8, ground: 0x1c2616, sun: 0xdcecbc, bg: 0x0a0f0b }, // II: catacombs and barrow, grave-green
-  { sky: 0xb8a2ff, ground: 0x281a32, sun: 0xdccaff, bg: 0x0f0a17 }, // III: nest, gallery, throne, ghostly violet
-  { sky: 0xe0bf8c, ground: 0x33220c, sun: 0xffc682, bg: 0x140d06 }, // IV: sunken halls and tomb, warm amber
-  { sky: 0xdc9c94, ground: 0x34140f, sun: 0xffb496, bg: 0x150808 }, // V: bridge, den and labyrinth, ember red
+  { sky: 0x9fb4ff, ground: 0x2a1d12, sun: 0xffe0b5, bg: 0x0d0b10, grade: { tint: [0.97, 1, 1.05], sat: 0.96, contrast: 1.04 } }, // I: the crypt, cold blue
+  { sky: 0x98cca8, ground: 0x1c2616, sun: 0xdcecbc, bg: 0x0a0f0b, grade: { tint: [0.96, 1.04, 0.96], sat: 0.9, contrast: 1.05 } }, // II: catacombs and barrow, grave-green
+  { sky: 0xb8a2ff, ground: 0x281a32, sun: 0xdccaff, bg: 0x0f0a17, grade: { tint: [1.02, 0.97, 1.07], sat: 0.94, contrast: 1.04 } }, // III: nest, gallery, throne, ghostly violet
+  { sky: 0xe0bf8c, ground: 0x33220c, sun: 0xffc682, bg: 0x140d06, grade: { tint: [1.07, 1.01, 0.9], sat: 1.05, contrast: 1.05 } }, // IV: sunken halls and tomb, warm amber
+  { sky: 0xdc9c94, ground: 0x34140f, sun: 0xffb496, bg: 0x150808, grade: { tint: [1.08, 0.95, 0.92], sat: 1.06, contrast: 1.07 } }, // V: bridge, den and labyrinth, ember red
 ];
 
 const ACT = {

@@ -536,7 +536,8 @@ export function burstFx(scene, at, {
       m.position.addScaledVector(v, dt);
       if (m.position.y < 0.02) {
         m.position.y = 0.02;
-        v.set(v.x * 0.4, 0, v.z * 0.4); // lands and skids
+        if (glowing && v.y < -0.8) v.set(v.x * 0.7, -v.y * 0.45, v.z * 0.7); // a spark bounces
+        else v.set(v.x * 0.4, 0, v.z * 0.4); // lands and skids
       } else {
         m.rotation.x += spin.x * dt;
         m.rotation.y += spin.y * dt;

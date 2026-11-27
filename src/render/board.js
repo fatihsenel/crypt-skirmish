@@ -6,6 +6,8 @@ import { tween, wait, easeOut, easeInOut, linear, keepAwake, calm } from './twee
 import { dustFx, glintFx } from './effects.js';
 import { Motes } from './motes.js';
 import { Marks } from './marks.js';
+import { Floors } from './floors.js';
+import { ditherable } from './dither.js';
 import { Tracks } from './tracks.js';
 import { WaterMirror } from './reflect.js';
 import { Clutter } from './clutter.js';
@@ -14,6 +16,8 @@ import { Arrows } from './arrows.js';
 import { Wisps } from './wisps.js';
 import { Life } from './life.js';
 import { kitReady, piece } from './dungeonKit.js';
+import { stoneSide, stoneTop, stoneBlock } from './stone.js';
+import { Haze } from './haze.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
 const KIT_WALL = 1.0;
@@ -146,8 +150,8 @@ class TileLayer {
 }
 
 const DEBRIS_GEO = new THREE.BoxGeometry(1, 1, 1);
-const LEDGE_GEO = new THREE.BoxGeometry(0.99, LEDGE, 0.99);
-const SEAM_GEO = new THREE.BoxGeometry(1.0, 0.025, 1.0);
+const TOP_GEO = new THREE.PlaneGeometry(0.99, 0.99).rotateX(-Math.PI / 2);
+const PLANK_GEO = new THREE.BoxGeometry(0.46, 0.02, 0.2);
 
 /** Rules 12: a wooden ladder `tall` high, leaning on a cliff's face (its foot at the origin, facing +z). */
 function ladderMesh(tall) {
@@ -281,9 +285,52 @@ function rippleMap() {
 }
 let waterMat = null;
 const waterMaterial = () => (waterMat ??= new THREE.MeshStandardMaterial({
-  color: 0x1c4a5e, transparent: true, opacity: 0.78, roughness: 0.12, metalness: 0.2, emissive: 0x08202c,
-  normalMap: rippleMap(), normalScale: new THREE.Vector2(0.35, 0.35),
+  color: 0x1c4a5e, transparent: true, opacity: 1, roughness: 0.12, metalness: 0.2, emissive: 0x08202c,
+  normalMap: rippleMap(), normalScale: new THREE.Vector2(0.35, 0.35), vertexColors: true,
 }));
+
+/**
+ * A water tile's sheet, deeper toward the pool's middle: each corner's colour and alpha come from
+ * how many of the four tiles round it are water, so the floor shows through the shallows at the
+ * edge and the middle goes dark and still.
+ */
+function waterSheet(grid, x, z) {
+  const geo = WATER_GEO.clone();
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 4);
+  const wet = (tx, tz) => grid.water.has(key(tx, tz));
+  for (let i = 0; i < pos.count; i++) {
+    const cx = x + Math.sign(pos.getX(i)) * 0.5;
+    const cz = z + Math.sign(pos.getZ(i)) * 0.5;
+    let n = 0;
+    for (const [ox, oz] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) if (wet(Math.round(cx + ox), Math.round(cz + oz))) n++;
+    const deep = Math.max(0, (n - 1) / 3); // 0 on the shore, 1 with water all round
+    const light = 1.45 - deep * 0.75;
+    colors.set([light * 0.95, light, light * 0.98, 0.42 + deep * 0.48], i * 4);
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+  return geo;
+}
+
+let shoreMap = null;
+/** A soft pale line, brightest at its top edge: where the water laps at the stone. */
+function shoreTexture() {
+  if (shoreMap) return shoreMap;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 16;
+  const g = c.getContext('2d');
+  const grad = g.createLinearGradient(0, 0, 0, 16);
+  grad.addColorStop(0, 'rgba(220,235,240,0.9)');
+  grad.addColorStop(0.35, 'rgba(200,220,230,0.35)');
+  grad.addColorStop(1, 'rgba(200,220,230,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 16);
+  shoreMap = new THREE.CanvasTexture(c);
+  shoreMap.colorSpace = THREE.SRGBColorSpace;
+  return shoreMap;
+}
+const SHORE_GEO = new THREE.PlaneGeometry(1, 0.16).rotateX(-Math.PI / 2).translate(0, 0, 0.08);
 // The lower hall of a room on two floors: a cool shadow over its floor.
 const LOWER_MAT = new THREE.MeshBasicMaterial({ color: 0x061224, transparent: true, opacity: 0.5, depthWrite: false });
 // A chasm's sides: a rock face wherever the hole meets solid ground (none between two chasm
@@ -477,23 +524,26 @@ export class Board {
     // STEP for each of its heights, a course of stone each, and a ladder up each cliff that has one).
     ledges = new Map(grid.heights?.size ? [...grid.heights].map(([k, h]) => [k, h * STEP]) : [...grid.high ?? []].map((k) => [k, LEDGE]));
     this.raised = []; // the blocks, which take a click on their top (pickables)
-    const stone = mat(0x5e554c, { roughness: 0.92 });
-    const course = mat(0x4f4740, { roughness: 0.95 });
+    // Cut stone (stone.js): a texture a course on the sides, worn flags on top; the vertex
+    // colours darken it toward its foot. Each course is a step (a rules-11 ledge is one).
+    const side = new THREE.MeshStandardMaterial({ map: stoneSide(), bumpMap: stoneSide(), bumpScale: 2, roughness: 0.93, vertexColors: true });
+    const flags = new THREE.MeshStandardMaterial({ map: stoneTop(), bumpMap: stoneTop(), bumpScale: 1.5, roughness: 0.88 });
+    const geos = new Map();
     for (const [k, top] of ledges) {
       const [x, z] = k.split(',').map(Number);
-      const block = new THREE.Mesh(top === LEDGE ? LEDGE_GEO : new THREE.BoxGeometry(0.99, top, 0.99), stone);
+      const steps = Math.max(1, Math.round(top / (top === LEDGE ? LEDGE : STEP)));
+      if (!geos.has(top)) geos.set(top, stoneBlock(top, steps));
+      const block = new THREE.Mesh(geos.get(top), side);
       block.position.set(x, top / 2, z);
       block.castShadow = block.receiveShadow = true;
       block.userData.tile = { x, z };
-      this.group.add(block);
-      this.addToCell(x, z, block);
-      this.raised.push(block);
-      for (let y = STEP; y < top - 0.01; y += STEP) { // a dark seam between the courses
-        const seam = new THREE.Mesh(SEAM_GEO, course);
-        seam.position.set(x, y, z);
-        this.group.add(seam);
-        this.addToCell(x, z, seam);
-      }
+      const cap = new THREE.Mesh(TOP_GEO, flags);
+      cap.position.set(x, top + 0.002, z);
+      cap.receiveShadow = true;
+      cap.userData.tile = { x, z };
+      this.group.add(block, cap);
+      this.addToCell(x, z, block, cap);
+      this.raised.push(block, cap);
     }
     for (const [k, to] of grid.ladders ?? []) {
       const [x, z] = k.split(',').map(Number);
@@ -504,6 +554,13 @@ export class Board {
         ladder.rotation.y = Math.atan2(t.x - x, t.z - z);
         this.group.add(ladder);
         this.addToCell(x, z, ladder);
+        // A worn plank on the lip where the ladder's top rests, scuffed by boots.
+        const plank = new THREE.Mesh(PLANK_GEO, mat(0x5a3e25, { roughness: 0.9 }));
+        plank.position.set(x + (t.x - x) * 0.62, ledgeAt(t.x, t.z) + 0.012, z + (t.z - z) * 0.62);
+        plank.rotation.y = ladder.rotation.y;
+        plank.receiveShadow = true;
+        this.group.add(plank);
+        this.addToCell(t.x, t.z, plank);
       }
     }
 
@@ -515,11 +572,24 @@ export class Board {
     // Shallow water: a dark, glossy sheet just over the floor.
     for (const k of grid.water) {
       const [x, z] = k.split(',').map(Number);
-      const sheet = new THREE.Mesh(WATER_GEO, waterMaterial());
+      const sheet = new THREE.Mesh(waterSheet(grid, x, z), waterMaterial());
       sheet.position.set(x, 0.035, z);
       sheet.receiveShadow = true;
       this.group.add(sheet);
-      this.addToCell(x, z, sheet);
+      const parts = [sheet];
+      // A pale line where the water meets dry stone, lapping in and out (the board's tick).
+      for (const [dx, dz] of DIRS4) {
+        if (grid.water.has(key(x + dx, z + dz))) continue;
+        const shore = new THREE.Mesh(SHORE_GEO, new THREE.MeshBasicMaterial({ map: shoreTexture(), transparent: true, depthWrite: false, opacity: 0.5 }));
+        shore.position.set(x + dx * 0.5, 0.037, z + dz * 0.5);
+        shore.rotation.y = Math.atan2(-dx, -dz); // its bright edge on the stone, fading into the pool
+        shore.raycast = () => {};
+        shore.userData.shore = (x + z) * 0.7;
+        this.group.add(shore);
+        parts.push(shore);
+        (this.shores ??= []).push(shore);
+      }
+      this.addToCell(x, z, ...parts);
     }
 
     // A room on two floors: the lower hall lies in a cooler shadow, and a flight of steps leads
@@ -615,16 +685,21 @@ export class Board {
       if (this.stairs?.lit) this.stairs.light.intensity = 3 + Math.sin(t * 3) * 0.8;
       this.motes.tick(t, dt);
       if (ripples && sway) ripples.offset.set(t * 0.025, t * 0.016); // the water's ripples drift
+      if (sway) for (const s of this.shores ?? []) s.scale.z = 0.8 + 0.25 * Math.sin(t * 1.3 + s.userData.shore);
       this.mirror?.tick(t, (x, z) => this.cells.get(key(x, z))?.f ?? 0);
       this.clutter?.tick(dt);
       this.wisps.tick(t);
       this.life?.tick(t, dt);
+      this.haze?.tick(t);
+      this.floors?.tick(t);
       if (this.runes.visible) {
         // Turning slowly and breathing; still under reduced motion.
         this.runes.rotation.y = sway ? t * 0.35 : 0;
         this.runes.material.opacity = (this.runes.userData.alpha ?? 0.8) * (sway ? 0.85 + 0.15 * Math.sin(t * 3) : 1);
       }
     };
+    this.haze = new Haze(this); // mist in the chasms and the lower hall, shafts of light (haze.js)
+    this.floors = new Floors(this, ledgeAt); // damp by the water, frost, glowing seams (floors.js)
     stage.tickers.add(this.tick);
     this.stage = stage;
 
@@ -739,6 +814,7 @@ export class Board {
       return { x, z };
     }));
     this.fireLit = keys.size > 0;
+    this.floors?.setSeams(keys);
   }
 
   /** Rules 10: the cracked ceilings still up (the Game's `ceilings`, a Map of {x, z, fallen}). */
@@ -808,6 +884,7 @@ export class Board {
       const [x, z] = k.split(',').map(Number);
       return { x, z };
     }));
+    this.floors?.setFrost(keys);
   }
 
   // --- fog of war & wall fading ----------------------------------------------
@@ -834,6 +911,7 @@ export class Board {
     this.group.add(...parts);
     const cell = this.addToCell(x, z, ...parts);
     this.motes.add(new THREE.Vector3(x, -0.02, z), () => cell.f, { embers: 0, dust: 3, spread: 0.4, fall: true }); // grit trickling down
+    this.haze?.addMist(key(x, z), [-0.28, -0.6], 0.8); // a crack broken mid-fight (the room's chasms come with the haze)
   }
 
   /** Rules 6: the cracked floor at (x, z) gives way: its tile drops out, leaving a shaft. */
@@ -1022,12 +1100,11 @@ export class Board {
       else this.fading = true;
       const see = w.opacity < 0.999;
       for (const m of w.meshes) {
-        if (m.material.transparent !== see) {
-          m.material.transparent = see;
-          m.material.needsUpdate = true;
-        }
-        m.material.opacity = w.opacity;
-        m.castShadow = !see;
+        m.traverse((o) => {
+          if (!o.isMesh || Array.isArray(o.material)) return;
+          ditherable(o.material).value = w.opacity; // a screen door, not glass (dither.js)
+          o.castShadow = !see;
+        });
       }
     }
   }
@@ -1906,6 +1983,7 @@ export class Board {
   /** Show or hide the tile highlights and threats (not ice) without forgetting them: photo mode. */
   /** Reflections in the water on or off (reflect.js; with the Glow setting). */
   setReflections(on) {
+    this.haze?.setShafts(on); // the shafts of light go with the Glow setting too
     if (!on || !this.grid.water?.size) {
       this.mirror?.dispose();
       this.mirror = null;
