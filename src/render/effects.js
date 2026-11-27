@@ -181,9 +181,23 @@ export async function healFx(scene, at) {
   });
   const light = new SpellLight(0x6dff8a, 0, 3, 1.5);
   light.position.y = 0.6;
-  group.add(light);
+  // Light welling up from the floor: a soft ring, and a column rising out of it.
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.18, 0.48, 40).rotateX(-Math.PI / 2), glow(0x9dffb0, 0));
+  ring.position.y = 0.03;
+  const column = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.42, 1.6, 24, 1, true), new THREE.MeshBasicMaterial({
+    map: rise(), color: 0x8dffa8, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+  }));
+  column.position.y = 0.8;
+  group.add(light, ring, column);
   await tween(1000, (t) => {
     light.intensity = Math.sin(t * Math.PI) * 3;
+    const swell = Math.sin(Math.min(1, t * 1.3) * Math.PI);
+    ring.scale.setScalar(0.7 + t * 0.6);
+    ring.material.opacity = swell * 0.7;
+    column.material.opacity = swell * 0.55;
+    column.scale.set(1, 0.4 + easeOut(Math.min(1, t * 2)) * 0.6, 1);
+    column.position.y = column.scale.y * 0.8;
+    column.material.map.offset.y = -t * 0.6;
     for (const m of motes) {
       const lt = Math.min(1, Math.max(0, (t - m.userData.d) / 0.7));
       const ang = m.userData.a + lt * 2;
@@ -266,6 +280,20 @@ export async function lightningFx(scene, from, tiles) {
     const halo = new THREE.Mesh(new THREE.TubeGeometry(path, n * 4, 0.13, 6), glow(0x6aa8ff, 0.5));
     const g = new THREE.Group();
     g.add(core, halo);
+    // Forks crackling off the bolt, each a short jagged line that dies away.
+    for (let i = 1; i < pts.length - 1; i++) {
+      if (Math.random() > 0.55) continue;
+      const fork = [pts[i].clone()];
+      const dir = b.clone().sub(a).normalize().multiplyScalar(0.25).addScaledVector(side, (Math.random() < 0.5 ? -1 : 1) * (0.25 + Math.random() * 0.2));
+      for (let j = 0; j < 3; j++) {
+        const p = fork.at(-1).clone().add(dir).addScaledVector(side, (Math.random() - 0.5) * 0.2);
+        p.y += (Math.random() - 0.65) * 0.25;
+        fork.push(p);
+      }
+      const fp = new THREE.CatmullRomCurve3(fork, false, 'catmullrom', 0.1);
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(fp, 8, 0.016, 4), glow(0xdff0ff, 0.9)));
+      g.add(new THREE.Mesh(new THREE.TubeGeometry(fp, 8, 0.06, 5), glow(0x6aa8ff, 0.35)));
+    }
     return g;
   };
   let current = null;
@@ -279,12 +307,14 @@ export async function lightningFx(scene, from, tiles) {
       flicks = want;
     }
     const o = t < 0.35 ? 1 : 1 - (t - 0.35) / 0.65;
-    current.children[0].material.opacity = o * (0.7 + Math.random() * 0.3);
-    current.children[1].material.opacity = o * 0.5;
+    current.children.forEach((c, i) => {
+      c.material.opacity = o * (i % 2 ? 0.45 : 0.7 + Math.random() * 0.3);
+    });
     for (const l of lights) l.intensity = o * (6 + Math.random() * 6);
   }, linear);
   scene.remove(group);
   dispose(group);
+  burstFx(scene, end, { colors: [0xffffff, 0xbfe0ff, 0x8cc0ff], count: 16, size: 0.035, glowing: true, y: 0.6, speed: 3 }); // sparks where it grounds
 }
 
 /**
@@ -416,7 +446,13 @@ export async function fireballFx(scene, from, center, tiles, onBoom) {
   const ctrl = a.clone().lerp(b, 0.5).add(new THREE.Vector3(0, 1.6 + a.distanceTo(b) * 0.15, 0));
   const curve = new THREE.QuadraticBezierCurve3(a, ctrl, b);
   scene.add(bead);
-  await tween(420 + a.distanceTo(b) * 30, (t) => bead.position.copy(curve.getPoint(t)), linear);
+  const trail = new Trail(scene, { color: 0xff8a2a, size: 0.32, life: 0.35 });
+  await tween(420 + a.distanceTo(b) * 30, (t) => {
+    bead.position.copy(curve.getPoint(t));
+    trail.drop(bead.position);
+    trail.age();
+  }, linear);
+  trail.fade();
   scene.remove(bead);
   dispose(bead);
   onBoom?.();
@@ -439,6 +475,7 @@ export async function fireballFx(scene, from, center, tiles, onBoom) {
     return m;
   });
   const radius = tiles.reduce((r, t) => Math.max(r, Math.hypot(t.x - center.x, t.z - center.z)), 1);
+  let smoked = false;
   await tween(1100, (t) => {
     light.intensity = 30 * Math.sin(Math.min(1, t * 1.6) * Math.PI);
     const grow = easeOut(Math.min(1, t * 2.2));
@@ -452,6 +489,11 @@ export async function fireballFx(scene, from, center, tiles, onBoom) {
       m.scale.set(0.6 + s, m.userData.h * (0.3 + s * 1.4), 0.6 + s);
       m.position.y = 0.15 + lt * 0.6;
       m.material.opacity = s * 0.9;
+    }
+    if (!smoked && t > 0.3) {
+      smoked = true;
+      smokeFx(scene, center, radius); // rolls up and hangs a while (not awaited)
+      embersFx(scene, tiles);
     }
   }, linear);
   scene.remove(group);
@@ -491,6 +533,7 @@ export async function iceStormFx(scene, center, tiles, onImpact) {
     if (!struck && t > 0.35) {
       struck = true;
       onImpact?.();
+      frostCrystalsFx(scene, tiles); // rime crystals spring up, then shatter (not awaited)
     }
   }, linear);
   scene.remove(group);
@@ -811,4 +854,161 @@ export async function glintFx(scene, at, { color = 0xc89438, count = 10, y = 0.3
   }, linear);
   scene.remove(group);
   for (const s of parts) s.material.dispose();
+}
+
+// --- lingering smoke, embers, frost and healing light ------------------------------
+
+let riseMap = null;
+/** A column's fall-off: full at its foot, gone at its top, in soft streaks going up. */
+function rise() {
+  if (riseMap) return riseMap;
+  const c = document.createElement('canvas');
+  c.width = 64;
+  c.height = 128;
+  const g = c.getContext('2d');
+  for (let i = 0; i < 26; i++) {
+    const x = Math.random() * 64;
+    const w = 2 + Math.random() * 6;
+    const grad = g.createLinearGradient(0, 128, 0, 0);
+    grad.addColorStop(0, `rgba(255,255,255,${0.3 + Math.random() * 0.4})`);
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(x, 0, w, 128);
+  }
+  riseMap = new THREE.CanvasTexture(c);
+  riseMap.wrapS = riseMap.wrapT = THREE.RepeatWrapping;
+  return riseMap;
+}
+
+/** A trail of glowing puffs left behind something flying: drop() a puff, age() them each frame. */
+class Trail {
+  constructor(scene, { color, size, life }) {
+    Object.assign(this, { scene, color, size, life, parts: [], last: performance.now() });
+  }
+
+  drop(at) {
+    if (calm()) return;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puff(), color: this.color, transparent: true, opacity: 0.8, depthWrite: false, blending: THREE.AdditiveBlending }));
+    s.position.copy(at).add(new THREE.Vector3((Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.08));
+    s.scale.setScalar(this.size);
+    s.userData.born = performance.now();
+    this.scene.add(s);
+    this.parts.push(s);
+  }
+
+  age() {
+    const now = performance.now();
+    for (const s of this.parts) {
+      const k = Math.min(1, (now - s.userData.born) / (this.life * 1000));
+      s.material.opacity = 0.8 * (1 - k);
+      s.scale.setScalar(this.size * (1 - k * 0.6));
+      s.position.y += 0.004;
+    }
+  }
+
+  /** The rest fade out on their own. */
+  fade() {
+    const parts = this.parts;
+    this.parts = [];
+    const from = parts.map((s) => s.material.opacity);
+    return tween(this.life * 1000, (t) => parts.forEach((s, i) => { s.material.opacity = from[i] * (1 - t); }), linear).then(() => {
+      for (const s of parts) {
+        this.scene.remove(s);
+        s.material.dispose();
+      }
+    });
+  }
+}
+
+/** Dark smoke rolling up from a blast and hanging over it a while before it thins away. */
+export function smokeFx(scene, center, radius = 1) {
+  if (calm()) return Promise.resolve();
+  const group = new THREE.Group();
+  group.position.set(center.x, 0, center.z);
+  scene.add(group);
+  const n = Math.round(10 + radius * 6);
+  const parts = Array.from({ length: n }, () => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puff(), color: 0x1e1a18, transparent: true, opacity: 0, depthWrite: false }));
+    const a = Math.random() * Math.PI * 2;
+    const d = Math.sqrt(Math.random()) * radius * 0.8;
+    s.userData = { x: Math.cos(a) * d, z: Math.sin(a) * d, up: 0.9 + Math.random() * 1.1, k: 0.6 + Math.random() * 0.7, at: Math.random() * 0.25, spin: (Math.random() - 0.5) * 0.4 };
+    group.add(s);
+    return s;
+  });
+  return tween(2600, (t) => {
+    for (const s of parts) {
+      const { x, z, up, k, at, spin } = s.userData;
+      const lt = Math.min(1, Math.max(0, (t - at) / (1 - at)));
+      const climb = easeOut(lt);
+      s.position.set(x * (1 + climb * 0.4), 0.3 + climb * up, z * (1 + climb * 0.4));
+      s.scale.setScalar((0.5 + climb * 1.1) * k);
+      s.material.rotation = spin * lt * 6;
+      s.material.opacity = lt <= 0 ? 0 : 0.85 * Math.min(1, lt * 6) * (1 - lt) ** 1.1;
+    }
+  }, linear).then(() => {
+    scene.remove(group);
+    for (const s of parts) s.material.dispose();
+  });
+}
+
+/** Embers left glowing on the blasted floor, drifting up and winking out. */
+export function embersFx(scene, tiles) {
+  if (calm()) return Promise.resolve();
+  const group = new THREE.Group();
+  scene.add(group);
+  const parts = [];
+  for (const t of tiles) {
+    for (let i = 0; i < 2; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: puff(), color: [0xffb050, 0xff7a20, 0xffd080][(i + t.x) % 3], transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      s.userData = { x: t.x + (Math.random() - 0.5) * 0.8, z: t.z + (Math.random() - 0.5) * 0.8, at: Math.random() * 0.4, up: 0.4 + Math.random() * 1.2, wob: Math.random() * 6 };
+      s.scale.setScalar(0.07 + Math.random() * 0.05);
+      group.add(s);
+      parts.push(s);
+    }
+  }
+  return tween(2400, (t) => {
+    for (const s of parts) {
+      const { x, z, at, up, wob } = s.userData;
+      const lt = Math.min(1, Math.max(0, (t - at) / 0.6));
+      s.position.set(x + Math.sin(wob + lt * 5) * 0.08, 0.06 + lt * up, z + Math.cos(wob + lt * 4) * 0.08);
+      s.material.opacity = lt <= 0 || lt >= 1 ? 0 : Math.sin(lt * Math.PI) * (0.7 + 0.3 * Math.sin(lt * 40 + wob));
+    }
+  }, linear).then(() => {
+    scene.remove(group);
+    for (const s of parts) s.material.dispose();
+  });
+}
+
+const CRYSTAL = new THREE.ConeGeometry(0.075, 0.42, 5).translate(0, 0.21, 0);
+/** Rime crystals springing up across the frozen tiles, glinting, then shattering into shards. */
+export function frostCrystalsFx(scene, tiles) {
+  const group = new THREE.Group();
+  scene.add(group);
+  const ice = new THREE.MeshStandardMaterial({ color: 0xcfeeff, emissive: 0x3a6a90, emissiveIntensity: 0.6, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.85 });
+  const spikes = [];
+  for (const t of tiles) {
+    const n = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < n; i++) {
+      const m = new THREE.Mesh(CRYSTAL, ice);
+      m.position.set(t.x + (Math.random() - 0.5) * 0.7, 0, t.z + (Math.random() - 0.5) * 0.7);
+      m.rotation.set((Math.random() - 0.5) * 0.9, Math.random() * Math.PI, (Math.random() - 0.5) * 0.9);
+      m.userData = { h: 0.6 + Math.random() * 0.9, at: Math.random() * 0.25 };
+      m.scale.setScalar(0.001);
+      group.add(m);
+      spikes.push(m);
+    }
+  }
+  return tween(900, (t) => {
+    for (const m of spikes) {
+      const lt = easeOut(Math.min(1, Math.max(0, (t - m.userData.at) / 0.5)));
+      m.scale.set(0.6 + lt * 0.6, Math.max(0.001, lt * m.userData.h), 0.6 + lt * 0.6);
+    }
+  }, linear).then(() => wait(500)).then(() => {
+    // They shatter: each spike bursts into glinting shards.
+    const shards = [];
+    for (const t of tiles) shards.push(burstFx(scene, t, { colors: [0xffffff, 0xd8f0ff, 0x9fd0ff], count: 7, size: 0.04, y: 0.15, speed: 1.8, glowing: true, life: 500 }));
+    scene.remove(group);
+    ice.dispose();
+    return Promise.all(shards);
+  });
 }

@@ -69,6 +69,7 @@ const TiltShader = {
     uniform sampler2D tDiffuse; uniform vec2 step; uniform float focus; uniform float band; varying vec2 vUv;
     void main() {
       float amount = smoothstep(band, 0.5, abs(vUv.y - focus));
+      if (amount < 0.002) { gl_FragColor = texture2D(tDiffuse, vUv); return; } // the sharp middle: one tap, not nine
       vec2 d = step * amount;
       vec4 sum = texture2D(tDiffuse, vUv) * 0.1633;
       sum += (texture2D(tDiffuse, vUv - d) + texture2D(tDiffuse, vUv + d)) * 0.1531;
@@ -120,19 +121,25 @@ const WarpShader = {
 
 // Ambient occlusion (GTAO): soft shade where wall meets floor, round the feet of figures and
 // props and under ledges. Only with the Glow setting and never on a touch screen (it draws the
-// scene a second time). Decals, mist, shafts and the fog's veils (transparent, no depth) are
-// left out of its depth pass, so they cast no shade.
+// scene a second time). Decals, mist, shafts, the fog's veils and sprites like smoke and dust
+// (transparent, no depth) are left out of its depth pass, so they cast no shade.
 const AO = { radius: 0.55, distanceExponent: 1.6, thickness: 1.2, scale: 1.1, samples: 12 };
 const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+
+let dense = () => false; // set by createPost: the renderer's pixel ratio is 1.5 or more
 
 function aoPass(scene, camera, w, h) {
   const pass = new GTAOPass(scene, camera, w, h, undefined, AO);
   pass.blendIntensity = 0.7;
+  // On a sharp screen (2 pixels a point and up) the shade is worked out at half size: soft
+  // anyway, and the pass costs a quarter.
+  const fit = pass.setSize.bind(pass);
+  pass.setSize = (w, h) => (dense() ? fit(Math.ceil(w / 2), Math.ceil(h / 2)) : fit(w, h));
   const hide = pass._overrideVisibility.bind(pass);
   pass._overrideVisibility = function () {
     hide();
     scene.traverse((o) => {
-      if (!o.visible || !o.isMesh || Array.isArray(o.material)) return;
+      if (!o.visible || !(o.isMesh || o.isSprite) || Array.isArray(o.material)) return;
       if (o.material.transparent && !o.material.depthWrite) {
         o.visible = false;
         this._visibilityCache.push(o);
@@ -144,10 +151,15 @@ function aoPass(scene, camera, w, h) {
 
 export function createPost(renderer, scene, camera) {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
-  const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: 4 });
+  dense = () => renderer.getPixelRatio() >= 1.5;
+  // Multisampled edges, but not on a sharp screen: its pixels are small enough, and four samples
+  // of a frame that size cost more than the ambient shade.
+  const samples = () => (renderer.getPixelRatio() >= 2 ? 0 : 4);
+  const target = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: samples() });
   const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
   const ao = aoPass(scene, camera, size.x, size.y);
+  ao.setSize(size.x, size.y);
   composer.addPass(ao);
   const warp = new ShaderPass(WarpShader);
   warp.enabled = false;
@@ -210,6 +222,12 @@ export function createPost(renderer, scene, camera) {
     },
     /** In CSS px, with the renderer's pixel ratio. */
     setSize(w, h) {
+      const n = samples();
+      for (const t of [composer.renderTarget1, composer.renderTarget2]) {
+        if (t.samples === n) continue;
+        t.samples = n;
+        t.dispose();
+      }
       composer.setPixelRatio(renderer.getPixelRatio());
       composer.setSize(w, h);
       tiltSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());

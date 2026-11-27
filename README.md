@@ -519,9 +519,20 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   floor it leaves fades to a cold ghost and the camera tips to follow it. Raised ground is cut
   stone, damp and mossy at its foot and worn pale at the lip; mist drifts down the chasms and
   over a lower hall. The room stands on rough rock that falls away into the dark below its
-  edge, with old foundation stones under the lip, roots hanging down and a cold mist far below,
-  and stones lie lodged down the chasms' sides. Stone beside water is dark and wet, Ice Storm's frost creeps out round its
-  ground and melts back, spilled coals glow through the cracks between flags, and blood soaks
+  edge, with old foundation stones under the lip, roots hanging down and a cold mist banked
+  round it, and stones lie lodged down the chasms' sides. The walls carry cracks, holes where
+  bricks fell out, alcoves with a skull, a candle or an urn, chains and moss (most by water),
+  and chains, a broken chandelier, roots and torn webs hang down out of the dark above, fading
+  away when they'd hide someone. Each act lights its walls its own way: torches in the crypt,
+  caged lanterns in the catacombs, skulls with a candle in their crown in the nest and the
+  throne room, bronze oil lamps in the sunken halls and fire baskets on the bridge. Moths
+  circle the flames, and thin steam curls up off the water. A door's latch rattles before it
+  swings, and a slammed one shivers in its frame as the bar drops; a chest jolts, its lid flies
+  back and light rises out of it, golden over treasure; a portcullis winds up in jerks and
+  crashes down in a cloud of dust. Fireball leaves smoke rolling up and embers drifting, a
+  Lightning Bolt forks as it flickers, Ice Storm's frost springs up in crystals that shatter,
+  and healing wells up from the floor in a column of light. Stone beside water is dark and
+  wet, Ice Storm's frost creeps out round its ground and melts back, spilled coals glow through the cracks between flags, and blood soaks
   in and dries brown over a few rounds. Figures hop up a step, climb ladders rung by rung and
   stagger back from a blow. Each figure has a thin rim of light (cool for heroes, warm for
   foes) and a soft shadow at its feet; a wall in the way fades out in a fine screen-door
@@ -946,6 +957,11 @@ src/
                      fading, water (deeper in the middle, a shore) and chasms, the room rising
     stone.js         cut stone for raised ground: block courses, worn flags, a damp foot
     bedrock.js       the rock under the room's edge: cliff, foundations, roots, mist; chasm rubble
+    wallDecor.js     cracks, fallen bricks, alcoves, chains and moss on the walls
+    hangings.js      chains, a broken chandelier, roots and webs hanging from above
+    sconces.js       each act's wall lights: lantern, skull lamp, oil lamp, fire basket
+    moths.js         moths round the wall lights, steam off the water
+    merge.js         joins a piece's small parts into one mesh a material
     haze.js          mist in chasms and the lower hall; torch and brazier light shafts (with Glow)
     floors.js        damp stone by water, frost round Ice Storm, glowing seams under coals
     dither.js        walls fading out of the way in a screen-door pattern
@@ -976,7 +992,7 @@ src/
     unitView.js      a unit's base, label and animations, the hit flash and hit-stop
     speechBubble.js  the speech bubble over a figure's label: typed, held, faded
     owl.js           the Wizard's and Warlock's owl familiar
-    effects.js       spell effects, hit particles
+    effects.js       spell effects (smoke, embers, forks, frost crystals, healing light), hit particles
     rollBadge.js     the d20 badge over attacks and saves
     tween.js         promise-based tweening and playback speed
     titleLogo.js     the 3D emblem (title and won campaign): the skull, its jaw, the mist and wisps

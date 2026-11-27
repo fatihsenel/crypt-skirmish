@@ -17,7 +17,7 @@ import { signed, seeded } from './game/dice.js';
 import { SPELLS, ACTIONS } from './game/abilities.js';
 import { createStage } from './render/stage.js';
 import { Board } from './render/board.js';
-import { moodFor } from './render/mood.js';
+import { moodFor, actFor } from './render/mood.js';
 import { UnitView, floatText } from './render/unitView.js';
 import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
@@ -940,7 +940,8 @@ function startFight(resume, watch = null) {
     hud.toast('The fight in progress couldn’t be restored, so the party is back at camp.');
     return;
   }
-  board = new Board(game.grid, stage);
+  board = new Board(game.grid, stage, { act: actFor(nodeId ?? level.id) }); // the act picks the wall lights (sconces.js)
+  board.dressWalls([...(game.secrets?.keys() ?? [])]); // never on a secret door (wallDecor.js)
   stage.turnHome(); // every fight starts from the usual corner
   board.setReflections(glowOn()); // the water's reflections go with the Glow setting
   stage.setMood(moodFor(nodeId ?? level.id)); // each act's light (render/mood.js)

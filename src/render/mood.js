@@ -20,9 +20,14 @@ const ACT = {
   bridge: 4, lair: 4, undercroft: 4, labyrinth: 4,
 };
 
+/** The act (0–4) a room belongs to, for its look; an Endless floor's goes in turn, five floors each. */
+export function actFor(id = '') {
+  const deep = /^deep:[^:]+:(\d+)/.exec(id);
+  if (deep) return Math.floor((Number(deep[1]) - 1) / 5) % MOODS.length;
+  return ACT[id] ?? 0;
+}
+
 /** The mood for a room id (a campaign room, or an Endless floor 'deep:<seed>:<floor>…'). */
 export function moodFor(id = '') {
-  const deep = /^deep:[^:]+:(\d+)/.exec(id);
-  if (deep) return MOODS[Math.floor((Number(deep[1]) - 1) / 5) % MOODS.length];
-  return MOODS[ACT[id] ?? 0];
+  return MOODS[actFor(id)];
 }

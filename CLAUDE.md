@@ -190,7 +190,21 @@ server on 5173.
   Raised ground is `stoneBlock` with `stoneSide`/`stoneTop` (`render/stone.js`, canvas textures
   made once). The rock under the room's edge (cliff, foundations, roots, a mist far below) is
   `render/bedrock.js` (`board.bedrock`, each stretch in its border tile's cell); a chasm's faces
-  share its `rockTexture` and get `shaftRubble`. Mist in chasms and over the lower hall and, with Glow, the torches' and braziers'
+  share its `rockTexture` and get `shaftRubble`. The walls' dressing (cracks, fallen bricks,
+  alcoves, chains, moss) is `render/wallDecor.js`, through `board.dressWalls(secrets)` from
+  `main.js` (never on a secret door; in the wall's cell, faded with it through
+  `board.wallDecor`); what hangs from above is `render/hangings.js` (`board.hangings`, faded
+  when it would cover a figure on screen, swung from its top). The wall lights after the first
+  act are `render/sconces.js` (`sconce(act)`; the act from `actFor` in `mood.js`, passed to
+  `new Board(grid, stage, { act })`), and moths round them and steam off the water are
+  `render/moths.js` (`board.moths`, hidden under `calm()`). Many small parts of one piece (links, a lamp's
+  parts) are joined into a mesh a material by `mergeMeshes` (`render/merge.js`) before the piece
+  goes into its cell: a draw call each otherwise, again in the shadow and GTAO passes. Doors, chests and portcullises
+  rattle, jolt and slam in `openDoor`, `shutDoor`, `openChest` (`chestGlow`) and `setGates`,
+  with grit through `board.sift`; under `calm()` they keep the plain swing. Lingering smoke, embers and
+  frost crystals in `effects.js` run on after the spell's own effect without being awaited,
+  and skip under `calm()` where they'd drift; GTAO leaves out sprites as well as see-through
+  meshes. Mist in chasms and over the lower hall and, with Glow, the torches' and braziers'
   light shafts are `render/haze.js` (`board.haze`; `setReflections` toggles the shafts).
   `render/floors.js` (`board.floors`) draws damp stone by water, frost from `setIce`
   (`setFrost`) and glowing seams from `setFire` (`setSeams`); blood marks dry through
@@ -198,7 +212,8 @@ server on 5173.
   A figure going up or down a step or a ladder in `moveAlong` sets `climbing` (so `animate`
   doesn't ease its lift) and hops or climbs (`climbLadder`), then `settle`s; `impact` also
   knocks the figure back from its attacker. With Glow, `post.js` adds GTAO (`aoPass`, off on a
-  coarse pointer; transparent no-depth meshes are left out of its depth pass) and the act's
+  coarse pointer, at half size on a pixel ratio of 1.5 and up, where the frame isn't
+  multisampled either from 2 up; transparent no-depth meshes are left out of its depth pass) and the act's
   grade (`mood.js` `grade`, `stage.setMood` → `post.setGrade`). Shadows are `PCFShadowMap`
   with `sun.shadow.radius` (three r187 dropped `PCFSoftShadowMap`).
   The view turns in quarters (`stage.turn(dir)`, Q/E, `#turn-toggle`, a two-finger twist, a

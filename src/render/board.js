@@ -20,6 +20,10 @@ import { stoneSide, stoneTop, stoneBlock } from './stone.js';
 import { Haze } from './haze.js';
 import { inFront } from './view.js';
 import { Bedrock, rockTexture, shaftRubble } from './bedrock.js';
+import { dressWalls } from './wallDecor.js';
+import { Hangings } from './hangings.js';
+import { sconce } from './sconces.js';
+import { Moths } from './moths.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
 const KIT_WALL = 1.0;
@@ -479,8 +483,9 @@ export const THREAT_COLORS = {
 };
 
 export class Board {
-  constructor(grid, stage) {
+  constructor(grid, stage, { act = 0 } = {}) {
     this.grid = grid;
+    this.act = act;
     this.group = new THREE.Group();
 
     const floorGeo = new THREE.BoxGeometry(0.98, 0.2, 0.98);
@@ -627,6 +632,7 @@ export class Board {
 
     // The rock the room stands on, falling away into the dark round its edge (bedrock.js).
     this.bedrock = new Bedrock(this);
+    this.hangings = new Hangings(this); // chains, a chandelier, roots and webs from the dark above (hangings.js)
 
     // Cracked floor (rules 6; the Game clears grid.cracks for older fights).
     this.cracks = new Map();
@@ -648,7 +654,9 @@ export class Board {
     const torches = torchSpots(grid);
     this.banners = [];
     for (const spot of torches) this.addTorch(spot);
-    if (this.kit) for (const spot of bannerSpots(grid, torches)) this.addBanner(spot);
+    const banners = this.kit ? bannerSpots(grid, torches) : [];
+    for (const spot of banners) this.addBanner(spot);
+    this.decorAvoid = [...torches, ...banners]; // the wall dressing keeps clear of these (dressWalls)
 
     this.doors = new Map();
     for (const d of grid.doors.values()) this.doors.set(key(d.x, d.z), { ...this.addDoor(d), opened: d.open });
@@ -661,6 +669,7 @@ export class Board {
     this.chests = new Map();
     for (const c of grid.chests.values()) this.chests.set(key(c.x, c.z), this.addChest(c));
     this.life = new Life(this, ledgeAt); // banners and cobwebs stirring, drips, a rat (life.js)
+    this.moths = new Moths(this, this.torches, liftAt); // moths round the wall lights, steam off the water (moths.js)
     this.clutter = new Clutter(this, liftAt); // pebbles, bones and shards, kicked and blown aside (clutter.js)
     this.traps = new Map();
     for (const s of grid.stairs) this.stairs = this.addStairs(s);
@@ -676,15 +685,16 @@ export class Board {
     this.tick = (t, dt) => {
       if (this.fogDirty) this.tickFog(dt);
       if (this.fadeSources) this.tickFade(dt);
+      if (this.fadeSources && this.stage && this.hangings.tick(t, dt, this.stage.camera, this.fadeSources())) this.fading = true;
       if (this.fogDirty || this.fading) keepAwake(100); // fog and walls easing in and out
       // Flames waver and their light flickers and sways; reduced motion keeps them steady.
       const sway = calm() ? 0 : 1;
-      for (const { light, seed, cell, flame, home } of this.torches) {
+      for (const { light, seed, cell, flame, size, home } of this.torches) {
         const a = Math.sin(t * 9 + seed);
         const b = Math.sin(t * 23 + seed * 2);
         light.intensity = (5.5 + (a * 0.6 + b * 0.4) * sway) * cell.f * this.torchDim;
         light.position.set(home.x + Math.sin(t * 5.3 + seed) * 0.05 * sway, home.y + b * 0.03 * sway, home.z + Math.cos(t * 4.1 + seed) * 0.05 * sway);
-        flame.scale.set(1 + b * 0.08 * sway, 1.5 + a * 0.22 * sway, 1 + b * 0.08 * sway);
+        flame.scale.set((1 + b * 0.08 * sway) * size, (1.5 + a * 0.22 * sway) * size, (1 + b * 0.08 * sway) * size);
       }
       for (const { light, seed, cell } of this.candles) {
         light.intensity = (1.1 + Math.sin(t * 11 + seed) * 0.15 * sway) * cell.f * this.torchDim;
@@ -703,6 +713,7 @@ export class Board {
       this.clutter?.tick(dt);
       this.wisps.tick(t);
       this.life?.tick(t, dt);
+      this.moths?.tick(t);
       this.haze?.tick(t);
       this.floors?.tick(t);
       this.bedrock?.tick(t, !sway);
@@ -1112,7 +1123,7 @@ export class Board {
       if (Math.abs(w.opacity - target) < 0.01) w.opacity = target;
       else this.fading = true;
       const see = w.opacity < 0.999;
-      for (const m of w.meshes) {
+      for (const m of [...w.meshes, ...(this.wallDecor?.get(key(w.x, w.z)) ?? [])]) {
         m.traverse((o) => {
           if (!o.isMesh || Array.isArray(o.material)) return;
           ditherable(o.material).value = w.opacity; // a screen door, not glass (dither.js)
@@ -1492,10 +1503,40 @@ export class Board {
     for (const pivot of this.levers.values()) pivot.rotation.x = down ? 0.6 : -0.6;
     const to = down ? 1 : 0;
     if (instant) return this.gates.forEach((g) => this.placeGate(g, to));
-    keepAwake(800);
     const from = this.gates.map((g) => g.t);
-    await tween(down ? 260 : 700, (t) => this.gates.forEach((g, i) => this.placeGate(g, from[i] + (to - from[i]) * t)),
-      down ? (t) => t * t : easeOut);
+    const move = (k) => this.gates.forEach((g, i) => this.placeGate(g, from[i] + (to - from[i]) * k));
+    const rattle = (a) => this.gates.forEach((g) => { g.bars.position.x = a * (Math.random() - 0.5); });
+    if (calm()) {
+      keepAwake(800);
+      await tween(down ? 260 : 700, move, down ? (t) => t * t : easeOut);
+      return;
+    }
+    keepAwake(1500);
+    if (down) {
+      // It drops, slams into the floor, bounces once and settles in a cloud of dust.
+      await tween(240, (t) => move(t * t), linear);
+      for (const g of this.gates) {
+        dustFx(this.stage.scene, g, { count: 10, size: 0.45, y: liftAt(g.x, g.z) });
+        this.sift(g.x, g.z, 0.95);
+      }
+      await tween(260, (t) => {
+        move(1 - 0.09 * Math.sin(t * Math.PI) * (1 - t));
+        rattle(0.03 * (1 - t));
+      }, linear);
+      rattle(0);
+      return;
+    }
+    // Wound up by its chain: in jerks, shivering at each, grit falling from the slot above.
+    for (const g of this.gates) this.sift(g.x, g.z, 0.95);
+    const pulls = 4;
+    for (let p = 0; p < pulls; p++) {
+      await tween(150, (t) => {
+        move((p + easeOut(t)) / pulls);
+        rattle(0.025 * Math.sin(t * Math.PI));
+      }, linear);
+      await wait(70);
+    }
+    rattle(0);
   }
 
   // --- tile kit ------------------------------------------------------------------
@@ -1559,6 +1600,16 @@ export class Board {
     this.walls.push({ x, z, meshes, opacity: 1 });
   }
 
+  /**
+   * Cracks, fallen bricks, alcoves, moss and chains on the kit walls (wallDecor.js), never on
+   * the tiles in `skip` (secret doors). Called once a fight, after the board is made.
+   */
+  dressWalls(skip = []) {
+    if (!this.kit || this.wallDecor) return;
+    this.wallDecor = dressWalls(this, { skip: new Set(skip), avoid: this.decorAvoid ?? [], candle: piece('candle_lit') });
+    this.fogDirty = true;
+  }
+
   /** A hanging banner on a wall facing the camera. */
   addBanner({ x, z, dx, dz }) {
     const b = piece('banner_red');
@@ -1582,7 +1633,18 @@ export class Board {
     let holder;
     let pos;
     const flame = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffb066 }));
-    if (this.kit && (holder = piece('torch_mounted'))) {
+    const lamp = this.kit ? sconce(this.act) : null;
+    let colors = { flame: 0xffb066, light: 0xff8a3d };
+    if (lamp) {
+      // The act's own wall light (sconces.js), on the wall's face.
+      holder = lamp.holder;
+      holder.position.set(x + dx * 0.25, 0, z + dz * 0.25);
+      holder.rotation.y = Math.atan2(dx, dz);
+      flame.position.copy(lamp.at).applyAxisAngle(new THREE.Vector3(0, 1, 0), holder.rotation.y).add(holder.position);
+      flame.scale.setScalar(lamp.scale);
+      colors = lamp;
+      flame.material.color.set(lamp.flame);
+    } else if (this.kit && (holder = piece('torch_mounted'))) {
       // Mounted on the wall face (the kit's walls are half a tile thick).
       pos = new THREE.Vector3(x + dx * 0.25, 0.55, z + dz * 0.25);
       holder.scale.setScalar(0.5);
@@ -1596,12 +1658,13 @@ export class Board {
       holder.rotation.set(dz * 0.5, 0, -dx * 0.5);
       flame.position.copy(pos).add(new THREE.Vector3(dx * 0.06, 0.15, dz * 0.06));
     }
-    flame.scale.y = 1.5;
-    const light = new THREE.PointLight(0xff8a3d, 6, 7, 1.6);
-    light.position.copy(flame.position).add(new THREE.Vector3(dx * 0.3, 0.2, dz * 0.3));
+    const size = flame.scale.x;
+    const light = new THREE.PointLight(colors.light, 6, 7, 1.6);
+    const out = lamp ? 0.5 : 0.3; // a lamp's light stands off its holder, so it doesn't glare on it
+    light.position.copy(flame.position).add(new THREE.Vector3(dx * out, 0.2, dz * out));
     this.group.add(holder, flame, light);
     const cell = this.addToCell(x, z, holder, flame);
-    this.torches.push({ light, seed: x * 7.3 + z * 3.1, cell, flame, home: light.position.clone() });
+    this.torches.push({ light, seed: x * 7.3 + z * 3.1, cell, flame, size, home: light.position.clone() });
     this.motes.add(flame.position, () => cell.f);
   }
 
@@ -1660,10 +1723,40 @@ export class Board {
       await tween(300, (t) => { d.hinge.rotation.y = -1.7 * t; }, easeOut);
       return;
     }
-    // It swings wide, knocks back off the wall a little and settles, raising dust.
-    await tween(380, (t) => { d.hinge.rotation.y = -1.82 * t; }, easeOut);
+    keepAwake(900);
+    // The latch rattles and the door sticks, then it swings wide, knocks back off the wall a
+    // little and settles; grit sifts from the lintel and dust rises where it scraped.
+    await tween(140, (t) => { d.hinge.rotation.y = -0.05 * Math.sin(t * Math.PI * 3) * (1 - t); }, linear);
+    this.sift(x, z, 0.9);
+    await tween(380, (t) => { d.hinge.rotation.y = -1.82 * t; }, (t) => t < 0.15 ? t * t * 6.67 * 0.15 : easeOut(t));
     dustFx(this.stage.scene, { x, z }, { count: 8, size: 0.4, y: liftAt(x, z) });
-    await tween(220, (t) => { d.hinge.rotation.y = -1.82 + 0.12 * Math.sin(t * Math.PI) + 0.12 * t; }, easeOut);
+    await tween(260, (t) => { d.hinge.rotation.y = -1.82 + 0.14 * Math.sin(t * Math.PI) * (1 - t * 0.4) + 0.12 * t; }, easeOut);
+  }
+
+  /** Grit trickling down from height `y` over (x, z), for a door or gate that's moved. */
+  sift(x, z, y) {
+    if (calm()) return;
+    const n = 14;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    const grit = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xb8aa96, size: 2.5, sizeAttenuation: false, transparent: true, opacity: 0.9, depthWrite: false }));
+    grit.frustumCulled = false;
+    this.group.add(grit);
+    const floor = liftAt(x, z);
+    const bits = Array.from({ length: n }, () => ({ x: x + (Math.random() - 0.5) * 0.8, z: z + (Math.random() - 0.5) * 0.3, at: Math.random() * 0.4 }));
+    const pos = geo.attributes.position;
+    tween(900, (t) => {
+      bits.forEach((b, i) => {
+        const k = Math.max(0, Math.min(1, (t - b.at) / 0.6));
+        pos.setXYZ(i, b.x, floor + y - y * k * k, b.z);
+      });
+      pos.needsUpdate = true;
+      grit.material.opacity = 0.9 * Math.min(1, (1 - t) * 3);
+    }, linear).then(() => {
+      this.group.remove(grit);
+      geo.dispose();
+      grit.material.dispose();
+    });
   }
 
   /** Rules 8: a hero swings the door shut and drops its bar. */
@@ -1672,8 +1765,20 @@ export class Board {
     if (!d) return;
     const from = d.hinge.rotation.y;
     d.opened = false;
-    if (from) await tween(360, (t) => { d.hinge.rotation.y = from * (1 - t); }, easeOut);
+    if (calm()) {
+      if (from) await tween(360, (t) => { d.hinge.rotation.y = from * (1 - t); }, easeOut);
+      d.bar.visible = true;
+      return;
+    }
+    keepAwake(1200);
+    // Slammed: it gathers speed, bangs into the frame and shivers, then the bar drops across.
+    if (from) await tween(320, (t) => { d.hinge.rotation.y = from * (1 - t * t); }, linear);
+    this.sift(x, z, 0.9);
+    dustFx(this.stage.scene, { x, z }, { count: 6, size: 0.35, y: liftAt(x, z) });
+    await tween(200, (t) => { d.hinge.rotation.y = -0.06 * Math.sin(t * Math.PI * 2) * (1 - t); }, linear);
     d.bar.visible = true;
+    await tween(240, (t) => { d.bar.position.y = 0.36 + 0.3 * (1 - t) ** 2 + 0.025 * Math.sin(Math.min(1, t * 1.4) * Math.PI) * (t > 0.7 ? 1 : 0); }, linear);
+    d.bar.position.y = 0.36;
   }
 
   /** The bar breaks (a monster forced the door). */
@@ -1786,12 +1891,67 @@ export class Board {
   async openChest(x, z, { gold = false } = {}) {
     const c = this.chests.get(key(x, z));
     if (!c) return;
+    if (calm()) {
+      await tween(500, (t) => {
+        c.lid.rotation.x = -1.9 * t;
+        c.shine.intensity = Math.sin(t * Math.PI) * 6 + t * 1;
+      }, easeOut);
+      tween(1500, (t) => { c.shine.intensity = 1 - t; });
+      return;
+    }
+    keepAwake(2200);
+    // The lid sticks and the chest jolts, the lid cracks open on a glow from inside, then flies
+    // back past open and drops onto its hinge; light rises out of it, golden over treasure.
+    const tilt = c.g.rotation.z;
+    await tween(180, (t) => {
+      c.lid.rotation.x = -0.12 * Math.sin(t * Math.PI);
+      c.g.rotation.z = tilt + 0.05 * Math.sin(t * Math.PI * 3) * (1 - t);
+      c.shine.intensity = t * 1.5;
+    }, linear);
+    c.g.rotation.z = tilt;
     if (gold) wait(250).then(() => glintFx(this.stage.scene, { x, z }, { y: liftAt(x, z) + 0.3 }));
-    await tween(500, (t) => {
-      c.lid.rotation.x = -1.9 * t;
-      c.shine.intensity = Math.sin(t * Math.PI) * 6 + t * 1;
+    this.chestGlow(x, z, gold);
+    await tween(420, (t) => {
+      c.lid.rotation.x = -2.1 * t;
+      c.shine.intensity = 1.5 + Math.sin(t * Math.PI) * 6;
     }, easeOut);
-    tween(1500, (t) => { c.shine.intensity = 1 - t; });
+    await tween(220, (t) => { c.lid.rotation.x = -2.1 + 0.2 * t + 0.06 * Math.sin(t * Math.PI); }, easeOut);
+    tween(1500, (t) => { c.shine.intensity = 1.5 * (1 - t); });
+  }
+
+  /** A column of light rising out of an opened chest, fading as it goes. */
+  chestGlow(x, z, gold) {
+    const tex = (this.glowTex ??= (() => {
+      const cv = document.createElement('canvas');
+      cv.width = 4;
+      cv.height = 64;
+      const g = cv.getContext('2d');
+      const grad = g.createLinearGradient(0, 64, 0, 0);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.4, 'rgba(255,255,255,0.35)');
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = grad;
+      g.fillRect(0, 0, 4, 64);
+      return new THREE.CanvasTexture(cv);
+    })());
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.26, 0.2, 1.1, 16, 1, true),
+      new THREE.MeshBasicMaterial({ map: tex, color: gold ? 0xffc860 : 0xffe2b0, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
+    );
+    const y0 = liftAt(x, z) + 0.3;
+    beam.position.set(x, y0, z);
+    beam.renderOrder = 4;
+    this.group.add(beam);
+    const peak = gold ? 0.5 : 0.28;
+    tween(1600, (t) => {
+      beam.material.opacity = peak * Math.min(1, t * 5) * (1 - t) ** 1.5;
+      beam.scale.y = 0.4 + t * 0.9;
+      beam.position.y = y0 + beam.scale.y * 0.55;
+    }, linear).then(() => {
+      this.group.remove(beam);
+      beam.geometry.dispose();
+      beam.material.dispose();
+    });
   }
 
   /** A stair well going down into darkness, lit up once the level is cleared. */
