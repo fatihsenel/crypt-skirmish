@@ -123,7 +123,7 @@ one row. Push stays out in a room with a chasm, burning coals or stairs.
   - over a chasm's edge: it falls and is gone (no save, no body left to raise);
   - onto burning coals: it burns;
   - into a stairwell (or off the top stair): it tumbles to the floor below, 1d6 and prone;
-  - off a ledge: 1d6 and prone.
+  - off a ledge: 1d6 a step it drops, and prone. Higher ground behind it stops the push.
 - **Grapple:** instead of one attack, Athletics against the foe's STR or DEX. Win and it can't
   move while you stay next to it; it tries to break free at the start of each of its turns.
 - **Help:** a hero distracts a foe next to them; the next ally to attack it before the
@@ -214,9 +214,13 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   hero; past that a foe is unseen, and attacks at one have disadvantage. Monsters see your
   torches from anywhere. Throw your torch, or cast Light, to light a spot for the rest of the
   fight; a burning foe lights the tiles around it.
-- **High ground:** raised ledges in the Crypt Door, the Goblin Warren and the Gallery. Climbing
-  up costs an extra 5 ft, shooting down at a foe below has advantage, and a foe pushed (or a
-  hero thrown) off the edge takes 1d6 and lands prone.
+- **High ground:** ground stands one to three steps up: a ledge in the Crypt Door, the archer's
+  tower in the Goblin Warren, the upper gallery in the Haunted Gallery and the far lip of the
+  Broken Bridge. Each step climbed costs an extra 5 ft, and shooting down at a foe on lower
+  ground has advantage. A rise of two steps or more is a cliff: no one walks up or down it but
+  by a ladder, no one strikes across it in melee unless one of them flies, and it hides what
+  lies beyond it from anyone below. A foe pushed (or a hero thrown) off it takes 1d6 for each
+  step it drops and lands prone.
 - **Shallow water** costs double to wade through (fliers skip it).
 - **Braziers:** a hero next to a lit brazier can tip it over with their action. Its coals land
   on the tiles past it, and whoever stands there makes a DC 12 DEX save against 2d6 fire (half
@@ -673,8 +677,9 @@ A few things differ from the SRD to keep the game simple.
   labyrinth too well to be pushed off.
 - A foe pushed into a stairwell, or off the top stair, tumbles to the stair at the foot (1d6
   bludgeoning, prone), unless it flies or someone stands there.
-- High ground: ranged attacks down from a ledge have advantage, climbing up costs 5 ft more,
-  and a fall from one is 1d6 and prone.
+- High ground: ranged attacks down onto lower ground have advantage, each step climbed costs
+  5 ft more, a rise of two steps is a cliff climbed only by a ladder and out of melee reach
+  (except for fliers), and a fall is 1d6 a step and prone.
 - A creature gives half cover like a barrel: not one right next to the attacker.
 - Death saves: monsters leave a dying hero alone, and a hero who fails three is out until the
   fight ends (back afterwards). Monsters die at 0 HP.

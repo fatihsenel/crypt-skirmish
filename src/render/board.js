@@ -30,18 +30,19 @@ const hash = (x, z, salt = 0) => {
 const WALL_HEIGHT = 0.55;
 
 // Rules 11: raised ledges (`grid.high`) stand this much over the floor; overlays and figures on
-// them are lifted by `liftAt`.
+// them are lifted by `liftAt`. Rules 12: ground `grid.heights` steps up stands STEP a step.
 export const LEDGE = 0.2;
-let ledges = new Set();
+export const STEP = 0.3;
+let ledges = new Map(); // tile key -> how far over the floor it stands
 // While a room builds itself (Board.rise), each tile's offset below its place: figures and
 // overlays read it through liftAt, so they ride up with their tile.
 const rising = new Map();
 export const liftAt = (x, z) => {
   const k = key(Math.round(x), Math.round(z));
-  return (ledges.has(k) ? LEDGE : 0) + (rising.get(k) ?? 0);
+  return (ledges.get(k) ?? 0) + (rising.get(k) ?? 0);
 };
 /** The ledge's height alone, for what is placed once and registered with its tile (rise moves it). */
-const ledgeAt = (x, z) => (ledges.has(key(Math.round(x), Math.round(z))) ? LEDGE : 0);
+const ledgeAt = (x, z) => ledges.get(key(Math.round(x), Math.round(z))) ?? 0;
 
 // A room building itself: how far below the tiles start, how long each takes to rise, and how
 // much later each tile starts per tile of distance from where the party stands.
@@ -146,6 +147,25 @@ class TileLayer {
 
 const DEBRIS_GEO = new THREE.BoxGeometry(1, 1, 1);
 const LEDGE_GEO = new THREE.BoxGeometry(0.99, LEDGE, 0.99);
+const SEAM_GEO = new THREE.BoxGeometry(1.0, 0.025, 1.0);
+
+/** Rules 12: a wooden ladder `tall` high, leaning on a cliff's face (its foot at the origin, facing +z). */
+function ladderMesh(tall) {
+  const wood = mat(0x6b4a2c, { roughness: 0.85 });
+  const g = new THREE.Group();
+  for (const side of [-0.18, 0.18]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.04, tall + 0.12, 0.04), wood);
+    rail.position.set(side, (tall + 0.12) / 2, -0.05);
+    rail.castShadow = true;
+    g.add(rail);
+  }
+  for (let y = 0.1; y < tall; y += 0.13) {
+    const rung = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.025, 0.03), wood);
+    rung.position.set(0, y, -0.05);
+    g.add(rung);
+  }
+  return g;
+}
 
 // Ambient occlusion, baked: a dark strip on the floor along the foot of each wall and ledge,
 // darkest at the stone. Drawn once with the room, under the highlights; no cost per frame.
@@ -453,15 +473,38 @@ export class Board {
       }
     }
 
-    // Rules 11: a raised ledge, a block of dressed stone over the floor.
-    ledges = new Set(grid.high ?? []);
-    for (const k of ledges) {
+    // Rules 11: a raised ledge, a block of dressed stone over the floor (rules 12: a step of
+    // STEP for each of its heights, a course of stone each, and a ladder up each cliff that has one).
+    ledges = new Map(grid.heights?.size ? [...grid.heights].map(([k, h]) => [k, h * STEP]) : [...grid.high ?? []].map((k) => [k, LEDGE]));
+    this.raised = []; // the blocks, which take a click on their top (pickables)
+    const stone = mat(0x5e554c, { roughness: 0.92 });
+    const course = mat(0x4f4740, { roughness: 0.95 });
+    for (const [k, top] of ledges) {
       const [x, z] = k.split(',').map(Number);
-      const block = new THREE.Mesh(LEDGE_GEO, mat(0x5e554c, { roughness: 0.92 }));
-      block.position.set(x, LEDGE / 2, z);
+      const block = new THREE.Mesh(top === LEDGE ? LEDGE_GEO : new THREE.BoxGeometry(0.99, top, 0.99), stone);
+      block.position.set(x, top / 2, z);
       block.castShadow = block.receiveShadow = true;
+      block.userData.tile = { x, z };
       this.group.add(block);
       this.addToCell(x, z, block);
+      this.raised.push(block);
+      for (let y = STEP; y < top - 0.01; y += STEP) { // a dark seam between the courses
+        const seam = new THREE.Mesh(SEAM_GEO, course);
+        seam.position.set(x, y, z);
+        this.group.add(seam);
+        this.addToCell(x, z, seam);
+      }
+    }
+    for (const [k, to] of grid.ladders ?? []) {
+      const [x, z] = k.split(',').map(Number);
+      for (const t of to) {
+        if (ledgeAt(t.x, t.z) <= ledgeAt(x, z)) continue; // drawn once, from its foot
+        const ladder = ladderMesh(ledgeAt(t.x, t.z) - ledgeAt(x, z));
+        ladder.position.set((x + t.x) / 2, ledgeAt(x, z), (z + t.z) / 2);
+        ladder.rotation.y = Math.atan2(t.x - x, t.z - z);
+        this.group.add(ladder);
+        this.addToCell(x, z, ladder);
+      }
     }
 
     this.torchDim = 1; // the torches gutter for a moment as the lair shakes (lairShake)
@@ -528,7 +571,7 @@ export class Board {
     for (const d of grid.doors.values()) this.doors.set(key(d.x, d.z), { ...this.addDoor(d), opened: d.open });
     this.candles = [];
     this.braziers = new Map();
-    this.pickables = []; // props the mouse can click (chests, braziers, levers), tagged with userData.tile
+    this.pickables = [...this.raised]; // props the mouse can click (chests, braziers, levers, raised ground), tagged with userData.tile
     this.levers = new Map();
     for (const p of grid.props.values()) this.addProp(p);
     this.gates = [...grid.gates.values()].map((g) => this.addGate(g));
@@ -810,19 +853,19 @@ export class Board {
     const g = this.grid;
     const k = key(x, z);
     if (g.isWall(x, z) || g.chasms.has(k) || g.links.has(k) || g.stairs.some((s) => s.x === x && s.z === z)) return;
-    const high = ledges.has(k);
+    const high = ledgeAt(x, z);
     const strips = [];
     for (const [dx, dz] of DIRS4) {
       const nx = x + dx;
       const nz = z + dz;
       if (!g.inBounds(nx, nz)) continue;
       const wall = g.isWall(nx, nz) && !g.doors.has(key(nx, nz));
-      const ledge = !high && ledges.has(key(nx, nz));
+      const ledge = ledgeAt(nx, nz) > high;
       if (!wall && !ledge) continue;
       const face = wall && this.kit ? 0.75 : 0.5; // from this tile's centre
       const strip = new THREE.Mesh(AO_GEO, aoMaterial());
       const off = face - AO_DEPTH / 2;
-      strip.position.set(x + dx * off, (high ? LEDGE : 0) + 0.005, z + dz * off);
+      strip.position.set(x + dx * off, high + 0.005, z + dz * off);
       strip.rotation.y = Math.atan2(-dx, -dz); // the dark edge (the plane's far side) toward the wall
       strip.renderOrder = -1;
       strips.push(strip);

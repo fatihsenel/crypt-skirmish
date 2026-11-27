@@ -19,6 +19,8 @@
 // `waves` by round), `secrets` [[x, z]] (walls that are secret doors) and `added9` spawns.
 // Rules 11: `high` [[x0, z0, x1, z1]] raised ledges, `dark11` more dark areas, `added11` spawns
 // (H hobgoblin, Y kobold, p shadow).
+// Rules 12: `heights` [[x0, z0, x1, z1, h]] ground h steps up (1-3, later rects over earlier; a
+// `high` ledge is 1), `ladders` [[x0, z0, x1, z1]] joining two tiles side by side across a cliff.
 // `asleep` lists monsters asleep at the start, by tile ('x,z'); `patrols` maps a monster's
 // tile to the waypoints it walks between while it hasn't noticed the party.
 // The campaign map that links these levels lives in campaign.js.
@@ -74,6 +76,10 @@ export const LEVELS = [
     // three more goblins pour out of the burrows in the north room.
     gong: { x: 12, z: 5, by: '11,6', after: 3, wave: [['g', 14, 1], ['g', 14, 3]] },
     high: [[13, 7, 14, 9]], // rules 11: a ledge by the way down, the archer's perch
+    // Rules 12: the perch is a tower two steps up, its one way up a ladder on its south face,
+    // beside the way down (on the face the camera sees).
+    heights: [[13, 7, 14, 9, 2]],
+    ladders: [[14, 10, 14, 9]],
   },
   {
     id: 'ossuary',
@@ -277,6 +283,10 @@ LEVELS.push(
     patrols: { '9,1': [[14, 1], [14, 4]] },
     loot10: [['cloakProtection', 'potion', 'scrollCureWounds'], ['weaponPlus1', 'potion']],
     high: [[7, 1, 14, 1]], // rules 11: the gallery itself, a raised walk along the north wall
+    // Rules 12: an upper gallery two steps up, climbed by a flight of steps at its west end or the
+    // ladder at its east end; below it, a cliff of panelling.
+    heights: [[7, 1, 14, 1, 2], [7, 1, 7, 1, 1]],
+    ladders: [[14, 2, 14, 1]],
   },
   {
     id: 'throne',
@@ -390,6 +400,9 @@ LEVELS.push(
     asleep: ['12,1', '13,4', '12,7', '13,9'], // statues until something comes close (False Appearance)
     pits: [[9, 3], [10, 8]], // rules 10: rotten planks on both crossings
     loot10: [['potion', 'potion', 'scrollMistyStep']],
+    // Rules 12: the far lip stands a step over the spans, and a dais two steps up in its north
+    // corner, where the gargoyles keep watch.
+    heights: [[11, 1, 14, 10, 1], [13, 1, 14, 2, 2]],
   },
   {
     id: 'lair',

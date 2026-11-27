@@ -41,6 +41,11 @@ export class Grid {
     this.walls = [];
     this.spawns = [];
     this.high = new Set(); // rules 11: raised tiles (set by the Game from level.high)
+    // Rules 12 (set by the Game from level.heights and level.ladders): each raised tile's height
+    // in steps (0 when missing). A climb or drop of 2 steps or more is a cliff no one walks,
+    // except up or down a ladder, which joins two tiles side by side whatever their heights.
+    this.heights = new Map(); // key -> 1..3
+    this.ladders = new Map(); // key -> [{x, z}]: the tiles its ladders lead to
     this.corpses = [];
     this.doors = new Map();  // key -> {x, z, open}
     this.traps = new Map();  // key -> {x, z, revealed, sprung}
@@ -120,6 +125,17 @@ export class Grid {
     return d && !d.open ? d : null;
   }
 
+  /** Rules 12: a tile's height in steps (0 on the floor, and in any room without heights). */
+  heightAt(x, z) {
+    return this.heights.size ? this.heights.get(key(x, z)) ?? 0 : 0;
+  }
+
+  /** Rules 12: too high to climb or drop between two tiles side by side (2 steps or more), with no ladder. */
+  cliff(x0, z0, x1, z1) {
+    if (!this.heights.size || Math.abs(this.heightAt(x0, z0) - this.heightAt(x1, z1)) < 2) return false;
+    return !this.ladders.get(key(x0, z0))?.some((t) => t.x === x1 && t.z === z1);
+  }
+
   *neighbors(x, z) {
     for (const [dx, dz] of DIRS) {
       const nx = x + dx;
@@ -127,6 +143,7 @@ export class Grid {
       if (this.isSolid(nx, nz)) continue;
       // No squeezing diagonally between two walls / around a corner.
       if (dx && dz && (this.isSolid(x + dx, z) || this.isSolid(x, z + dz))) continue;
+      if (this.heights.size && this.cliff(x, z, nx, nz)) continue; // rules 12 (a ladder is the way)
       yield [nx, nz];
     }
     // A stair to the other floor: one step to the stair at its other end (after the eight
@@ -207,8 +224,22 @@ export class Grid {
    * `blocks` can stand in for blocksSight (the renderer uses the doors as drawn).
    */
   lineOfSight(x0, z0, x1, z1, blocks = (x, z) => this.blocksSight(x, z)) {
-    for (const [x, z] of this.lineBetween(x0, z0, x1, z1)) if (blocks(x, z)) return false;
+    for (const [x, z] of this.lineBetween(x0, z0, x1, z1)) if (blocks(x, z) || this.risesBetween(x, z, x0, z0, x1, z1)) return false;
     return true;
+  }
+
+  /**
+   * Rules 12: raised ground at (x, z) hides one end of a line from the other when it stands at
+   * least a step over the higher end and two over the lower one (a low ledge is seen over; a
+   * cliff or a raised gallery is not). Height only ever takes sight away, never adds it.
+   */
+  risesBetween(x, z, x0, z0, x1, z1) {
+    if (!this.heights.size) return false;
+    const h = this.heightAt(x, z);
+    if (!h) return false;
+    const a = this.heightAt(x0, z0);
+    const b = this.heightAt(x1, z1);
+    return h - Math.max(a, b) >= 1 && h - Math.min(a, b) >= 2;
   }
 
   /** The tiles strictly between two tiles along a Bresenham line. */

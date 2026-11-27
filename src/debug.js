@@ -2,6 +2,7 @@
 // behind ?victory. Nothing here is reached in normal play.
 
 import * as THREE from 'three';
+import { liftAt } from './render/board.js';
 import { newCampaign, runSummary, runShareText } from './game/campaign.js';
 import { levelById } from './game/maps.js';
 import { storyOutro } from './game/story.js';
@@ -82,7 +83,7 @@ export function installDebug(app) {
     focus: (x, z, zoom = 2.5) => app.lookAt(x, z, zoom),
     /** Screen position (CSS px) of a tile, useful for scripted play-testing. */
     tileToScreen(x, z) {
-      const v = new THREE.Vector3(x, 0, z).project(app.stage.camera);
+      const v = new THREE.Vector3(x, liftAt(x, z), z).project(app.stage.camera);
       const r = app.stage.dom.getBoundingClientRect();
       return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
     },

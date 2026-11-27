@@ -2,6 +2,7 @@
 // press that shows a character card on a touch screen, and what a click on a tile asks for.
 
 import * as THREE from 'three';
+import { liftAt } from './render/board.js';
 import { key, gridDistance } from './game/grid.js';
 import { SPELLS } from './game/abilities.js';
 import { unitRef, targetRef } from './game/replay.js';
@@ -58,7 +59,7 @@ function floorTile(game, board) {
 /** Where a figure (its view `v`) stands on screen: from the top of its label down to its tile. */
 export function figureRect(stage, u, v) {
   const label = v?.label.element.getBoundingClientRect();
-  const p = new THREE.Vector3(u.x, 0, u.z).project(stage.camera);
+  const p = new THREE.Vector3(u.x, liftAt(u.x, u.z), u.z).project(stage.camera);
   const box = stage.dom.getBoundingClientRect();
   const x = box.left + ((p.x + 1) / 2) * box.width;
   const y = box.top + ((1 - p.y) / 2) * box.height;

@@ -226,6 +226,32 @@ export class Game extends Spellcasting {
         for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (!this.grid.isSolid(x, z)) this.high.add(key(x, z));
       }
     }
+    // Rules 12: heights in steps (level.heights: [x0, z0, x1, z1, h] each, later ones over earlier;
+    // a rules-11 ledge is a step up) and ladders (level.ladders: [x0, z0, x1, z1], two tiles side
+    // by side). A climb of a step costs a tile more per step, a rise of 2 or more is a cliff no one
+    // walks (grid.neighbors) but a ladder, raised ground hides what lies beyond and below it
+    // (grid.risesBetween), no one strikes in melee across a cliff (reachesAcross), and a fall
+    // off it is 1d6 a step (pushTo).
+    if (this.rules >= 12 && (level.heights || level.high)) {
+      const h = this.grid.heights;
+      for (const k of this.high) h.set(k, 1);
+      for (const [x0, z0, x1, z1, n] of level.heights ?? []) {
+        for (let z = z0; z <= z1; z++) {
+          for (let x = x0; x <= x1; x++) {
+            if (this.grid.isSolid(x, z)) continue;
+            if (n > 0) h.set(key(x, z), n);
+            else h.delete(key(x, z));
+          }
+        }
+      }
+      for (const [x0, z0, x1, z1] of level.ladders ?? []) {
+        for (const [a, b] of [[[x0, z0], [x1, z1]], [[x1, z1], [x0, z0]]]) {
+          const k = key(...a);
+          this.grid.ladders.set(k, [...this.grid.ladders.get(k) ?? [], { x: b[0], z: b[1] }]);
+        }
+      }
+      this.high = new Set(h.keys());
+    }
     this.grid.high = this.high; // the board raises these tiles
     // Rules 6: cracked floor gives way over the lower hall, `below` [dx, dz] from it (level.below).
     // Older fights walk it as plain floor.
@@ -509,6 +535,15 @@ export class Game extends Spellcasting {
 
   isAdjacentToEnemy(unit) {
     return this.enemiesOf(unit).some((e) => gridDistance(e, unit) <= 1);
+  }
+
+  /**
+   * Rules 12: can `a` (on `at`, else where it stands) and `b` reach each other in melee? Not
+   * across a cliff (2 steps or more), unless one of them flies. Distance is the caller's.
+   */
+  reachesAcross(a, b, at = a) {
+    if (!this.grid.heights.size || a.flies || b.flies) return true;
+    return Math.abs(this.grid.heightAt(at.x, at.z) - this.grid.heightAt(b.x, b.z)) < 2;
   }
 
   /** Can still attack this turn (Multiattack allows follow-up attacks). */
@@ -1373,9 +1408,13 @@ export class Game extends Spellcasting {
     const high = this.high?.size ? this.high : null; // rules 11: climbing onto a ledge costs a tile more
     if ((!this.ice?.length && !water.size && !rough?.size && !high) || unit?.flies) return null;
     const icy = this.icyTiles();
+    const g = this.grid;
+    const steps = this.rules >= 12 && g.heights.size;
     return (x, z, fx, fz) => {
       const k = key(x, z);
-      const climb = high?.has(k) && fx !== undefined && !high.has(key(fx, fz)) ? 1 : 0;
+      const climb = fx === undefined ? 0 // rules 12: a tile more for each step up
+        : steps ? Math.max(0, g.heightAt(x, z) - g.heightAt(fx, fz))
+          : high?.has(k) && !high.has(key(fx, fz)) ? 1 : 0;
       return (icy.has(k) || water.has(k) || rough?.has(k) ? 2 : 1) + climb;
     };
   }
@@ -1471,7 +1510,8 @@ export class Game extends Spellcasting {
   canOpportunityAttack(foe, mover, from, to) {
     return foe.alive && foe.team !== mover.team && !mover.disengaged && !foe.reactionUsed && !foe.unaware
       && !foe.turned && foe.attacks.some((a) => a.reach === 1)
-      && gridDistance(foe, from) <= 1 && gridDistance(foe, to) > 1;
+      && gridDistance(foe, from) <= 1 && this.reachesAcross(mover, foe, from)
+      && (gridDistance(foe, to) > 1 || !this.reachesAcross(mover, foe, to));
   }
 
   /**
@@ -1956,6 +1996,7 @@ export class Game extends Spellcasting {
     const d = gridDistance(attacker, target);
     const far = this.rules >= 2 ? longReach(attack) : attack.reach;
     if (d > far) return `Out of range (${d * 5} ft, ${attack.name} reaches ${far * 5} ft${far > attack.reach ? ' at long range' : ''})`;
+    if (isMelee(attack) && !this.reachesAcross(attacker, target)) return 'Too far above or below to reach';
     if (d > 1 && this.grid.lineOfSight(attacker.x, attacker.z, target.x, target.z) && this.fogBlocks(attacker, target)) return 'The fog hides it';
     if (d > 1 && !this.grid.lineOfSight(attacker.x, attacker.z, target.x, target.z)) {
       const lower = this.grid.lower;
@@ -2026,7 +2067,8 @@ export class Game extends Spellcasting {
     if (this.has(target, 'pit') && gridDistance(attacker, target) > 1) dis.push('target in a pit');
     if (this.sandstorm && this.sandstorm === this.round && attack.reach > 1 && gridDistance(attacker, target) > 1) dis.push('sandstorm');
     if (this.high?.size && attack.reach > 1 && gridDistance(attacker, target) > 1
-      && this.high.has(key(attacker.x, attacker.z)) && !this.high.has(key(target.x, target.z))) adv.push('high ground');
+      && (this.rules >= 12 ? this.grid.heightAt(attacker.x, attacker.z) > this.grid.heightAt(target.x, target.z) // rules 12: any step lower
+        : this.high.has(key(attacker.x, attacker.z)) && !this.high.has(key(target.x, target.z)))) adv.push('high ground');
     const mode = adv.length && !dis.length ? 'adv' : dis.length && !adv.length ? 'dis' : 'normal';
     return { adv, dis, mode };
   }
@@ -3080,6 +3122,7 @@ export class Game extends Spellcasting {
     if (!target?.alive || target.team === attacker.team) return 'Choose an enemy';
     if (target.hidden) return `${target.name} is hidden: Search to find it`;
     if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
+    if (!this.reachesAcross(attacker, target)) return 'Too far above or below to reach';
     if (target.huge) return `${target.name} is too big to grapple`;
     if (target.swarm) return `${target.name} is a swarm: nothing to hold`;
     if (target.grappledBy === attacker) return `Already holding ${target.name}`;
@@ -3174,6 +3217,7 @@ export class Game extends Spellcasting {
     if (!target?.alive || target.team === unit.team) return 'Choose an enemy';
     if (target.hidden) return `${target.name} is hidden: Search to find it`;
     if (gridDistance(unit, target) > 1) return 'Must stand next to them';
+    if (!this.reachesAcross(unit, target)) return 'Too far above or below to reach';
     if (target.helped === unit) return `Already distracting ${target.name}`;
     return null;
   }
@@ -3224,6 +3268,7 @@ export class Game extends Spellcasting {
     if (attacker.turned) return 'Turned: can only flee';
     if (!target?.alive || target.team === attacker.team) return 'Choose an enemy';
     if (gridDistance(attacker, target) > 1) return 'Must stand next to them';
+    if (!this.reachesAcross(attacker, target)) return 'Too far above or below to reach';
     if (target.huge) return `${target.name} is too big to shove`;
     if (push) return this.pushTo(attacker, target).why ?? null;
     if (this.has(target, 'prone')) return `${target.name} is already prone`;
@@ -3253,8 +3298,14 @@ export class Game extends Spellcasting {
     if (crash) return crash;
     if (fall && target.flies) return { why: `${target.name} would only fly` };
     if (fall && target.surefooted) return { why: `${target.name} won’t be pushed off the edge` };
+    // Rules 12: up against higher ground, no room; off it, a fall of 1d6 a step.
+    if (this.rules >= 12 && !fall && g.heights.size && !target.flies) {
+      const steps = g.heightAt(target.x, target.z) - g.heightAt(x, z);
+      if (steps < 0) return { why: `No room to push ${target.name} back` };
+      if (steps > 0) return { x, z, fall: false, drop: true, steps };
+    }
     // Rules 11: off a ledge, a fall to the floor below it.
-    if (this.rules >= 11 && !fall && !target.flies && this.high.has(key(target.x, target.z)) && !this.high.has(key(x, z))) {
+    if (this.rules >= 11 && this.rules < 12 && !fall && !target.flies && this.high.has(key(target.x, target.z)) && !this.high.has(key(x, z))) {
       return { x, z, fall: false, drop: true };
     }
     return { x, z, fall };
@@ -3341,7 +3392,7 @@ export class Game extends Spellcasting {
     if (target.grappling && gridDistance(target, target.grappling) > 1) this.letGo(target, 'pushed');
     if (target.grappledBy && !this.held(target)) this.letGo(target.grappledBy, 'pushed');
     if (to.fall) this.fall(target, by);
-    else if (to.drop) out.tumble = this.tumble(target, by, 'ledge');
+    else if (to.drop) out.tumble = this.tumble(target, by, 'ledge', to.steps);
     else if (to.tumble) {
       if (to.crash) this.breakCrack(to.tumble);
       out.tumble = this.tumble(target, by, !!to.crash);
@@ -3350,12 +3401,12 @@ export class Game extends Spellcasting {
   }
 
   /** Rules 5: down a flight of stone steps (rules 6: or through cracked floor): 1d6 bludgeoning, and prone at the bottom. */
-  tumble(target, by, through = false) { // through: true (cracked floor) or 'ledge' (rules 11)
-    const roll = rollExpr(TUMBLE_DAMAGE, { rng: this.rng });
+  tumble(target, by, through = false, steps = 1) { // through: true (cracked floor) or 'ledge' (rules 11; rules 12: `steps` d6)
+    const roll = rollExpr(steps > 1 ? `${steps}d6` : TUMBLE_DAMAGE, { rng: this.rng });
     const ledge = through === 'ledge';
     this.cause = ledge ? 'a fall from a ledge' : through ? 'a fall through the floor' : 'a fall down the stairs';
     this.via = 'fall';
-    const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0), ...(through === true && { through: true }), ...(ledge && { ledge: true }) };
+    const result = { unit: target, roll, damage: roll.total, lands: roll.total < target.hp + (target.tempHp ?? 0), ...(through === true && { through: true }), ...(ledge && { ledge: true }), ...(steps > 1 && { steps }) };
     target.tumbled = (target.tumbled ?? 0) + 1; // for play stats; no dice
     this.emit('tumble', result);
     this.applyDamage(target, roll.total, by);

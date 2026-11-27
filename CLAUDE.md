@@ -116,7 +116,19 @@ server on 5173.
   through `martialUsed`) and the kobold (`Y`, pack tactics); rooms add rules-11 spawns through
   `level.added11` and dark through `level.dark11` (`filesForRoom` takes the level, so every
   `added*` spawn's figure loads), and rules-10 fights are replayed by
-  `tests/fixtures/v10-fights.json` (`scripts/v10-fixtures.mjs`).
+  `tests/fixtures/v10-fights.json` (`scripts/v10-fixtures.mjs`). Rules 12: heights in steps
+  (`level.heights` `[x0, z0, x1, z1, h]`, a `high` ledge is 1; `grid.heights`, `heightAt`) and
+  ladders (`level.ladders`, `grid.ladders`): a rise of 2 or more is a `cliff`, skipped by
+  `grid.neighbors` (so paths, the AI's fields and sound) unless a ladder joins the two tiles,
+  each step climbed costs a tile more in `moveCost`, raised ground hides what lies past it
+  (`risesBetween` in `lineOfSight`, for the rules and the fog alike; it only ever takes sight
+  away), no melee, shove, grapple or Help across a cliff unless one flies (`reachesAcross`,
+  also in `canOpportunityAttack`), high ground from any step higher, and a push off is
+  `steps`d6 (`pushTo`'s `steps`, `tumble`'s) while higher ground stops one. Drawn by STEP a
+  step in `render/board.js` (a course a step, `ladderMesh`; the blocks are `pickables`, so a
+  tap on top picks the raised tile). Rules-11 fights are replayed by
+  `tests/fixtures/v11-fights.json` (`scripts/v11-fixtures.mjs`); `tests/heights.test.js`
+  checks every tile of a room with heights can be walked to.
   `RULES` lives in `game/elites.js`.
 - `src/render/` is three.js only. Animations use `tween`/`wait` from `render/tween.js`, so
   they follow the monster-turn speed setting (`playback.rate`). `calm()` there is reduced
