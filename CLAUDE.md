@@ -188,7 +188,9 @@ server on 5173.
   `stairCamera`, the Floor peek `peekFloor`, turning the view `turnView`; a newer pan takes
   over through `panTween`), and they skip under `calm()`, as does `board.lairShake` in `main.js`. The red edges are `#vignette` (`data-level`).
   Raised ground is `stoneBlock` with `stoneSide`/`stoneTop` (`render/stone.js`, canvas textures
-  made once). Mist in chasms and over the lower hall and, with Glow, the torches' and braziers'
+  made once). The rock under the room's edge (cliff, foundations, roots, a mist far below) is
+  `render/bedrock.js` (`board.bedrock`, each stretch in its border tile's cell); a chasm's faces
+  share its `rockTexture` and get `shaftRubble`. Mist in chasms and over the lower hall and, with Glow, the torches' and braziers'
   light shafts are `render/haze.js` (`board.haze`; `setReflections` toggles the shafts).
   `render/floors.js` (`board.floors`) draws damp stone by water, frost from `setIce`
   (`setFrost`) and glowing seams from `setFire` (`setSeams`); blood marks dry through

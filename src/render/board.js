@@ -19,6 +19,7 @@ import { kitReady, piece } from './dungeonKit.js';
 import { stoneSide, stoneTop, stoneBlock } from './stone.js';
 import { Haze } from './haze.js';
 import { inFront } from './view.js';
+import { Bedrock, rockTexture, shaftRubble } from './bedrock.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
 const KIT_WALL = 1.0;
@@ -350,6 +351,14 @@ const SHAFT_GEO = new THREE.PlaneGeometry(1, SHAFT_DEPTH);
   }
   SHAFT_GEO.setAttribute('color', new THREE.BufferAttribute(col, 3));
 }
+// The same rough rock as under the room's edge (bedrock.js), at the same scale: half a texture
+// a tile across.
+{
+  const uv = SHAFT_GEO.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.5, uv.getY(i) * SHAFT_DEPTH * 0.5);
+}
+let shaftMat = null;
+const shaftMaterial = () => (shaftMat ??= new THREE.MeshStandardMaterial({ color: 0x9a8c80, map: rockTexture(), bumpMap: rockTexture(), bumpScale: 3, roughness: 1, vertexColors: true }));
 const CHASM_MIST = new THREE.MeshBasicMaterial({ color: 0x3a4862, transparent: true, opacity: 0.4, depthWrite: false });
 const CHASM_FLOOR = new THREE.MeshBasicMaterial({ color: 0x000000 });
 
@@ -616,6 +625,9 @@ export class Board {
       this.addShaft(x, z);
     }
 
+    // The rock the room stands on, falling away into the dark round its edge (bedrock.js).
+    this.bedrock = new Bedrock(this);
+
     // Cracked floor (rules 6; the Game clears grid.cracks for older fights).
     this.cracks = new Map();
     for (const c of grid.cracks.values()) {
@@ -693,6 +705,7 @@ export class Board {
       this.life?.tick(t, dt);
       this.haze?.tick(t);
       this.floors?.tick(t);
+      this.bedrock?.tick(t, !sway);
       if (this.runes.visible) {
         // Turning slowly and breathing; still under reduced motion.
         this.runes.rotation.y = sway ? t * 0.35 : 0;
@@ -898,11 +911,11 @@ export class Board {
     for (const [dx, dz] of DIRS4) {
       const nk = key(x + dx, z + dz);
       if (this.grid.chasms.has(nk) || this.holes.has(nk)) continue;
-      const face = new THREE.Mesh(SHAFT_GEO, mat(0x6a5c50, { roughness: 1, vertexColors: true }));
+      const face = new THREE.Mesh(SHAFT_GEO, shaftMaterial());
       face.position.set(x + dx * 0.5, -SHAFT_DEPTH / 2, z + dz * 0.5);
       face.rotation.y = Math.atan2(-dx, -dz); // facing into the hole
       face.receiveShadow = true;
-      parts.push(face);
+      parts.push(face, ...shaftRubble(x, z, dx, dz, SHAFT_DEPTH)); // stones lodged on the way down
     }
     const mist = new THREE.Mesh(WATER_GEO, CHASM_MIST);
     mist.position.set(x, -0.8, z);

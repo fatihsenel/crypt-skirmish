@@ -518,7 +518,9 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   door, a barrel or the floor for the rest of the fight. When a figure takes the stairs, the
   floor it leaves fades to a cold ghost and the camera tips to follow it. Raised ground is cut
   stone, damp and mossy at its foot and worn pale at the lip; mist drifts down the chasms and
-  over a lower hall. Stone beside water is dark and wet, Ice Storm's frost creeps out round its
+  over a lower hall. The room stands on rough rock that falls away into the dark below its
+  edge, with old foundation stones under the lip, roots hanging down and a cold mist far below,
+  and stones lie lodged down the chasms' sides. Stone beside water is dark and wet, Ice Storm's frost creeps out round its
   ground and melts back, spilled coals glow through the cracks between flags, and blood soaks
   in and dries brown over a few rounds. Figures hop up a step, climb ladders rung by rung and
   stagger back from a blow. Each figure has a thin rim of light (cool for heroes, warm for
@@ -943,6 +945,7 @@ src/
     board.js         dungeon meshes, wall shading, flickering torches, highlights, fog of war, wall
                      fading, water (deeper in the middle, a shore) and chasms, the room rising
     stone.js         cut stone for raised ground: block courses, worn flags, a damp foot
+    bedrock.js       the rock under the room's edge: cliff, foundations, roots, mist; chasm rubble
     haze.js          mist in chasms and the lower hall; torch and brazier light shafts (with Glow)
     floors.js        damp stone by water, frost round Ice Storm, glowing seams under coals
     dither.js        walls fading out of the way in a screen-door pattern
