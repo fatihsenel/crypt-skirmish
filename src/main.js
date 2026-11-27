@@ -527,7 +527,7 @@ const $banner = document.getElementById('banner');
 // --- the camera: framing the board round the HUD, and its moves in a fight (camera.js) ---------
 const floorButton = document.getElementById('floor-toggle');
 const camera = createCamera({ stage, hud, game: () => game, board: () => board, photo: () => photo, floorButton });
-const { frameParty, lookAt, keepInView, bossSweep, stairCamera, lastBlow, peekFloor, setPeek } = camera;
+const { frameParty, lookAt, keepInView, bossSweep, stairCamera, lastBlow, peekFloor, setPeek, turnView } = camera;
 
 // Audio may only start after a user gesture. Safari on a phone takes the end of a tap, not its
 // start: a context made on touch-down says it's running yet stays silent. So start it on the
@@ -941,6 +941,7 @@ function startFight(resume, watch = null) {
     return;
   }
   board = new Board(game.grid, stage);
+  stage.turnHome(); // every fight starts from the usual corner
   board.setReflections(glowOn()); // the water's reflections go with the Glow setting
   stage.setMood(moodFor(nodeId ?? level.id)); // each act's light (render/mood.js)
   floorButton.hidden = !game.grid.links.size; // rooms on two floors only
@@ -2352,7 +2353,7 @@ const controls = createControls({
   game: () => game, board: () => board, views: () => views, busy: () => busy, replay: () => replay,
   hovered: () => hovered, setHovered: (t) => { hovered = t; },
   selected: () => selected, setSelected: (s) => { selected = s; },
-  isHeroTurn, refresh, heroCommand, endHeroTurn, undoMove, endReplay, keepInView, peekFloor,
+  isHeroTurn, refresh, heroCommand, endHeroTurn, undoMove, endReplay, keepInView, peekFloor, turnView,
   toggleSound, toggleMusic, visibleUnitAt, spellTargetAt, photo: () => photo.active,
 });
 // A gamepad drives the same cursor and keys, and moves focus in the menus (gamepad.js).

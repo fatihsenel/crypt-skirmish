@@ -192,6 +192,12 @@ export function createControls(deps) {
       deps.peekFloor();
       return;
     }
+    // Q and E: turn the view a quarter round the room (camera.js turnView).
+    if ((ev.code === 'KeyQ' || ev.code === 'KeyE') && game() && deps.board() && plain && !deps.photo() && !deps.camp.open && (deps.replay() || !game().over)) {
+      if (ev.target.closest?.('#settings, .overlay')) return;
+      deps.turnView(ev.code === 'KeyE' ? 1 : -1);
+      return;
+    }
     if (ev.code === 'Space' || ev.code === 'Enter') {
       if (ev.target instanceof HTMLButtonElement || ev.target instanceof HTMLElement && ev.target.closest('summary, #log-list')) return;
       ev.preventDefault();

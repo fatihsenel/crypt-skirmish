@@ -9,6 +9,7 @@ import { key } from './game/grid.js';
 import { wait, tween, playback, calm, keepAwake } from './render/tween.js';
 import { otherFloor } from './input.js';
 import { announce } from './ui/announce.js';
+import { compass, twistTurn } from './render/view.js';
 
 /**
  * `stage` and `hud`, and as functions `game()`, `board()` and `photo()` (the photo mode, made
@@ -97,7 +98,9 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
    * to centre it. Zoom stays put, and so does any pan the player made while the unit is in view.
    */
   let panTween = 0;
+  let levelStair = null; // a running stair tilt's settle (stairCamera)
   function keepInView(unit) {
+    stage.finishTurn(); // a turn under way ends first, so the glide is measured from where it lands
     if (Math.min(window.innerWidth, window.innerHeight) >= 600) return;
     const cam = stage.camera;
     cam.updateMatrixWorld(); // it may have moved since the last frame drew
@@ -128,6 +131,7 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
 
   /** Slide the camera over the ground by `shift`, in 350 ms (at once with reduced motion). */
   function glide(shift) {
+    stage.finishTurn();
     const cam = stage.camera;
     const ticket = ++panTween;
     if (calm()) { // reduced motion: jump there
@@ -163,6 +167,7 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
    * when it's there or was taken over.
    */
   function easeCamera(to, zoom, ms) {
+    stage.finishTurn();
     const cam = stage.camera;
     const ticket = ++panTween;
     const z0 = cam.zoom;
@@ -204,6 +209,7 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
    */
   async function bossSweep(u) {
     if (calm() || photo().active || document.hidden) return;
+    stage.finishTurn(); // before the shot it comes back to
     const back = cameraShot();
     const g = game();
     await easeCamera(u, Math.min(stage.controls.maxZoom, Math.max(back.zoom * 1.4, 1.5)), 700);
@@ -220,6 +226,7 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
    */
   async function stairCamera(step, unit, ms) {
     if (calm() || photo().active || document.hidden) return;
+    stage.finishTurn();
     const cam = stage.camera;
     const ticket = ++panTween;
     const target0 = stage.controls.target.clone();
@@ -233,6 +240,7 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
     let level = false;
     /** Upright and at its zoom again, round wherever the camera looks now. */
     const settle = () => {
+      if (levelStair === settle) levelStair = null;
       level = true;
       orbit.phi = phi0;
       cam.position.copy(stage.controls.target).add(new THREE.Vector3().setFromSpherical(orbit));
@@ -240,6 +248,7 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
       cam.updateProjectionMatrix();
       keepAwake(100);
     };
+    levelStair = settle; // a turn levels the camera at once (turnView)
     await tween(ms + 500, (t) => {
       if (ticket !== panTween) { // a newer pan took over: it keeps its way, but not the tilt
         if (!level) settle();
@@ -267,6 +276,7 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
    */
   function lastBlow(at) {
     if (calm() || photo().active || document.hidden) return null;
+    stage.finishTurn();
     const back = cameraShot();
     const rate = playback.rate;
     playback.rate = rate * 0.4;
@@ -318,7 +328,35 @@ export function createCamera({ stage, hud, game, board, photo, floorButton }) {
       `. ${hud.touch ? 'Floor' : 'V'} again to look back.`);
   }
 
+  /**
+   * Q and E, the Turn button, a two-finger twist and a pad's LT and RT: the view a quarter turn
+   * round the room (`dir` 1 clockwise seen from above, stage.turn). It takes over from any other
+   * camera move. Not in photo mode, which turns freely.
+   */
+  async function turnView(dir) {
+    if (!game() || !board() || photo().active) return;
+    ++panTween;
+    levelStair?.(); // a stair's tilt ends level before the turn takes its angle
+    if (await stage.turn(dir)) announce(`View from the ${compass(stage.view())}.`); // once, as it lands
+  }
+  document.getElementById('turn-toggle')?.addEventListener('click', () => turnView(1));
+  // A twist of two fingers turns the view the way the fingers turn, once each 35° or so.
+  let twist = null; // the fingers' angle a twist is measured from
+  const fingers = (ev) => Math.atan2(ev.touches[1].clientY - ev.touches[0].clientY, ev.touches[1].clientX - ev.touches[0].clientX);
+  stage.dom.addEventListener('touchstart', (ev) => { twist = ev.touches.length === 2 ? fingers(ev) : null; }, { passive: true });
+  stage.dom.addEventListener('touchmove', (ev) => {
+    if (twist === null || ev.touches.length !== 2) return;
+    const now = fingers(ev);
+    const d = Math.atan2(Math.sin(now - twist), Math.cos(now - twist));
+    const way = twistTurn(d);
+    if (!way) return;
+    twist = now;
+    turnView(-way); // fingers turning clockwise on screen turn the room clockwise: the camera goes the other way
+  }, { passive: true });
+  for (const type of ['touchend', 'touchcancel']) stage.dom.addEventListener(type, (ev) => { if (ev.touches.length < 2) twist = null; }, { passive: true });
+
   return {
+    turnView,
     hudInsets, frameParty,
     /** The action bar's height changed (the Text size): measure it afresh, smaller too. */
     remeasure: () => { framedFor = ''; },

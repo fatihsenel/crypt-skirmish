@@ -6,6 +6,7 @@ import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { calm, animating, onAnimate, keepAwake } from './tween.js';
 import { keepSpellLights } from './lights.js';
+import { viewOf } from './view.js';
 
 export function createStage(container, { width, height }) {
   const center = new THREE.Vector3((width - 1) / 2, 0, (height - 1) / 2);
@@ -226,7 +227,106 @@ export function createStage(container, { width, height }) {
     fit();
   };
 
-  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, render, setEffects, setMood, warp, dom: renderer.domElement };
+  // Turning the view a quarter at a time (camera.js turnView): the camera orbits what it looks
+  // at, keeping its height and distance, and always ends on one of the four diagonals.
+  const QUARTER = Math.PI / 2;
+  const HOME = Math.PI / 4; // the usual corner, +x and +z of the target
+  const orbit = new THREE.Spherical();
+  const offset = new THREE.Vector3();
+  let goal = null; // the azimuth a turn under way is heading for
+  let turnTicket = 0;
+  const placeAt = (theta) => {
+    orbit.setFromVector3(offset.copy(camera.position).sub(controls.target));
+    orbit.theta = theta;
+    camera.position.copy(controls.target).add(offset.setFromSpherical(orbit));
+    camera.lookAt(controls.target);
+    keepAwake(100);
+  };
+  const azimuth = () => {
+    orbit.setFromVector3(offset.copy(camera.position).sub(controls.target));
+    return orbit.theta;
+  };
+  const nearestQuarter = (theta) => Math.round((theta - HOME) / QUARTER) * QUARTER + HOME;
+  // The ground in the middle of the area the HUD leaves free: what a turn turns about, so the
+  // spot the player looks at stays where it is on screen.
+  const ray = new THREE.Raycaster();
+  const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const UP = new THREE.Vector3(0, 1, 0);
+  const pivotOnScreen = () => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    const { top, bottom, right } = insets(w, h);
+    camera.updateMatrixWorld();
+    ray.setFromCamera(new THREE.Vector2((w - right) / w - 1, 1 - (top + h - bottom) / h), camera);
+    const at = new THREE.Vector3();
+    return ray.ray.intersectPlane(ground, at) ? at : controls.target.clone().setY(0);
+  };
+  // A turn rotates the camera and its target about the pivot a little each frame (by what is
+  // left of it), so a pan, a tilt or a zoom made meanwhile adds to it rather than being undone.
+  let turning = null; // { pivot, applied, end }: the turn under way and how much of it is done
+  const rotateBy = (angle) => {
+    if (!angle) return;
+    const { pivot } = turning;
+    camera.position.sub(pivot).applyAxisAngle(UP, angle).add(pivot);
+    controls.target.sub(pivot).applyAxisAngle(UP, angle).add(pivot);
+    camera.lookAt(controls.target);
+    turning.applied += angle;
+    keepAwake(100);
+  };
+  const done = () => { turning = null; goal = null; };
+  /**
+   * A quarter turn: `dir` 1 moves the camera clockwise round the room seen from above. Another
+   * press while it runs adds a quarter to the same turn. Resolves true once this press's turn
+   * has ended, false if a later press or `finishTurn` took it over.
+   */
+  const turn = (dir, { snap = false } = {}) => {
+    if (!turning) {
+      const from = azimuth();
+      turning = { pivot: pivotOnScreen(), applied: 0, end: 0 };
+      goal = nearestQuarter(from);
+      turning.end = goal - from; // squares up a view left off the diagonal, too
+    }
+    goal -= dir * QUARTER;
+    turning.end -= dir * QUARTER;
+    const ticket = ++turnTicket;
+    if (snap || calm()) {
+      finishTurn();
+      return Promise.resolve(true);
+    }
+    const from = turning.applied;
+    const end = turning.end;
+    const start = performance.now();
+    const MS = 300;
+    return new Promise((resolve) => {
+      const step = (now) => {
+        if (ticket !== turnTicket || !turning) return resolve(false);
+        const t = Math.min(1, (now - start) / MS);
+        const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+        rotateBy(from + (end - from) * e - turning.applied);
+        if (t < 1) return requestAnimationFrame(step);
+        done();
+        resolve(true);
+      };
+      requestAnimationFrame(step);
+    });
+  };
+  /** A turn under way jumps to its end (another camera move, or photo mode, is starting). */
+  const finishTurn = () => {
+    if (!turning) return;
+    turnTicket++;
+    rotateBy(turning.end - turning.applied);
+    done();
+  };
+  /** Back to the usual corner, at once (a new fight). */
+  const turnHome = () => {
+    turnTicket++;
+    done();
+    placeAt(HOME);
+  };
+  /** The diagonal the camera stands on: { x: ±1, z: ±1 } (view.js). */
+  const view = () => viewOf(camera.position.x - controls.target.x, camera.position.z - controls.target.z);
+
+  return { scene, camera, renderer, controls, tickers, shake, fit, setInsets, perf, render, setEffects, setMood, warp, turn, finishTurn, turnHome, view, dom: renderer.domElement };
 }
 
 /**

@@ -185,8 +185,8 @@ server on 5173.
   new room needs its act in `ACT` there. The camera's moves live in `src/camera.js`
   (`createCamera`: framing round the HUD with `hudInsets`, `keepInView` on a phone, a named
   foe's sweep `bossSweep`, the last blow's slow close-up `lastBlow` through `easeCamera`,
-  `stairCamera`, the Floor peek `peekFloor`; a newer pan takes over through `panTween`), and
-  they skip under `calm()`, as does `board.lairShake` in `main.js`. The red edges are `#vignette` (`data-level`).
+  `stairCamera`, the Floor peek `peekFloor`, turning the view `turnView`; a newer pan takes
+  over through `panTween`), and they skip under `calm()`, as does `board.lairShake` in `main.js`. The red edges are `#vignette` (`data-level`).
   Raised ground is `stoneBlock` with `stoneSide`/`stoneTop` (`render/stone.js`, canvas textures
   made once). Mist in chasms and over the lower hall and, with Glow, the torches' and braziers'
   light shafts are `render/haze.js` (`board.haze`; `setReflections` toggles the shafts).
@@ -199,6 +199,14 @@ server on 5173.
   coarse pointer; transparent no-depth meshes are left out of its depth pass) and the act's
   grade (`mood.js` `grade`, `stage.setMood` → `post.setGrade`). Shadows are `PCFShadowMap`
   with `sun.shadow.radius` (three r187 dropped `PCFSoftShadowMap`).
+  The view turns in quarters (`stage.turn(dir)`, Q/E, `#turn-toggle`, a two-finger twist, a
+  pad's LT/RT) about the ground in the middle of the free area; `stage.view()` is the diagonal
+  the camera stands on (`render/view.js`: `inFront` for wall fading, `compass`, `twistTurn`), and
+  a new fight calls `stage.turnHome()`. Anything drawn to face the camera reads `stage.view()`
+  (the brazier shafts in `haze.js`); wall decor stays on the walls facing the usual corner, and
+  from another side a stair may sit behind a wall. A turn rotates the camera a little each frame
+  by what's left (`rotateBy`), and every other camera move, and photo mode, calls
+  `stage.finishTurn()` first, so the view always ends square on a diagonal.
   A wall in the way fades by `ditherable` (`render/dither.js`, a `uFade` that discards pixels in
   a Bayer pattern), never by `transparent`. Figures get `rimLight` and `contactShadow`
   (`render/rim.js`); these, `dither` and `dissolve` patch `onBeforeCompile`, so each chains the

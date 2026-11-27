@@ -476,6 +476,10 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   banner's Copy log puts the whole fight's log on the clipboard as plain text.
 - **Copying:** where a browser won't let the game copy, Copy log, Copy result and the link
   buttons open the text selected in a panel, to copy by hand (or Save as file).
+- **Turning the view** (Q and E, the Turn button, a two-finger twist or a pad's LT and RT):
+  the room turns a quarter round the spot in the middle of the screen, so a fight behind a rise
+  or a wall can be seen from another side. Walls in the way fade from whichever side you look;
+  each fight starts from the usual corner.
 - **Photo mode** (P, or the camera button): the HUD goes and the monsters wait. Drag to turn
   the view around the hero whose turn it is, right-drag to pan and scroll to zoom (on a phone,
   one finger turns, two pan and pinch). Save image keeps the picture (on a phone, the share
@@ -606,6 +610,7 @@ Everything is generated in the browser, with no recordings:
 | 1–9, 0 | Pick the action bar's first ten buttons in order (attacks, spells, actions); the number shows on each |
 | R | Read out the hero, enemies in sight (distance, HP, in range) and who's down |
 | V | In a room on two floors, look down (or up) the stair nearest your hero; V again looks back (or the Floor button) |
+| Q / E | Turn the view a quarter round the room, one way or the other (or the Turn button) |
 | Space or Enter | End turn (or throw the die when it's waiting) |
 | Esc | Un-pick the tile, cancel the selected attack or spell, then put the cursor away |
 | Z | Undo the last move |
@@ -629,6 +634,7 @@ Everything is generated in the browser, with no recordings:
 | Tap a portrait or hold a figure | Show the character card |
 | Log button (top right) | Open the combat log (its number counts new lines); tap a name in it to see that figure, hold it for only its lines |
 | Camera button (top right) | Photo mode: one finger turns, two pan and pinch |
+| Turn button (top right), or twist two fingers | Turn the view a quarter round the room |
 | Floor button (top right, rooms on two floors) | Look down (or up) the stairs nearest the hero; tap again to look back |
 
 | Gamepad | Action |
@@ -640,6 +646,7 @@ Everything is generated in the browser, with no recordings:
 | Y | Undo the last move |
 | LB / RB | Pick the previous / next action bar button |
 | Right stick press | Look at the other floor (like V) |
+| LT / RT | Turn the view (like Q / E) |
 | Start | Settings |
 | Back / View | Show or hide the controls panel, which then lists the pad's buttons |
 
@@ -948,6 +955,7 @@ src/
     scars.js         soot and cracks on the walls
     arrows.js        missed arrows stuck where they struck
     lights.js        spell light: a few kept point lights lent to bolts and blasts
+    view.js          which side the view is turned to: walls in the way, compass names, twists
     wisps.js         haze at the edge of the explored map and over a lower hall
     outline.js       the outlines on the hovered figure and the foes in reach
     life.js          banners and cobwebs stirring, drips into pools, a rat out of sight, light shafts
@@ -993,7 +1001,8 @@ src/
     appStatus.js     the title's line about offline play, installing and a new version
   boot.js            the entry: the title and the saves, before three.js and main.js load
   main.js            controller: game → animations → HUD
-  camera.js          the camera: framing round the HUD, glides, close-ups, the stairs, the Floor peek
+  camera.js          the camera: framing round the HUD, glides, close-ups, the stairs, the Floor
+                     peek, turning the view
   controls.js        mouse, touch and keyboard: the arrow-key cursor and the shortcut keys
   gamepad.js         gamepads: the keyboard's keys on the board, focus moves in the menus
   preview.js         what a click on the hovered tile would do: the path, the odds, a spell's blast

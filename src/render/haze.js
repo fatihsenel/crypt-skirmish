@@ -121,7 +121,7 @@ export class Haze {
     }
     this.shafts = [];
     if (!on) return;
-    const add = (pos, cell, seed, { w, h, tilt, yaw, base, lit }) => {
+    const add = (pos, cell, seed, { w, h, tilt, yaw, base, lit, faces = false }) => {
       const mesh = new THREE.Mesh(SHAFT_GEO, new THREE.MeshBasicMaterial({
         map: shaftTexture(), transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false,
       }));
@@ -131,7 +131,7 @@ export class Haze {
       mesh.renderOrder = 4;
       mesh.raycast = () => {};
       this.board.group.add(mesh);
-      this.shafts.push({ mesh, cell, seed, base, lit });
+      this.shafts.push({ mesh, cell, seed, base, lit, faces }); // `faces`: turns to the view
     };
     for (const t of this.board.torches) {
       const out = t.home.clone().sub(t.flame.position).setY(0).normalize(); // away from the wall
@@ -144,7 +144,7 @@ export class Haze {
       const at = b.g.position.clone().add(new THREE.Vector3(0, 0.74, 0));
       // A column of heat and light rising over the coals (turned over, it stands up from them).
       add(at, b.cell, b.seed, {
-        w: 0.7, h: 0.9, tilt: Math.PI, yaw: Math.PI / 4, base: 0.3, lit: () => b.lit,
+        w: 0.7, h: 0.9, tilt: Math.PI, yaw: Math.PI / 4, base: 0.3, lit: () => b.lit, faces: true,
       });
     }
   }
@@ -157,7 +157,9 @@ export class Haze {
       m.mesh.material.opacity = m.base * f;
       m.mesh.visible = f > 0.01;
     }
+    const view = this.board.stage?.view?.();
     for (const s of this.shafts) {
+      if (s.faces && view) s.mesh.rotation.y = Math.atan2(view.x, view.z); // a column faces the camera
       const flicker = still ? 1 : 0.85 + 0.1 * Math.sin(t * 9 + s.seed) + 0.05 * Math.sin(t * 23 + s.seed * 2);
       s.mesh.material.opacity = s.lit() ? s.base * flicker * s.cell.f * this.board.torchDim : 0;
       s.mesh.visible = s.mesh.material.opacity > 0.005;

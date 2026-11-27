@@ -168,7 +168,7 @@ body.colorblind #help .sw.threat-far { --c: rgba(240, 228, 66, 0.6); }
   gap: 6px;
   z-index: 22; /* above the title and camp screens, so sound and settings work there too */
 }
-#sound, #music, #settings-toggle, #threats-toggle, #photo-toggle, #floor-toggle {
+#sound, #music, #settings-toggle, #threats-toggle, #photo-toggle, #turn-toggle, #floor-toggle {
   display: flex;
   align-items: center;
   gap: 6px;

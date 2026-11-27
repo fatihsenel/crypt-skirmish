@@ -12,7 +12,7 @@
      below them; the fight's own ones (threats, log, photo) step aside while it's up. */
   padding-top: calc(env(safe-area-inset-top) + 60px);
 }
-body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle, #floor-toggle) { display: none; }
+body:has(#banner:not([hidden])) :is(#threats-toggle, #log-toggle, #photo-toggle, #turn-toggle, #floor-toggle) { display: none; }
 #banner .card:focus { outline: none; } /* focused for keyboard and screen readers, see hud.banner */
 #banner[hidden] { display: none; }
 #banner .card {

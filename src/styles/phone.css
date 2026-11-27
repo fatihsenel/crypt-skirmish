@@ -50,6 +50,9 @@
   .passives, .economy, .stats { flex-wrap: nowrap; }
   #attacks .group-label { display: none; }
   #app.log-open #log { top: 56px; bottom: 8px; }
+  /* A phone on its side: the corner row packs closer, so it clears the portraits. */
+  #audio { gap: 4px; }
+  #audio > button { padding: 7px 7px; }
 }
 
 /* --- touch: bigger targets, no keyboard hints, touch wording in the controls --------- */

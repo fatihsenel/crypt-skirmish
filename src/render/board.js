@@ -18,6 +18,7 @@ import { Life } from './life.js';
 import { kitReady, piece } from './dungeonKit.js';
 import { stoneSide, stoneTop, stoneBlock } from './stone.js';
 import { Haze } from './haze.js';
+import { inFront } from './view.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
 const KIT_WALL = 1.0;
@@ -1076,20 +1077,19 @@ export class Board {
   }
 
   /**
-   * Walls between the camera and a figure turn see-through. The camera looks from
-   * +x/+z, so a wall is "in front" when its x+z is a little larger than the figure's
-   * and it lines up on screen (similar x−z).
+   * Walls between the camera and a figure fade out of the way: a wall is "in front" when it is
+   * a little nearer the camera along the view and lines up with the figure on screen (`inFront`,
+   * from whichever side the view is turned to).
    */
   tickFade(dt) {
     const who = this.fadeSources();
+    const view = this.stage?.view?.() ?? { x: 1, z: 1 };
     const k = Math.min(1, dt * 8);
     this.fading = false;
     for (const w of this.walls) {
       let target = 1;
       for (const p of who) {
-        const depth = (w.x + w.z) - (p.x + p.z);
-        const side = Math.abs((w.x - w.z) - (p.x - p.z));
-        if (depth > 0.5 && depth < 3.5 && side < 1.6) {
+        if (inFront(w, p, view)) {
           target = FADED;
           break;
         }

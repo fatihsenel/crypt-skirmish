@@ -1,8 +1,8 @@
 // Gamepads (the standard mapping: Xbox, PlayStation, Switch Pro, Steam Deck). On the board they
 // press the keyboard's keys, so the cursor, its two-step Enter and every shortcut work the same
 // (controls.js): the stick or D-pad moves the cursor, A picks and acts, B cancels, X ends the
-// turn (or throws the dice), Y takes back a move, LB and RB step through the action bar,
-// a press of the right stick looks at the other floor (V), Start opens the settings and Back
+// turn (or throws the dice), Y takes back a move, LB and RB step through the action bar, LT and
+// RT turn the view (Q and E), a press of the right stick looks at the other floor (V), Start opens the settings and Back
 // the controls panel. Anywhere else (the title, camp, the end banner, a panel) the stick moves focus to the nearest control that way, A presses it and B is
 // Escape. The pad is read 60 times a second (on a timer, not frames: a busy or slow board draws
 // few, and a quick tap would fall between them), only while one is connected.
@@ -12,7 +12,7 @@ import { announce } from './ui/announce.js';
 
 const $ = (sel) => document.querySelector(sel);
 /** Standard-mapping button indexes. */
-const PAD = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, back: 8, start: 9, rs: 11, up: 12, down: 13, left: 14, right: 15 };
+const PAD = { a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, lt: 6, rt: 7, back: 8, start: 9, rs: 11, up: 12, down: 13, left: 14, right: 15 };
 const ARROW = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
 const DEAD = 0.5; // how far the stick must lean to count
 const FIRST_REPEAT = 320; // ms a held direction waits before it repeats
@@ -128,6 +128,8 @@ export function createGamepad({ hud, hovered, onBoard }) {
     else if (name === 'rb') cycle(1);
     else if (name === 'back') key('KeyH', 'h');
     else if (name === 'rs') key('KeyV', 'v');
+    else if (name === 'lt') key('KeyQ', 'q');
+    else if (name === 'rt') key('KeyE', 'e');
   }
 
   // Polling: what was down last frame, and when each held direction repeats next.

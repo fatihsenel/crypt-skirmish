@@ -122,6 +122,7 @@
               <li><kbd>Z</kbd>Undo move</li>
               <li><kbd>R</kbd>Read out</li>
               <li><kbd>V</kbd>Other floor</li>
+              <li><kbd>Q</kbd><kbd>E</kbd>Turn view</li>
               <li><kbd>P</kbd>Photo mode</li>
               <li><kbd>H</kbd><kbd>?</kbd>This panel</li>
             </ul>
@@ -136,6 +137,7 @@
               <dt><kbd>Swipe</kbd></dt><dd>More buttons past a faded edge</dd>
               <dt><kbd>Camera</kbd></dt><dd>Photo mode: turn, pan, save</dd>
               <dt><kbd>Floor</kbd></dt><dd>Look down or up the stairs (rooms on two floors)</dd>
+              <dt><kbd>Turn</kbd> <kbd>Twist</kbd></dt><dd>See the room from another side</dd>
             </dl>
           </div>
           <div class="help-pad">
@@ -150,6 +152,7 @@
               <li><kbd>LB</kbd><kbd>RB</kbd>Action bar</li>
               <li><kbd>Start</kbd>Settings</li>
               <li><kbd>RS</kbd>Other floor</li>
+              <li><kbd>LT</kbd><kbd>RT</kbd>Turn view</li>
               <li><kbd>Back</kbd>This panel</li>
             </ul>
           </div>
@@ -189,6 +192,13 @@
           <path d="M14 3l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" opacity="0.7" />
         </svg>
         <span>Floor</span>
+      </button>
+      <button id="turn-toggle" type="button" data-tip="Turn view" data-desc="See the room from another side (Q turns the other way)" data-key="E">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M19 12a7 7 0 1 1-2.05-4.95" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          <path d="M17.5 3.5v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" />
+        </svg>
+        <span>Turn</span>
       </button>
       <button id="photo-toggle" type="button" aria-pressed="false" data-tip="Photo mode" data-desc="Hide the HUD, turn the camera and save a picture" data-key="P">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">

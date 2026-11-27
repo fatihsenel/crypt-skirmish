@@ -33,6 +33,7 @@ export function createPhotoMode(stage, deps) {
 
   function enter() {
     if (saved || !deps.canEnter()) return;
+    stage.finishTurn?.(); // a turn under way lands first, so leaving comes back square
     saved = {
       position: camera.position.clone(), zoom: camera.zoom, target: controls.target.clone(), up: camera.up.clone(),
       frustum: [camera.left, camera.right, camera.top, camera.bottom], size: `${innerWidth}x${innerHeight}`,

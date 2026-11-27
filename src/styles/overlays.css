@@ -178,10 +178,10 @@ h3.sub { margin: 10px 0 6px; font: 600 12px var(--display); letter-spacing: 0.08
   #camp-party { display: grid; grid-template-columns: 1fr 1fr; gap: 0 6px; }
 }
 /* The fight HUD steps back while the title or camp is up. */
-#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #floor-toggle),
-#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #floor-toggle) { visibility: hidden; }
-#app:has(#title:not([hidden])) :is(#threats-toggle, #photo-toggle, #floor-toggle),
-#app:has(#camp:not([hidden])) :is(#threats-toggle, #photo-toggle, #floor-toggle) { display: none; } /* no gap in the row */
+#app:has(#title:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #turn-toggle, #floor-toggle),
+#app:has(#camp:not([hidden])) :is(#log, #help, #actionbar, #initiative, #log-toggle, #threats-toggle, #photo-toggle, #turn-toggle, #floor-toggle) { visibility: hidden; }
+#app:has(#title:not([hidden])) :is(#threats-toggle, #photo-toggle, #turn-toggle, #floor-toggle),
+#app:has(#camp:not([hidden])) :is(#threats-toggle, #photo-toggle, #turn-toggle, #floor-toggle) { display: none; } /* no gap in the row */
 
 /* Shown while a fight waits for the character models to finish downloading. */
 #loading {
