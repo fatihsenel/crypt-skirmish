@@ -197,7 +197,13 @@ server on 5173.
   when it would cover a figure on screen, swung from its top). The wall lights after the first
   act are `render/sconces.js` (`sconce(act)`; the act from `actFor` in `mood.js`, passed to
   `new Board(grid, stage, { act })`), and moths round them and steam off the water are
-  `render/moths.js` (`board.moths`, hidden under `calm()`). Many small parts of one piece (links, a lamp's
+  `render/moths.js` (`board.moths`, hidden under `calm()`). Light off the pools and the rings and splashes
+  of a figure wading are `render/water.js` (`board.water`: one caustics mesh, its fog a vertex
+  attribute; `step` from `board.tread`). A monster first seen on the tile it began on (`homes` in
+  `main.js`, none on a restored fight) or arriving mid-fight comes on through `enterView`
+  (`render/entrance.js`, `UnitView.enter`: `dig`, `drop`, `mist`, `step`, after `board.riseEnds`);
+  its turn waits for `view.entered`. `hitFx` picks its debris by what the target is made of
+  (`STUFF` by code, `MAKEUP`, sparks off AC 17 and up). Many small parts of one piece (links, a lamp's
   parts) are joined into a mesh a material by `mergeMeshes` (`render/merge.js`) before the piece
   goes into its cell: a draw call each otherwise, again in the shadow and GTAO passes. Doors, chests and portcullises
   rattle, jolt and slam in `openDoor`, `shutDoor`, `openChest` (`chestGlow`) and `setGates`,
@@ -327,7 +333,7 @@ server on 5173.
   dice; `banter` gives `leaveRoom` two heroes' camp talk (`report.banter`), and a monster's
   line is kept for the bestiary (`hear`, `crypt-skirmish:heard`); `quip` in `animate.js` shows them through
   `render/speechBubble.js` (one at a time, inside the speaker's label, the `bubbles` setting;
-  its styles are `speechBubble.css`, loaded with the game to keep them off the title's budget).
+  its styles are `styles/speechBubble.css`, loaded with the game to keep them off the title's budget).
   A new talking monster or class needs its lines in `speech.js`.
 - Photo mode (`src/photo.js`, P or the camera button) hides the HUD and the board's highlights,
   centres the view on the current figure and lets the camera turn; Blur (B) is a depth of field
@@ -335,7 +341,8 @@ server on 5173.
   through `stage.render()` and reads the canvas back. Monster turns wait for it (`whileAway`), and leaving restores the camera
   and frustum exactly.
 - `src/ui/` is plain HTML overlays. Styles are in `src/styles/` (one file per part of the screen, imported in cascade order by
-  `src/style.css`), markup in `index.html`.
+  `src/style.css`; the panels loaded later, `shop`, `town`, `coop`, `speechBubble` and `losses`, are
+  there too but imported by their own scripts, off the title's budget), markup in `index.html`.
   The camp redraws itself on every change; `show` in `camp.js` puts focus back on the same
   control (`focusKey`), and `arrive` focuses the way on and announces the room's results.
   A short note on a small label is `data-hint="…"`, never `title=`: `ui/hints.js` shows it

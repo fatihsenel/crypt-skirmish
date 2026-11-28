@@ -1,5 +1,6 @@
 /* The game's styles, in cascade order: later files may override earlier ones. Each file covers
-   one part of the screen; the ?losses page's are in ui/losses.css, loaded with it. */
+   one part of the screen. A few more live in styles/ but load with their own scripts, off the
+   title's budget: the ?losses page's (losses.css) and the game's shop, town, coop and speechBubble. */
 @import './styles/base.css';
 @import './styles/labels.css';
 @import './styles/hud.css';

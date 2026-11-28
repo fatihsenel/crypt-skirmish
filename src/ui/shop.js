@@ -7,7 +7,7 @@ import { Overlay } from './overlay.js';
 import { announce } from './announce.js';
 import { ITEMS } from '../game/items.js';
 import { priceOf, stock, buyProblem, buy, sell, sellPrice } from '../game/shop.js';
-import './shop.css';
+import '../styles/shop.css';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

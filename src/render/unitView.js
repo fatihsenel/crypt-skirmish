@@ -396,6 +396,84 @@ export class UnitView {
     this.label.visible = true;
   }
 
+  /**
+   * Coming on (render/entrance.js): hidden at once, then after `delay` ms it claws up out of the
+   * floor ('dig'), lowers on a thread or swoops down ('drop', `thread`), gathers out of a haze
+   * ('mist') or steps out of the dark from `from`, a direction ('step'). `onStart` runs as it shows.
+   */
+  async enter(kind, delay, { thread = false, from = null, onStart = () => {} } = {}) {
+    const fig = this.model.root;
+    const h = this.model.height ?? 1;
+    const shown = this.base.visible;
+    this.label.visible = false;
+    this.base.visible = false;
+    this.entering = true;
+    if (kind === 'dig') fig.position.y = -h * 1.05;
+    else if (kind === 'drop') fig.visible = false;
+    else this.setDissolve(1, 0);
+    await wait(delay);
+    onStart();
+    if (kind === 'dig') {
+      fig.rotation.x = -0.45;
+      await tween(800, (t) => {
+        fig.position.y = -h * 1.05 * (1 - t);
+        fig.rotation.x = -0.45 * (1 - t) + Math.sin(t * Math.PI * 5) * 0.06 * (1 - t);
+      }, easeOut);
+      fig.position.y = 0;
+      fig.rotation.x = 0;
+    } else if (kind === 'drop') {
+      const top = 3.2;
+      let line = null;
+      if (thread) {
+        const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, top, 0), new THREE.Vector3(0, top, 0)]);
+        line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xd8d8d0, transparent: true, opacity: 0.55, depthWrite: false }));
+        line.raycast = () => {};
+        this.raise.add(line);
+      }
+      fig.visible = true;
+      fig.position.y = top;
+      await tween(thread ? 900 : 550, (t) => {
+        // Down fast, a little bob past the floor's height on the thread, then still.
+        const e = thread ? 1 - (1 - t) ** 3 : t * t;
+        fig.position.y = top * (1 - e) + (thread ? Math.sin(t * Math.PI * 3) * 0.08 * (1 - t) : 0);
+        if (line) line.geometry.attributes.position.setY(1, fig.position.y + h * 0.9 + 0.075);
+        if (line) line.geometry.attributes.position.needsUpdate = true;
+      }, linear);
+      fig.position.y = 0;
+      if (line) {
+        await tween(450, (t) => { line.material.opacity = 0.55 * (1 - t); }, linear);
+        line.removeFromParent();
+        line.geometry.dispose();
+        line.material.dispose();
+      }
+    } else if (kind === 'mist') {
+      await tween(900, (t) => {
+        this.setDissolve(1 - t, 1.2 * (1 - t));
+        fig.position.y = 0.25 * (1 - t) ** 2;
+      }, easeOut);
+      this.setDissolve(0);
+      fig.position.y = 0;
+    } else {
+      const dir = from ?? { x: 0, z: -1 };
+      const len = Math.hypot(dir.x, dir.z) || 1;
+      const off = { x: (dir.x / len) * 0.45, z: (dir.z / len) * 0.45 };
+      const walks = this.rig?.has('walk');
+      if (walks) this.walking = true;
+      await tween(650, (t) => {
+        this.figure.position.x = off.x * (1 - t);
+        this.figure.position.z = off.z * (1 - t);
+        this.setDissolve(1 - t, 0);
+      }, easeOut);
+      this.walking = false;
+      this.figure.position.x = 0;
+      this.figure.position.z = 0;
+      this.setDissolve(0);
+    }
+    this.entering = false;
+    this.base.visible = shown;
+    this.label.visible = this.unit.alive;
+  }
+
   // --- per-frame animation ----------------------------------------------------
   animate(t, dt) {
     this.t = t;

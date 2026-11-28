@@ -63,6 +63,30 @@ const CONDITION_VERB = { prone: 'is knocked prone!', poisoned: 'is poisoned!', f
 const blessed = (r) => (r.selfHeal ? `<br>${who(r.caster)} is <b class="spell">Blessed Healer</b>: <b class="heal">+${r.selfHeal} HP</b>` : '');
 
 /** Marks which edges of a sideways-scrolling row have more out of sight (more-left, more-right). */
+/**
+ * The turn order: centred on the screen, but never under the buttons at the top right (sound,
+ * settings, Threats, Turn, Floor: their number and labels vary), sliding left of centre and then
+ * narrowing (it scrolls) to keep clear of them. An upright phone gives it a row of its own (CSS).
+ */
+const UPRIGHT = matchMedia('(max-width: 600px) and (min-height: 521px)');
+function placeInitiative() {
+  const bar = $('#initiative');
+  const buttons = $('#audio');
+  if (!bar || !buttons) return;
+  if (UPRIGHT.matches || !buttons.getClientRects().length) {
+    bar.style.left = bar.style.maxWidth = bar.style.transform = '';
+    return;
+  }
+  const page = bar.offsetParent?.clientWidth ?? window.innerWidth;
+  const stop = buttons.getBoundingClientRect().left - (bar.offsetParent?.getBoundingClientRect().left ?? 0) - 12;
+  const room = Math.max(120, stop - 12);
+  const w = Math.min(bar.scrollWidth + 2, room); // +2: its border
+  const left = Math.max(12, Math.min((page - w) / 2, stop - w));
+  bar.style.transform = 'none';
+  bar.style.maxWidth = `${room}px`;
+  bar.style.left = `${Math.round(left)}px`;
+}
+
 function markOverflow(row) {
   row.classList.toggle('more-left', row.scrollLeft > 2);
   row.classList.toggle('more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 2);
@@ -109,6 +133,10 @@ export class Hud {
     // Rows that scroll sideways on a phone fade the edge with more out of sight (style.css).
     const rows = ['#initiative', '#attacks', '#who'].map((sel) => $(sel));
     const resized = new ResizeObserver(() => rows.forEach(markOverflow));
+    const place = new ResizeObserver(() => placeInitiative());
+    place.observe($('#audio'));
+    place.observe(document.body);
+    UPRIGHT.addEventListener?.('change', placeInitiative);
     for (const row of rows) {
       row.addEventListener('scroll', () => markOverflow(row), { passive: true });
       resized.observe(row);
@@ -1140,6 +1168,7 @@ export class Hud {
         </div>`;
       })
       .join('');
+    placeInitiative(); // as wide as its portraits now, clear of the buttons
     // Long fights overflow the bar: keep whoever is acting in view.
     const bar = $('#initiative');
     const cur = bar.querySelector('.current');

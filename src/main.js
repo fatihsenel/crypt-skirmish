@@ -23,6 +23,7 @@ import { loadModels, modelsSettled } from './render/gltfModels.js';
 import { filesForRoom, allFiles } from './render/modelSpecs.js';
 import { preloadDungeon } from './render/dungeonKit.js';
 import { spiritWeapon, raiseFx } from './render/effects.js';
+import { enterView } from './render/entrance.js';
 import { createOwl } from './render/owl.js';
 import { wait, playback, calm, setMotion, onSystemMotion, keepAwake } from './render/tween.js';
 import { Hud } from './ui/hud.js';
@@ -686,6 +687,7 @@ const view = (u) => views.get(u.id);
 // as they step in), not the engine's instant results.
 let visible = new Set();   // tile keys the heroes see right now
 let seenIds = new Set();   // monsters the heroes have laid eyes on this fight
+let homes = new Map();      // where each monster began this fight: first seen still there, it makes an entrance
 let visionSig = '';
 
 const tileOf = (v) => ({ x: Math.round(v.group.position.x), z: Math.round(v.group.position.z) });
@@ -790,6 +792,7 @@ stage.tickers.add(() => {
   updateVision();
   let spotted = false;
   let elite = null;
+  let entrances = 0; // those seen together come on one after another
   const kinds = [];
   for (const v of views.values()) {
     const u = v.unit;
@@ -806,6 +809,10 @@ stage.tickers.add(() => {
       kinds.push(u.code);
       spotted = true;
       if (u.elite) elite = u;
+      if (homes.get(u.id) === `${u.x},${u.z}`) {
+        const delay = Math.max(0, (board.riseEnds ?? 0) - performance.now()) + Math.min(entrances++, 5) * 140;
+        enterView(stage.scene, v, delay, awayFromHeroes(u));
+      }
       anim.intro(u); // a named foe says who it is
       if (SPEECH.NAMED.has(u.code) && u.alive) bossSweep(u); // and the camera turns to it
     }
@@ -821,6 +828,17 @@ stage.tickers.add(() => {
     sfx.bestiary();
   }
 });
+
+/** The way from the nearest hero to monster `u` (it steps in from there), or null. */
+function awayFromHeroes(u) {
+  let best = null;
+  for (const h of game.units) {
+    if (h.team !== 'heroes' || !h.alive) continue;
+    const d = Math.hypot(u.x - h.x, u.z - h.z);
+    if (d > 0 && (!best || d < best.d)) best = { d, x: (u.x - h.x) / d, z: (u.z - h.z) / d };
+  }
+  return best;
+}
 
 /** The elite comes into view: name its trait in the log and a toast (after `news`, if any), sound a horn, flare its band and, on a phone, pan to it. */
 function spotElite(u, news) {
@@ -1012,6 +1030,8 @@ function startFight(resume, watch = null) {
     const mid = (k) => heroes.reduce((n, u) => n + u[k], 0) / (heroes.length || 1);
     board.rise({ x: mid('x'), z: mid('z') });
   }
+  // A monster first seen where it began (not on a restored fight) makes an entrance (render/entrance.js).
+  homes = new Map(resume ? [] : game.units.filter((u) => u.team === 'monsters').map((u) => [u.id, `${u.x},${u.z}`]));
   hud.unknown = (u) => u.team === 'monsters' && !seenIds.has(u.id);
   hud.hidden = (u) => unseen(u);
   hud.reset();
@@ -1216,10 +1236,7 @@ function startFight(resume, watch = null) {
   game.on('arrive', (r) => {
     hud.logArrive(r);
     if (r.why === 'hold') sfx.raise();
-    for (const u of r.units) {
-      if (inView(u)) raiseFx(stage.scene, u);
-      addView(u).rise();
-    }
+    r.units.forEach((u, i) => enterView(stage.scene, addView(u), i * 140, awayFromHeroes(u)));
     hud.renderInitiative(game);
   });
   game.on('summon', (r) => {
@@ -1607,6 +1624,8 @@ async function runMonsterTurn(unit) {
     // Monsters out of sight act quickly: nothing to watch.
     const pace = (ms) => wait(unit.team === 'monsters' && (unseen(unit) || unit.unaware) ? ms / 4 : ms);
     await whileAway();
+    if (game !== g) return;
+    await view(unit)?.entered; // still coming on (render/entrance.js)
     if (game !== g) return;
     await pace(450);
 

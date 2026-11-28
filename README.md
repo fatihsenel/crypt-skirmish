@@ -475,7 +475,8 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   figure) for its HP, AC, speed, attacks with to-hit and damage, conditions and traits, and a
   monster's charge, Reckless or petrifying bite.
 - **Turn order:** the round, then portraits along the top, each with its initiative number.
-  Long names shrink to fit, like "G. Spider 2". On an upright phone the whole party fits
+  Long names shrink to fit, like "G. Spider 2", and the bar stops short of the buttons beside
+  it, scrolling if it must. On an upright phone the whole party fits
   across; when more portraits are scrolled out of sight, that edge fades. Swipe it to see them.
 - **Combat log:** scrolled up to read, new lines don't pull it back down; a button counts them
   and goes back. Each earlier round folds under a heading with who fell and the HP the party
@@ -500,7 +501,13 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   bone dust or a puddle behind. Fire leaves soot and lightning a charred star on the floor (for
   the fight only: a restored fight starts clean). Bolts and blasts light the walls and figures
   around them, a cold haze curls where the explored map meets the dark and lies over a lower
-  hall, water ripples, and chasms drop away into mist with dust falling in. The hovered figure
+  hall, water ripples and throws a wavering web of light over itself and the stones beside it,
+  a figure wading through leaves rings and a splash at each step, and chasms drop away into
+  mist with dust falling in. A blow knocks off what the target is made of: bone chips, rot,
+  ooze, stone dust, linen, splinters, ichor, or sparks off heavy armour. A monster first seen
+  where it began makes an entrance, as do those arriving mid-fight: the buried dead claw up out
+  of the floor, a spider lowers on its thread, a gargoyle swoops down, ghosts gather out of a
+  pale haze, and the rest step out of the dark. The hovered figure
   gets a warm outline and each foe in reach a red one. Blades leave a trail as they swing (gold
   on a critical hit), and a shove or a fall raises dust. An area spell's rune circle turns on
   the floor while you aim it, and flashes under a monster's before it lands. A hero below half
@@ -978,6 +985,8 @@ src/
     marks.js         soot, scorch and remains left on the floor; blood drying over the rounds
     tracks.js        wet and bloody footprints
     reflect.js       reflections in the water (with Glow)
+    water.js         light off the pools (caustics), rings and splashes as a figure wades
+    entrance.js      how a monster comes on: up from the floor, on a thread, out of mist or the dark
     clutter.js       pebbles, bones and shards that roll aside
     glyphs.js        runes round a caster, by school
     scars.js         soot and cracks on the walls
@@ -1001,7 +1010,8 @@ src/
     unitView.js      a unit's base, label and animations, the hit flash and hit-stop
     speechBubble.js  the speech bubble over a figure's label: typed, held, faded
     owl.js           the Wizard's and Warlock's owl familiar
-    effects.js       spell effects (smoke, embers, forks, frost crystals, healing light), hit particles
+    effects.js       spell effects (smoke, embers, forks, frost crystals, healing light), hit
+                     particles by what the target is made of
     rollBadge.js     the d20 badge over attacks and saves
     tween.js         promise-based tweening and playback speed
     titleLogo.js     the 3D emblem (title and won campaign): the skull, its jaw, the mist and wisps
@@ -1019,8 +1029,8 @@ src/
     unitCard.js      the character card's text
     bestiary.js      the bestiary screen and its lore (loaded with the game)
     bestiaryLabel.js the bestiary buttons' label: how many met, and the new-entry dot
-    shop.js          the pedlar's panel: buy and sell (loaded with the game, with shop.css)
-    town.js          the village's panel: rebuild the smith, temple and library (with town.css)
+    shop.js          the pedlar's panel: buy and sell (loaded with the game, with styles/shop.css)
+    town.js          the village's panel: rebuild the smith, temple and library (with styles/town.css)
     banner.js        the end-of-fight banner: result, recap, run summary, Copy result, Save image, Copy log
     overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order
@@ -1049,8 +1059,9 @@ src/
   stats.js           anonymous play stats (Umami): the setting, the events, the script loaded after the title,
                      and the event counts and lost fights sent to the loss-replay Worker
   tallies.js         the Worker's event counts read into numbers (the digest, ?losses, the crash check)
-  ui/losses.js       the unlisted ?losses page: play stats and players' lost fights to watch (with losses.css)
-  style.css          the game's styles: imports styles/*.css in cascade order, one file per part of the screen
+  ui/losses.js       the unlisted ?losses page: play stats and players' lost fights to watch (with styles/losses.css)
+  style.css          the game's styles: imports styles/*.css in cascade order, one file per part of the screen (shop, town, coop,
+                     speechBubble and losses load with their own scripts)
   offline.js         registers the offline copy (public/sw.js), hands it the files already loaded, looks for a new deploy
 tests/               Vitest rules, replay and input tests, and a check that every spell animates
 scripts/

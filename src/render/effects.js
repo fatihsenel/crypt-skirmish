@@ -549,7 +549,7 @@ const chipGeo = new THREE.BoxGeometry(1, 1, 1);
  * dir: {x, z} to bias the spray away from the attacker.
  */
 export function burstFx(scene, at, {
-  colors = [0xb01818], count = 14, speed = 2.6, size = 0.05, y = 0.65, glowing = false, dir = null, life = 650,
+  colors = [0xb01818], count = 14, speed = 2.6, size = 0.05, y = 0.65, glowing = false, dir = null, life = 650, rise = false,
 } = {}) {
   const group = new THREE.Group();
   scene.add(group);
@@ -575,7 +575,8 @@ export function burstFx(scene, at, {
     last = t;
     for (const m of parts) {
       const { v, spin } = m.userData;
-      v.y -= 9.8 * dt;
+      if (rise) v.multiplyScalar(1 - 2.5 * dt).y += 0.6 * dt; // dust and ectoplasm drift up and hang
+      else v.y -= 9.8 * dt;
       m.position.addScaledVector(v, dt);
       if (m.position.y < 0.02) {
         m.position.y = 0.02;
@@ -593,14 +594,53 @@ export function burstFx(scene, at, {
   });
 }
 
-/** What spills out when a creature is hit: blood, or bone chips for the undead. */
+/** What a creature is made of, for what flies off it when it's hit (by its monster letter). */
+const STUFF = {
+  s: 'bone', // skeleton
+  u: 'rot', h: 'rot', d: 'rot', // ghoul, ghast, zombie
+  w: 'ichor', // the wight's black blood
+  e: 'ghost', q: 'ghost', t: 'ghost', p: 'ghost', // specter, banshee, wraith, shadow
+  y: 'linen', l: 'linen', // mummies
+  a: 'stone', // gargoyle
+  j: 'ochre', i: 'cube', // the oozes
+  k: 'venom', // giant spider
+  m: 'wood', // mimic
+  x: 'knight', // the fallen knight: dark blood in plate
+};
+
+const MAKEUP = {
+  blood: [{ colors: [0x9a0f12, 0x6e0a0c, 0xc21d1d], size: 0.045 }],
+  bone: [{ colors: [0xe8e0c8, 0xcfc6ad, 0xa89f88], size: 0.06, speed: 2.8 }, { colors: [0xb8b09a], size: 0.025, speed: 1.6, share: 0.4, life: 900 }],
+  rot: [{ colors: [0x4a4a1c, 0x34361a, 0x5e5426], size: 0.05 }, { colors: [0x6f6a3a], size: 0.03, speed: 1.4, share: 0.4 }],
+  ichor: [{ colors: [0x1c1418, 0x2e1a22, 0x40202a], size: 0.045 }],
+  ghost: [{ colors: [0xbcd4ff, 0x8fa8e8, 0xe8f0ff], size: 0.035, speed: 1.3, glowing: true, life: 900, lift: true }],
+  linen: [{ colors: [0xc8b48a, 0xa8946a, 0x8c7a56], size: 0.07, speed: 2.0, life: 900 }, { colors: [0xd8c8a0], size: 0.03, speed: 1.2, share: 0.6, life: 1100, lift: true }],
+  stone: [{ colors: [0x7c7a74, 0x5f5d58, 0x96938a], size: 0.065, speed: 3.0 }, { colors: [0xa8a49a], size: 0.025, speed: 1.4, share: 0.6, life: 1000, lift: true }],
+  ochre: [{ colors: [0xc8902a, 0xa86e18, 0xe0aa40], size: 0.06, speed: 2.2 }],
+  cube: [{ colors: [0x8fd8b0, 0x6cc49a, 0xb8f0d0], size: 0.06, speed: 2.2 }],
+  venom: [{ colors: [0x9bb23a, 0x6f8a24, 0xc0d050], size: 0.045 }],
+  wood: [{ colors: [0x7a5530, 0x5c3e22, 0x9a7044], size: 0.06, speed: 2.8 }, { colors: [0x4a1a2a, 0x6a2236], size: 0.04, share: 0.5 }],
+  knight: [{ colors: [0x3a0c10, 0x5a1014], size: 0.045, share: 0.6 }],
+};
+
+/** Sparks off plate and mail (heavily armoured targets) */
+const SPARKS = { colors: [0xffe2a0, 0xffb84a, 0xfff4d0], size: 0.022, speed: 3.6, glowing: true, life: 420, share: 0.5 };
+
+/**
+ * What flies off a creature when it's hit: blood, or what it's made of (bone, rot, ectoplasm,
+ * linen and dust, stone chips, ooze, ichor, splinters), and sparks off heavy armour.
+ * `target`: where (x, z) and, when known, its `code`, `undead` and `ac`.
+ */
 export function hitFx(scene, target, from, { crit = false } = {}) {
   const dir = from ? { x: target.x - from.x, z: target.z - from.z } : null;
   const n = crit ? 26 : 14;
-  if (target.undead) {
-    return burstFx(scene, target, { colors: [0xe8e0c8, 0xcfc6ad, 0xa89f88], count: n, size: 0.06, dir, speed: 2.8 });
-  }
-  return burstFx(scene, target, { colors: [0x9a0f12, 0x6e0a0c, 0xc21d1d], count: n, size: 0.045, dir });
+  const kind = STUFF[target.code] ?? (target.undead ? 'bone' : 'blood');
+  const parts = [...MAKEUP[kind]];
+  if ((target.ac ?? 0) >= 17 && kind !== 'stone') parts.push(SPARKS);
+  const done = parts.map(({ share = 1, lift = false, ...o }) => burstFx(scene, target, {
+    ...o, count: Math.max(3, Math.round(n * share)), dir: lift ? null : dir, rise: lift,
+  }));
+  return Promise.all(done);
 }
 
 /** A fire bolt bursting: a flash, a ring of flame and a shower of embers. */

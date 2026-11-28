@@ -6,7 +6,7 @@
 // skip it (the log already says what happened).
 
 import { playback, calm } from './tween.js';
-import './speechBubble.css';
+import '../styles/speechBubble.css';
 
 const LETTERS_PER_SECOND = 35;
 let current = null; // { el, timers }

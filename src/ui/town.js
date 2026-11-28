@@ -5,7 +5,7 @@
 import { Overlay } from './overlay.js';
 import { announce } from './announce.js';
 import { TOWN, COSTS, stageOf, buildProblem } from '../game/town.js';
-import './town.css';
+import '../styles/town.css';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

@@ -13,7 +13,7 @@ import { CLASS_CHOICES, TEMPLATES } from '../game/units.js';
 import { DAILY_ROOMS_TWO_FLOORS } from '../game/daily.js';
 import { newSeed } from '../game/replay.js';
 import { RULES } from '../game/elites.js';
-import './coop.css';
+import '../styles/coop.css';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const NAME_KEY = 'crypt-skirmish:coop-name';

@@ -24,6 +24,7 @@ import { dressWalls } from './wallDecor.js';
 import { Hangings } from './hangings.js';
 import { sconce } from './sconces.js';
 import { Moths } from './moths.js';
+import { Water } from './water.js';
 
 /** Wall height when built from the tile kit (the pack's walls are 4 units: squashed to fit). */
 const KIT_WALL = 1.0;
@@ -670,6 +671,7 @@ export class Board {
     for (const c of grid.chests.values()) this.chests.set(key(c.x, c.z), this.addChest(c));
     this.life = new Life(this, ledgeAt); // banners and cobwebs stirring, drips, a rat (life.js)
     this.moths = new Moths(this, this.torches, liftAt); // moths round the wall lights, steam off the water (moths.js)
+    this.water = new Water(this, liftAt); // light off the pools, rings and splashes where figures wade (water.js)
     this.clutter = new Clutter(this, liftAt); // pebbles, bones and shards, kicked and blown aside (clutter.js)
     this.traps = new Map();
     for (const s of grid.stairs) this.stairs = this.addStairs(s);
@@ -714,6 +716,7 @@ export class Board {
       this.wisps.tick(t);
       this.life?.tick(t, dt);
       this.moths?.tick(t);
+      this.water?.tick(t);
       this.haze?.tick(t);
       this.floors?.tick(t);
       this.bedrock?.tick(t, !sway);
@@ -776,6 +779,7 @@ export class Board {
    */
   rise(from) {
     rising.clear();
+    this.riseEnds = performance.now();
     if (calm()) return;
     const tiles = [];
     const home = new Set(); // an object in two cells rises with the first
@@ -794,6 +798,7 @@ export class Board {
     }
     const layers = Object.values(this).filter((v) => v instanceof TileLayer);
     const total = RISE_MAX_DELAY + RISE_MS;
+    this.riseEnds += total; // when the monsters may come on (main.js)
     const id = (this.riseId = (this.riseId ?? 0) + 1);
     keepAwake(total + 100);
     tween(total, (t) => {
@@ -2174,6 +2179,7 @@ export class Board {
   /** `unit` steps from tile `a` to `b`: it may leave footprints and kick what lies there. */
   tread(unit, a, b) {
     this.tracks.step(unit, a, b);
+    this.water.step(unit, a, b);
     if (!unit.flies) this.clutter?.kick(a, b);
   }
 
