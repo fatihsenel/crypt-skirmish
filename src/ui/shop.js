@@ -1,11 +1,12 @@
 // The pedlar's panel, opened from camp (Visit the pedlar) where he trades (game/shop.js): his
-// potions and two pieces of gear to buy, and the pack's spare gear to sell him at half price.
+// potions, scrolls and gear to buy, and the pack's spare gear to sell him (the village's smith
+// and library, game/town.js, change what he carries and asks).
 // Built on first open, so neither it nor its styles weigh on the title.
 
 import { Overlay } from './overlay.js';
 import { announce } from './announce.js';
 import { ITEMS } from '../game/items.js';
-import { PRICES, stock, buyProblem, buy, sell, sellPrice } from '../game/shop.js';
+import { priceOf, stock, buyProblem, buy, sell, sellPrice } from '../game/shop.js';
 import './shop.css';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -59,12 +60,12 @@ export class Shop {
     this.el.querySelector('.buy').innerHTML = stock(state).map((id) => {
       const problem = buyProblem(state, id);
       return `<li><div><b class="loot">${esc(ITEMS[id].name)}</b><small>${esc(ITEMS[id].desc)}${id === 'potion' || ITEMS[id].kind === 'supply' ? ' Goes to whoever carries fewest.' : ITEMS[id].kind === 'scroll' ? ' Goes to a hero who can read it.' : ' Goes into the pack.'}</small></div>
-        <button type="button" data-buy="${id}"${problem ? ` disabled data-hint="${esc(problem)}"` : ''}>Buy · ${PRICES[id]} gold</button></li>`;
+        <button type="button" data-buy="${id}"${problem ? ` disabled data-hint="${esc(problem)}"` : ''}>Buy · ${priceOf(state, id)} gold</button></li>`;
     }).join('');
-    const spare = state.pack.map((id, i) => [id, i]).filter(([id]) => sellPrice(id));
+    const spare = state.pack.map((id, i) => [id, i]).filter(([id]) => sellPrice(id, state));
     this.el.querySelector('.shop-sell').hidden = !spare.length;
     this.el.querySelector('.sell').innerHTML = spare.map(([id, i]) => `<li><div><b class="loot">${esc(ITEMS[id].name)}</b><small>${esc(ITEMS[id].desc)}</small></div>
-      <button type="button" data-sell="${i}">Sell · ${sellPrice(id)} gold</button></li>`).join('');
+      <button type="button" data-sell="${i}">Sell · ${sellPrice(id, state)} gold</button></li>`).join('');
   }
 
   onClick(ev) {
@@ -78,12 +79,12 @@ export class Shop {
       const id = b.dataset.buy;
       next = buy(state, id);
       act = ['buy', id];
-      said = `Bought ${ITEMS[id].name} for ${PRICES[id]} gold.`;
+      said = `Bought ${ITEMS[id].name} for ${priceOf(state, id)} gold.`;
     } else {
       const id = state.pack[Number(b.dataset.sell)];
       next = sell(state, Number(b.dataset.sell));
       act = ['sell', Number(b.dataset.sell)];
-      said = `Sold ${ITEMS[id].name} for ${sellPrice(id)} gold.`;
+      said = `Sold ${ITEMS[id].name} for ${sellPrice(id, state)} gold.`;
     }
     if (this.set(next, act) === false) return; // a run together: it lands when the relay hands it back
     this.draw();

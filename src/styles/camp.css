@@ -22,7 +22,8 @@
 }
 .camp-head { display: flex; justify-content: space-between; align-items: center; }
 .camp-head h2 { margin: 0; font: 700 26px var(--display); color: var(--gold); }
-#camp-trade { margin: 0 10px 0 auto; } /* the pedlar, beside the bestiary */
+#camp-trade, #camp-town { margin: 0 10px 0 auto; } /* the pedlar and the village, beside the bestiary */
+#camp-town:not([hidden]) + #camp-trade { margin-left: 0; }
 .camp-foot { display: flex; justify-content: flex-end; margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
 .camp-foot button { font-size: 12px; color: var(--muted); }
 #camp-pack-box[hidden], #camp-relics-box[hidden] { display: none; }

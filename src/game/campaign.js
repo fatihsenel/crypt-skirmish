@@ -6,11 +6,12 @@ import {
   TEMPLATES, PROGRESSION, MAX_LEVEL, CLASS_CHOICES, createUnit, applyLevel, classOf, asiLevels, asiDefault, cleanPick, ABILITY_NAMES,
   applyStyle, styleOf, STYLE_CLASSES, FIGHTING_STYLES,
 } from './units.js';
-import { ITEMS, applyItems, relicFrom, cleanRelics, readsScroll } from './items.js';
+import { ITEMS, SCROLLS, applyItems, relicFrom, cleanRelics, readsScroll } from './items.js';
 import { abilityMod } from './dice.js';
 import { levelById } from './maps.js';
 import { ELITE_TRAITS, eliteTrait, RULES } from './elites.js';
 import { goldFor, cleanGold, readers } from './shop.js';
+import { stageOf, cleanTown } from './town.js';
 import { storyHas, heskTends, cleanStory, TENDING } from './story.js';
 
 export const SAVE_VERSION = 1;
@@ -438,7 +439,7 @@ export function newCampaign(difficulty = 'normal', names = {}, classes = {}) {
     const name = cleanName(names[code]);
     if (name) party[code].name = name;
   }
-  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], relics: [], done: false, difficulty, tier: 0, gold: 0, stats: blankStats() };
+  return { v: SAVE_VERSION, at: null, cleared: [], xp: 0, party, pack: [], relics: [], done: false, difficulty, tier: 0, gold: 0, town: { smith: 0, temple: 0, library: 0 }, stats: blankStats() };
 }
 
 /** The items each hero may carry into New Game+: what they have equipped, if a fresh hero of their class can use it. */
@@ -614,10 +615,52 @@ export function completeFight(prev, id, game) {
       rec.hp = Math.min(restedHero(code, rec).maxHp, rec.hp + TENDING);
     }
   }
+  const town = villageGifts(state, id, longRest && !!NODES[id], !longRest && node.next.length > 0);
   const spent = !!state.phylacterySpent;
   if (longRest) restParty(state);
   const phylactery = !spent ? null : longRest ? 'ready' : game.phylacteryUsed ? 'spent' : null;
-  return { state, report: { xp, gold, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery, blessed, pilgrim, tended } };
+  return { state, report: { xp, gold, total: state.xp, levelUps, loot, potions, longRest, relic, phylactery, blessed, pilgrim, tended, town } };
+}
+
+/** HP the village's temple gives back after every room. */
+export const TEMPLE_HP = 3;
+
+/**
+ * What the village (town.js) sends down after room `id`: between rooms the temple's HP and a
+ * caster's 1st-level slot; at an act's end its potions and the library's scrolls (a steady pick
+ * among those each hero reads, no dice). Changes `state`; returns { hp, slots, potions, scrolls } or null.
+ */
+function villageGifts(state, id, actEnd, between) {
+  if (state.endless) return null;
+  const temple = stageOf(state, 'temple');
+  const library = stageOf(state, 'library');
+  const t = { hp: 0, slots: false, potions: false, scrolls: [] };
+  for (const code of HERO_CODES) {
+    const rec = state.party[code];
+    const u = restedHero(code, rec);
+    if (between && temple >= 1) {
+      rec.hp = Math.min(u.maxHp, rec.hp + TEMPLE_HP);
+      t.hp = TEMPLE_HP;
+    }
+    if (between && temple >= 3 && u.slotMax[1] && !u.pactMagic && (rec.slots[1] ?? 0) < u.slotMax[1]) {
+      rec.slots[1] = (rec.slots[1] ?? 0) + 1;
+      t.slots = true;
+    }
+    if (actEnd && temple >= 2) {
+      rec.potions++;
+      t.potions = true;
+    }
+    if (actEnd && library >= 3) {
+      const can = SCROLLS.filter((s) => readsScroll(classOf(code, rec), s));
+      if (!can.length) continue;
+      let h = 7;
+      for (const ch of `${id}:${code}`) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      const scroll = can[h % can.length];
+      (rec.scrolls ??= []).push(scroll);
+      t.scrolls.push([code, scroll]);
+    }
+  }
+  return t.hp || t.slots || t.potions || t.scrolls.length ? t : null;
 }
 
 /** The relics the next fight starts with: the run's, less a Phylactery spent this act. */
@@ -872,7 +915,7 @@ export function parseSave(text) {
       s.done = false;
       restParty(s);
     }
-    return cleanGold(s); // saves from before gold start with none
+    return cleanTown(cleanGold(s)); // saves from before gold start with none, from before the village with it in ruins
   } catch {
     return null;
   }

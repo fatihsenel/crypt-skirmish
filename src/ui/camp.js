@@ -3,6 +3,8 @@
 
 import { bestiaryLabel } from './bestiaryLabel.js';
 import { canTrade } from '../game/shop.js';
+import { canBuild } from '../game/town.js';
+import { TEMPLE_HP } from '../game/campaign.js';
 import { Overlay } from './overlay.js';
 import {
   NODES, choices, mapEdges, nodeName, heroUnit, HERO_CODES, XP_LEVELS, levelForXp, equipProblem, equipPreview, DIFFICULTIES, difficultyLabel,
@@ -79,8 +81,8 @@ function focusKey(el) {
 const nameLabel = (cls) => `${TEMPLATES[cls].cls}’s name (${TEMPLATES[cls].name} if left blank)`;
 
 export class Camp {
-  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle, onCoop }) {
-    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onEndless, onEndDive, onPick, onStyle, onCoop };
+  constructor({ onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onTown, onEndless, onEndDive, onPick, onStyle, onCoop }) {
+    this.h = { onEnter, onEquip, onUnequip, onNewCampaign, onContinue, onDaily, onWeekly, onWatch, onShareFight, onNewGamePlus, onTrade, onTown, onEndless, onEndDive, onPick, onStyle, onCoop };
     this.selected = null;
     this.confirmNew = false;
     $('#camp').addEventListener('click', (ev) => this.onClick(ev));
@@ -389,6 +391,7 @@ export class Camp {
     bestiaryLabel($('#camp-bestiary'));
     // The pedlar trades at the rest stops and after each act's boss.
     $('#camp-trade').hidden = !canTrade(state);
+    $('#camp-town').hidden = !canBuild(state); // and the village above can be rebuilt (town.js)
     const returned = had?.includes('data-unequip') && document.querySelector('#camp-pack .pack-item:last-child [data-equip]:not([disabled])');
     this.h.onShown?.(); // Play together marks the votes
     if (had) (document.querySelector(had) ?? (returned || this.firstControl()))?.focus();
@@ -439,6 +442,11 @@ export class Camp {
         : state.relics?.includes('jar') ? 'Short rest, with the Embalming Jar: three-quarters of everyone’s missing HP back.' : 'Short rest: half of everyone’s missing HP back.'}${found.length ? ` Found ${found.join(', ')}${report.loot.length ? '; hand it out from the pack' : ''}.` : ''}</p>`];
       if (report.banter) parts.push(`<p>${report.banter.map(([n, l]) => `<b>${esc(n)}:</b> “${esc(l)}”`).join('<br>')}</p>`);
       if (report.tended) parts.push(`<p>Hesk the gravedigger tends your wounds: <b>+${TENDING} HP</b> for every hero.</p>`);
+      const t = report.town; // the village's gifts (town.js)
+      if (t?.hp) parts.push(`<p>The temple’s prayers follow you down: <b>+${TEMPLE_HP} HP</b> for every hero.</p>`);
+      if (t?.slots) parts.push('<p>The temple bells ring: each caster gets <b>a 1st-level slot</b> back.</p>');
+      if (t?.potions) parts.push('<p>The temple’s acolytes send down <b class="loot">a potion for every hero</b>.</p>');
+      if (t?.scrolls?.length) parts.push(`<p>The library sends scrolls: ${t.scrolls.map(([code, id]) => `${esc(heroUnit(code, state.party[code]).name)} gets <b class="loot">${esc(ITEMS[id].name)}</b>`).join(', ')}.</p>`);
       if (report.blessed) parts.push('<p>The altar’s blessing fades.</p>');
       if (report.pilgrim) parts.push('<p>The pilgrim you tended finds you again: <b class="loot">a potion for every hero</b>.</p>');
       if (report.phylactery === 'spent') parts.push(`<p><b class="relic">${esc(RELICS.phylactery.name)}</b> is spent: it sleeps until the next long rest.</p>`);
@@ -628,6 +636,7 @@ export class Camp {
     const b = ev.target.closest('button');
     if (!b) return;
     if (b.id === 'camp-trade') this.h.onTrade(b);
+    if (b.id === 'camp-town') this.h.onTown(b);
     else if (b.dataset.enter) this.h.onEnter(b.dataset.enter);
     else if (b.dataset.equip) {
       const [i, code] = b.dataset.equip.split(':');

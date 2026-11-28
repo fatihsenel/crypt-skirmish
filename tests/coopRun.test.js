@@ -137,3 +137,17 @@ describe('co-op runs', () => {
     expect(rebuildRun(SPEC, [camp('enter', 'crypt'), { type: 'attack', target: 99, attack: 0 }])).toEqual({ ok: false, at: 2 });
   });
 });
+
+describe('the village in a run together', () => {
+  it('rebuilds by vote at an act’s end, and a second click that no longer fits is refused', () => {
+    const run = new CoopRun(SPEC);
+    run.state = { ...run.state, at: 'sanctum', cleared: ['crypt', 'warren', 'chapel', 'sanctum'], gold: 250 };
+    expect(keyAct(voteKey(['town', 'smith']))).toEqual(['town', 'smith']);
+    const r = run.step(['town', 'smith']);
+    expect(r.ok).toBe(true);
+    expect(r.report).toEqual({ built: 'smith', stage: 1 });
+    expect(run.state.gold).toBe(130);
+    expect(run.step(['town', 'smith'])).toEqual({ ok: false, why: 'Not enough gold' });
+    expect(run.step(['town', 'mill']).ok).toBe(false);
+  });
+});

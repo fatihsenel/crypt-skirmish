@@ -28,6 +28,8 @@ import { wait, playback, calm, setMotion, onSystemMotion, keepAwake } from './re
 import { Hud } from './ui/hud.js';
 import { Bestiary } from './ui/bestiary.js';
 import { Shop } from './ui/shop.js';
+import { Town } from './ui/town.js';
+import { build, TOWN } from './game/town.js';
 import { levelOf, newEndless, nextFloor, afterFloor, loadEndless, saveBestFloor, clearEndless, ENDLESS_KEY } from './game/endless.js';
 import { meet, metBefore, slay, slayElite } from './game/bestiary.js';
 import { TEMPLATES } from './game/units.js';
@@ -197,6 +199,20 @@ const shop = new Shop(() => campaign, (state, act) => {
   camp.show(campaign);
 });
 
+// The village (game/town.js): rebuilt at once alone; in a run together, by vote (it spends everyone's gold).
+const town = new Town(() => campaign, (id) => {
+  if (coop?.run) {
+    coopVote(voteKey(['town', id]));
+    coopMarks();
+    return false;
+  }
+  sfx.chest();
+  campaign = build(campaign, id);
+  writeSave(campaign);
+  camp.show(campaign);
+  return true;
+});
+
 // The camp itself is made in boot.js, which put the title up before this file arrived.
 Object.assign(later, {
   onEnter: (id) => (coop?.run ? coopVote(voteKey(enterAct(campaign, id))) : enterRoom(id)),
@@ -232,6 +248,11 @@ Object.assign(later, {
   onTrade: (opener) => {
     sfx.ui();
     shop.open(opener);
+  },
+  onTown: (opener) => {
+    sfx.ui();
+    town.open(opener);
+    coopMarks();
   },
   onEndless: () => startEndless(),
   onCoop: (button) => lobby.show(button),
@@ -1864,6 +1885,7 @@ function coopLoadRun() {
     camp.hide();
     tips.hide();
     shop.close();
+    town.close();
     $banner.hidden = true;
     newGame({ seed: c.fight.seed, rules: c.run.rules, relics: fightRelics(campaign), log: [...c.run.cmds], coop: true, explored: same && board ? [...board.explored] : [], seen: [] });
   } else {
@@ -1902,6 +1924,7 @@ function coopStepped([kind], r) {
     coop.fight = { ...r.fight, rules: coop.run.rules };
     nodeId = r.fight.node;
     shop.close();
+    town.close();
     camp.hide();
     tips.hide();
     $banner.hidden = true;
@@ -1915,6 +1938,14 @@ function coopStepped([kind], r) {
   if (['buy', 'sell', 'equip', 'unequip', 'pick', 'style'].includes(kind)) { // a player's own: the camp as it was
     camp.show(campaign);
     if (shop.isOpen) shop.draw();
+    return;
+  }
+  if (kind === 'town') { // the village voted a stage up: the camp as it was, with the news
+    sfx.chest();
+    if (town.isOpen) town.draw();
+    camp.show(campaign); // (marks the votes, the panel's too)
+    town.news(r.report.built);
+    hud.toast(`${TOWN[r.report.built].name} rebuilt.`);
     return;
   }
   if (kind === 'rest') sfx.heal();
@@ -1997,6 +2028,7 @@ function coopMarks() {
     b.setAttribute('aria-description', `Votes: ${who.map((id) => coop.link.playerName(id)).join(', ')}`);
   };
   for (const b of document.querySelectorAll('[data-enter]')) mark(b, run ? voteKey(enterAct(campaign, b.dataset.enter)) : '');
+  for (const b of document.querySelectorAll('[data-build]')) mark(b, run ? `town:${b.dataset.build}` : '');
   for (const [id, key] of [['next', 'next'], ['restart', 'retry'], ['ease', 'ease'], ['to-map', 'camp']]) mark(document.getElementById(id), run ? key : '');
 }
 

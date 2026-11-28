@@ -397,6 +397,11 @@ server on 5173.
   `PRICES`); `ui/shop.js` is the panel, opened from camp through `onTrade`. A new item for sale
   needs a price in `PRICES` and a place in `STOCK`. Supplies (`kind: 'supply'` in `ITEMS`, its
   `carry` the hero field) are always in stock and go to whoever carries fewest.
+- **Village stage:** `TOWN` in `game/town.js` (a stage's `desc`, `look`, `news`; `COSTS`), its
+  rule where it lands: the pedlar's `stock`, `priceOf` or `sellPrice(id, state)` in `shop.js`,
+  or `villageGifts` in `completeFight` (between rooms, or at an act's end; never in a fight, so
+  no `RULES` bump). The campaign's `town` (`cleanTown` in `parseSave`); `ui/town.js` is the
+  panel (`onTown`), and in a run together a `town` step settled by vote (`GROUP_ACTS`).
 - **Stop with no fight:** a node of `kind: 'event'` in `NODES`, its words and options in
   `EVENTS`, and its rule in `takeEvent` and `eventProblem` (`game/campaign.js`); the camp
   draws its options as buttons (`data-enter="altar:offer"`) and `EVENT_NEWS` in `camp.js` says

@@ -33,7 +33,7 @@ hints(); // styled tooltips for data-hint, everywhere
 document.documentElement.dataset.text = loadSettings().text; // the Text size setting, from the title on
 export const camp = new Camp(Object.fromEntries([
   'onEnter', 'onEquip', 'onUnequip', 'onPick', 'onStyle', 'onNewCampaign', 'onDaily', 'onWeekly', 'onWatch',
-  'onShareFight', 'onNewGamePlus', 'onContinue', 'onTrade', 'onEndless', 'onEndDive', 'onCoop',
+  'onShareFight', 'onNewGamePlus', 'onContinue', 'onTrade', 'onTown', 'onEndless', 'onEndDive', 'onCoop',
 ].map((name) => [name, handOn(name)])));
 
 /** #boot (inline in index.html) covers the page until the title is up. */

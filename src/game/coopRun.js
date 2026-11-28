@@ -19,6 +19,7 @@ import {
 } from './campaign.js';
 import { pendingScene, sceneProblem, takeScene } from './story.js';
 import { buy, buyProblem, sell, sellPrice, canTrade } from './shop.js';
+import { build, buildProblem } from './town.js';
 import { replayFight } from './replay.js';
 
 /** Fight number `n`'s dice in a run that began from `seed`. */
@@ -36,7 +37,7 @@ export const isCampStep = (cmd) => cmd?.type === 'camp' && Array.isArray(cmd.act
  * The steps everyone agrees on (by vote, then sent by the host), as opposed to a player's own
  * (gear, picks and styles for the heroes they play, and trades).
  */
-export const GROUP_ACTS = ['enter', 'scene', 'event', 'rest', 'next', 'retry', 'ease', 'camp'];
+export const GROUP_ACTS = ['enter', 'scene', 'event', 'rest', 'next', 'retry', 'ease', 'camp', 'town'];
 
 /** The camp's `data-enter` value ("warren", "altar:offer", "scene:gravedigger:take") as a step. */
 export function enterAct(state, id) {
@@ -129,7 +130,9 @@ export class CoopRun {
         return this.phase === 'camp' ? buyProblem(s, a) : 'Not now';
       case 'sell':
         if (this.phase !== 'camp' || !canTrade(s)) return 'Not now';
-        return sellPrice(s.pack[a]) ? null : 'He won’t take that';
+        return sellPrice(s.pack[a], s) ? null : 'He won’t take that';
+      case 'town':
+        return this.phase === 'camp' ? buildProblem(s, a) : 'Not now';
       default:
         return 'No such step';
     }
@@ -191,6 +194,10 @@ export class CoopRun {
         break;
       case 'sell':
         this.state = sell(s, a);
+        break;
+      case 'town': // the village (town.js), by vote: it spends everyone's gold
+        this.state = build(s, a);
+        report = { built: a, stage: this.state.town[a] };
         break;
       default:
     }

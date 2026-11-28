@@ -302,6 +302,14 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
   (15), each to whoever carries fewest; a spell scroll (60 to 180) for a hero who can read it;
   and two pieces of gear that change from stop to stop, better in later acts. He buys spare
   gear from the pack at half price.
+- **The village:** in camp after each act's boss (The village), gold rebuilds the village above
+  the crypt: the smith, the temple and the library, three stages each at 120, 220 and 340 gold.
+  The smith gives the pedlar a third piece of gear, then buys gear at three quarters, then
+  brings the next act's gear an act early. The temple gives every hero 3 HP more after each
+  room, then a potion each at each act's end, then a caster's spent 1st-level slot back after
+  each room. The library gives the pedlar a second scroll, then copies scrolls for a third less,
+  then sends each hero who can read one a free scroll at each act's end. Not in the Endless
+  Crypt; a New Game+ run starts with the village in ruins. In a run together it's a vote.
 - **Stops with no fight:** three side trips on the map, each one choice and no dice. Visit one
   on the way, or walk past it; the fork after it is still there.
   - The Wounded Pilgrim (after the Crypt): give up a potion and he finds you after the Sanctum
@@ -390,7 +398,7 @@ the labyrinth's corridors and can knock a hero flat and throw them back.
     difficulty, back to camp) are put to a vote: a badge on the button says how many chose it.
     Most of the players here decide; once everyone has voted, the most votes win, a tie going
     the host's way. Each player hands out gear, picks and styles for their own heroes; anyone
-    may trade with the pedlar from the shared gold. The relay keeps the run for a month: Play
+    may trade with the pedlar from the shared gold; rebuilding the village is a vote. The relay keeps the run for a month: Play
     together's Back to the run, under the same name, takes up your old place and heroes.
 - **Daily crypt:** one room a day, the same for everyone. Your best result and win streak are
   kept. Win it and Copy result puts a short summary on the clipboard (on a phone, the share
@@ -937,6 +945,7 @@ src/
     campaign.js      the dungeon map, XP, the pack, rests, New Game+, save data
     story.js         the scenes between fights, their choices and the ending they make
     shop.js          gold for each room, and what the pedlar sells and pays
+    town.js          the village rebuilt between acts: its stages, costs and gifts
     endless.js       the Endless Crypt: floors made from a seed, the dive's state and its save
     maps.js          the rooms as ASCII maps
     combat.js        Game: turns, movement, attacks, events
@@ -1011,6 +1020,7 @@ src/
     bestiary.js      the bestiary screen and its lore (loaded with the game)
     bestiaryLabel.js the bestiary buttons' label: how many met, and the new-entry dot
     shop.js          the pedlar's panel: buy and sell (loaded with the game, with shop.css)
+    town.js          the village's panel: rebuild the smith, temple and library (with town.css)
     banner.js        the end-of-fight banner: result, recap, run summary, Copy result, Save image, Copy log
     overlay.js       panels over the screen (bestiary, past runs, achievements, New Game+)
     icons.js         portrait icons for the turn order

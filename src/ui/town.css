@@ -1,0 +1,23 @@
+/* The village panel (ui/town.js), loaded with it. */
+.town-gold { margin: 4px 0 8px; }
+.town-news { margin: 0 0 10px; color: var(--gold); font-style: italic; }
+.town-list { list-style: none; margin: 0; padding: 0; }
+.town-card {
+  padding: 10px 12px; margin-bottom: 8px; border-radius: 8px; border: 1px dashed rgba(217, 180, 90, 0.4);
+}
+.town-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.town-top b { font: 700 17px var(--display, inherit); color: var(--gold); }
+.town-card .pips { display: inline-flex; gap: 5px; }
+.town-card .pips i {
+  width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid rgba(217, 180, 90, 0.7);
+}
+.town-card .pips i.on { background: var(--gold); }
+.town-look { margin: 4px 0 6px; color: var(--muted); font-size: 13px; font-style: italic; }
+.town-now { margin: 0 0 8px; padding-left: 18px; font-size: 13px; }
+.town-next { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.town-next small { color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10.5px; margin-right: 4px; }
+.town-next button { flex: none; white-space: nowrap; }
+.town-done { margin: 0; color: var(--muted); font-size: 13px; }
+@media (max-width: 600px) {
+  .town-next { flex-direction: column; align-items: stretch; }
+}
